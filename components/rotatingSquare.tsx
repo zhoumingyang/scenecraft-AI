@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
+import styles from "./rotatingSquare.module.scss";
 
 export default function RotatingSquare() {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -9,8 +10,10 @@ export default function RotatingSquare() {
   useEffect(() => {
     if (!containerRef.current) return;
 
-    const width = containerRef.current.clientWidth;
-    const height = containerRef.current.clientHeight;
+    const container = containerRef.current;
+    const rect = container.getBoundingClientRect();
+    const width = rect.width || container.clientWidth || 600;
+    const height = rect.height || container.clientHeight || 400;
     const scene = new THREE.Scene();
     scene.background = new THREE.Color("#0b1020");
 
@@ -22,10 +25,10 @@ export default function RotatingSquare() {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     containerRef.current.appendChild(renderer.domElement);
 
-    const geometry = new THREE.PlaneGeometry(1, 1);
+    const geometry = new THREE.PlaneGeometry(1.6, 1.6);
     const material = new THREE.MeshBasicMaterial({
       color: "#67d7ff",
-      wireframe: true
+      wireframe: false
     });
     const square = new THREE.Mesh(geometry, material);
     scene.add(square);
@@ -63,5 +66,5 @@ export default function RotatingSquare() {
     };
   }, []);
 
-  return <div ref={containerRef} style={{ width: "100%", height: "100%" }} />;
+  return <div ref={containerRef} className={styles.canvasHost} />;
 }

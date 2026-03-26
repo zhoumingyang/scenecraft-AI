@@ -1,0 +1,243 @@
+.page {
+  min-height: 100vh;
+  padding: 32px 48px 44px;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 32px;
+}
+
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.brand {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.topActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.userName {
+  color: rgba(245, 247, 255, 0.78);
+  font-size: 14px;
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(320px, 560px);
+  gap: 28px;
+  align-items: stretch;
+}
+
+.copyBlock {
+  border: 1px solid rgba(156, 173, 255, 0.24);
+  border-radius: 24px;
+  background: linear-gradient(145deg, rgba(9, 14, 30, 0.82), rgba(20, 32, 60, 0.58));
+  box-shadow: 0 24px 80px rgba(3, 7, 22, 0.55);
+  padding: 36px;
+  display: grid;
+  gap: 18px;
+  align-content: center;
+}
+
+.kicker {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(134, 224, 255, 0.85);
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(32px, 4vw, 52px);
+  line-height: 1.08;
+}
+
+.subtitle {
+  margin: 0;
+  max-width: 560px;
+  color: rgba(241, 245, 255, 0.8);
+  line-height: 1.7;
+}
+
+.heroActions {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.previewCard {
+  min-height: 520px;
+  border-radius: 24px;
+  overflow: hidden;
+  border: 1px solid rgba(167, 186, 255, 0.28);
+  box-shadow: 0 30px 90px rgba(5, 9, 23, 0.62);
+}
+
+.primaryButton,
+.ghostButton {
+  border-radius: 999px;
+  height: 42px;
+  padding: 0 18px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.primaryButton {
+  border: none;
+  color: #071122;
+  background: linear-gradient(90deg, #8ca0ff, #7de8ff);
+  box-shadow: 0 16px 34px rgba(95, 183, 255, 0.28);
+}
+
+.primaryButton:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.ghostButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(211, 220, 255, 0.35);
+  color: #eff4ff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.ghostButton:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.primaryButton:disabled,
+.ghostButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.modalMask {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 4, 10, 0.68);
+  display: grid;
+  place-items: center;
+  z-index: 50;
+  padding: 20px;
+}
+
+.modal {
+  width: min(460px, 100%);
+  border-radius: 20px;
+  border: 1px solid rgba(160, 176, 255, 0.25);
+  background: linear-gradient(155deg, rgba(10, 16, 32, 0.95), rgba(17, 22, 42, 0.92));
+  padding: 24px;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.6);
+}
+
+.modalTabs {
+  display: inline-flex;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.tab,
+.activeTab {
+  height: 34px;
+  min-width: 72px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(233, 239, 255, 0.78);
+  cursor: pointer;
+}
+
+.activeTab {
+  color: #091120;
+  font-weight: 700;
+  background: linear-gradient(90deg, #9aabff, #8feeff);
+}
+
+.modalTitle {
+  margin: 16px 0 6px;
+  font-size: 26px;
+}
+
+.modalDesc {
+  margin: 0 0 14px;
+  color: rgba(224, 233, 255, 0.72);
+}
+
+.form {
+  display: grid;
+  gap: 12px;
+}
+
+.label {
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
+  color: rgba(237, 243, 255, 0.92);
+}
+
+.input {
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid rgba(196, 211, 255, 0.26);
+  background: rgba(255, 255, 255, 0.07);
+  color: #f8fbff;
+  padding: 0 12px;
+  outline: none;
+}
+
+.input:focus {
+  border-color: rgba(137, 227, 255, 0.85);
+  box-shadow: 0 0 0 3px rgba(137, 227, 255, 0.16);
+}
+
+.errorText {
+  margin: 0;
+  color: #ff9fa5;
+  font-size: 13px;
+}
+
+.divider {
+  margin: 14px 0 10px;
+  text-align: center;
+  color: rgba(226, 235, 255, 0.56);
+  font-size: 13px;
+}
+
+.socialRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+@media (max-width: 960px) {
+  .page {
+    padding: 24px;
+  }
+
+  .hero {
+    grid-template-columns: 1fr;
+  }
+
+  .previewCard {
+    min-height: 420px;
+  }
+
+  .title {
+    font-size: clamp(28px, 10vw, 42px);
+  }
+}

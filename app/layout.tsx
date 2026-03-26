@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
-import "./globals.css";
+import "./globals.scss";
+import MuiProvider from "@/components/muiProvider";
 
 export const metadata: Metadata = {
   title: "scenecraft-AI",
-  description: "scenecraft-AI login and threejs demo"
+  description: "scenecraft-AI creative dark editor"
 };
 
 export default function RootLayout({
@@ -13,7 +14,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="zh-CN">
-      <body>{children}</body>
+      <body>
+        <MuiProvider>{children}</MuiProvider>
+      </body>
     </html>
   );
 }
