@@ -5,6 +5,9 @@ import { Box, Button, Stack, Typography } from "@mui/material";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import { useRouter } from "next/navigation";
 import * as THREE from "three";
+import { useI18n } from "@/lib/i18n";
+import TopBar from "@/components/editor/topBar";
+import AvatarMenu from "@/components/editor/avatarMenu";
 
 type EditorCanvasViewProps = {
   displayName: string;
@@ -12,6 +15,7 @@ type EditorCanvasViewProps = {
 
 export default function EditorCanvasView({ displayName }: EditorCanvasViewProps) {
   const router = useRouter();
+  const { t } = useI18n();
   const canvasHostRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -165,6 +169,9 @@ export default function EditorCanvasView({ displayName }: EditorCanvasViewProps)
         }}
       />
 
+      <TopBar />
+      <AvatarMenu />
+
       <Stack
         spacing={1}
         sx={{
@@ -182,17 +189,18 @@ export default function EditorCanvasView({ displayName }: EditorCanvasViewProps)
           Editor
         </Typography>
         <Typography variant="h6" sx={{ lineHeight: 1.2 }}>
-          你好，{displayName}
+          {t("editor.greeting", { name: displayName })}
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          鼠标拖拽旋转 · 滚轮缩放 · 右键平移
+          {t("editor.tips")}
         </Typography>
         <Button
           variant="outlined"
           startIcon={<ArrowBackRoundedIcon />}
           onClick={() => router.push("/home")}
+          sx={{ width: "fit-content" }}
         >
-          返回 Home
+          {t("editor.backHome")}
         </Button>
       </Stack>
     </Box>
