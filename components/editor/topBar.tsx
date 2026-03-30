@@ -126,6 +126,11 @@ export default function TopBar() {
     await app.loadProject(createDefaultEditorProjectJSON());
   };
 
+  const onClearProject = async () => {
+    if (!app) return;
+    await app.clearProject();
+  };
+
   const activeItems =
     activeConfig?.options.map((option) => ({
       key: option.value,
@@ -197,7 +202,7 @@ export default function TopBar() {
           {t("editor.top.save")}
         </Button>
 
-        <Button size="small" color="inherit" startIcon={<DeleteSweepRoundedIcon />} onClick={onCreateProject}>
+        <Button size="small" color="inherit" startIcon={<DeleteSweepRoundedIcon />} onClick={onClearProject}>
           {t("editor.top.clear")}
         </Button>
 

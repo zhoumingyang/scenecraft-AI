@@ -7,6 +7,6 @@ export {
   MeshEntityModel,
   ModelEntityModel
 } from "./dataModel";
-export { createDefaultEditorProjectJSON } from "./projectFactory";
+export { createDefaultEditorProjectJSON, createEmptyEditorProjectJSON } from "./projectFactory";
 export * from "./typings";
 export * from "./util";

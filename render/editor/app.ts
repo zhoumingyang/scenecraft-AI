@@ -30,6 +30,7 @@ import type {
   SyncSource,
   TransformPatch
 } from "./typings";
+import { createEmptyEditorProjectJSON } from "./projectFactory";
 
 type RenderBinding = {
   kind: EntityKind;
@@ -334,6 +335,11 @@ export class EditorApp {
     }
 
     this.emit({ type: "projectLoaded", projectId: this.projectModel.id });
+  }
+
+  async clearProject() {
+    const projectId = this.projectModel?.id;
+    await this.loadProject(createEmptyEditorProjectJSON(projectId));
   }
 
   getProjectJSON(): EditorProjectJSON | null {
