@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "tsc --noEmit"
+    "lint": "npm run lint:types && npm run lint:eslint",
+    "lint:types": "tsc --noEmit",
+    "lint:eslint": "eslint . --max-warnings=0"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -28,6 +30,10 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.2",
     "@types/three": "^0.180.0",
+    "@typescript-eslint/eslint-plugin": "^8.57.2",
+    "@typescript-eslint/parser": "^8.57.2",
+    "eslint": "^10.1.0",
+    "eslint-plugin-unused-imports": "^4.4.1",
     "typescript": "^5.9.3"
   }
 }
