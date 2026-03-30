@@ -2,6 +2,7 @@
 
 import { ThemeProvider, createTheme } from "@mui/material";
 import { PropsWithChildren, useMemo } from "react";
+import EmotionRegistry from "@/components/emotionRegistry";
 
 export default function MuiProvider({ children }: PropsWithChildren) {
   const theme = useMemo(
@@ -135,5 +136,9 @@ export default function MuiProvider({ children }: PropsWithChildren) {
     []
   );
 
-  return <ThemeProvider theme={theme}>{children}</ThemeProvider>;
+  return (
+    <EmotionRegistry>
+      <ThemeProvider theme={theme}>{children}</ThemeProvider>
+    </EmotionRegistry>
+  );
 }

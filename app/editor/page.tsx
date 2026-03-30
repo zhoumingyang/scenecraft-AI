@@ -12,7 +12,5 @@ export default async function EditorPage() {
     redirect("/home");
   }
 
-  const displayName = sessionData.user.name || sessionData.user.email.split("@")[0];
-
-  return <EditorCanvasView displayName={displayName} />;
+  return <EditorCanvasView />;
 }
