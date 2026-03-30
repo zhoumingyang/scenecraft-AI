@@ -40,7 +40,6 @@ export async function sendAuthEmail(args: SendAuthEmailArgs) {
 
   // Fallback for local development when email provider is not configured.
   // This keeps auth flows testable by copying the link from server logs.
-  // eslint-disable-next-line no-console
   console.info(`[auth-email:fallback] to=${args.to} subject=${args.subject}\\n${args.html}`);
 }
 

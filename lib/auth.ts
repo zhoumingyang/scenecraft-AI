@@ -22,13 +22,14 @@ export const auth = betterAuth({
     sendVerificationEmail: async ({ user, url }) => {
       await sendAuthEmail({
         to: user.email,
-        subject: "Scenecraft AI 注册验证",
+        subject: "Scenecraft AI Email Verification",
         html: buildAuthEmailTemplate({
-          title: "完成账号注册",
-          intro: "请点击下方按钮验证邮箱并完成注册。验证成功后会自动回到主页并进入编辑器。",
+          title: "Complete Your Account Registration",
+          intro:
+            "Click the button below to verify your email and finish registration. After verification, you will be redirected to the home page and enter the editor automatically.",
           actionUrl: url,
-          actionText: "验证邮箱并继续",
-          expireText: "该链接 30 分钟内有效。"
+          actionText: "Verify Email and Continue",
+          expireText: "This link is valid for 30 minutes."
         })
       });
     }
@@ -42,13 +43,14 @@ export const auth = betterAuth({
     sendResetPassword: async ({ user, url }) => {
       await sendAuthEmail({
         to: user.email,
-        subject: "Scenecraft AI 重置密码",
+        subject: "Scenecraft AI Password Reset",
         html: buildAuthEmailTemplate({
-          title: "重置登录密码",
-          intro: "请点击下方按钮继续重置密码。页面会打开“设置新密码”弹窗。",
+          title: "Reset Your Login Password",
+          intro:
+            "Click the button below to continue resetting your password. A modal for setting a new password will open.",
           actionUrl: url,
-          actionText: "重置密码",
-          expireText: "该链接 30 分钟内有效。"
+          actionText: "Reset Password",
+          expireText: "This link is valid for 30 minutes."
         })
       });
     }
