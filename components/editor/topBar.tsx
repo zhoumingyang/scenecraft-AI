@@ -1,14 +1,7 @@
 "use client";
 
-import { ComponentType, useRef, useState } from "react";
-import {
-  Button,
-  ButtonGroup,
-  Menu,
-  MenuItem,
-  Stack,
-  SvgIconProps
-} from "@mui/material";
+import { ComponentType, useEffect, useRef, useState } from "react";
+import { Button, Stack, SvgIconProps } from "@mui/material";
 import FolderRoundedIcon from "@mui/icons-material/FolderRounded";
 import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
 import SaveRoundedIcon from "@mui/icons-material/SaveRounded";
@@ -17,7 +10,10 @@ import VideocamRoundedIcon from "@mui/icons-material/VideocamRounded";
 import LightModeRoundedIcon from "@mui/icons-material/LightModeRounded";
 import GridViewRoundedIcon from "@mui/icons-material/GridViewRounded";
 import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
+import DropdownMenu from "@/components/common/dropdownMenu";
 import { useI18n, TranslationKey } from "@/lib/i18n";
+import { createDefaultEditorProjectJSON } from "@/render/editor";
+import { useEditorStore } from "@/stores/editorStore";
 
 type IconComponent = ComponentType<SvgIconProps>;
 
@@ -44,15 +40,15 @@ const lightOptions: SelectOption[] = [
   { value: "rectArea", labelKey: "editor.light.rectArea" }
 ];
 
-const gridOptions: SelectOption[] = [
-  { value: "box", labelKey: "editor.grid.box" },
-  { value: "capsule", labelKey: "editor.grid.capsule" },
-  { value: "circle", labelKey: "editor.grid.circle" },
-  { value: "cylinder", labelKey: "editor.grid.cylinder" }
+const meshOptions: SelectOption[] = [
+  { value: "box", labelKey: "editor.mesh.box" },
+  { value: "capsule", labelKey: "editor.mesh.capsule" },
+  { value: "circle", labelKey: "editor.mesh.circle" },
+  { value: "cylinder", labelKey: "editor.mesh.cylinder" }
 ];
 
 type DropdownConfig = {
-  id: "project" | "camera" | "light" | "grid";
+  id: "project" | "camera" | "light" | "mesh";
   labelKey: TranslationKey;
   icon: IconComponent;
   options: SelectOption[];
@@ -78,25 +74,34 @@ const dropdownConfigs: DropdownConfig[] = [
     options: lightOptions
   },
   {
-    id: "grid",
-    labelKey: "editor.top.grid",
+    id: "mesh",
+    labelKey: "editor.top.mesh",
     icon: GridViewRoundedIcon,
-    options: gridOptions
+    options: meshOptions
   }
 ];
+
+const defaultSelectedValues: Record<string, string> = {
+  camera: "bird",
+  light: "ambient",
+  mesh: "box"
+};
 
 export default function TopBar() {
   const { t } = useI18n();
   const importInputRef = useRef<HTMLInputElement | null>(null);
+  const app = useEditorStore((state) => state.app);
+  const projectLoadVersion = useEditorStore((state) => state.projectLoadVersion);
   const [activeMenuId, setActiveMenuId] = useState<DropdownConfig["id"] | null>(null);
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
-  const [selectedValues, setSelectedValues] = useState<Record<string, string>>({
-    camera: "bird",
-    light: "ambient",
-    grid: "box"
-  });
+  const [selectedValues, setSelectedValues] = useState<Record<string, string>>(defaultSelectedValues);
 
   const activeConfig = dropdownConfigs.find((item) => item.id === activeMenuId) || null;
+
+  useEffect(() => {
+    setSelectedValues({ ...defaultSelectedValues });
+    closeMenu();
+  }, [projectLoadVersion]);
 
   const openMenu = (id: DropdownConfig["id"], anchor: HTMLElement) => {
     setActiveMenuId(id);
@@ -116,9 +121,29 @@ export default function TopBar() {
     // Placeholder: save scene action.
   };
 
-  const onClearScene = () => {
-    // Placeholder: clear scene/reset action.
+  const onCreateProject = async () => {
+    if (!app) return;
+    await app.loadProject(createDefaultEditorProjectJSON());
   };
+
+  const activeItems =
+    activeConfig?.options.map((option) => ({
+      key: option.value,
+      selected: selectedValues[activeConfig.id] === option.value,
+      label: t(option.labelKey),
+      onClick: async () => {
+        if (activeConfig.id === "project" && option.value === "new") {
+          await onCreateProject();
+          closeMenu();
+          return;
+        }
+
+        if (activeConfig.id !== "project") {
+          setSelectedValues((prev) => ({ ...prev, [activeConfig.id]: option.value }));
+        }
+        closeMenu();
+      }
+    })) || [];
 
   return (
     <>
@@ -168,14 +193,13 @@ export default function TopBar() {
           {t("editor.top.import")}
         </Button>
 
-        <ButtonGroup size="small" color="inherit" variant="outlined">
-          <Button startIcon={<SaveRoundedIcon />} onClick={onSaveScene}>
-            {t("editor.top.save")}
-          </Button>
-          <Button startIcon={<DeleteSweepRoundedIcon />} onClick={onClearScene}>
-            {t("editor.top.clear")}
-          </Button>
-        </ButtonGroup>
+        <Button size="small" color="inherit" startIcon={<SaveRoundedIcon />} onClick={onSaveScene}>
+          {t("editor.top.save")}
+        </Button>
+
+        <Button size="small" color="inherit" startIcon={<DeleteSweepRoundedIcon />} onClick={onCreateProject}>
+          {t("editor.top.clear")}
+        </Button>
 
         {dropdownConfigs
           .filter((config) => config.id !== "project")
@@ -193,22 +217,14 @@ export default function TopBar() {
           ))}
       </Stack>
 
-      <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={closeMenu}>
-        {activeConfig?.options.map((option) => (
-          <MenuItem
-            key={option.value}
-            selected={selectedValues[activeConfig.id] === option.value}
-            onClick={() => {
-              if (activeConfig.id !== "project") {
-                setSelectedValues((prev) => ({ ...prev, [activeConfig.id]: option.value }));
-              }
-              closeMenu();
-            }}
-          >
-            {t(option.labelKey)}
-          </MenuItem>
-        ))}
-      </Menu>
+      <DropdownMenu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={closeMenu}
+        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+        transformOrigin={{ vertical: "top", horizontal: "left" }}
+        items={activeItems}
+      />
     </>
   );
 }

@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Button, Menu, MenuItem } from "@mui/material";
+import { Button } from "@mui/material";
 import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
 import AccountCircleRoundedIcon from "@mui/icons-material/AccountCircleRounded";
 import { useRouter } from "next/navigation";
+import DropdownMenu from "@/components/common/dropdownMenu";
 import { useI18n } from "@/lib/i18n";
 import { authClient } from "@/lib/authClient";
 
@@ -48,11 +49,21 @@ export default function AvatarMenu() {
         {t("editor.avatar.default")}
       </Button>
 
-      <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)}>
-        <MenuItem disabled={signOutBusy} onClick={onSignOut}>
-          {t("editor.avatar.signOut")}
-        </MenuItem>
-      </Menu>
+      <DropdownMenu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={() => setAnchorEl(null)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        transformOrigin={{ vertical: "top", horizontal: "right" }}
+        items={[
+          {
+            key: "signOut",
+            label: t("editor.avatar.signOut"),
+            disabled: signOutBusy,
+            onClick: onSignOut
+          }
+        ]}
+      />
     </>
   );
 }
