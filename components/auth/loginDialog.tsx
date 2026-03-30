@@ -14,7 +14,12 @@ type LoginDialogProps = {
   onClose: () => void;
 };
 
-const rowLabelSx = { minWidth: 52, color: "rgba(236,244,255,0.9)", fontWeight: 600 };
+const rowLabelSx = {
+  width: 92,
+  flexShrink: 0,
+  color: "rgba(236,244,255,0.9)",
+  fontWeight: 600
+};
 
 const socialButtonSx = {
   borderRadius: 2.5,

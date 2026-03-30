@@ -83,6 +83,12 @@ export default function HomeView({ isAuthenticated, displayName }: HomeViewProps
     setLocale(event.target.value as "en" | "zh");
   };
 
+  const topControlSx = {
+    width: 112,
+    height: 40,
+    borderRadius: 2
+  };
+
   return (
     <Box sx={{ minHeight: "100vh", position: "relative", overflow: "hidden" }}>
       <Box
@@ -110,6 +116,7 @@ export default function HomeView({ isAuthenticated, displayName }: HomeViewProps
               variant="contained"
               startIcon={<LoginRoundedIcon />}
               onClick={() => openAuthModal("login")}
+              sx={topControlSx}
             >
               {t("home.login")}
             </Button>
@@ -118,6 +125,7 @@ export default function HomeView({ isAuthenticated, displayName }: HomeViewProps
               color="inherit"
               startIcon={<PersonAddRoundedIcon />}
               onClick={() => openAuthModal("register")}
+              sx={topControlSx}
             >
               {t("home.register")}
             </Button>
@@ -129,6 +137,7 @@ export default function HomeView({ isAuthenticated, displayName }: HomeViewProps
             startIcon={<LogoutRoundedIcon />}
             onClick={signOut}
             disabled={signOutBusy}
+            sx={topControlSx}
           >
             {t("home.signOut")}
           </Button>
@@ -140,9 +149,14 @@ export default function HomeView({ isAuthenticated, displayName }: HomeViewProps
           variant="outlined"
           aria-label={t("language.label")}
           sx={{
-            minWidth: 112,
+            ...topControlSx,
             color: "rgba(230,241,255,0.96)",
-            borderRadius: 2,
+            "& .MuiSelect-select": {
+              minHeight: "unset",
+              display: "flex",
+              alignItems: "center",
+              py: 0
+            },
             "& .MuiOutlinedInput-notchedOutline": {
               borderColor: "rgba(181,205,255,0.4)"
             },

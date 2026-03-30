@@ -11,7 +11,12 @@ type RegisterDialogProps = {
   onClose: () => void;
 };
 
-const rowLabelSx = { minWidth: 52, color: "rgba(236,244,255,0.9)", fontWeight: 600 };
+const rowLabelSx = {
+  width: 92,
+  flexShrink: 0,
+  color: "rgba(236,244,255,0.9)",
+  fontWeight: 600
+};
 
 function nameFromEmail(email: string) {
   const local = email.split("@")[0]?.trim();
