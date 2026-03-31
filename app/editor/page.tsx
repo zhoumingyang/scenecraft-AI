@@ -12,5 +12,5 @@ export default async function EditorPage() {
     redirect("/home");
   }
 
-  return <EditorCanvasView />;
+  return <EditorCanvasView userEmail={sessionData.user.email || null} />;
 }

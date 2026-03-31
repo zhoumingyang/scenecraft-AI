@@ -8,7 +8,11 @@ import { createDefaultEditorProjectJSON } from "@/render/editor";
 import { createEditorSdk } from "@/render/editor/sdk";
 import { useEditorStore } from "@/stores/editorStore";
 
-export default function EditorCanvasView() {
+type EditorCanvasViewProps = {
+  userEmail: string | null;
+};
+
+export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
   const canvasHostRef = useRef<HTMLDivElement | null>(null);
   const setApp = useEditorStore((state) => state.setApp);
   const setSelectedEntityId = useEditorStore((state) => state.setSelectedEntityId);
@@ -62,7 +66,7 @@ export default function EditorCanvasView() {
         }}
       />
       <TopBar />
-      <AvatarMenu />
+      <AvatarMenu userEmail={userEmail} />
     </Box>
   );
 }
