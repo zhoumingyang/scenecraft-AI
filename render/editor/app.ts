@@ -12,11 +12,21 @@ import type {
 import { EditorRuntime } from "./runtime/editorRuntime";
 import { EditorSession } from "./session/editorSession";
 
+const PICK_POINTER_MOVE_THRESHOLD_PX = 6;
+
+type PendingPick = {
+  pointerId: number;
+  startX: number;
+  startY: number;
+  moved: boolean;
+};
+
 export class EditorApp {
   private readonly runtime: EditorRuntime;
   private readonly session: EditorSession;
   private readonly listeners = new Set<EditorAppListener>();
   private disposed = false;
+  private pendingPick: PendingPick | null = null;
 
   constructor(host: HTMLDivElement) {
     this.runtime = new EditorRuntime(host);
@@ -35,11 +45,18 @@ export class EditorApp {
       onPointerDown: this.onPointerDown,
       onFrame: this.onFrame
     });
+    window.addEventListener("pointermove", this.onPointerMove);
+    window.addEventListener("pointerup", this.onPointerUp);
+    window.addEventListener("pointercancel", this.onPointerCancel);
   }
 
   dispose() {
     if (this.disposed) return;
     this.disposed = true;
+    window.removeEventListener("pointermove", this.onPointerMove);
+    window.removeEventListener("pointerup", this.onPointerUp);
+    window.removeEventListener("pointercancel", this.onPointerCancel);
+    this.pendingPick = null;
     this.session.dispose();
     this.runtime.dispose();
   }
@@ -138,14 +155,44 @@ export class EditorApp {
 
   private onPointerDown = (event: PointerEvent) => {
     if (event.button !== 0) return;
+    this.pendingPick = null;
     if (this.runtime.beginTransformInteraction(event.clientX, event.clientY)) return;
     if (this.runtime.isFirstPersonCamera()) return;
+
+    this.pendingPick = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      moved: false
+    };
+  };
+
+  private onPointerMove = (event: PointerEvent) => {
+    if (!this.pendingPick || this.pendingPick.pointerId !== event.pointerId) return;
+    const deltaX = event.clientX - this.pendingPick.startX;
+    const deltaY = event.clientY - this.pendingPick.startY;
+    const distanceSquared = deltaX * deltaX + deltaY * deltaY;
+    if (distanceSquared <= PICK_POINTER_MOVE_THRESHOLD_PX * PICK_POINTER_MOVE_THRESHOLD_PX) return;
+    this.pendingPick.moved = true;
+  };
+
+  private onPointerUp = (event: PointerEvent) => {
+    if (!this.pendingPick || this.pendingPick.pointerId !== event.pointerId) return;
+    const shouldPick = !this.pendingPick.moved;
+    this.pendingPick = null;
+    if (!shouldPick) return;
+
     const pickedEntityId = this.session.pick(event.clientX, event.clientY);
     void this.dispatch({
       type: "selection.set",
       entityId: pickedEntityId,
       source: "render"
     });
+  };
+
+  private onPointerCancel = (event: PointerEvent) => {
+    if (!this.pendingPick || this.pendingPick.pointerId !== event.pointerId) return;
+    this.pendingPick = null;
   };
 
   private onFrame = () => {
