@@ -55,7 +55,13 @@ type RotateVisual = HandleVisual & {
 
 type TranslateVisual = HandleVisual & {
   base: THREE.Group;
+  tip: THREE.Mesh;
 };
+
+function normalizePositiveAngle(angle: number) {
+  const fullTurn = Math.PI * 2;
+  return ((angle % fullTurn) + fullTurn) % fullTurn;
+}
 
 function getAxisVector(axis: "x" | "y" | "z"): THREE.Vector3 {
   if (axis === "x") return new THREE.Vector3(1, 0, 0);
@@ -95,7 +101,6 @@ export class CustomTransformGizmo {
   private readonly tmpV1 = new THREE.Vector3();
   private readonly tmpV2 = new THREE.Vector3();
   private readonly tmpV3 = new THREE.Vector3();
-  private readonly tmpV4 = new THREE.Vector3();
   private readonly handleTargets: THREE.Object3D[] = [];
   private readonly visuals = new Map<GizmoHandleKey, HandleVisual>();
   private readonly rotateVisuals = new Map<"x" | "y" | "z", RotateVisual>();
@@ -353,6 +358,7 @@ export class CustomTransformGizmo {
       axis,
       root,
       base,
+      tip,
       pickTargets: [root, base, shaft, tip],
       materials: [shaftMaterial, tipMaterial]
     };
@@ -373,7 +379,6 @@ export class CustomTransformGizmo {
       fullMaterial
     );
 
-    previewMesh.rotation.z = -Math.PI / 4;
     fullMesh.visible = false;
     tagHandle(root, "rotate-axis", axis);
     tagHandle(base, "rotate-axis", axis);
@@ -435,27 +440,33 @@ export class CustomTransformGizmo {
   }
 
   private updateRotateFacing() {
-    const cameraOffset = this.tmpV1.copy(this.camera.position).sub(this.root.position);
-
     this.rotateVisuals.forEach((visual, axis) => {
       const axisVector = getAxisVector(axis);
       visual.base.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), axisVector);
-
-      const facingDirection = this.tmpV2.copy(cameraOffset).projectOnPlane(axisVector);
-      if (facingDirection.lengthSq() < 1e-6) {
-        facingDirection.copy(this.worldUp).projectOnPlane(axisVector);
-      }
-      if (facingDirection.lengthSq() < 1e-6) {
-        facingDirection.set(1, 0, 0).projectOnPlane(axisVector);
-      }
-      facingDirection.normalize();
-
-      const localFacing = this.tmpV4.copy(facingDirection).applyQuaternion(
-        visual.base.quaternion.clone().invert()
-      );
-      const facingAngle = Math.atan2(localFacing.y, localFacing.x);
-      visual.base.rotation.z = facingAngle;
+      this.alignRotatePreviewToTranslateTips(axis, visual);
     });
+  }
+
+  private alignRotatePreviewToTranslateTips(axis: "x" | "y" | "z", visual: RotateVisual) {
+    const endpointAxes =
+      axis === "x" ? (["y", "z"] as const) : axis === "y" ? (["z", "x"] as const) : (["x", "y"] as const);
+
+    const firstTip = this.translateVisuals.get(endpointAxes[0])?.tip ?? null;
+    const secondTip = this.translateVisuals.get(endpointAxes[1])?.tip ?? null;
+    if (!firstTip || !secondTip) return;
+
+    const firstLocal = visual.base.worldToLocal(firstTip.getWorldPosition(this.tmpV1.clone()));
+    const secondLocal = visual.base.worldToLocal(secondTip.getWorldPosition(this.tmpV2.clone()));
+
+    firstLocal.z = 0;
+    secondLocal.z = 0;
+    if (firstLocal.lengthSq() < 1e-6 || secondLocal.lengthSq() < 1e-6) return;
+
+    const firstAngle = normalizePositiveAngle(Math.atan2(firstLocal.y, firstLocal.x));
+    const secondAngle = normalizePositiveAngle(Math.atan2(secondLocal.y, secondLocal.x));
+    const delta = normalizePositiveAngle(secondAngle - firstAngle);
+
+    visual.previewMesh.rotation.z = delta <= Math.PI ? firstAngle : secondAngle;
   }
 
   private updateVisualState() {
