@@ -4,7 +4,8 @@ import { useEffect, useRef } from "react";
 import { Box } from "@mui/material";
 import TopBar from "@/components/editor/topBar";
 import AvatarMenu from "@/components/editor/avatarMenu";
-import { createDefaultEditorProjectJSON, createEditorApp } from "@/render/editor";
+import { createDefaultEditorProjectJSON } from "@/render/editor";
+import { createEditorSdk } from "@/render/editor/sdk";
 import { useEditorStore } from "@/stores/editorStore";
 
 export default function EditorCanvasView() {
@@ -17,7 +18,7 @@ export default function EditorCanvasView() {
   useEffect(() => {
     if (!canvasHostRef.current) return;
 
-    const app = createEditorApp(canvasHostRef.current);
+    const app = createEditorSdk(canvasHostRef.current);
     setApp(app);
 
     const unsubscribe = app.subscribe((event) => {
@@ -38,7 +39,10 @@ export default function EditorCanvasView() {
     });
 
     app.start();
-    void app.loadProject(createDefaultEditorProjectJSON());
+    void app.dispatch({
+      type: "project.load",
+      project: createDefaultEditorProjectJSON()
+    });
 
     return () => {
       unsubscribe();

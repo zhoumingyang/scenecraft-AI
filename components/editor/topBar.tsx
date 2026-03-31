@@ -1,6 +1,6 @@
 "use client";
 
-import { ComponentType, useEffect, useRef, useState } from "react";
+import { ChangeEvent, ComponentType, useEffect, useRef, useState } from "react";
 import { Button, Stack, SvgIconProps } from "@mui/material";
 import FolderRoundedIcon from "@mui/icons-material/FolderRounded";
 import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
@@ -12,7 +12,7 @@ import GridViewRoundedIcon from "@mui/icons-material/GridViewRounded";
 import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
 import DropdownMenu from "@/components/common/dropdownMenu";
 import { useI18n, TranslationKey } from "@/lib/i18n";
-import { createDefaultEditorProjectJSON } from "@/render/editor";
+import { createDefaultEditorProjectJSON, inferModelFileFormat } from "@/render/editor";
 import { useEditorStore } from "@/stores/editorStore";
 
 type IconComponent = ComponentType<SvgIconProps>;
@@ -103,6 +103,16 @@ export default function TopBar() {
     closeMenu();
   }, [projectLoadVersion]);
 
+  useEffect(() => {
+    if (!app) return;
+
+    const cameraType = app.projectModel?.camera.cameraType;
+    setSelectedValues((prev) => ({
+      ...prev,
+      camera: cameraType === 2 ? "firstPerson" : "bird"
+    }));
+  }, [app, projectLoadVersion]);
+
   const openMenu = (id: DropdownConfig["id"], anchor: HTMLElement) => {
     setActiveMenuId(id);
     setAnchorEl(anchor);
@@ -117,18 +127,33 @@ export default function TopBar() {
     importInputRef.current?.click();
   };
 
+  const onImportModelFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null;
+    event.target.value = "";
+    if (!app || !file) return;
+    if (!inferModelFileFormat(file.name)) return;
+
+    await app.dispatch({
+      type: "model.import",
+      file
+    });
+  };
+
   const onSaveScene = () => {
     // Placeholder: save scene action.
   };
 
   const onCreateProject = async () => {
     if (!app) return;
-    await app.loadProject(createDefaultEditorProjectJSON());
+    await app.dispatch({
+      type: "project.load",
+      project: createDefaultEditorProjectJSON()
+    });
   };
 
   const onClearProject = async () => {
     if (!app) return;
-    await app.clearProject();
+    await app.dispatch({ type: "project.clear" });
   };
 
   const activeItems =
@@ -146,6 +171,20 @@ export default function TopBar() {
         if (activeConfig.id !== "project") {
           setSelectedValues((prev) => ({ ...prev, [activeConfig.id]: option.value }));
         }
+        if (activeConfig.id === "camera" && app) {
+          await app.dispatch({
+            type: "camera.patch",
+            patch: {
+              type: option.value === "firstPerson" ? 2 : 1
+            }
+          });
+        }
+        if (activeConfig.id === "light" && app) {
+          await app.dispatch({
+            type: "light.create",
+            lightType: option.value
+          });
+        }
         closeMenu();
       }
     })) || [];
@@ -155,10 +194,8 @@ export default function TopBar() {
       <input
         ref={importInputRef}
         type="file"
-        accept=".gltf,.glb,.obj,.fbx,.stl,.ply,.dae,.3ds"
-        onChange={() => {
-          // Placeholder: capture selected model file.
-        }}
+        accept=".gltf,.glb,.fbx,.obj"
+        onChange={onImportModelFile}
         style={{ display: "none" }}
       />
 

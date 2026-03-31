@@ -1,0 +1,238 @@
+import * as THREE from "three";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { RectAreaLightUniformsLib } from "three/examples/jsm/lights/RectAreaLightUniformsLib.js";
+
+import { CameraModel } from "../models";
+import { buildTransformSignature } from "../utils/object3d";
+import { CustomTransformGizmo } from "./customTransformGizmo";
+import { FirstPersonController } from "./firstPersonController";
+import { ModelLoaderFactory } from "./modelLoaderFactory";
+
+type RuntimeStartOptions = {
+  onPointerDown: (event: PointerEvent) => void;
+  onFrame: () => void;
+};
+
+export class EditorRuntime {
+  readonly host: HTMLDivElement;
+  readonly scene: THREE.Scene;
+  readonly camera: THREE.PerspectiveCamera;
+  readonly renderer: THREE.WebGLRenderer;
+  readonly modelLoaderFactory: ModelLoaderFactory;
+  readonly textureLoader: THREE.TextureLoader;
+  readonly raycaster: THREE.Raycaster;
+  readonly fallbackAmbientLight: THREE.AmbientLight;
+  readonly orbitControls: OrbitControls;
+  readonly firstPersonController: FirstPersonController;
+  readonly transformGizmo: CustomTransformGizmo;
+
+  private rafId = 0;
+  private readonly clock = new THREE.Clock();
+  private disposed = false;
+  private startOptions: RuntimeStartOptions | null = null;
+  private lastCameraSignature = "";
+  private currentCameraType = 1;
+  private transformDragging = false;
+
+  constructor(host: HTMLDivElement) {
+    RectAreaLightUniformsLib.init();
+
+    this.host = host;
+    this.scene = new THREE.Scene();
+    this.scene.background = new THREE.Color("#05070f");
+    this.scene.fog = new THREE.Fog("#05070f", 20, 180);
+
+    this.camera = new THREE.PerspectiveCamera(60, 1, 0.1, 2000);
+    this.camera.position.set(10, 10, 10);
+    this.camera.lookAt(0, 0, 0);
+
+    this.renderer = new THREE.WebGLRenderer({ antialias: true });
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+    this.modelLoaderFactory = new ModelLoaderFactory();
+    this.textureLoader = new THREE.TextureLoader();
+    this.raycaster = new THREE.Raycaster();
+    this.fallbackAmbientLight = new THREE.AmbientLight("#ffffff", 0.55);
+    this.orbitControls = new OrbitControls(this.camera, this.renderer.domElement);
+    this.orbitControls.enableDamping = true;
+    this.orbitControls.enablePan = true;
+    this.orbitControls.target.set(0, 0, 0);
+    this.firstPersonController = new FirstPersonController(this.camera, this.renderer.domElement);
+    this.transformGizmo = new CustomTransformGizmo(this.camera, this.renderer.domElement, this.raycaster);
+
+    const grid = new THREE.GridHelper(80, 80, 0x335588, 0x22334f);
+    grid.position.y = -0.0001;
+    this.scene.add(grid);
+    this.scene.add(this.transformGizmo.root);
+  }
+
+  start(options: RuntimeStartOptions) {
+    if (this.disposed) return;
+    this.startOptions = options;
+    this.host.appendChild(this.renderer.domElement);
+    this.resize();
+    this.clock.start();
+    this.firstPersonController.connect();
+    this.renderer.domElement.addEventListener("pointerdown", options.onPointerDown);
+    window.addEventListener("pointermove", this.onPointerMove);
+    window.addEventListener("pointerup", this.onPointerUp);
+    window.addEventListener("resize", this.resize);
+    this.animate();
+  }
+
+  stop() {
+    if (!this.startOptions) return;
+    window.cancelAnimationFrame(this.rafId);
+    this.clock.stop();
+    window.removeEventListener("resize", this.resize);
+    this.renderer.domElement.removeEventListener("pointerdown", this.startOptions.onPointerDown);
+    window.removeEventListener("pointermove", this.onPointerMove);
+    window.removeEventListener("pointerup", this.onPointerUp);
+    this.firstPersonController.disconnect();
+    this.startOptions = null;
+  }
+
+  dispose() {
+    if (this.disposed) return;
+    this.disposed = true;
+    this.stop();
+    this.transformGizmo.dispose();
+    this.scene.remove(this.transformGizmo.root);
+    this.orbitControls.dispose();
+    this.renderer.dispose();
+    if (this.host.contains(this.renderer.domElement)) {
+      this.host.removeChild(this.renderer.domElement);
+    }
+  }
+
+  renderFrame() {
+    this.renderer.render(this.scene, this.camera);
+  }
+
+  applyCameraModel(cameraModel: CameraModel) {
+    this.currentCameraType = cameraModel.cameraType;
+    this.camera.fov = cameraModel.fov;
+    cameraModel.applyTransformToObject(this.camera);
+
+    if (cameraModel.cameraType === 1) {
+      this.firstPersonController.setEnabled(false);
+      this.camera.lookAt(0, 0, 0);
+      this.orbitControls.enabled = !this.transformDragging;
+      this.orbitControls.target.set(0, 0, 0);
+      this.orbitControls.update();
+    } else {
+      this.orbitControls.enabled = false;
+      this.firstPersonController.syncFromCamera();
+      this.firstPersonController.setEnabled(!this.transformDragging);
+    }
+
+    this.camera.updateProjectionMatrix();
+    this.lastCameraSignature = buildTransformSignature(this.camera);
+  }
+
+  alignCameraModelToFirstPerson(cameraModel: CameraModel) {
+    const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(this.camera.quaternion);
+    forward.y = 0;
+
+    if (forward.lengthSq() < 1e-6) {
+      forward.set(0, 0, -1);
+    } else {
+      forward.normalize();
+    }
+
+    const position = this.camera.position.clone();
+    position.y = 1.8;
+
+    const lookTarget = position.clone().add(forward);
+    const helper = new THREE.Object3D();
+    helper.position.copy(position);
+    helper.lookAt(lookTarget);
+
+    cameraModel.position = [position.x, position.y, position.z];
+    cameraModel.quaternion = [
+      helper.quaternion.x,
+      helper.quaternion.y,
+      helper.quaternion.z,
+      helper.quaternion.w
+    ];
+  }
+
+  attachTransformTarget(object: THREE.Object3D | null) {
+    this.transformGizmo.setTarget(object);
+  }
+
+  isTransformGizmoHit(clientX: number, clientY: number): boolean {
+    return this.transformGizmo.isHandleHit(clientX, clientY);
+  }
+
+  beginTransformInteraction(clientX: number, clientY: number): boolean {
+    const started = this.transformGizmo.beginPointerInteraction({ clientX, clientY });
+    if (!started) return false;
+    this.setTransformDragging(true);
+    return true;
+  }
+
+  syncCameraModel(cameraModel: CameraModel): boolean {
+    const nextSignature = buildTransformSignature(this.camera);
+    if (nextSignature === this.lastCameraSignature) return false;
+    cameraModel.copyTransformFromObject(this.camera);
+    this.lastCameraSignature = nextSignature;
+    return true;
+  }
+
+  update(deltaSeconds: number) {
+    this.transformGizmo.update();
+    if (this.currentCameraType === 1) {
+      this.orbitControls.update();
+      return;
+    }
+
+    this.firstPersonController.update(deltaSeconds);
+  }
+
+  isFirstPersonCamera() {
+    return this.currentCameraType === 2;
+  }
+
+  private setTransformDragging(isDragging: boolean) {
+    this.transformDragging = isDragging;
+    if (this.currentCameraType === 2) {
+      if (!isDragging) this.firstPersonController.syncFromCamera();
+      this.firstPersonController.setEnabled(!isDragging);
+      this.orbitControls.enabled = false;
+      return;
+    }
+    this.orbitControls.enabled = !isDragging;
+  }
+
+  private onPointerMove = (event: PointerEvent) => {
+    if (!this.transformGizmo.isDragging()) return;
+    this.transformGizmo.updatePointerInteraction({
+      clientX: event.clientX,
+      clientY: event.clientY
+    });
+  };
+
+  private onPointerUp = () => {
+    if (!this.transformGizmo.isDragging()) return;
+    this.transformGizmo.endPointerInteraction();
+    this.setTransformDragging(false);
+  };
+
+  private resize = () => {
+    const width = this.host.clientWidth || window.innerWidth;
+    const height = this.host.clientHeight || window.innerHeight;
+    this.renderer.setSize(width, height);
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.camera.aspect = width / height;
+    this.camera.updateProjectionMatrix();
+  };
+
+  private animate = () => {
+    if (!this.startOptions) return;
+    this.rafId = window.requestAnimationFrame(this.animate);
+    this.update(this.clock.getDelta());
+    this.startOptions.onFrame();
+    this.renderFrame();
+  };
+}
