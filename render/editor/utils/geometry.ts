@@ -5,10 +5,13 @@ import type { MeshEntityModel } from "../models";
 
 export function createBuiltinGeometry(name: string): THREE.BufferGeometry {
   const normalized = name.trim().toLowerCase();
+  if (normalized === "plane") return new THREE.PlaneGeometry(1.6, 1.6, 1, 1);
   if (normalized === "capsule") return new THREE.CapsuleGeometry(0.6, 1.2, 8, 16);
+  if (normalized === "cone") return new THREE.ConeGeometry(0.75, 1.6, 24);
   if (normalized === "sphere") return new THREE.SphereGeometry(0.8, 24, 16);
   if (normalized === "circle") return new THREE.CircleGeometry(0.9, 32);
   if (normalized === "cylinder") return new THREE.CylinderGeometry(0.7, 0.7, 1.4, 24);
+  if (normalized === "torus") return new THREE.TorusGeometry(0.7, 0.22, 18, 48);
   return new THREE.BoxGeometry(1, 1, 1);
 }
 

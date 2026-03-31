@@ -24,6 +24,24 @@ function createLightEntityId() {
   return globalThis.crypto?.randomUUID?.() ?? `light-${Date.now().toString(36)}`;
 }
 
+function createMeshEntityId() {
+  return globalThis.crypto?.randomUUID?.() ?? `mesh-${Date.now().toString(36)}`;
+}
+
+function createMeshPayload(geometryName: string) {
+  const normalizedGeometryName = geometryName.trim() || "Box";
+  return {
+    id: createMeshEntityId(),
+    type: 1,
+    geometryName: normalizedGeometryName,
+    color: "#d9e8ff",
+    textureUrl: "",
+    position: [0, 0.8, 0],
+    quaternion: [0, 0, 0, 1],
+    scale: [1, 1, 1]
+  };
+}
+
 function createLightPayload(lightType: EditorLightJSON["type"]): EditorLightJSON {
   const normalizedType = typeof lightType === "string" ? lightType : Number(lightType);
   const base: EditorLightJSON = {
@@ -145,6 +163,9 @@ export class EditorSession {
       case "mesh.material":
         this.updateMeshMaterial(command.entityId, command.patch, command.source ?? "ui");
         return;
+      case "mesh.create":
+        this.createMesh(command.geometryName, command.source ?? "ui");
+        return;
       case "light.patch":
         this.updateLight(command.entityId, command.patch, command.source ?? "ui");
         return;
@@ -223,6 +244,23 @@ export class EditorSession {
       entityKind: "mesh",
       source
     });
+  }
+
+  async createMesh(geometryName: string, source: SyncSource = "ui") {
+    if (!this.projectModel) {
+      await this.loadProject(createEmptyEditorProjectJSON());
+    }
+    if (!this.projectModel) return;
+
+    const mesh = this.projectModel.addMesh(createMeshPayload(geometryName));
+    this.registry.create(mesh);
+    this.emit({
+      type: "entityUpdated",
+      entityId: mesh.id,
+      entityKind: "mesh",
+      source
+    });
+    this.setSelectedEntity(mesh.id, source);
   }
 
   updateLight(entityId: string, patch: Partial<EditorLightJSON>, source: SyncSource = "ui") {

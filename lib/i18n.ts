@@ -73,9 +73,13 @@ const dictionaries: Record<Locale, Dictionary> = {
     "editor.light.spot": "Spot light",
     "editor.light.rectArea": "Rect area light",
     "editor.mesh.box": "Box",
+    "editor.mesh.plane": "Plane",
     "editor.mesh.capsule": "Capsule",
+    "editor.mesh.cone": "Cone",
     "editor.mesh.circle": "Circle",
     "editor.mesh.cylinder": "Cylinder",
+    "editor.mesh.sphere": "Sphere",
+    "editor.mesh.torus": "Torus",
     "editor.avatar.default": "Default Avatar",
     "editor.avatar.signOut": "Sign out"
   },
@@ -146,9 +150,13 @@ const dictionaries: Record<Locale, Dictionary> = {
     "editor.light.spot": "聚光灯",
     "editor.light.rectArea": "面光源（rectAreaLight）",
     "editor.mesh.box": "盒子（box）",
+    "editor.mesh.plane": "平面（plane）",
     "editor.mesh.capsule": "Capsule",
+    "editor.mesh.cone": "圆锥（cone）",
     "editor.mesh.circle": "Circle",
     "editor.mesh.cylinder": "Cylinder",
+    "editor.mesh.sphere": "球体（sphere）",
+    "editor.mesh.torus": "圆环（torus）",
     "editor.avatar.default": "默认头像",
     "editor.avatar.signOut": "退出登录"
   }

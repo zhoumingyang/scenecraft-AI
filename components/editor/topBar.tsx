@@ -42,9 +42,13 @@ const lightOptions: SelectOption[] = [
 
 const meshOptions: SelectOption[] = [
   { value: "box", labelKey: "editor.mesh.box" },
+  { value: "plane", labelKey: "editor.mesh.plane" },
   { value: "capsule", labelKey: "editor.mesh.capsule" },
+  { value: "cone", labelKey: "editor.mesh.cone" },
   { value: "circle", labelKey: "editor.mesh.circle" },
-  { value: "cylinder", labelKey: "editor.mesh.cylinder" }
+  { value: "cylinder", labelKey: "editor.mesh.cylinder" },
+  { value: "sphere", labelKey: "editor.mesh.sphere" },
+  { value: "torus", labelKey: "editor.mesh.torus" }
 ];
 
 type DropdownConfig = {
@@ -183,6 +187,12 @@ export default function TopBar() {
           await app.dispatch({
             type: "light.create",
             lightType: option.value
+          });
+        }
+        if (activeConfig.id === "mesh" && app) {
+          await app.dispatch({
+            type: "mesh.create",
+            geometryName: option.value
           });
         }
         closeMenu();

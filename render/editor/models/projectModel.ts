@@ -111,6 +111,12 @@ export class EditorProjectModel {
     return model;
   }
 
+  addMesh(source: ConstructorParameters<typeof MeshEntityModel>[1]) {
+    const mesh = new MeshEntityModel(this.meshes.size, source);
+    this.meshes.set(mesh.id, mesh);
+    return mesh;
+  }
+
   addLight(source: ConstructorParameters<typeof LightEntityModel>[1]) {
     const light = new LightEntityModel(this.lights.size, source);
     this.lights.set(light.id, light);

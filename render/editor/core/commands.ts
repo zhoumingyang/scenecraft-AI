@@ -47,6 +47,11 @@ export type EditorCommand =
       source?: SyncSource;
     }
   | {
+      type: "mesh.create";
+      geometryName: string;
+      source?: SyncSource;
+    }
+  | {
       type: "light.patch";
       entityId: string;
       patch: Partial<EditorLightJSON>;
