@@ -14,7 +14,7 @@ export default function PropertyPanelSection({
   return (
     <Box
       sx={{
-        borderRadius: 1.5,
+        borderRadius: 0.5,
         border: "1px solid rgba(160,190,255,0.14)",
         background: "rgba(255,255,255,0.03)"
       }}

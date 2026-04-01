@@ -110,11 +110,13 @@ export function MeshAppearanceSection({
   return (
     <PropertyPanelSection title={t("editor.properties.appearance")}>
       <Stack spacing={0.7}>
+        <Stack direction="row" spacing={0.8} alignItems="center">
+          <Typography sx={{ width: 64, fontSize: 11, color: "rgba(205,220,255,0.78)" }}>
+            {t("editor.properties.color")}
+          </Typography>
+          <ColorField value={color} onChange={onColorChange} compact />
+        </Stack>
         <Typography sx={{ fontSize: 11, color: "rgba(205,220,255,0.78)" }}>
-          {t("editor.properties.color")}
-        </Typography>
-        <ColorField value={color} onChange={onColorChange} />
-        <Typography sx={{ pt: 0.2, fontSize: 11, color: "rgba(205,220,255,0.78)" }}>
           {t("editor.properties.texture")}
         </Typography>
         <Button

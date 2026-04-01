@@ -307,8 +307,7 @@ export default function PropertyPanel() {
       <Box
         sx={{
           position: "relative",
-          height: "100%",
-          borderRadius: "12px 0 0 12px",
+          borderRadius: "10px 0 0 10px",
           border: "1px solid rgba(180,205,255,0.26)",
           borderRight: 0,
           background: "rgba(8,12,24,0.78)",
