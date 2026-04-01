@@ -15,6 +15,7 @@ type ActiveDrag =
   | {
       type: "translate-axis";
       axis: "x" | "y" | "z";
+      origin: THREE.Vector3;
       startPosition: THREE.Vector3;
       plane: THREE.Plane;
       startOffset: number;
@@ -28,6 +29,7 @@ type ActiveDrag =
   | {
       type: "rotate-axis";
       axis: "x" | "y" | "z";
+      origin: THREE.Vector3;
       plane: THREE.Plane;
       startVector: THREE.Vector3;
       startQuaternion: THREE.Quaternion;
@@ -251,6 +253,7 @@ export class CustomTransformGizmo {
       this.activeDrag = {
         type: "translate-axis",
         axis,
+        origin: origin.clone(),
         plane,
         startPosition: this.target.position.clone(),
         startOffset: point.sub(origin).dot(axisVector)
@@ -272,6 +275,7 @@ export class CustomTransformGizmo {
       this.activeDrag = {
         type: "rotate-axis",
         axis,
+        origin: origin.clone(),
         plane,
         startVector: point.sub(origin).normalize(),
         startQuaternion: this.target.quaternion.clone()
@@ -302,7 +306,7 @@ export class CustomTransformGizmo {
       if (!point) return;
 
       const axisVector = getAxisVector(this.activeDrag.axis);
-      const delta = point.clone().sub(this.root.position).dot(axisVector) - this.activeDrag.startOffset;
+      const delta = point.clone().sub(this.activeDrag.origin).dot(axisVector) - this.activeDrag.startOffset;
       this.target.position.copy(this.activeDrag.startPosition).add(axisVector.multiplyScalar(delta));
       return;
     }
@@ -311,7 +315,7 @@ export class CustomTransformGizmo {
     if (!point) return;
 
     const axisVector = getAxisVector(this.activeDrag.axis);
-    const currentVector = point.sub(this.root.position).normalize();
+    const currentVector = point.sub(this.activeDrag.origin).normalize();
     if (currentVector.lengthSq() < 1e-6) return;
 
     const sin = axisVector.dot(this.tmpV3.crossVectors(this.activeDrag.startVector, currentVector));
