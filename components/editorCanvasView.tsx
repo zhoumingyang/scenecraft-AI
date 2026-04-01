@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { Box } from "@mui/material";
-import { AvatarMenu, SceneTreePanel, TopBar } from "@/components/editor";
+import { AvatarMenu, PropertyPanel, SceneTreePanel, TopBar } from "@/components/editor";
 import { createDefaultEditorProjectJSON } from "@/render/editor";
 import { createEditorSdk } from "@/render/editor/sdk";
 import { useEditorStore } from "@/stores/editorStore";
@@ -67,6 +67,7 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
       <TopBar />
       <AvatarMenu userEmail={userEmail} />
       <SceneTreePanel />
+      <PropertyPanel />
     </Box>
   );
 }

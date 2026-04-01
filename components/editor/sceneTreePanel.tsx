@@ -124,13 +124,13 @@ export default function SceneTreePanel() {
         <Box
           sx={{
             position: "absolute",
-            right: 20,
-            bottom: 76,
+            left: 20,
+            bottom: 116,
             zIndex: 21,
             width: 300,
             maxHeight: "42vh",
             overflowY: "auto",
-            borderRadius: 2.5,
+            borderRadius: 1,
             border: "1px solid rgba(180,205,255,0.26)",
             background: "rgba(8,12,24,0.78)",
             backdropFilter: "blur(12px)",
@@ -154,7 +154,7 @@ export default function SceneTreePanel() {
               <Box
                 key={section.id}
                 sx={{
-                  borderRadius: 2,
+                  borderRadius: 1,
                   border: "1px solid rgba(160,190,255,0.14)",
                   background: "rgba(255,255,255,0.03)"
                 }}
@@ -253,8 +253,8 @@ export default function SceneTreePanel() {
         onClick={() => setOpen((value) => !value)}
         sx={{
           position: "absolute",
-          right: 20,
-          bottom: 20,
+          left: 20,
+          bottom: 72,
           zIndex: 21,
           borderRadius: 99,
           border: "1px solid rgba(180,205,255,0.3)",

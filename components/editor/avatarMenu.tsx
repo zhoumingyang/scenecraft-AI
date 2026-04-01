@@ -47,7 +47,7 @@ export default function AvatarMenu({ userEmail }: AvatarMenuProps) {
         endIcon={<KeyboardArrowDownRoundedIcon />}
         sx={{
           position: "absolute",
-          right: 20,
+          left: 20,
           top: 18,
           zIndex: 21,
           borderRadius: 99,
@@ -76,8 +76,8 @@ export default function AvatarMenu({ userEmail }: AvatarMenuProps) {
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
         onClose={() => setAnchorEl(null)}
-        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-        transformOrigin={{ vertical: "top", horizontal: "right" }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+        transformOrigin={{ vertical: "top", horizontal: "left" }}
         items={[
           {
             key: "signOut",
