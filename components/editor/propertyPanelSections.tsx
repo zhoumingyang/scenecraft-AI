@@ -195,6 +195,7 @@ export function LightSettingsSection({
             onChange={(value) => onFieldChange("intensity", value)}
             onCommit={() => onFieldCommit("intensity")}
             onNudge={onFieldNudge ? (delta) => onFieldNudge("intensity", delta) : undefined}
+            nudgeStep={0.02}
             compact
           />
         </Stack>
@@ -218,6 +219,7 @@ export function LightSettingsSection({
                 onChange={(value) => onFieldChange("distance", value)}
                 onCommit={() => onFieldCommit("distance")}
                 onNudge={onFieldNudge ? (delta) => onFieldNudge("distance", delta) : undefined}
+                nudgeStep={0.02}
                 compact
               />
             </Stack>
@@ -231,6 +233,7 @@ export function LightSettingsSection({
                 onChange={(value) => onFieldChange("decay", value)}
                 onCommit={() => onFieldCommit("decay")}
                 onNudge={onFieldNudge ? (delta) => onFieldNudge("decay", delta) : undefined}
+                nudgeStep={0.02}
                 compact
               />
             </Stack>
@@ -307,6 +310,7 @@ export function LightSettingsSection({
                 onChange={(value) => onFieldChange("width", value)}
                 onCommit={() => onFieldCommit("width")}
                 onNudge={onFieldNudge ? (delta) => onFieldNudge("width", delta) : undefined}
+                nudgeStep={0.02}
                 compact
               />
             </Stack>
@@ -320,6 +324,7 @@ export function LightSettingsSection({
                 onChange={(value) => onFieldChange("height", value)}
                 onCommit={() => onFieldCommit("height")}
                 onNudge={onFieldNudge ? (delta) => onFieldNudge("height", delta) : undefined}
+                nudgeStep={0.02}
                 compact
               />
             </Stack>

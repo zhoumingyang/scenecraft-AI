@@ -243,6 +243,7 @@ type CommitNumberFieldProps = {
   onFocus: () => void;
   onCommit: () => void;
   onNudge?: (delta: number) => void;
+  nudgeStep?: number;
   compact?: boolean;
 };
 
@@ -253,6 +254,7 @@ export function CommitNumberField({
   onFocus,
   onCommit,
   onNudge,
+  nudgeStep = 1,
   compact = false
 }: CommitNumberFieldProps) {
   return (
@@ -296,7 +298,7 @@ export function CommitNumberField({
                     <IconButton
                       size="small"
                       onMouseDown={(event) => event.preventDefault()}
-                      onClick={() => onNudge(1)}
+                      onClick={() => onNudge(nudgeStep)}
                       sx={{ p: 0.05, color: "rgba(214,228,255,0.9)" }}
                     >
                       <AddRoundedIcon sx={{ fontSize: 11 }} />
@@ -304,7 +306,7 @@ export function CommitNumberField({
                     <IconButton
                       size="small"
                       onMouseDown={(event) => event.preventDefault()}
-                      onClick={() => onNudge(-1)}
+                      onClick={() => onNudge(-nudgeStep)}
                       sx={{ p: 0.05, color: "rgba(214,228,255,0.9)" }}
                     >
                       <RemoveRoundedIcon sx={{ fontSize: 11 }} />

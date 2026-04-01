@@ -19,6 +19,12 @@ type LightBindingParts = {
   helper: THREE.Object3D;
 };
 
+type LightBindingUpdateParts = {
+  root: THREE.Group;
+  light: SupportedLight;
+  helper?: THREE.Object3D;
+};
+
 function createAmbientHelper(color: string) {
   const material = new THREE.LineBasicMaterial({
     color,
@@ -92,7 +98,7 @@ function createLightParts(model: LightEntityModel): LightBindingParts {
   return { root, light, helper };
 }
 
-function applyLightModelToObject(model: LightEntityModel, parts: LightBindingParts) {
+function applyLightModelToObject(model: LightEntityModel, parts: LightBindingUpdateParts) {
   model.applyTransformToObject(parts.root);
 
   if (parts.light instanceof THREE.AmbientLight) {
@@ -199,16 +205,17 @@ export function updateLightBinding(binding: RenderBinding, patch: Partial<Editor
   const model = binding.model as LightEntityModel;
   const root = binding.object;
   const light = root.children.find((child) => child instanceof THREE.Light) as SupportedLight | undefined;
-  const helper = root.children.find(
+  const helper = binding.pickTargets?.find(
     (child) =>
-      child instanceof THREE.DirectionalLightHelper ||
-      child instanceof THREE.PointLightHelper ||
-      child instanceof THREE.SpotLightHelper ||
-      child instanceof RectAreaLightHelper ||
-      child instanceof THREE.LineSegments
+      child !== binding.object &&
+      (child instanceof THREE.DirectionalLightHelper ||
+        child instanceof THREE.PointLightHelper ||
+        child instanceof THREE.SpotLightHelper ||
+        child instanceof RectAreaLightHelper ||
+        child instanceof THREE.LineSegments)
   );
 
-  if (!light || !helper) return;
+  if (!light) return;
 
   model.patchLight(patch);
   applyLightModelToObject(model, {
