@@ -178,6 +178,8 @@ type AxisSliderGroupProps = {
   step: number;
   formatter: (value: number) => string;
   onChange: (axis: Axis, value: number) => void;
+  onChangeStart?: (axis: Axis) => void;
+  onChangeCommit?: (axis: Axis, value: number) => void;
 };
 
 export function AxisSliderGroup({
@@ -187,7 +189,9 @@ export function AxisSliderGroup({
   max,
   step,
   formatter,
-  onChange
+  onChange,
+  onChangeStart,
+  onChangeCommit
 }: AxisSliderGroupProps) {
   return (
     <Stack spacing={0.65}>
@@ -210,7 +214,10 @@ export function AxisSliderGroup({
             max={max}
             step={step}
             value={values[index]}
+            onMouseDown={() => onChangeStart?.(axis)}
+            onTouchStart={() => onChangeStart?.(axis)}
             onChange={(_, nextValue) => onChange(axis, nextValue as number)}
+            onChangeCommitted={(_, nextValue) => onChangeCommit?.(axis, nextValue as number)}
             sx={{ flex: 1 }}
           />
           <Typography

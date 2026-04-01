@@ -35,7 +35,9 @@ type TransformSectionProps = {
   onPositionChange: (axis: Axis, value: string) => void;
   onPositionCommit: () => void;
   onPositionNudge: (axis: Axis, delta: number) => void;
+  onRotationStart: (axis: Axis) => void;
   onRotationChange: (axis: Axis, value: number) => void;
+  onRotationCommit: (axis: Axis, value: number) => void;
   onScaleChange: (axis: Axis, value: number) => void;
 };
 
@@ -47,7 +49,9 @@ export function TransformSection({
   onPositionChange,
   onPositionCommit,
   onPositionNudge,
+  onRotationStart,
   onRotationChange,
+  onRotationCommit,
   onScaleChange
 }: TransformSectionProps) {
   const { t } = useI18n();
@@ -70,7 +74,9 @@ export function TransformSection({
         max={360}
         step={1}
         formatter={formatDegrees}
+        onChangeStart={onRotationStart}
         onChange={onRotationChange}
+        onChangeCommit={onRotationCommit}
       />
 
       <AxisSliderGroup

@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { Box, IconButton, Stack, Typography } from "@mui/material";
 import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
@@ -61,6 +61,10 @@ function buildDefaultPositionDraft(): AxisTextValues {
   return { x: "0", y: "0", z: "0" };
 }
 
+function buildDefaultRotationDraft(): [number, number, number] {
+  return [0, 0, 0];
+}
+
 function buildDefaultLightNumberDraft(): LightNumberDraft {
   return {
     intensity: "1",
@@ -84,11 +88,14 @@ export default function PropertyPanel() {
   const projectVersion = useEditorStore((state) => state.projectVersion);
   const [open, setOpen] = useState(true);
   const [activePositionAxis, setActivePositionAxis] = useState<Axis | null>(null);
+  const [activeRotationAxis, setActiveRotationAxis] = useState<Axis | null>(null);
   const [activeLightNumberField, setActiveLightNumberField] = useState<LightNumberField | null>(null);
   const [positionDraft, setPositionDraft] = useState<AxisTextValues>(buildDefaultPositionDraft);
+  const [rotationDraft, setRotationDraft] = useState<[number, number, number]>(buildDefaultRotationDraft);
   const [lightNumberDraft, setLightNumberDraft] =
     useState<LightNumberDraft>(buildDefaultLightNumberDraft);
   const [meshTextureInputKey, setMeshTextureInputKey] = useState(0);
+  const lastRotationQuaternionRef = useRef<string | null>(null);
 
   const entityRecord = useMemo(() => {
     const project = app?.projectModel;
@@ -114,6 +121,28 @@ export default function PropertyPanel() {
       prev.x === nextDraft.x && prev.y === nextDraft.y && prev.z === nextDraft.z ? prev : nextDraft
     );
   }, [activePositionAxis, entityRecord]);
+
+  useEffect(() => {
+    if (!entityRecord) {
+      setRotationDraft(buildDefaultRotationDraft());
+      lastRotationQuaternionRef.current = null;
+      return;
+    }
+
+    const quaternionKey = entityRecord.item.quaternion.map((value) => value.toFixed(6)).join(",");
+    if (activeRotationAxis) {
+      lastRotationQuaternionRef.current = quaternionKey;
+      return;
+    }
+
+    if (lastRotationQuaternionRef.current === quaternionKey) return;
+
+    setRotationDraft((prev) => {
+      const next = entityRecord.rotationDegrees;
+      return prev[0] === next[0] && prev[1] === next[1] && prev[2] === next[2] ? prev : next;
+    });
+    lastRotationQuaternionRef.current = quaternionKey;
+  }, [activeRotationAxis, entityRecord]);
 
   useEffect(() => {
     if (!entityRecord || entityRecord.kind !== "light" || activeLightNumberField) return;
@@ -154,10 +183,23 @@ export default function PropertyPanel() {
 
   const updateRotation = (axis: Axis, value: number) => {
     if (!app || !entityRecord) return;
-    const nextRotation = [...entityRecord.rotationDegrees] as [number, number, number];
+    const nextRotation = [...rotationDraft] as [number, number, number];
     nextRotation[AXIS_INDEX[axis]] = value;
+    setRotationDraft(nextRotation);
+    lastRotationQuaternionRef.current = degreesToQuaternion(nextRotation)
+      .map((component) => component.toFixed(6))
+      .join(",");
     app.updateEntityTransform(entityRecord.item.id, {
       quaternion: degreesToQuaternion(nextRotation)
+    });
+  };
+
+  const commitRotation = (axis: Axis, value: number) => {
+    setActiveRotationAxis((current) => (current === axis ? null : current));
+    setRotationDraft((prev) => {
+      const next = [...prev] as [number, number, number];
+      next[AXIS_INDEX[axis]] = value;
+      return next;
     });
   };
 
@@ -342,7 +384,7 @@ export default function PropertyPanel() {
 
                 <TransformSection
                   positionDraft={positionDraft}
-                  rotationValues={entityRecord.rotationDegrees}
+                  rotationValues={rotationDraft}
                   scaleValues={entityRecord.item.scale}
                   onPositionFocus={setActivePositionAxis}
                   onPositionChange={(axis, value) =>
@@ -353,7 +395,9 @@ export default function PropertyPanel() {
                   }
                   onPositionCommit={commitPosition}
                   onPositionNudge={nudgePosition}
+                  onRotationStart={setActiveRotationAxis}
                   onRotationChange={updateRotation}
+                  onRotationCommit={commitRotation}
                   onScaleChange={updateScale}
                 />
 
