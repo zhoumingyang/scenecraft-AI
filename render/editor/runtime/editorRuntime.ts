@@ -28,18 +28,23 @@ export class EditorRuntime {
 
   private rafId = 0;
   private readonly clock = new THREE.Clock();
+  private readonly gridHelper: THREE.GridHelper;
+  private readonly defaultBackground = new THREE.Color("#05070f");
   private disposed = false;
   private startOptions: RuntimeStartOptions | null = null;
   private lastCameraSignature = "";
   private currentCameraType = 1;
   private transformDragging = false;
+  private lightHelpersVisible = true;
+  private panoramaTexture: THREE.Texture | null = null;
+  private panoramaVisible = false;
 
   constructor(host: HTMLDivElement) {
     RectAreaLightUniformsLib.init();
 
     this.host = host;
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color("#05070f");
+    this.scene.background = this.defaultBackground;
     this.scene.fog = new THREE.Fog("#05070f", 20, 180);
 
     this.camera = new THREE.PerspectiveCamera(60, 1, 0.1, 2000);
@@ -60,9 +65,9 @@ export class EditorRuntime {
     this.firstPersonController = new FirstPersonController(this.camera, this.renderer.domElement);
     this.transformGizmo = new CustomTransformGizmo(this.camera, this.renderer.domElement, this.raycaster);
 
-    const grid = new THREE.GridHelper(80, 80, 0x335588, 0x22334f);
-    grid.position.y = -0.0001;
-    this.scene.add(grid);
+    this.gridHelper = new THREE.GridHelper(80, 80, 0x335588, 0x22334f);
+    this.gridHelper.position.y = -0.0001;
+    this.scene.add(this.gridHelper);
     this.scene.add(this.transformGizmo.root);
   }
 
@@ -96,6 +101,7 @@ export class EditorRuntime {
     if (this.disposed) return;
     this.disposed = true;
     this.stop();
+    this.clearPanorama();
     this.transformGizmo.dispose();
     this.scene.remove(this.transformGizmo.root);
     this.orbitControls.dispose();
@@ -192,6 +198,75 @@ export class EditorRuntime {
 
   isFirstPersonCamera() {
     return this.currentCameraType === 2;
+  }
+
+  getGridHelperVisible() {
+    return this.gridHelper.visible;
+  }
+
+  setGridHelperVisible(visible: boolean) {
+    this.gridHelper.visible = visible;
+  }
+
+  getTransformGizmoVisible() {
+    return this.transformGizmo.isVisible();
+  }
+
+  setTransformGizmoVisible(visible: boolean) {
+    this.transformGizmo.setVisible(visible);
+  }
+
+  getLightHelpersVisible() {
+    return this.lightHelpersVisible;
+  }
+
+  setLightHelpersVisible(visible: boolean) {
+    this.lightHelpersVisible = visible;
+    this.syncLightHelperVisibility();
+  }
+
+  syncLightHelperVisibility() {
+    this.scene.traverse((object) => {
+      if (object.userData?.editorLightHelper !== true) return;
+      object.visible = this.lightHelpersVisible;
+    });
+  }
+
+  hasPanorama() {
+    return Boolean(this.panoramaTexture);
+  }
+
+  isPanoramaVisible() {
+    return this.panoramaVisible && Boolean(this.panoramaTexture);
+  }
+
+  async importPanorama(url: string) {
+    const texture = await this.textureLoader.loadAsync(url);
+    texture.mapping = THREE.EquirectangularReflectionMapping;
+    texture.colorSpace = THREE.SRGBColorSpace;
+
+    const previousTexture = this.panoramaTexture;
+    this.panoramaTexture = texture;
+    this.panoramaVisible = true;
+    this.applyPanoramaVisibility();
+    previousTexture?.dispose();
+  }
+
+  setPanoramaVisible(visible: boolean) {
+    this.panoramaVisible = visible;
+    this.applyPanoramaVisibility();
+  }
+
+  clearPanorama() {
+    this.panoramaVisible = false;
+    this.scene.background = this.defaultBackground;
+    this.panoramaTexture?.dispose();
+    this.panoramaTexture = null;
+  }
+
+  private applyPanoramaVisibility() {
+    this.scene.background =
+      this.panoramaVisible && this.panoramaTexture ? this.panoramaTexture : this.defaultBackground;
   }
 
   private setTransformDragging(isDragging: boolean) {

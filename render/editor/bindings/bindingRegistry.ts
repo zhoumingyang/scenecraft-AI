@@ -24,6 +24,14 @@ export class BindingRegistry {
     return binding;
   }
 
+  remove(entityId: string) {
+    const binding = this.bindingsById.get(entityId);
+    if (!binding) return null;
+    binding.dispose();
+    this.bindingsById.delete(entityId);
+    return binding;
+  }
+
   get(entityId: string) {
     return this.bindingsById.get(entityId) ?? null;
   }
@@ -37,13 +45,16 @@ export class BindingRegistry {
   }
 
   getPickTargets(): THREE.Object3D[] {
-    return this.list().flatMap((binding) => binding.pickTargets ?? [binding.object]);
+    return this.list()
+      .filter((binding) => !binding.model.locked)
+      .flatMap((binding) => binding.pickTargets ?? [binding.object]);
   }
 
   syncModelTransformToObject(entityId: string) {
     const binding = this.bindingsById.get(entityId);
     if (!binding) return null;
     binding.model.applyTransformToObject(binding.object);
+    binding.applyState?.();
     binding.lastTransformSignature = buildTransformSignature(binding.object);
     return binding;
   }

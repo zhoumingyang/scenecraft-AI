@@ -16,6 +16,11 @@ export function createModelBinding(context: BindingContext, model: ModelEntityMo
   setEntityId(group, model.id);
   scene.add(group);
 
+  const applyState = () => {
+    group.visible = model.visible;
+  };
+  applyState();
+
   let disposed = false;
   void modelLoaderFactory
     .load(model.source, model.format)
@@ -36,6 +41,7 @@ export function createModelBinding(context: BindingContext, model: ModelEntityMo
     kind: "model",
     model,
     object: group,
+    applyState,
     lastTransformSignature: buildTransformSignature(group),
     dispose: () => {
       disposed = true;

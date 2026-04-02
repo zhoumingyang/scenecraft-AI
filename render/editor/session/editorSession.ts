@@ -20,12 +20,16 @@ import { inferModelFileFormat } from "../utils/modelFile";
 
 type Emit = (event: EditorAppEvent) => void;
 
+function createEntityId(prefix: "model" | "mesh" | "light") {
+  return globalThis.crypto?.randomUUID?.() ?? `${prefix}-${Date.now().toString(36)}`;
+}
+
 function createLightEntityId() {
-  return globalThis.crypto?.randomUUID?.() ?? `light-${Date.now().toString(36)}`;
+  return createEntityId("light");
 }
 
 function createMeshEntityId() {
-  return globalThis.crypto?.randomUUID?.() ?? `mesh-${Date.now().toString(36)}`;
+  return createEntityId("mesh");
 }
 
 function createMeshPayload(geometryName: string) {
@@ -110,11 +114,17 @@ export class EditorSession {
     this.clearProjectObjects();
 
     this.projectModel = EditorProjectModel.fromJSON(projectJson);
+    if (this.projectModel.envPano) {
+      await this.runtime.importPanorama(this.projectModel.envPano);
+    } else {
+      this.runtime.clearPanorama();
+    }
     this.runtime.applyCameraModel(this.projectModel.camera);
 
     this.projectModel.models.forEach((model) => this.registry.create(model));
     this.projectModel.meshes.forEach((mesh) => this.registry.create(mesh));
     this.projectModel.lights.forEach((light) => this.registry.create(light));
+    this.runtime.syncLightHelperVisibility();
 
     if (this.projectModel.lights.size === 0) {
       this.runtime.scene.add(this.runtime.fallbackAmbientLight);
@@ -154,6 +164,18 @@ export class EditorSession {
       case "selection.set":
         this.setSelectedEntity(command.entityId, command.source ?? "ui");
         return;
+      case "entity.remove":
+        this.removeEntity(command.entityId, command.source ?? "ui");
+        return;
+      case "entity.duplicate":
+        this.duplicateEntity(command.entityId, command.source ?? "ui");
+        return;
+      case "entity.lock":
+        this.setEntityLocked(command.entityId, command.locked, command.source ?? "ui");
+        return;
+      case "entity.visible":
+        this.setEntityVisible(command.entityId, command.visible, command.source ?? "ui");
+        return;
       case "entity.transform":
         this.updateEntityTransform(command.entityId, command.patch, command.source ?? "ui");
         return;
@@ -188,7 +210,7 @@ export class EditorSession {
     this.ownedModelUrls.add(objectUrl);
 
     const model = this.projectModel.addModel({
-      id: globalThis.crypto?.randomUUID?.() ?? `model-${Date.now().toString(36)}`,
+      id: createEntityId("model"),
       source: objectUrl,
       format,
       assetUnit: "m",
@@ -207,7 +229,7 @@ export class EditorSession {
 
   updateEntityTransform(entityId: string, patch: TransformPatch, source: SyncSource = "ui") {
     const binding = this.registry.get(entityId);
-    if (!binding) return;
+    if (!binding || binding.model.locked) return;
 
     binding.model.patchTransform(patch);
     this.registry.syncModelTransformToObject(entityId);
@@ -235,7 +257,7 @@ export class EditorSession {
     source: SyncSource = "ui"
   ) {
     const binding = this.registry.get(entityId);
-    if (!binding || binding.kind !== "mesh") return;
+    if (!binding || binding.kind !== "mesh" || binding.model.locked) return;
 
     updateMeshBindingMaterial(binding, this.runtime.textureLoader, patch);
     this.emit({
@@ -265,7 +287,7 @@ export class EditorSession {
 
   updateLight(entityId: string, patch: Partial<EditorLightJSON>, source: SyncSource = "ui") {
     const binding = this.registry.get(entityId);
-    if (!binding || binding.kind !== "light") return;
+    if (!binding || binding.kind !== "light" || binding.model.locked) return;
 
     updateLightBinding(binding, patch);
     this.emit({
@@ -282,6 +304,7 @@ export class EditorSession {
     const light = this.projectModel.addLight(createLightPayload(lightType));
     this.runtime.scene.remove(this.runtime.fallbackAmbientLight);
     this.registry.create(light);
+    this.runtime.syncLightHelperVisibility();
     this.emit({
       type: "entityUpdated",
       entityId: light.id,
@@ -332,11 +355,166 @@ export class EditorSession {
   }
 
   setSelectedEntity(entityId: string | null, source: SyncSource = "ui") {
+    if (entityId) {
+      const binding = this.registry.get(entityId);
+      if (!binding || binding.model.locked) return;
+    }
     if (this.selectedEntityId === entityId) return;
     this.selectedEntityId = entityId;
     const binding = entityId ? this.registry.get(entityId) : null;
     this.runtime.attachTransformTarget(binding?.object ?? null);
     this.emit({ type: "selectionChanged", selectedEntityId: entityId, source });
+  }
+
+  removeEntity(entityId: string, source: SyncSource = "ui") {
+    if (!this.projectModel) return;
+    const binding = this.registry.get(entityId);
+    if (!binding || binding.model.locked) return;
+
+    const removedKind = this.projectModel.removeEntity(entityId);
+    if (!removedKind) return;
+    this.registry.remove(entityId);
+    this.runtime.syncLightHelperVisibility();
+
+    if (this.projectModel.lights.size === 0) {
+      this.runtime.scene.add(this.runtime.fallbackAmbientLight);
+    }
+
+    if (this.selectedEntityId === entityId) {
+      this.setSelectedEntity(null, source);
+    }
+
+    this.emit({
+      type: "entityUpdated",
+      entityId,
+      entityKind: removedKind,
+      source
+    });
+  }
+
+  duplicateEntity(entityId: string, source: SyncSource = "ui") {
+    if (!this.projectModel) return;
+    const record = this.projectModel.getEntityById(entityId);
+    if (!record || record.item.locked) return;
+
+    if (record.kind === "model") {
+      const duplicate = this.projectModel.addModel({
+        id: createEntityId("model"),
+        source: record.item.source,
+        format: record.item.format,
+        assetUnit: record.item.assetUnit,
+        assetImportScale: record.item.assetImportScale,
+        locked: false,
+        visible: record.item.visible,
+        position: [...record.item.position],
+        quaternion: [...record.item.quaternion],
+        scale: [...record.item.scale]
+      });
+      this.registry.create(duplicate);
+      this.emit({
+        type: "entityUpdated",
+        entityId: duplicate.id,
+        entityKind: "model",
+        source
+      });
+      this.setSelectedEntity(duplicate.id, source);
+      return;
+    }
+
+    if (record.kind === "mesh") {
+      const duplicate = this.projectModel.addMesh({
+        id: createEntityId("mesh"),
+        type: record.item.meshType,
+        geometryName: record.item.geometryName,
+        vertices: record.item.vertices.map((vertex) => ({ ...vertex })),
+        uvs: record.item.uvs.map((uv) => ({ ...uv })),
+        normals: record.item.normals.map((normal) => ({ ...normal })),
+        indices: [...record.item.indices],
+        color: record.item.color,
+        textureUrl: record.item.textureUrl,
+        locked: false,
+        visible: record.item.visible,
+        position: [...record.item.position],
+        quaternion: [...record.item.quaternion],
+        scale: [...record.item.scale]
+      });
+      this.registry.create(duplicate);
+      this.emit({
+        type: "entityUpdated",
+        entityId: duplicate.id,
+        entityKind: "mesh",
+        source
+      });
+      this.setSelectedEntity(duplicate.id, source);
+      return;
+    }
+
+    const duplicate = this.projectModel.addLight({
+      id: createEntityId("light"),
+      type: record.item.lightType,
+      locked: false,
+      position: [...record.item.position],
+      quaternion: [...record.item.quaternion],
+      scale: [...record.item.scale],
+      color: record.item.color,
+      intensity: record.item.intensity,
+      distance: record.item.distance,
+      decay: record.item.decay,
+      angle: record.item.angle,
+      penumbra: record.item.penumbra,
+      width: record.item.width,
+      height: record.item.height
+    });
+    this.runtime.scene.remove(this.runtime.fallbackAmbientLight);
+    this.registry.create(duplicate);
+    this.runtime.syncLightHelperVisibility();
+    this.emit({
+      type: "entityUpdated",
+      entityId: duplicate.id,
+      entityKind: "light",
+      source
+    });
+    this.setSelectedEntity(duplicate.id, source);
+  }
+
+  setEntityLocked(entityId: string, locked: boolean, source: SyncSource = "ui") {
+    if (!this.projectModel) return;
+    const record = this.projectModel.getEntityById(entityId);
+    if (!record || record.item.locked === locked) return;
+
+    record.item.locked = locked;
+    if (locked && this.selectedEntityId === entityId) {
+      this.setSelectedEntity(null, source);
+    }
+
+    this.emit({
+      type: "entityUpdated",
+      entityId,
+      entityKind: record.kind,
+      source
+    });
+  }
+
+  setEntityVisible(entityId: string, visible: boolean, source: SyncSource = "ui") {
+    if (!this.projectModel) return;
+    const record = this.projectModel.getEntityById(entityId);
+    if (!record || record.item.locked || record.kind === "light") return;
+    if (record.item.visible === visible) return;
+
+    record.item.visible = visible;
+    const binding = this.registry.get(entityId);
+    binding?.applyState?.();
+
+    if (!visible && this.selectedEntityId === entityId) {
+      this.setSelectedEntity(null, source);
+    }
+
+    this.emit({
+      type: "entityUpdated",
+      entityId,
+      entityKind: record.kind,
+      source
+    });
   }
 
   private clearProjectObjects() {

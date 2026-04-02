@@ -1,13 +1,19 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Box, Button, Stack, Typography } from "@mui/material";
+import { Box, Button, IconButton, Stack, Tooltip, Typography } from "@mui/material";
 import AccountTreeRoundedIcon from "@mui/icons-material/AccountTreeRounded";
+import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
+import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import FolderRoundedIcon from "@mui/icons-material/FolderRounded";
 import GridViewRoundedIcon from "@mui/icons-material/GridViewRounded";
+import LockOpenRoundedIcon from "@mui/icons-material/LockOpenRounded";
+import LockRoundedIcon from "@mui/icons-material/LockRounded";
 import LightModeRoundedIcon from "@mui/icons-material/LightModeRounded";
 import KeyboardArrowUpRoundedIcon from "@mui/icons-material/KeyboardArrowUpRounded";
 import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
+import VisibilityOffRoundedIcon from "@mui/icons-material/VisibilityOffRounded";
+import VisibilityRoundedIcon from "@mui/icons-material/VisibilityRounded";
 import { useI18n } from "@/lib/i18n";
 import { useEditorStore } from "@/stores/editorStore";
 
@@ -15,6 +21,8 @@ type SceneTreeNode = {
   id: string;
   label: string;
   type: "model" | "mesh" | "light";
+  locked: boolean;
+  visible: boolean;
 };
 
 type SceneTreeSection = {
@@ -83,6 +91,8 @@ export default function SceneTreePanel() {
         nodes: Array.from(project.models.values()).map((model, index) => ({
           id: model.id,
           type: "model",
+          locked: model.locked,
+          visible: model.visible,
           label: `${t("editor.sceneTree.model")} ${index + 1}`
         }))
       },
@@ -93,6 +103,8 @@ export default function SceneTreePanel() {
         nodes: Array.from(project.meshes.values()).map((mesh, index) => ({
           id: mesh.id,
           type: "mesh",
+          locked: mesh.locked,
+          visible: mesh.visible,
           label: `${formatTitleCase(mesh.geometryName)} ${index + 1}`
         }))
       },
@@ -103,6 +115,8 @@ export default function SceneTreePanel() {
         nodes: Array.from(project.lights.values()).map((light, index) => ({
           id: light.id,
           type: "light",
+          locked: light.locked,
+          visible: true,
           label: getLightLabel(light.lightType, index, t)
         }))
       }
@@ -116,6 +130,22 @@ export default function SceneTreePanel() {
       entityId,
       source: "ui"
     });
+  };
+
+  const onDeleteEntity = (entityId: string) => {
+    app?.removeEntity(entityId);
+  };
+
+  const onDuplicateEntity = (entityId: string) => {
+    app?.duplicateEntity(entityId);
+  };
+
+  const onToggleLock = (entityId: string, locked: boolean) => {
+    app?.setEntityLocked(entityId, !locked);
+  };
+
+  const onToggleVisible = (entityId: string, visible: boolean) => {
+    app?.setEntityVisible(entityId, !visible);
   };
 
   return (
@@ -192,25 +222,35 @@ export default function SceneTreePanel() {
                   ) : (
                     section.nodes.map((node) => {
                       const selected = node.id === selectedEntityId;
+                      const actionsDisabled = node.locked;
+                      const canToggleVisible = node.type !== "light";
+                      const rowColor = node.locked
+                        ? "rgba(166,178,203,0.6)"
+                        : selected
+                          ? "#e9f3ff"
+                          : "rgba(219,230,255,0.84)";
+
+                      const iconButtonSx = {
+                        color: rowColor,
+                        opacity: 0.9,
+                        p: 0.45,
+                        "&:hover": {
+                          background: "rgba(255,255,255,0.08)"
+                        },
+                        "&.Mui-disabled": {
+                          color: "rgba(125,138,166,0.5)"
+                        }
+                      };
+
                       return (
-                        <Button
+                        <Stack
                           key={node.id}
-                          fullWidth
-                          color="inherit"
-                          onClick={() => void onSelectEntity(node.id)}
-                          startIcon={
-                            node.type === "model" ? (
-                              <FolderRoundedIcon sx={{ fontSize: 16 }} />
-                            ) : node.type === "mesh" ? (
-                              <GridViewRoundedIcon sx={{ fontSize: 16 }} />
-                            ) : (
-                              <LightModeRoundedIcon sx={{ fontSize: 16 }} />
-                            )
-                          }
+                          direction="row"
+                          spacing={0.35}
+                          alignItems="center"
                           sx={{
-                            justifyContent: "flex-start",
                             px: 1.1,
-                            py: 0.8,
+                            py: 0.35,
                             borderRadius: 1.6,
                             border: selected
                               ? "1px solid rgba(124,183,255,0.8)"
@@ -218,23 +258,120 @@ export default function SceneTreePanel() {
                             background: selected
                               ? "rgba(78,140,255,0.18)"
                               : "rgba(255,255,255,0.02)",
-                            color: selected ? "#e9f3ff" : "rgba(219,230,255,0.84)",
-                            textTransform: "none"
+                            opacity: node.visible ? 1 : 0.6
                           }}
                         >
-                          <span
-                            style={{
-                              display: "inline-block",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
-                              width: "100%",
-                              textAlign: "left"
+                          <Button
+                            fullWidth
+                            color="inherit"
+                            disabled={node.locked}
+                            onClick={() => void onSelectEntity(node.id)}
+                            startIcon={
+                              node.type === "model" ? (
+                                <FolderRoundedIcon sx={{ fontSize: 16 }} />
+                              ) : node.type === "mesh" ? (
+                                <GridViewRoundedIcon sx={{ fontSize: 16 }} />
+                              ) : (
+                                <LightModeRoundedIcon sx={{ fontSize: 16 }} />
+                              )
+                            }
+                            sx={{
+                              minWidth: 0,
+                              justifyContent: "flex-start",
+                              px: 0,
+                              py: 0.45,
+                              color: rowColor,
+                              textTransform: "none",
+                              "&.Mui-disabled": {
+                                color: rowColor
+                              }
                             }}
                           >
-                            {node.label}
-                          </span>
-                        </Button>
+                            <span
+                              style={{
+                                display: "inline-block",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                                width: "100%",
+                                textAlign: "left"
+                              }}
+                            >
+                              {node.label}
+                            </span>
+                          </Button>
+
+                          {canToggleVisible ? (
+                            <Tooltip title={node.visible ? "hide" : "show"} arrow>
+                              <span>
+                                <IconButton
+                                  size="small"
+                                  disabled={actionsDisabled}
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    onToggleVisible(node.id, node.visible);
+                                  }}
+                                  sx={iconButtonSx}
+                                >
+                                  {node.visible ? (
+                                    <VisibilityRoundedIcon sx={{ fontSize: 16 }} />
+                                  ) : (
+                                    <VisibilityOffRoundedIcon sx={{ fontSize: 16 }} />
+                                  )}
+                                </IconButton>
+                              </span>
+                            </Tooltip>
+                          ) : null}
+
+                          <Tooltip title={node.locked ? "unlock" : "lock"} arrow>
+                            <IconButton
+                              size="small"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                onToggleLock(node.id, node.locked);
+                              }}
+                              sx={iconButtonSx}
+                            >
+                              {node.locked ? (
+                                <LockRoundedIcon sx={{ fontSize: 16 }} />
+                              ) : (
+                                <LockOpenRoundedIcon sx={{ fontSize: 16 }} />
+                              )}
+                            </IconButton>
+                          </Tooltip>
+
+                          <Tooltip title="copy" arrow>
+                            <span>
+                              <IconButton
+                                size="small"
+                                disabled={actionsDisabled}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  onDuplicateEntity(node.id);
+                                }}
+                                sx={iconButtonSx}
+                              >
+                                <ContentCopyRoundedIcon sx={{ fontSize: 16 }} />
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+
+                          <Tooltip title="delete" arrow>
+                            <span>
+                              <IconButton
+                                size="small"
+                                disabled={actionsDisabled}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  onDeleteEntity(node.id);
+                                }}
+                                sx={iconButtonSx}
+                              >
+                                <DeleteOutlineRoundedIcon sx={{ fontSize: 16 }} />
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+                        </Stack>
                       );
                     })
                   )}

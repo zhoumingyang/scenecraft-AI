@@ -44,6 +44,10 @@ function createAmbientHelper(color: string) {
   return new THREE.LineSegments(geometry, material);
 }
 
+function markAsEditorLightHelper(helper: THREE.Object3D) {
+  helper.userData.editorLightHelper = true;
+}
+
 function createLightParts(model: LightEntityModel): LightBindingParts {
   const root = new THREE.Group();
   root.name = `light:${model.id}`;
@@ -159,6 +163,7 @@ export function createLightBinding(context: BindingContext, model: LightEntityMo
   applyLightModelToObject(model, parts);
   setEntityId(parts.root, model.id);
   setEntityId(parts.helper, model.id);
+  markAsEditorLightHelper(parts.helper);
   scene.add(parts.root);
   if (!(parts.helper instanceof RectAreaLightHelper)) {
     scene.add(parts.helper);

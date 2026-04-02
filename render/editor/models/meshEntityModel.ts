@@ -1,5 +1,5 @@
 import type { EditorMeshJSON } from "../core/types";
-import { normalizeColor, normalizeId, normalizeNumber, normalizeString } from "../utils/normalize";
+import { normalizeBoolean, normalizeColor, normalizeId, normalizeNumber, normalizeString } from "../utils/normalize";
 import { BaseEntityModel } from "./baseEntity";
 
 export class MeshEntityModel extends BaseEntityModel {
@@ -11,6 +11,7 @@ export class MeshEntityModel extends BaseEntityModel {
   indices: number[];
   color: string;
   textureUrl: string;
+  visible: boolean;
 
   constructor(index: number, source: EditorMeshJSON) {
     super(normalizeId("mesh", source.id, index), source);
@@ -41,6 +42,7 @@ export class MeshEntityModel extends BaseEntityModel {
       : [];
     this.color = normalizeColor(source.color, "#ffffff");
     this.textureUrl = normalizeString(source.textureUrl);
+    this.visible = normalizeBoolean(source.visible, true);
   }
 
   patchMaterial(source: { color?: string; textureUrl?: string }) {

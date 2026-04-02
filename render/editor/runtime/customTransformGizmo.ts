@@ -116,6 +116,7 @@ export class CustomTransformGizmo {
   private activeDrag: ActiveDrag | null = null;
   private activeHandleKey: GizmoHandleKey | null = null;
   private dragging = false;
+  private enabled = true;
 
   constructor(camera: THREE.PerspectiveCamera, domElement: HTMLCanvasElement, raycaster: THREE.Raycaster) {
     this.camera = camera;
@@ -169,10 +170,19 @@ export class CustomTransformGizmo {
     this.activeDrag = null;
     this.activeHandleKey = null;
     this.dragging = false;
-    this.root.visible = Boolean(object);
+    this.root.visible = this.enabled && Boolean(object);
     if (!object) return;
     this.syncToTarget();
     this.updateVisualState();
+  }
+
+  setVisible(visible: boolean) {
+    this.enabled = visible;
+    this.root.visible = visible && Boolean(this.target);
+  }
+
+  isVisible() {
+    return this.enabled;
   }
 
   update() {
@@ -181,7 +191,8 @@ export class CustomTransformGizmo {
       return;
     }
 
-    this.root.visible = true;
+    this.root.visible = this.enabled;
+    if (!this.enabled) return;
     this.syncToTarget();
 
     const distance = this.camera.position.distanceTo(this.root.position);

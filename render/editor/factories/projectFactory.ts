@@ -23,6 +23,7 @@ export function createDefaultEditorProjectJSON(): EditorProjectJSON {
 
   return {
     id: projectId,
+    envPano: "",
     model: [],
     mesh: [],
     light: [],
@@ -33,6 +34,7 @@ export function createDefaultEditorProjectJSON(): EditorProjectJSON {
 export function createEmptyEditorProjectJSON(projectId = createUuid()): EditorProjectJSON {
   return {
     id: projectId,
+    envPano: "",
     model: [],
     mesh: [],
     light: [],

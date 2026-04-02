@@ -36,10 +36,16 @@ export function createMeshBinding(context: BindingContext, model: MeshEntityMode
   setEntityId(mesh, model.id);
   scene.add(mesh);
 
+  const applyState = () => {
+    mesh.visible = model.visible;
+  };
+  applyState();
+
   return {
     kind: "mesh",
     model,
     object: mesh,
+    applyState,
     lastTransformSignature: buildTransformSignature(mesh),
     dispose: () => {
       scene.remove(mesh);

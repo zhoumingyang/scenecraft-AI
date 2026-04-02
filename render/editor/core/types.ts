@@ -23,6 +23,8 @@ export type EditorModelJSON = {
   format?: ModelFileFormat;
   assetUnit?: AssetUnit;
   assetImportScale?: number;
+  locked?: boolean;
+  visible?: boolean;
   position?: number[];
   quaternion?: number[];
   scale?: number[];
@@ -49,6 +51,8 @@ export type EditorMeshJSON = {
   indices?: number[];
   color?: string;
   textureUrl?: string;
+  locked?: boolean;
+  visible?: boolean;
   position?: number[];
   quaternion?: number[];
   scale?: number[];
@@ -57,6 +61,7 @@ export type EditorMeshJSON = {
 export type EditorLightJSON = {
   id: string;
   type: number | string;
+  locked?: boolean;
   position?: number[];
   quaternion?: number[];
   scale?: number[];
@@ -80,6 +85,7 @@ export type EditorCameraJSON = {
 
 export type EditorProjectJSON = {
   id: string;
+  envPano?: string;
   model?: EditorModelJSON[];
   mesh?: EditorMeshJSON[];
   light?: EditorLightJSON[];

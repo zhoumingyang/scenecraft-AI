@@ -9,6 +9,7 @@ type KeyState = {
 
 export class FirstPersonController {
   enabled = false;
+  private static readonly MAX_PITCH = Math.PI / 2 - 1e-3;
 
   private readonly camera: THREE.Camera;
   private readonly domElement: HTMLCanvasElement;
@@ -19,8 +20,10 @@ export class FirstPersonController {
     right: false
   };
   private yaw = 0;
+  private pitch = 0;
   private isDragging = false;
   private lastPointerX: number | null = null;
+  private lastPointerY: number | null = null;
   private readonly lookSpeed = 0.003;
   private readonly moveSpeed = 8;
   private readonly forward = new THREE.Vector3();
@@ -54,17 +57,14 @@ export class FirstPersonController {
   }
 
   syncFromCamera() {
-    const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(this.camera.quaternion);
-    forward.y = 0;
-    if (forward.lengthSq() < 1e-6) {
-      this.yaw = 0;
-      this.applyYawToCamera();
-      return;
-    }
-
-    forward.normalize();
-    this.yaw = Math.atan2(forward.x, -forward.z);
-    this.applyYawToCamera();
+    const euler = new THREE.Euler().setFromQuaternion(this.camera.quaternion, "YXZ");
+    this.yaw = euler.y;
+    this.pitch = THREE.MathUtils.clamp(
+      euler.x,
+      -FirstPersonController.MAX_PITCH,
+      FirstPersonController.MAX_PITCH
+    );
+    this.applyRotationToCamera();
   }
 
   setEnabled(enabled: boolean) {
@@ -80,14 +80,12 @@ export class FirstPersonController {
 
     this.forward.set(0, 0, -1).applyQuaternion(this.camera.quaternion);
     this.forward.y = 0;
-
     if (this.forward.lengthSq() < 1e-6) {
-      this.forward.set(Math.sin(this.yaw), 0, -Math.cos(this.yaw));
-    } else {
-      this.forward.normalize();
+      this.forward.set(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
     }
+    this.forward.normalize();
 
-    this.right.crossVectors(this.forward, this.worldUp).negate();
+    this.right.crossVectors(this.forward, this.worldUp);
     if (this.right.lengthSq() < 1e-6) return;
     this.right.normalize();
 
@@ -108,20 +106,30 @@ export class FirstPersonController {
     event.preventDefault();
     this.isDragging = true;
     this.lastPointerX = event.clientX;
+    this.lastPointerY = event.clientY;
   };
 
   private onMouseMove = (event: MouseEvent) => {
     if (!this.enabled || !this.isDragging) return;
-    if (this.lastPointerX === null) {
+    if (this.lastPointerX === null || this.lastPointerY === null) {
       this.lastPointerX = event.clientX;
+      this.lastPointerY = event.clientY;
       return;
     }
 
     const deltaX = event.movementX || event.clientX - this.lastPointerX;
+    const deltaY = event.movementY || event.clientY - this.lastPointerY;
     this.lastPointerX = event.clientX;
-    if (deltaX === 0) return;
+    this.lastPointerY = event.clientY;
+    if (deltaX === 0 && deltaY === 0) return;
+
     this.yaw -= deltaX * this.lookSpeed;
-    this.applyYawToCamera();
+    this.pitch = THREE.MathUtils.clamp(
+      this.pitch - deltaY * this.lookSpeed,
+      -FirstPersonController.MAX_PITCH,
+      FirstPersonController.MAX_PITCH
+    );
+    this.applyRotationToCamera();
   };
 
   private onMouseUp = (event: MouseEvent) => {
@@ -161,9 +169,10 @@ export class FirstPersonController {
   private resetPointer() {
     this.isDragging = false;
     this.lastPointerX = null;
+    this.lastPointerY = null;
   }
 
-  private applyYawToCamera() {
-    this.camera.quaternion.setFromEuler(new THREE.Euler(0, this.yaw, 0, "YXZ"));
+  private applyRotationToCamera() {
+    this.camera.quaternion.setFromEuler(new THREE.Euler(this.pitch, this.yaw, 0, "YXZ"));
   }
 }

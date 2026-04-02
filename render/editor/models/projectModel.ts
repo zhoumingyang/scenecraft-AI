@@ -7,13 +7,15 @@ import { ModelEntityModel } from "./modelEntityModel";
 
 export class EditorProjectModel {
   id: string;
+  envPano: string;
   models: Map<string, ModelEntityModel>;
   meshes: Map<string, MeshEntityModel>;
   lights: Map<string, LightEntityModel>;
   camera: CameraModel;
 
-  private constructor(id: string, camera: CameraModel) {
+  private constructor(id: string, camera: CameraModel, envPano: string) {
     this.id = id;
+    this.envPano = envPano;
     this.camera = camera;
     this.models = new Map();
     this.meshes = new Map();
@@ -22,7 +24,7 @@ export class EditorProjectModel {
 
   static fromJSON(source: EditorProjectJSON): EditorProjectModel {
     const id = normalizeString(source.id, `project-${Date.now().toString(36)}`);
-    const project = new EditorProjectModel(id, new CameraModel(source.camera));
+    const project = new EditorProjectModel(id, new CameraModel(source.camera), source.envPano ?? "");
 
     (source.model || []).forEach((item, index) => {
       const model = new ModelEntityModel(index, item);
@@ -45,12 +47,15 @@ export class EditorProjectModel {
   toJSON(): EditorProjectJSON {
     return {
       id: this.id,
+      envPano: this.envPano,
       model: Array.from(this.models.values()).map((item) => ({
         id: item.id,
         source: item.source,
         format: item.format,
         assetUnit: item.assetUnit,
         assetImportScale: item.assetImportScale,
+        locked: item.locked,
+        visible: item.visible,
         position: [...item.position],
         quaternion: [...item.quaternion],
         scale: [...item.scale]
@@ -65,6 +70,8 @@ export class EditorProjectModel {
         indices: [...item.indices],
         color: item.color,
         textureUrl: item.textureUrl,
+        locked: item.locked,
+        visible: item.visible,
         position: [...item.position],
         quaternion: [...item.quaternion],
         scale: [...item.scale]
@@ -72,6 +79,7 @@ export class EditorProjectModel {
       light: Array.from(this.lights.values()).map((item) => ({
         id: item.id,
         type: item.lightType,
+        locked: item.locked,
         position: [...item.position],
         quaternion: [...item.quaternion],
         scale: [...item.scale],
@@ -121,5 +129,12 @@ export class EditorProjectModel {
     const light = new LightEntityModel(this.lights.size, source);
     this.lights.set(light.id, light);
     return light;
+  }
+
+  removeEntity(id: string) {
+    if (this.models.delete(id)) return "model";
+    if (this.meshes.delete(id)) return "mesh";
+    if (this.lights.delete(id)) return "light";
+    return null;
   }
 }

@@ -23,10 +23,15 @@ export type ProjectLoadedEvent = {
   projectId: string;
 };
 
+export type ViewStateUpdatedEvent = {
+  type: "viewStateUpdated";
+};
+
 export type EditorAppEvent =
   | EntityUpdatedEvent
   | CameraUpdatedEvent
   | SelectionChangedEvent
-  | ProjectLoadedEvent;
+  | ProjectLoadedEvent
+  | ViewStateUpdatedEvent;
 
 export type EditorAppListener = (event: EditorAppEvent) => void;

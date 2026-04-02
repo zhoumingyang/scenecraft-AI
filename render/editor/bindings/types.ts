@@ -9,6 +9,7 @@ export type RenderBinding = {
   model: EntityModel;
   object: THREE.Object3D;
   pickTargets?: THREE.Object3D[];
+  applyState?: () => void;
   dispose: () => void;
   lastTransformSignature: string;
   refresh?: () => void;

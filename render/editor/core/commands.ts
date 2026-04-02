@@ -30,6 +30,28 @@ export type EditorCommand =
       source?: SyncSource;
     }
   | {
+      type: "entity.remove";
+      entityId: string;
+      source?: SyncSource;
+    }
+  | {
+      type: "entity.duplicate";
+      entityId: string;
+      source?: SyncSource;
+    }
+  | {
+      type: "entity.lock";
+      entityId: string;
+      locked: boolean;
+      source?: SyncSource;
+    }
+  | {
+      type: "entity.visible";
+      entityId: string;
+      visible: boolean;
+      source?: SyncSource;
+    }
+  | {
       type: "entity.transform";
       entityId: string;
       patch: TransformPatch;

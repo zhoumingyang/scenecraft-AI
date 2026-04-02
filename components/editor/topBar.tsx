@@ -27,6 +27,11 @@ const projectOptions: SelectOption[] = [
   { value: "select", labelKey: "editor.project.select" }
 ];
 
+const importOptions: SelectOption[] = [
+  { value: "model", labelKey: "editor.import.model" },
+  { value: "pano", labelKey: "editor.import.pano" }
+];
+
 const cameraOptions: SelectOption[] = [
   { value: "bird", labelKey: "editor.camera.birdView" },
   { value: "firstPerson", labelKey: "editor.camera.firstPerson" }
@@ -52,7 +57,7 @@ const meshOptions: SelectOption[] = [
 ];
 
 type DropdownConfig = {
-  id: "project" | "camera" | "light" | "mesh";
+  id: "project" | "import" | "camera" | "light" | "mesh";
   labelKey: TranslationKey;
   icon: IconComponent;
   options: SelectOption[];
@@ -64,6 +69,12 @@ const dropdownConfigs: DropdownConfig[] = [
     labelKey: "editor.top.project",
     icon: FolderRoundedIcon,
     options: projectOptions
+  },
+  {
+    id: "import",
+    labelKey: "editor.top.import",
+    icon: UploadFileRoundedIcon,
+    options: importOptions
   },
   {
     id: "camera",
@@ -93,7 +104,8 @@ const defaultSelectedValues: Record<string, string> = {
 
 export default function TopBar() {
   const { t } = useI18n();
-  const importInputRef = useRef<HTMLInputElement | null>(null);
+  const modelImportInputRef = useRef<HTMLInputElement | null>(null);
+  const panoImportInputRef = useRef<HTMLInputElement | null>(null);
   const app = useEditorStore((state) => state.app);
   const projectLoadVersion = useEditorStore((state) => state.projectLoadVersion);
   const [activeMenuId, setActiveMenuId] = useState<DropdownConfig["id"] | null>(null);
@@ -128,7 +140,11 @@ export default function TopBar() {
   };
 
   const onImportModel = () => {
-    importInputRef.current?.click();
+    modelImportInputRef.current?.click();
+  };
+
+  const onImportPano = () => {
+    panoImportInputRef.current?.click();
   };
 
   const onImportModelFile = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -141,6 +157,37 @@ export default function TopBar() {
       type: "model.import",
       file
     });
+  };
+
+  const onImportPanoFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null;
+    event.target.value = "";
+    if (!app || !file) return;
+
+    const imageUrl = URL.createObjectURL(file);
+    try {
+      const dimensions = await new Promise<{ width: number; height: number }>((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => {
+          resolve({ width: image.naturalWidth, height: image.naturalHeight });
+          URL.revokeObjectURL(imageUrl);
+        };
+        image.onerror = () => {
+          URL.revokeObjectURL(imageUrl);
+          reject(new Error("invalid image"));
+        };
+        image.src = imageUrl;
+      });
+
+      if (dimensions.width !== dimensions.height * 2) {
+        window.alert(t("editor.import.panoRatioError"));
+        return;
+      }
+
+      await app.importPanorama(file);
+    } catch {
+      window.alert(t("editor.import.panoLoadError"));
+    }
   };
 
   const onSaveScene = () => {
@@ -172,7 +219,18 @@ export default function TopBar() {
           return;
         }
 
-        if (activeConfig.id !== "project") {
+        if (activeConfig.id === "import") {
+          if (option.value === "model") onImportModel();
+          if (option.value === "pano") onImportPano();
+          closeMenu();
+          return;
+        }
+
+        if (
+          activeConfig.id === "camera" ||
+          activeConfig.id === "light" ||
+          activeConfig.id === "mesh"
+        ) {
           setSelectedValues((prev) => ({ ...prev, [activeConfig.id]: option.value }));
         }
         if (activeConfig.id === "camera" && app) {
@@ -202,10 +260,17 @@ export default function TopBar() {
   return (
     <>
       <input
-        ref={importInputRef}
+        ref={modelImportInputRef}
         type="file"
         accept=".gltf,.glb,.fbx,.obj"
         onChange={onImportModelFile}
+        style={{ display: "none" }}
+      />
+      <input
+        ref={panoImportInputRef}
+        type="file"
+        accept="image/*"
+        onChange={onImportPanoFile}
         style={{ display: "none" }}
       />
 
@@ -240,10 +305,6 @@ export default function TopBar() {
               {t(config.labelKey)}
             </Button>
           ))}
-
-        <Button size="small" color="inherit" startIcon={<UploadFileRoundedIcon />} onClick={onImportModel}>
-          {t("editor.top.import")}
-        </Button>
 
         <Button size="small" color="inherit" startIcon={<SaveRoundedIcon />} onClick={onSaveScene}>
           {t("editor.top.save")}

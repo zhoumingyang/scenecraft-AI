@@ -27,6 +27,7 @@ export class EditorApp {
   private readonly listeners = new Set<EditorAppListener>();
   private disposed = false;
   private pendingPick: PendingPick | null = null;
+  private panoramaUrl: string | null = null;
 
   constructor(host: HTMLDivElement) {
     this.runtime = new EditorRuntime(host);
@@ -57,6 +58,7 @@ export class EditorApp {
     window.removeEventListener("pointerup", this.onPointerUp);
     window.removeEventListener("pointercancel", this.onPointerCancel);
     this.pendingPick = null;
+    this.revokePanoramaUrl();
     this.session.dispose();
     this.runtime.dispose();
   }
@@ -92,11 +94,109 @@ export class EditorApp {
     return this.session.getRenderObject(entityId);
   }
 
+  isFirstPersonCamera() {
+    return this.runtime.isFirstPersonCamera();
+  }
+
+  getFirstPersonHeight() {
+    return this.projectModel?.camera.position[1] ?? this.runtime.camera.position.y;
+  }
+
+  setFirstPersonHeight(height: number, source: SyncSource = "ui") {
+    if (!this.projectModel) return;
+    const nextHeight = Number.isFinite(height) ? height : this.projectModel.camera.position[1];
+    this.updateCamera(
+      {
+        position: [
+          this.projectModel.camera.position[0],
+          nextHeight,
+          this.projectModel.camera.position[2]
+        ]
+      },
+      source
+    );
+  }
+
+  getViewHelperVisibility() {
+    return {
+      gridHelper: this.runtime.getGridHelperVisible(),
+      transformGizmo: this.runtime.getTransformGizmoVisible(),
+      lightHelper: this.runtime.getLightHelpersVisible(),
+      panorama: this.runtime.isPanoramaVisible(),
+      panoramaAvailable: this.runtime.hasPanorama()
+    };
+  }
+
+  setViewHelperVisibility(
+    helper: "gridHelper" | "transformGizmo" | "lightHelper" | "panorama",
+    visible: boolean
+  ) {
+    if (helper === "gridHelper") {
+      this.runtime.setGridHelperVisible(visible);
+    } else if (helper === "transformGizmo") {
+      this.runtime.setTransformGizmoVisible(visible);
+    } else if (helper === "panorama") {
+      this.runtime.setPanoramaVisible(visible);
+    } else {
+      this.runtime.setLightHelpersVisible(visible);
+    }
+    this.emit({ type: "viewStateUpdated" });
+  }
+
+  async importPanorama(file: File) {
+    if (!this.projectModel) return;
+    const nextUrl = URL.createObjectURL(file);
+    try {
+      await this.runtime.importPanorama(nextUrl);
+      this.revokePanoramaUrl();
+      this.panoramaUrl = nextUrl;
+      this.projectModel.envPano = nextUrl;
+      this.emit({ type: "viewStateUpdated" });
+    } catch (error) {
+      URL.revokeObjectURL(nextUrl);
+      throw error;
+    }
+  }
+
   updateEntityTransform(entityId: string, patch: TransformPatch, source: SyncSource = "ui") {
     void this.dispatch({
       type: "entity.transform",
       entityId,
       patch,
+      source
+    });
+  }
+
+  removeEntity(entityId: string, source: SyncSource = "ui") {
+    void this.dispatch({
+      type: "entity.remove",
+      entityId,
+      source
+    });
+  }
+
+  duplicateEntity(entityId: string, source: SyncSource = "ui") {
+    void this.dispatch({
+      type: "entity.duplicate",
+      entityId,
+      source
+    });
+  }
+
+  setEntityLocked(entityId: string, locked: boolean, source: SyncSource = "ui") {
+    void this.dispatch({
+      type: "entity.lock",
+      entityId,
+      locked,
+      source
+    });
+  }
+
+  setEntityVisible(entityId: string, visible: boolean, source: SyncSource = "ui") {
+    void this.dispatch({
+      type: "entity.visible",
+      entityId,
+      visible,
       source
     });
   }
@@ -198,6 +298,14 @@ export class EditorApp {
   private onFrame = () => {
     this.session.syncRenderChangesToModel();
   };
+
+  private revokePanoramaUrl() {
+    if (!this.panoramaUrl) return;
+    if (this.panoramaUrl.startsWith("blob:")) {
+      URL.revokeObjectURL(this.panoramaUrl);
+    }
+    this.panoramaUrl = null;
+  }
 }
 
 export function createEditorApp(host: HTMLDivElement): EditorApp {

@@ -26,6 +26,10 @@ export function normalizeString(value: unknown, fallback = ""): string {
   return typeof value === "string" && value.trim() ? value : fallback;
 }
 
+export function normalizeBoolean(value: unknown, fallback: boolean): boolean {
+  return typeof value === "boolean" ? value : fallback;
+}
+
 export function normalizeVec3(value: unknown, fallback: Vec3Tuple): Vec3Tuple {
   if (!Array.isArray(value)) return [...fallback];
   return [
