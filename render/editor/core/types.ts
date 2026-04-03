@@ -16,6 +16,13 @@ export type TransformPatch = {
 
 export type ModelFileFormat = "gltf" | "glb" | "fbx" | "obj";
 export type AssetUnit = "m" | "cm" | "mm" | "unknown";
+export type ModelAnimationPlaybackState = "playing" | "paused" | "stopped";
+
+export type ModelAnimationClipJSON = {
+  id: string;
+  name: string;
+  duration: number;
+};
 
 export type EditorModelJSON = {
   id: string;
@@ -23,6 +30,10 @@ export type EditorModelJSON = {
   format?: ModelFileFormat;
   assetUnit?: AssetUnit;
   assetImportScale?: number;
+  animations?: ModelAnimationClipJSON[];
+  activeAnimationId?: string | null;
+  animationTimeScale?: number;
+  animationPlaybackState?: ModelAnimationPlaybackState;
   locked?: boolean;
   visible?: boolean;
   position?: number[];
@@ -41,6 +52,54 @@ export type EditorMeshUvJSON = {
   y: number;
 };
 
+export type TextureSchema = {
+  url?: string;
+  offset?: number[];
+  repeat?: number[];
+  rotation?: number;
+};
+
+export type ResolvedTextureSchema = {
+  url: string;
+  offset: [number, number];
+  repeat: [number, number];
+  rotation: number;
+};
+
+export type EditorMeshMaterialJSON = {
+  color?: string;
+  opacity?: number;
+  diffuseMap?: TextureSchema;
+  metalness?: number;
+  metalnessMap?: TextureSchema;
+  roughness?: number;
+  roughnessMap?: TextureSchema;
+  normalMap?: TextureSchema;
+  normalScale?: number[];
+  aoMap?: TextureSchema;
+  aoMapIntensity?: number;
+  emissive?: string;
+  emissiveIntensity?: number;
+  emissiveMap?: TextureSchema;
+};
+
+export type ResolvedMeshMaterialJSON = {
+  color: string;
+  opacity: number;
+  diffuseMap: ResolvedTextureSchema;
+  metalness: number;
+  metalnessMap: ResolvedTextureSchema;
+  roughness: number;
+  roughnessMap: ResolvedTextureSchema;
+  normalMap: ResolvedTextureSchema;
+  normalScale: [number, number];
+  aoMap: ResolvedTextureSchema;
+  aoMapIntensity: number;
+  emissive: string;
+  emissiveIntensity: number;
+  emissiveMap: ResolvedTextureSchema;
+};
+
 export type EditorMeshJSON = {
   id: string;
   type: number;
@@ -51,6 +110,7 @@ export type EditorMeshJSON = {
   indices?: number[];
   color?: string;
   textureUrl?: string;
+  material?: EditorMeshMaterialJSON;
   locked?: boolean;
   visible?: boolean;
   position?: number[];
@@ -83,9 +143,17 @@ export type EditorCameraJSON = {
   scale?: number[];
 };
 
+export type EditorEnvConfigJSON = {
+  panoUrl?: string;
+  environment?: number;
+  backgroundShow?: number;
+  toneMapping?: number;
+  toneMappingExposure?: number;
+};
+
 export type EditorProjectJSON = {
   id: string;
-  envPano?: string;
+  envConfig?: EditorEnvConfigJSON;
   model?: EditorModelJSON[];
   mesh?: EditorMeshJSON[];
   light?: EditorLightJSON[];
@@ -94,3 +162,5 @@ export type EditorProjectJSON = {
 
 export type EntityKind = "model" | "mesh" | "light";
 export type SyncSource = "load" | "ui" | "render";
+
+export const SCENE_NODE_ID = "scene";

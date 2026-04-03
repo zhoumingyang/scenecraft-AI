@@ -1,21 +1,32 @@
-import type { EditorProjectJSON } from "../core/types";
+import * as THREE from "three";
+import type { EditorEnvConfigJSON, EditorProjectJSON } from "../core/types";
 import { normalizeString } from "../utils/normalize";
 import { CameraModel } from "./cameraModel";
 import { LightEntityModel } from "./lightEntityModel";
 import { MeshEntityModel } from "./meshEntityModel";
 import { ModelEntityModel } from "./modelEntityModel";
 
+function normalizeEnvConfig(source?: EditorEnvConfigJSON): Required<EditorEnvConfigJSON> {
+  return {
+    panoUrl: source?.panoUrl ?? "",
+    environment: source?.environment ?? 1,
+    backgroundShow: source?.backgroundShow ?? 1,
+    toneMapping: source?.toneMapping ?? THREE.NoToneMapping,
+    toneMappingExposure: source?.toneMappingExposure ?? 1
+  };
+}
+
 export class EditorProjectModel {
   id: string;
-  envPano: string;
+  envConfig: Required<EditorEnvConfigJSON>;
   models: Map<string, ModelEntityModel>;
   meshes: Map<string, MeshEntityModel>;
   lights: Map<string, LightEntityModel>;
   camera: CameraModel;
 
-  private constructor(id: string, camera: CameraModel, envPano: string) {
+  private constructor(id: string, camera: CameraModel, envConfig: Required<EditorEnvConfigJSON>) {
     this.id = id;
-    this.envPano = envPano;
+    this.envConfig = envConfig;
     this.camera = camera;
     this.models = new Map();
     this.meshes = new Map();
@@ -24,7 +35,11 @@ export class EditorProjectModel {
 
   static fromJSON(source: EditorProjectJSON): EditorProjectModel {
     const id = normalizeString(source.id, `project-${Date.now().toString(36)}`);
-    const project = new EditorProjectModel(id, new CameraModel(source.camera), source.envPano ?? "");
+    const project = new EditorProjectModel(
+      id,
+      new CameraModel(source.camera),
+      normalizeEnvConfig(source.envConfig)
+    );
 
     (source.model || []).forEach((item, index) => {
       const model = new ModelEntityModel(index, item);
@@ -47,13 +62,23 @@ export class EditorProjectModel {
   toJSON(): EditorProjectJSON {
     return {
       id: this.id,
-      envPano: this.envPano,
+      envConfig: {
+        panoUrl: this.envConfig.panoUrl,
+        environment: this.envConfig.environment,
+        backgroundShow: this.envConfig.backgroundShow,
+        toneMapping: this.envConfig.toneMapping,
+        toneMappingExposure: this.envConfig.toneMappingExposure
+      },
       model: Array.from(this.models.values()).map((item) => ({
         id: item.id,
         source: item.source,
         format: item.format,
         assetUnit: item.assetUnit,
         assetImportScale: item.assetImportScale,
+        animations: item.animations.map((clip) => ({ ...clip })),
+        activeAnimationId: item.activeAnimationId,
+        animationTimeScale: item.animationTimeScale,
+        animationPlaybackState: item.animationPlaybackState,
         locked: item.locked,
         visible: item.visible,
         position: [...item.position],
@@ -68,8 +93,52 @@ export class EditorProjectModel {
         uvs: item.uvs.map((uv) => ({ ...uv })),
         normals: item.normals.map((normal) => ({ ...normal })),
         indices: [...item.indices],
-        color: item.color,
-        textureUrl: item.textureUrl,
+        material: {
+          color: item.material.color,
+          opacity: item.material.opacity,
+          diffuseMap: {
+            url: item.material.diffuseMap.url,
+            offset: [...item.material.diffuseMap.offset],
+            repeat: [...item.material.diffuseMap.repeat],
+            rotation: item.material.diffuseMap.rotation
+          },
+          metalness: item.material.metalness,
+          metalnessMap: {
+            url: item.material.metalnessMap.url,
+            offset: [...item.material.metalnessMap.offset],
+            repeat: [...item.material.metalnessMap.repeat],
+            rotation: item.material.metalnessMap.rotation
+          },
+          roughness: item.material.roughness,
+          roughnessMap: {
+            url: item.material.roughnessMap.url,
+            offset: [...item.material.roughnessMap.offset],
+            repeat: [...item.material.roughnessMap.repeat],
+            rotation: item.material.roughnessMap.rotation
+          },
+          normalMap: {
+            url: item.material.normalMap.url,
+            offset: [...item.material.normalMap.offset],
+            repeat: [...item.material.normalMap.repeat],
+            rotation: item.material.normalMap.rotation
+          },
+          normalScale: [...item.material.normalScale],
+          aoMap: {
+            url: item.material.aoMap.url,
+            offset: [...item.material.aoMap.offset],
+            repeat: [...item.material.aoMap.repeat],
+            rotation: item.material.aoMap.rotation
+          },
+          aoMapIntensity: item.material.aoMapIntensity,
+          emissive: item.material.emissive,
+          emissiveIntensity: item.material.emissiveIntensity,
+          emissiveMap: {
+            url: item.material.emissiveMap.url,
+            offset: [...item.material.emissiveMap.offset],
+            repeat: [...item.material.emissiveMap.repeat],
+            rotation: item.material.emissiveMap.rotation
+          }
+        },
         locked: item.locked,
         visible: item.visible,
         position: [...item.position],

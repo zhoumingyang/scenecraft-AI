@@ -3,6 +3,7 @@ import * as THREE from "three";
 import type { EditorCommand, MeshMaterialPatch } from "../core/commands";
 import type {
   EditorCameraJSON,
+  EditorEnvConfigJSON,
   EditorLightJSON,
   EditorProjectJSON,
   SyncSource,
@@ -13,10 +14,11 @@ import { BindingRegistry } from "../bindings/bindingRegistry";
 import { updateLightBinding } from "../bindings/lightBinding";
 import { updateMeshBindingMaterial } from "../bindings/meshBinding";
 import { pickEntityId } from "../interaction/picker";
-import { EditorProjectModel } from "../models";
+import { EditorProjectModel, ModelEntityModel } from "../models";
 import { createEmptyEditorProjectJSON } from "../factories/projectFactory";
 import { EditorRuntime } from "../runtime/editorRuntime";
 import { inferModelFileFormat } from "../utils/modelFile";
+import { SCENE_NODE_ID as SCENE_SELECTION_ID } from "../core/types";
 
 type Emit = (event: EditorAppEvent) => void;
 
@@ -38,8 +40,52 @@ function createMeshPayload(geometryName: string) {
     id: createMeshEntityId(),
     type: 1,
     geometryName: normalizedGeometryName,
-    color: "#d9e8ff",
-    textureUrl: "",
+    material: {
+      color: "#d9e8ff",
+      opacity: 1,
+      diffuseMap: {
+        url: "",
+        offset: [0, 0],
+        repeat: [1, 1],
+        rotation: 0
+      },
+      metalness: 0,
+      metalnessMap: {
+        url: "",
+        offset: [0, 0],
+        repeat: [1, 1],
+        rotation: 0
+      },
+      roughness: 1,
+      roughnessMap: {
+        url: "",
+        offset: [0, 0],
+        repeat: [1, 1],
+        rotation: 0
+      },
+      normalMap: {
+        url: "",
+        offset: [0, 0],
+        repeat: [1, 1],
+        rotation: 0
+      },
+      normalScale: [1, 1],
+      aoMap: {
+        url: "",
+        offset: [0, 0],
+        repeat: [1, 1],
+        rotation: 0
+      },
+      aoMapIntensity: 1,
+      emissive: "#000000",
+      emissiveIntensity: 1,
+      emissiveMap: {
+        url: "",
+        offset: [0, 0],
+        repeat: [1, 1],
+        rotation: 0
+      }
+    },
     position: [0, 0.8, 0],
     quaternion: [0, 0, 0, 1],
     scale: [1, 1, 1]
@@ -114,11 +160,12 @@ export class EditorSession {
     this.clearProjectObjects();
 
     this.projectModel = EditorProjectModel.fromJSON(projectJson);
-    if (this.projectModel.envPano) {
-      await this.runtime.importPanorama(this.projectModel.envPano);
+    if (this.projectModel.envConfig.panoUrl) {
+      await this.runtime.setEnvironmentFromUrl(this.projectModel.envConfig.panoUrl);
     } else {
-      this.runtime.clearPanorama();
+      this.runtime.clearEnvironment();
     }
+    this.runtime.applyEnvConfig(this.projectModel.envConfig);
     this.runtime.applyCameraModel(this.projectModel.camera);
 
     this.projectModel.models.forEach((model) => this.registry.create(model));
@@ -182,6 +229,9 @@ export class EditorSession {
       case "camera.patch":
         this.updateCamera(command.patch, command.source ?? "ui");
         return;
+      case "scene.envConfig.patch":
+        await this.updateSceneEnvConfig(command.patch, command.source ?? "ui");
+        return;
       case "mesh.material":
         this.updateMeshMaterial(command.entityId, command.patch, command.source ?? "ui");
         return;
@@ -193,6 +243,15 @@ export class EditorSession {
         return;
       case "light.create":
         this.createLight(command.lightType, command.source ?? "ui");
+        return;
+      case "model.animation.select":
+        this.selectModelAnimation(command.entityId, command.animationId, command.source ?? "ui");
+        return;
+      case "model.animation.timeScale":
+        this.updateModelAnimationTimeScale(command.entityId, command.timeScale, command.source ?? "ui");
+        return;
+      case "model.animation.control":
+        this.controlModelAnimation(command.entityId, command.action, command.source ?? "ui");
         return;
     }
   }
@@ -208,13 +267,26 @@ export class EditorSession {
 
     const objectUrl = URL.createObjectURL(file);
     this.ownedModelUrls.add(objectUrl);
+    let asset;
+    try {
+      asset = await this.runtime.modelLoaderFactory.load(objectUrl, format);
+    } catch (error) {
+      this.runtime.modelLoaderFactory.release(objectUrl, format);
+      URL.revokeObjectURL(objectUrl);
+      this.ownedModelUrls.delete(objectUrl);
+      throw error;
+    }
 
     const model = this.projectModel.addModel({
       id: createEntityId("model"),
       source: objectUrl,
       format,
       assetUnit: "m",
-      assetImportScale: 1
+      assetImportScale: 1,
+      animations: asset.animations,
+      activeAnimationId: asset.animations[0]?.id ?? null,
+      animationTimeScale: 1,
+      animationPlaybackState: asset.animations.length > 0 ? "playing" : "stopped"
     });
 
     this.registry.create(model);
@@ -249,6 +321,38 @@ export class EditorSession {
     this.projectModel.camera.patch(update);
     this.runtime.applyCameraModel(this.projectModel.camera);
     this.emit({ type: "cameraUpdated", source });
+  }
+
+  async updateSceneEnvConfig(
+    patch: Partial<EditorEnvConfigJSON>,
+    source: SyncSource = "ui",
+    options?: { panoAssetName?: string }
+  ) {
+    if (!this.projectModel) return;
+
+    const nextEnvConfig = {
+      ...this.projectModel.envConfig,
+      ...patch
+    };
+
+    const shouldReloadEnvironment =
+      patch.panoUrl !== undefined && patch.panoUrl !== this.projectModel.envConfig.panoUrl;
+
+    if (shouldReloadEnvironment) {
+      if (nextEnvConfig.panoUrl) {
+        await this.runtime.setEnvironmentFromUrl(
+          nextEnvConfig.panoUrl,
+          options?.panoAssetName ?? nextEnvConfig.panoUrl
+        );
+      } else {
+        this.runtime.clearEnvironment();
+      }
+    }
+
+    this.projectModel.envConfig = nextEnvConfig;
+    this.runtime.applyEnvConfig(this.projectModel.envConfig);
+    this.emit({ type: "sceneUpdated", source });
+    this.emit({ type: "viewStateUpdated" });
   }
 
   updateMeshMaterial(
@@ -326,12 +430,12 @@ export class EditorSession {
     });
   }
 
-  syncRenderChangesToModel() {
+  syncRenderChangesToModel(deltaSeconds = 0) {
     if (this.projectModel && this.runtime.syncCameraModel(this.projectModel.camera)) {
       this.emit({ type: "cameraUpdated", source: "render" });
     }
 
-    this.registry.refresh();
+    this.registry.refresh(deltaSeconds);
 
     this.registry.syncAllObjectTransformsToModel().forEach((binding) => {
       this.emit({
@@ -355,13 +459,13 @@ export class EditorSession {
   }
 
   setSelectedEntity(entityId: string | null, source: SyncSource = "ui") {
-    if (entityId) {
+    if (entityId && entityId !== SCENE_SELECTION_ID) {
       const binding = this.registry.get(entityId);
       if (!binding || binding.model.locked) return;
     }
     if (this.selectedEntityId === entityId) return;
     this.selectedEntityId = entityId;
-    const binding = entityId ? this.registry.get(entityId) : null;
+    const binding = entityId && entityId !== SCENE_SELECTION_ID ? this.registry.get(entityId) : null;
     this.runtime.attachTransformTarget(binding?.object ?? null);
     this.emit({ type: "selectionChanged", selectedEntityId: entityId, source });
   }
@@ -404,6 +508,10 @@ export class EditorSession {
         format: record.item.format,
         assetUnit: record.item.assetUnit,
         assetImportScale: record.item.assetImportScale,
+        animations: record.item.animations.map((clip) => ({ ...clip })),
+        activeAnimationId: record.item.activeAnimationId,
+        animationTimeScale: record.item.animationTimeScale,
+        animationPlaybackState: record.item.animationPlaybackState,
         locked: false,
         visible: record.item.visible,
         position: [...record.item.position],
@@ -430,8 +538,52 @@ export class EditorSession {
         uvs: record.item.uvs.map((uv) => ({ ...uv })),
         normals: record.item.normals.map((normal) => ({ ...normal })),
         indices: [...record.item.indices],
-        color: record.item.color,
-        textureUrl: record.item.textureUrl,
+        material: {
+          color: record.item.material.color,
+          opacity: record.item.material.opacity,
+          diffuseMap: {
+            url: record.item.material.diffuseMap.url,
+            offset: [...record.item.material.diffuseMap.offset],
+            repeat: [...record.item.material.diffuseMap.repeat],
+            rotation: record.item.material.diffuseMap.rotation
+          },
+          metalness: record.item.material.metalness,
+          metalnessMap: {
+            url: record.item.material.metalnessMap.url,
+            offset: [...record.item.material.metalnessMap.offset],
+            repeat: [...record.item.material.metalnessMap.repeat],
+            rotation: record.item.material.metalnessMap.rotation
+          },
+          roughness: record.item.material.roughness,
+          roughnessMap: {
+            url: record.item.material.roughnessMap.url,
+            offset: [...record.item.material.roughnessMap.offset],
+            repeat: [...record.item.material.roughnessMap.repeat],
+            rotation: record.item.material.roughnessMap.rotation
+          },
+          normalMap: {
+            url: record.item.material.normalMap.url,
+            offset: [...record.item.material.normalMap.offset],
+            repeat: [...record.item.material.normalMap.repeat],
+            rotation: record.item.material.normalMap.rotation
+          },
+          normalScale: [...record.item.material.normalScale],
+          aoMap: {
+            url: record.item.material.aoMap.url,
+            offset: [...record.item.material.aoMap.offset],
+            repeat: [...record.item.material.aoMap.repeat],
+            rotation: record.item.material.aoMap.rotation
+          },
+          aoMapIntensity: record.item.material.aoMapIntensity,
+          emissive: record.item.material.emissive,
+          emissiveIntensity: record.item.material.emissiveIntensity,
+          emissiveMap: {
+            url: record.item.material.emissiveMap.url,
+            offset: [...record.item.material.emissiveMap.offset],
+            repeat: [...record.item.material.emissiveMap.repeat],
+            rotation: record.item.material.emissiveMap.rotation
+          }
+        },
         locked: false,
         visible: record.item.visible,
         position: [...record.item.position],
@@ -528,6 +680,12 @@ export class EditorSession {
     const nextSources = new Set((projectJson.model || []).map((item) => item.source));
     Array.from(this.ownedModelUrls).forEach((url) => {
       if (nextSources.has(url)) return;
+      const model = this.projectModel
+        ? Array.from(this.projectModel.models.values()).find((item) => item.source === url)
+        : null;
+      if (model) {
+        this.runtime.modelLoaderFactory.release(url, model.format);
+      }
       URL.revokeObjectURL(url);
       this.ownedModelUrls.delete(url);
     });
@@ -535,8 +693,86 @@ export class EditorSession {
 
   private revokeOwnedModelUrls() {
     Array.from(this.ownedModelUrls).forEach((url) => {
+      const model = this.projectModel
+        ? Array.from(this.projectModel.models.values()).find((item) => item.source === url)
+        : null;
+      if (model) {
+        this.runtime.modelLoaderFactory.release(url, model.format);
+      }
       URL.revokeObjectURL(url);
       this.ownedModelUrls.delete(url);
+    });
+  }
+
+  private selectModelAnimation(entityId: string, animationId: string, source: SyncSource = "ui") {
+    const binding = this.registry.get(entityId);
+    if (!binding || binding.kind !== "model" || binding.model.locked) return;
+    const model = binding.model as ModelEntityModel;
+    if (!binding.modelAnimation?.hasClip(animationId)) return;
+
+    model.setActiveAnimation(animationId);
+    model.animationPlaybackState = "playing";
+    binding.modelAnimation.applyState();
+    this.emit({
+      type: "entityUpdated",
+      entityId,
+      entityKind: "model",
+      source
+    });
+  }
+
+  private updateModelAnimationTimeScale(entityId: string, timeScale: number, source: SyncSource = "ui") {
+    const binding = this.registry.get(entityId);
+    if (!binding || binding.kind !== "model" || binding.model.locked) return;
+    const model = binding.model as ModelEntityModel;
+
+    model.animationTimeScale = THREE.MathUtils.clamp(timeScale, 0.1, 4);
+    binding.modelAnimation?.applyState();
+    this.emit({
+      type: "entityUpdated",
+      entityId,
+      entityKind: "model",
+      source
+    });
+  }
+
+  private controlModelAnimation(
+    entityId: string,
+    action: "play" | "pause" | "stop" | "step",
+    source: SyncSource = "ui"
+  ) {
+    const binding = this.registry.get(entityId);
+    if (!binding || binding.kind !== "model" || binding.model.locked) return;
+    const model = binding.model as ModelEntityModel;
+    if (!model.animations.length) return;
+
+    if (!model.activeAnimationId) {
+      model.activeAnimationId = model.animations[0].id;
+    }
+
+    if (action === "play") {
+      if (model.animationPlaybackState === "playing") return;
+      model.animationPlaybackState = "playing";
+      binding.modelAnimation?.applyState();
+    } else if (action === "pause") {
+      if (model.animationPlaybackState !== "playing") return;
+      model.animationPlaybackState = "paused";
+      binding.modelAnimation?.applyState();
+    } else if (action === "stop") {
+      if (model.animationPlaybackState === "stopped") return;
+      model.animationPlaybackState = "stopped";
+      binding.modelAnimation?.applyState();
+    } else if (action === "step") {
+      model.animationPlaybackState = "paused";
+      const stepped = binding.modelAnimation?.step() ?? false;
+      if (!stepped) return;
+    }
+
+    this.emit({
+      type: "entityUpdated",
+      entityId,
+      entityKind: "model",
+      source
     });
   }
 }

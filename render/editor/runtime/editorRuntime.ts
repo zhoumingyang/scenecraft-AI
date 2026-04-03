@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { HDRLoader } from "three/examples/jsm/loaders/HDRLoader.js";
 import { RectAreaLightUniformsLib } from "three/examples/jsm/lights/RectAreaLightUniformsLib.js";
 
 import { CameraModel } from "../models";
@@ -7,10 +8,11 @@ import { buildTransformSignature } from "../utils/object3d";
 import { CustomTransformGizmo } from "./customTransformGizmo";
 import { FirstPersonController } from "./firstPersonController";
 import { ModelLoaderFactory } from "./modelLoaderFactory";
+import type { EditorEnvConfigJSON } from "../core/types";
 
 type RuntimeStartOptions = {
   onPointerDown: (event: PointerEvent) => void;
-  onFrame: () => void;
+  onFrame: (deltaSeconds: number) => void;
 };
 
 export class EditorRuntime {
@@ -20,6 +22,7 @@ export class EditorRuntime {
   readonly renderer: THREE.WebGLRenderer;
   readonly modelLoaderFactory: ModelLoaderFactory;
   readonly textureLoader: THREE.TextureLoader;
+  readonly hdrLoader: HDRLoader;
   readonly raycaster: THREE.Raycaster;
   readonly fallbackAmbientLight: THREE.AmbientLight;
   readonly orbitControls: OrbitControls;
@@ -36,8 +39,9 @@ export class EditorRuntime {
   private currentCameraType = 1;
   private transformDragging = false;
   private lightHelpersVisible = true;
-  private panoramaTexture: THREE.Texture | null = null;
-  private panoramaVisible = false;
+  private environmentTexture: THREE.Texture | null = null;
+  private environmentMapTexture: THREE.Texture | null = null;
+  private readonly pmremGenerator: THREE.PMREMGenerator;
 
   constructor(host: HTMLDivElement) {
     RectAreaLightUniformsLib.init();
@@ -53,9 +57,12 @@ export class EditorRuntime {
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.toneMapping = THREE.NoToneMapping;
+    this.renderer.toneMappingExposure = 1;
 
     this.modelLoaderFactory = new ModelLoaderFactory();
     this.textureLoader = new THREE.TextureLoader();
+    this.hdrLoader = new HDRLoader();
     this.raycaster = new THREE.Raycaster();
     this.fallbackAmbientLight = new THREE.AmbientLight("#ffffff", 0.55);
     this.orbitControls = new OrbitControls(this.camera, this.renderer.domElement);
@@ -69,6 +76,8 @@ export class EditorRuntime {
     this.gridHelper.position.y = -0.0001;
     this.scene.add(this.gridHelper);
     this.scene.add(this.transformGizmo.root);
+    this.pmremGenerator = new THREE.PMREMGenerator(this.renderer);
+    this.pmremGenerator.compileEquirectangularShader();
   }
 
   start(options: RuntimeStartOptions) {
@@ -101,10 +110,11 @@ export class EditorRuntime {
     if (this.disposed) return;
     this.disposed = true;
     this.stop();
-    this.clearPanorama();
+    this.clearEnvironment();
     this.transformGizmo.dispose();
     this.scene.remove(this.transformGizmo.root);
     this.orbitControls.dispose();
+    this.pmremGenerator.dispose();
     this.renderer.dispose();
     if (this.host.contains(this.renderer.domElement)) {
       this.host.removeChild(this.renderer.domElement);
@@ -232,41 +242,55 @@ export class EditorRuntime {
     });
   }
 
-  hasPanorama() {
-    return Boolean(this.panoramaTexture);
+  hasEnvironmentTexture() {
+    return Boolean(this.environmentTexture);
   }
 
-  isPanoramaVisible() {
-    return this.panoramaVisible && Boolean(this.panoramaTexture);
-  }
+  async loadEnvironmentTexture(url: string, assetName = url) {
+    const lowerUrl = assetName.toLowerCase();
+    if (lowerUrl.endsWith(".hdr")) {
+      const texture = await this.hdrLoader.loadAsync(url);
+      texture.mapping = THREE.EquirectangularReflectionMapping;
+      return texture;
+    }
 
-  async importPanorama(url: string) {
     const texture = await this.textureLoader.loadAsync(url);
     texture.mapping = THREE.EquirectangularReflectionMapping;
     texture.colorSpace = THREE.SRGBColorSpace;
+    return texture;
+  }
 
-    const previousTexture = this.panoramaTexture;
-    this.panoramaTexture = texture;
-    this.panoramaVisible = true;
-    this.applyPanoramaVisibility();
+  async setEnvironmentFromUrl(url: string, assetName = url) {
+    const texture = await this.loadEnvironmentTexture(url, assetName);
+    const environmentMapTexture = this.pmremGenerator.fromEquirectangular(texture).texture;
+
+    const previousTexture = this.environmentTexture;
+    const previousEnvironmentMapTexture = this.environmentMapTexture;
+    this.environmentTexture = texture;
+    this.environmentMapTexture = environmentMapTexture;
     previousTexture?.dispose();
+    previousEnvironmentMapTexture?.dispose();
   }
 
-  setPanoramaVisible(visible: boolean) {
-    this.panoramaVisible = visible;
-    this.applyPanoramaVisibility();
-  }
-
-  clearPanorama() {
-    this.panoramaVisible = false;
+  clearEnvironment() {
+    this.scene.environment = null;
     this.scene.background = this.defaultBackground;
-    this.panoramaTexture?.dispose();
-    this.panoramaTexture = null;
+    this.environmentTexture?.dispose();
+    this.environmentMapTexture?.dispose();
+    this.environmentTexture = null;
+    this.environmentMapTexture = null;
   }
 
-  private applyPanoramaVisibility() {
+  applyEnvConfig(envConfig: Required<EditorEnvConfigJSON>) {
+    this.scene.environment =
+      envConfig.environment === 1 && this.environmentMapTexture ? this.environmentMapTexture : null;
     this.scene.background =
-      this.panoramaVisible && this.panoramaTexture ? this.panoramaTexture : this.defaultBackground;
+      envConfig.backgroundShow === 1 && this.environmentTexture
+        ? this.environmentTexture
+        : this.defaultBackground;
+    this.renderer.toneMapping = envConfig.toneMapping as THREE.ToneMapping;
+    this.renderer.toneMappingExposure = envConfig.toneMappingExposure;
+    console.log('environment: ', this.scene.environment);
   }
 
   private setTransformDragging(isDragging: boolean) {
@@ -306,8 +330,9 @@ export class EditorRuntime {
   private animate = () => {
     if (!this.startOptions) return;
     this.rafId = window.requestAnimationFrame(this.animate);
-    this.update(this.clock.getDelta());
-    this.startOptions.onFrame();
+    const deltaSeconds = this.clock.getDelta();
+    this.update(deltaSeconds);
+    this.startOptions.onFrame(deltaSeconds);
     this.renderFrame();
   };
 }

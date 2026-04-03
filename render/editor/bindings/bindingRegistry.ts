@@ -83,9 +83,9 @@ export class BindingRegistry {
     return changed;
   }
 
-  refresh() {
+  refresh(deltaSeconds = 0) {
     this.bindingsById.forEach((binding) => {
-      binding.refresh?.();
+      binding.refresh?.(deltaSeconds);
     });
   }
 }

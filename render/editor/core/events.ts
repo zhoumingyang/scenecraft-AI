@@ -12,6 +12,11 @@ export type CameraUpdatedEvent = {
   source: SyncSource;
 };
 
+export type SceneUpdatedEvent = {
+  type: "sceneUpdated";
+  source: SyncSource;
+};
+
 export type SelectionChangedEvent = {
   type: "selectionChanged";
   selectedEntityId: string | null;
@@ -30,6 +35,7 @@ export type ViewStateUpdatedEvent = {
 export type EditorAppEvent =
   | EntityUpdatedEvent
   | CameraUpdatedEvent
+  | SceneUpdatedEvent
   | SelectionChangedEvent
   | ProjectLoadedEvent
   | ViewStateUpdatedEvent;

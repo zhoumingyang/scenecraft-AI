@@ -52,8 +52,16 @@ const meshOptions: SelectOption[] = [
   { value: "cone", labelKey: "editor.mesh.cone" },
   { value: "circle", labelKey: "editor.mesh.circle" },
   { value: "cylinder", labelKey: "editor.mesh.cylinder" },
+  { value: "dodecahedron", labelKey: "editor.mesh.dodecahedron" },
+  { value: "icosahedron", labelKey: "editor.mesh.icosahedron" },
+  { value: "lathe", labelKey: "editor.mesh.lathe" },
+  { value: "octahedron", labelKey: "editor.mesh.octahedron" },
+  { value: "ring", labelKey: "editor.mesh.ring" },
   { value: "sphere", labelKey: "editor.mesh.sphere" },
-  { value: "torus", labelKey: "editor.mesh.torus" }
+  { value: "tetrahedron", labelKey: "editor.mesh.tetrahedron" },
+  { value: "torus", labelKey: "editor.mesh.torus" },
+  { value: "torusKnot", labelKey: "editor.mesh.torusKnot" },
+  { value: "tube", labelKey: "editor.mesh.tube" }
 ];
 
 type DropdownConfig = {
@@ -164,6 +172,15 @@ export default function TopBar() {
     event.target.value = "";
     if (!app || !file) return;
 
+    if (file.name.toLowerCase().endsWith(".hdr")) {
+      try {
+        await app.importPanorama(file);
+      } catch {
+        window.alert(t("editor.import.panoLoadError"));
+      }
+      return;
+    }
+
     const imageUrl = URL.createObjectURL(file);
     try {
       const dimensions = await new Promise<{ width: number; height: number }>((resolve, reject) => {
@@ -269,7 +286,7 @@ export default function TopBar() {
       <input
         ref={panoImportInputRef}
         type="file"
-        accept="image/*"
+        accept="image/*,.hdr"
         onChange={onImportPanoFile}
         style={{ display: "none" }}
       />

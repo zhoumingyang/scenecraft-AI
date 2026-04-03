@@ -52,6 +52,12 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
         return;
       }
 
+      if (event.type === "sceneUpdated") {
+        bumpProjectVersion();
+        bumpViewStateVersion();
+        return;
+      }
+
       if (event.type === "viewStateUpdated") {
         bumpViewStateVersion();
       }

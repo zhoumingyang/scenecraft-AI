@@ -1,15 +1,14 @@
 import type {
   EditorCameraJSON,
+  EditorEnvConfigJSON,
   EditorLightJSON,
+  EditorMeshMaterialJSON,
   EditorProjectJSON,
   SyncSource,
   TransformPatch
 } from "./types";
 
-export type MeshMaterialPatch = {
-  color?: string;
-  textureUrl?: string;
-};
+export type MeshMaterialPatch = Partial<EditorMeshMaterialJSON>;
 
 export type EditorCommand =
   | {
@@ -63,6 +62,11 @@ export type EditorCommand =
       source?: SyncSource;
     }
   | {
+      type: "scene.envConfig.patch";
+      patch: Partial<EditorEnvConfigJSON>;
+      source?: SyncSource;
+    }
+  | {
       type: "mesh.material";
       entityId: string;
       patch: MeshMaterialPatch;
@@ -82,5 +86,23 @@ export type EditorCommand =
   | {
       type: "light.create";
       lightType: EditorLightJSON["type"];
+      source?: SyncSource;
+    }
+  | {
+      type: "model.animation.select";
+      entityId: string;
+      animationId: string;
+      source?: SyncSource;
+    }
+  | {
+      type: "model.animation.timeScale";
+      entityId: string;
+      timeScale: number;
+      source?: SyncSource;
+    }
+  | {
+      type: "model.animation.control";
+      entityId: string;
+      action: "play" | "pause" | "stop" | "step";
       source?: SyncSource;
     };

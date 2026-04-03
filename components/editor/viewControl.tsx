@@ -11,7 +11,7 @@ import type { EditorApp } from "@/render/editor";
 import { useI18n } from "@/lib/i18n";
 import { viewportPillSx } from "./viewportControlStyles";
 
-type HelperKey = "gridHelper" | "transformGizmo" | "lightHelper" | "panorama";
+type HelperKey = "gridHelper" | "transformGizmo" | "lightHelper";
 
 type ViewControlProps = {
   app: EditorApp | null;
@@ -27,9 +27,7 @@ export default function ViewControl({ app, viewStateVersion }: ViewControlProps)
       app?.getViewHelperVisibility() ?? {
         gridHelper: true,
         transformGizmo: true,
-        lightHelper: true,
-        panorama: false,
-        panoramaAvailable: false
+        lightHelper: true
       },
     [app, viewStateVersion]
   );
@@ -58,13 +56,6 @@ export default function ViewControl({ app, viewStateVersion }: ViewControlProps)
       icon: LightModeRoundedIcon,
       label: t("editor.view.lightHelper"),
       visible: helperVisibility.lightHelper
-    },
-    {
-      key: "panorama",
-      icon: VisibilityRoundedIcon,
-      label: t("editor.view.panorama"),
-      visible: helperVisibility.panorama,
-      disabled: !helperVisibility.panoramaAvailable
     }
   ];
 
@@ -84,7 +75,7 @@ export default function ViewControl({ app, viewStateVersion }: ViewControlProps)
               bottom: 39.3,
               minWidth: 220,
               p: 1,
-              borderRadius: 2,
+              borderRadius: 1,
               border: "1px solid rgba(180,205,255,0.26)",
               background: "rgba(8,12,24,0.78)",
               backdropFilter: "blur(12px)",

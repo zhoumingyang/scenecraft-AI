@@ -4,6 +4,7 @@ import type { EditorCommand, MeshMaterialPatch } from "./core/commands";
 import type { EditorAppEvent, EditorAppListener } from "./core/events";
 import type {
   EditorCameraJSON,
+  EditorEnvConfigJSON,
   EditorLightJSON,
   EditorProjectJSON,
   SyncSource,
@@ -11,6 +12,7 @@ import type {
 } from "./core/types";
 import { EditorRuntime } from "./runtime/editorRuntime";
 import { EditorSession } from "./session/editorSession";
+import { SCENE_NODE_ID as SCENE_SELECTION_ID } from "./core/types";
 
 const PICK_POINTER_MOVE_THRESHOLD_PX = 6;
 
@@ -27,7 +29,7 @@ export class EditorApp {
   private readonly listeners = new Set<EditorAppListener>();
   private disposed = false;
   private pendingPick: PendingPick | null = null;
-  private panoramaUrl: string | null = null;
+  private environmentUrl: string | null = null;
 
   constructor(host: HTMLDivElement) {
     this.runtime = new EditorRuntime(host);
@@ -58,7 +60,7 @@ export class EditorApp {
     window.removeEventListener("pointerup", this.onPointerUp);
     window.removeEventListener("pointercancel", this.onPointerCancel);
     this.pendingPick = null;
-    this.revokePanoramaUrl();
+    this.revokeEnvironmentUrl();
     this.session.dispose();
     this.runtime.dispose();
   }
@@ -121,22 +123,18 @@ export class EditorApp {
     return {
       gridHelper: this.runtime.getGridHelperVisible(),
       transformGizmo: this.runtime.getTransformGizmoVisible(),
-      lightHelper: this.runtime.getLightHelpersVisible(),
-      panorama: this.runtime.isPanoramaVisible(),
-      panoramaAvailable: this.runtime.hasPanorama()
+      lightHelper: this.runtime.getLightHelpersVisible()
     };
   }
 
   setViewHelperVisibility(
-    helper: "gridHelper" | "transformGizmo" | "lightHelper" | "panorama",
+    helper: "gridHelper" | "transformGizmo" | "lightHelper",
     visible: boolean
   ) {
     if (helper === "gridHelper") {
       this.runtime.setGridHelperVisible(visible);
     } else if (helper === "transformGizmo") {
       this.runtime.setTransformGizmoVisible(visible);
-    } else if (helper === "panorama") {
-      this.runtime.setPanoramaVisible(visible);
     } else {
       this.runtime.setLightHelpersVisible(visible);
     }
@@ -147,11 +145,16 @@ export class EditorApp {
     if (!this.projectModel) return;
     const nextUrl = URL.createObjectURL(file);
     try {
-      await this.runtime.importPanorama(nextUrl);
-      this.revokePanoramaUrl();
-      this.panoramaUrl = nextUrl;
-      this.projectModel.envPano = nextUrl;
-      this.emit({ type: "viewStateUpdated" });
+      await this.session.updateSceneEnvConfig(
+        {
+          panoUrl: nextUrl
+        },
+        "ui",
+        { panoAssetName: file.name }
+      );
+      this.revokeEnvironmentUrl();
+      this.environmentUrl = nextUrl;
+      this.setSelectedEntity(SCENE_SELECTION_ID, "ui");
     } catch (error) {
       URL.revokeObjectURL(nextUrl);
       throw error;
@@ -209,6 +212,14 @@ export class EditorApp {
     });
   }
 
+  updateSceneEnvConfig(patch: Partial<EditorEnvConfigJSON>, source: SyncSource = "ui") {
+    void this.dispatch({
+      type: "scene.envConfig.patch",
+      patch,
+      source
+    });
+  }
+
   updateMeshMaterial(
     entityId: string,
     patch: MeshMaterialPatch,
@@ -227,6 +238,37 @@ export class EditorApp {
       type: "light.patch",
       entityId,
       patch,
+      source
+    });
+  }
+
+  selectModelAnimation(entityId: string, animationId: string, source: SyncSource = "ui") {
+    void this.dispatch({
+      type: "model.animation.select",
+      entityId,
+      animationId,
+      source
+    });
+  }
+
+  setModelAnimationTimeScale(entityId: string, timeScale: number, source: SyncSource = "ui") {
+    void this.dispatch({
+      type: "model.animation.timeScale",
+      entityId,
+      timeScale,
+      source
+    });
+  }
+
+  controlModelAnimation(
+    entityId: string,
+    action: "play" | "pause" | "stop" | "step",
+    source: SyncSource = "ui"
+  ) {
+    void this.dispatch({
+      type: "model.animation.control",
+      entityId,
+      action,
       source
     });
   }
@@ -295,16 +337,16 @@ export class EditorApp {
     this.pendingPick = null;
   };
 
-  private onFrame = () => {
-    this.session.syncRenderChangesToModel();
+  private onFrame = (deltaSeconds: number) => {
+    this.session.syncRenderChangesToModel(deltaSeconds);
   };
 
-  private revokePanoramaUrl() {
-    if (!this.panoramaUrl) return;
-    if (this.panoramaUrl.startsWith("blob:")) {
-      URL.revokeObjectURL(this.panoramaUrl);
+  private revokeEnvironmentUrl() {
+    if (!this.environmentUrl) return;
+    if (this.environmentUrl.startsWith("blob:")) {
+      URL.revokeObjectURL(this.environmentUrl);
     }
-    this.panoramaUrl = null;
+    this.environmentUrl = null;
   }
 }
 

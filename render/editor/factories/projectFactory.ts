@@ -1,4 +1,5 @@
 import type { EditorProjectJSON } from "../core/types";
+import * as THREE from "three";
 
 function createUuid() {
   if (typeof globalThis.crypto?.randomUUID === "function") {
@@ -23,7 +24,13 @@ export function createDefaultEditorProjectJSON(): EditorProjectJSON {
 
   return {
     id: projectId,
-    envPano: "",
+    envConfig: {
+      panoUrl: "",
+      environment: 1,
+      backgroundShow: 1,
+      toneMapping: THREE.NoToneMapping,
+      toneMappingExposure: 1
+    },
     model: [],
     mesh: [],
     light: [],
@@ -34,7 +41,13 @@ export function createDefaultEditorProjectJSON(): EditorProjectJSON {
 export function createEmptyEditorProjectJSON(projectId = createUuid()): EditorProjectJSON {
   return {
     id: projectId,
-    envPano: "",
+    envConfig: {
+      panoUrl: "",
+      environment: 1,
+      backgroundShow: 1,
+      toneMapping: THREE.NoToneMapping,
+      toneMappingExposure: 1
+    },
     model: [],
     mesh: [],
     light: [],

@@ -10,23 +10,25 @@ import GridViewRoundedIcon from "@mui/icons-material/GridViewRounded";
 import LockOpenRoundedIcon from "@mui/icons-material/LockOpenRounded";
 import LockRoundedIcon from "@mui/icons-material/LockRounded";
 import LightModeRoundedIcon from "@mui/icons-material/LightModeRounded";
+import PublicRoundedIcon from "@mui/icons-material/PublicRounded";
 import KeyboardArrowUpRoundedIcon from "@mui/icons-material/KeyboardArrowUpRounded";
 import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
 import VisibilityOffRoundedIcon from "@mui/icons-material/VisibilityOffRounded";
 import VisibilityRoundedIcon from "@mui/icons-material/VisibilityRounded";
 import { useI18n } from "@/lib/i18n";
+import { SCENE_NODE_ID } from "@/render/editor";
 import { useEditorStore } from "@/stores/editorStore";
 
 type SceneTreeNode = {
   id: string;
   label: string;
-  type: "model" | "mesh" | "light";
+  type: "scene" | "model" | "mesh" | "light";
   locked: boolean;
   visible: boolean;
 };
 
 type SceneTreeSection = {
-  id: "model" | "mesh" | "light";
+  id: "scene" | "model" | "mesh" | "light";
   label: string;
   icon: typeof FolderRoundedIcon;
   nodes: SceneTreeNode[];
@@ -63,6 +65,20 @@ export default function SceneTreePanel() {
     if (!project) {
       return [
         {
+          id: "scene",
+          label: t("editor.sceneTree.sceneGroup"),
+          icon: PublicRoundedIcon,
+          nodes: [
+            {
+              id: SCENE_NODE_ID,
+              type: "scene",
+              locked: false,
+              visible: true,
+              label: t("editor.sceneTree.scene")
+            }
+          ]
+        },
+        {
           id: "model",
           label: t("editor.sceneTree.models"),
           icon: FolderRoundedIcon,
@@ -84,6 +100,20 @@ export default function SceneTreePanel() {
     }
 
     return [
+      {
+        id: "scene",
+        label: t("editor.sceneTree.sceneGroup"),
+        icon: PublicRoundedIcon,
+        nodes: [
+          {
+            id: SCENE_NODE_ID,
+            type: "scene",
+            locked: false,
+            visible: true,
+            label: t("editor.sceneTree.scene")
+          }
+        ]
+      },
       {
         id: "model",
         label: t("editor.sceneTree.models"),
@@ -222,8 +252,8 @@ export default function SceneTreePanel() {
                   ) : (
                     section.nodes.map((node) => {
                       const selected = node.id === selectedEntityId;
-                      const actionsDisabled = node.locked;
-                      const canToggleVisible = node.type !== "light";
+                      const actionsDisabled = node.locked || node.type === "scene";
+                      const canToggleVisible = node.type !== "light" && node.type !== "scene";
                       const rowColor = node.locked
                         ? "rgba(166,178,203,0.6)"
                         : selected
@@ -267,7 +297,9 @@ export default function SceneTreePanel() {
                             disabled={node.locked}
                             onClick={() => void onSelectEntity(node.id)}
                             startIcon={
-                              node.type === "model" ? (
+                              node.type === "scene" ? (
+                                <PublicRoundedIcon sx={{ fontSize: 16 }} />
+                              ) : node.type === "model" ? (
                                 <FolderRoundedIcon sx={{ fontSize: 16 }} />
                               ) : node.type === "mesh" ? (
                                 <GridViewRoundedIcon sx={{ fontSize: 16 }} />
@@ -324,20 +356,23 @@ export default function SceneTreePanel() {
                           ) : null}
 
                           <Tooltip title={node.locked ? "unlock" : "lock"} arrow>
-                            <IconButton
-                              size="small"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                onToggleLock(node.id, node.locked);
-                              }}
-                              sx={iconButtonSx}
-                            >
-                              {node.locked ? (
-                                <LockRoundedIcon sx={{ fontSize: 16 }} />
-                              ) : (
-                                <LockOpenRoundedIcon sx={{ fontSize: 16 }} />
-                              )}
-                            </IconButton>
+                            <span>
+                              <IconButton
+                                size="small"
+                                disabled={actionsDisabled}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  onToggleLock(node.id, node.locked);
+                                }}
+                                sx={iconButtonSx}
+                              >
+                                {node.locked ? (
+                                  <LockRoundedIcon sx={{ fontSize: 16 }} />
+                                ) : (
+                                  <LockOpenRoundedIcon sx={{ fontSize: 16 }} />
+                                )}
+                              </IconButton>
+                            </span>
                           </Tooltip>
 
                           <Tooltip title="copy" arrow>

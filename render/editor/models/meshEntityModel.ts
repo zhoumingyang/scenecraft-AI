@@ -1,6 +1,57 @@
-import type { EditorMeshJSON } from "../core/types";
-import { normalizeBoolean, normalizeColor, normalizeId, normalizeNumber, normalizeString } from "../utils/normalize";
+import type {
+  EditorMeshJSON,
+  EditorMeshMaterialJSON,
+  ResolvedMeshMaterialJSON,
+  ResolvedTextureSchema,
+  TextureSchema
+} from "../core/types";
+import {
+  clampUnitInterval,
+  normalizeBoolean,
+  normalizeColor,
+  normalizeId,
+  normalizeNumber,
+  normalizeString
+} from "../utils/normalize";
 import { BaseEntityModel } from "./baseEntity";
+
+function normalizeVec2(value: unknown, fallback: [number, number]): [number, number] {
+  if (!Array.isArray(value)) return [...fallback];
+  return [normalizeNumber(value[0], fallback[0]), normalizeNumber(value[1], fallback[1])];
+}
+
+function normalizeTexture(source?: TextureSchema | null): ResolvedTextureSchema {
+  return {
+    url: normalizeString(source?.url),
+    offset: normalizeVec2(source?.offset, [0, 0]),
+    repeat: normalizeVec2(source?.repeat, [1, 1]),
+    rotation: normalizeNumber(source?.rotation, 0)
+  };
+}
+
+function normalizeMaterial(
+  source?: EditorMeshMaterialJSON,
+  legacy?: Pick<EditorMeshJSON, "color" | "textureUrl">
+): ResolvedMeshMaterialJSON {
+  return {
+    color: normalizeColor(source?.color ?? legacy?.color, "#ffffff"),
+    opacity: clampUnitInterval(source?.opacity, 1),
+    diffuseMap: normalizeTexture(
+      source?.diffuseMap ?? (legacy?.textureUrl ? { url: legacy.textureUrl } : undefined)
+    ),
+    metalness: clampUnitInterval(source?.metalness, 0),
+    metalnessMap: normalizeTexture(source?.metalnessMap),
+    roughness: clampUnitInterval(source?.roughness, 1),
+    roughnessMap: normalizeTexture(source?.roughnessMap),
+    normalMap: normalizeTexture(source?.normalMap),
+    normalScale: normalizeVec2(source?.normalScale, [1, 1]),
+    aoMap: normalizeTexture(source?.aoMap),
+    aoMapIntensity: clampUnitInterval(source?.aoMapIntensity, 1),
+    emissive: normalizeColor(source?.emissive, "#000000"),
+    emissiveIntensity: normalizeNumber(source?.emissiveIntensity, 1),
+    emissiveMap: normalizeTexture(source?.emissiveMap)
+  };
+}
 
 export class MeshEntityModel extends BaseEntityModel {
   meshType: number;
@@ -9,8 +60,7 @@ export class MeshEntityModel extends BaseEntityModel {
   uvs: EditorMeshJSON["uvs"] extends infer T ? NonNullable<T> : never;
   normals: EditorMeshJSON["normals"] extends infer T ? NonNullable<T> : never;
   indices: number[];
-  color: string;
-  textureUrl: string;
+  material: ResolvedMeshMaterialJSON;
   visible: boolean;
 
   constructor(index: number, source: EditorMeshJSON) {
@@ -40,17 +90,30 @@ export class MeshEntityModel extends BaseEntityModel {
     this.indices = Array.isArray(source.indices)
       ? source.indices.filter((item) => typeof item === "number" && Number.isFinite(item))
       : [];
-    this.color = normalizeColor(source.color, "#ffffff");
-    this.textureUrl = normalizeString(source.textureUrl);
+    this.material = normalizeMaterial(source.material, source);
     this.visible = normalizeBoolean(source.visible, true);
   }
 
-  patchMaterial(source: { color?: string; textureUrl?: string }) {
-    if (source.color !== undefined) {
-      this.color = normalizeColor(source.color, this.color);
-    }
-    if (source.textureUrl !== undefined) {
-      this.textureUrl = normalizeString(source.textureUrl, this.textureUrl);
-    }
+  patchMaterial(source: Partial<EditorMeshMaterialJSON>) {
+    this.material = normalizeMaterial({
+      ...this.material,
+      ...source,
+      diffuseMap: source.diffuseMap
+        ? { ...this.material.diffuseMap, ...source.diffuseMap }
+        : this.material.diffuseMap,
+      metalnessMap: source.metalnessMap
+        ? { ...this.material.metalnessMap, ...source.metalnessMap }
+        : this.material.metalnessMap,
+      roughnessMap: source.roughnessMap
+        ? { ...this.material.roughnessMap, ...source.roughnessMap }
+        : this.material.roughnessMap,
+      normalMap: source.normalMap
+        ? { ...this.material.normalMap, ...source.normalMap }
+        : this.material.normalMap,
+      aoMap: source.aoMap ? { ...this.material.aoMap, ...source.aoMap } : this.material.aoMap,
+      emissiveMap: source.emissiveMap
+        ? { ...this.material.emissiveMap, ...source.emissiveMap }
+        : this.material.emissiveMap
+    });
   }
 }

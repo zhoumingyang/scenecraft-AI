@@ -10,9 +10,14 @@ export type RenderBinding = {
   object: THREE.Object3D;
   pickTargets?: THREE.Object3D[];
   applyState?: () => void;
+  modelAnimation?: {
+    applyState: () => void;
+    step: () => boolean;
+    hasClip: (animationId: string | null) => boolean;
+  };
   dispose: () => void;
   lastTransformSignature: string;
-  refresh?: () => void;
+  refresh?: (deltaSeconds: number) => void;
 };
 
 export type BindingContext = {
