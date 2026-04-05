@@ -3,7 +3,7 @@ import { boolean, index, pgTable, text, timestamp, uniqueIndex } from "drizzle-o
 
 // These tables mirror Better Auth's core models so authentication and
 // business data can live in the same Postgres database.
-export const users = pgTable(
+export const user = pgTable(
   "user",
   {
     id: text("id").primaryKey(),
@@ -19,13 +19,13 @@ export const users = pgTable(
   })
 );
 
-export const sessions = pgTable(
+export const session = pgTable(
   "session",
   {
     id: text("id").primaryKey(),
     userId: text("user_id")
       .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
+      .references(() => user.id, { onDelete: "cascade" }),
     token: text("token").notNull(),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     ipAddress: text("ip_address"),
@@ -40,13 +40,13 @@ export const sessions = pgTable(
   })
 );
 
-export const accounts = pgTable(
+export const account = pgTable(
   "account",
   {
     id: text("id").primaryKey(),
     userId: text("user_id")
       .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
+      .references(() => user.id, { onDelete: "cascade" }),
     accountId: text("account_id").notNull(),
     providerId: text("provider_id").notNull(),
     accessToken: text("access_token"),
@@ -68,7 +68,7 @@ export const accounts = pgTable(
   })
 );
 
-export const verifications = pgTable(
+export const verification = pgTable(
   "verification",
   {
     id: text("id").primaryKey(),
@@ -87,21 +87,27 @@ export const verifications = pgTable(
 
 // Relations are not required for Better Auth itself, but they make Drizzle
 // queries clearer once we start building app-level services.
-export const usersRelations = relations(users, ({ many }) => ({
-  sessions: many(sessions),
-  accounts: many(accounts)
+export const userRelations = relations(user, ({ many }) => ({
+  sessions: many(session),
+  accounts: many(account)
 }));
 
-export const sessionsRelations = relations(sessions, ({ one }) => ({
-  user: one(users, {
-    fields: [sessions.userId],
-    references: [users.id]
+export const sessionRelations = relations(session, ({ one }) => ({
+  user: one(user, {
+    fields: [session.userId],
+    references: [user.id]
   })
 }));
 
-export const accountsRelations = relations(accounts, ({ one }) => ({
-  user: one(users, {
-    fields: [accounts.userId],
-    references: [users.id]
+export const accountRelations = relations(account, ({ one }) => ({
+  user: one(user, {
+    fields: [account.userId],
+    references: [user.id]
   })
 }));
+
+// Keep plural aliases available for app-level queries if we want them later.
+export const users = user;
+export const sessions = session;
+export const accounts = account;
+export const verifications = verification;
