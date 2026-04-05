@@ -1,5 +1,9 @@
 import { betterAuth } from "better-auth";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { memoryAdapter } from "@better-auth/memory-adapter";
 import { nextCookies } from "better-auth/next-js";
+import { db, isDatabaseConfigured } from "@/db";
+import * as schema from "@/db/schema";
 import { buildAuthEmailTemplate, sendAuthEmail } from "@/lib/authEmail";
 
 const googleClientId = process.env.GOOGLE_CLIENT_ID;
@@ -9,12 +13,38 @@ const githubClientSecret = process.env.GITHUB_CLIENT_SECRET;
 
 const EMAIL_VERIFY_EXPIRES_IN = 60 * 30;
 const RESET_PASSWORD_EXPIRES_IN = 60 * 30;
+const isProduction = process.env.NODE_ENV === "production";
+
+if (!isDatabaseConfigured) {
+  if (isProduction) {
+    throw new Error("DATABASE_URL is required in production.");
+  }
+
+  console.warn(
+    "[auth] DATABASE_URL is not configured. Falling back to Better Auth memory adapter for local development."
+  );
+}
 
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
   secret:
     process.env.BETTER_AUTH_SECRET ??
     "scenecraft-dev-secret-key-please-change-in-production-2026",
+  // Production should use Postgres persistence. Local development can fall
+  // back to memory mode before Neon is ready, which keeps the app runnable
+  // but does not preserve auth data after a restart.
+  database: isDatabaseConfigured
+    ? drizzleAdapter(db, {
+        provider: "pg",
+        schema,
+        camelCase: true
+      })
+    : memoryAdapter({
+        user: [],
+        session: [],
+        account: [],
+        verification: []
+      }),
   emailVerification: {
     expiresIn: EMAIL_VERIFY_EXPIRES_IN,
     sendOnSignUp: true,

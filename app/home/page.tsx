@@ -1,11 +1,8 @@
 import HomeViewClient from "@/components/homeViewClient";
-import { headers } from "next/headers";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/server/auth/getSession";
 
 export default async function HomePage() {
-  const sessionData = await auth.api.getSession({
-    headers: await headers()
-  });
+  const sessionData = await getSession();
   const userName =
     sessionData?.user?.name || sessionData?.user?.email?.split("@")[0] || null;
 

@@ -1,16 +1,8 @@
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 import EditorCanvasView from "@/components/editorCanvasView";
-import { auth } from "@/lib/auth";
+import { requireSessionUser } from "@/lib/server/auth/requireSessionUser";
 
 export default async function EditorPage() {
-  const sessionData = await auth.api.getSession({
-    headers: await headers()
-  });
+  const user = await requireSessionUser();
 
-  if (!sessionData) {
-    redirect("/home");
-  }
-
-  return <EditorCanvasView userEmail={sessionData.user.email || null} />;
+  return <EditorCanvasView userEmail={user.email || null} />;
 }

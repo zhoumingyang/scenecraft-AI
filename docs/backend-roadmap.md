@@ -69,7 +69,7 @@
 
 - `db/schema/auth.ts`
 - `db/index.ts`
-- `lib/server/auth/require-session-user.ts`
+- `lib/server/auth/requireSessionUser.ts`
 - `drizzle.config.ts`
 
 验收标准：
