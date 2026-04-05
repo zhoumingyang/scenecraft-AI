@@ -14,6 +14,19 @@ const githubClientSecret = process.env.GITHUB_CLIENT_SECRET;
 const EMAIL_VERIFY_EXPIRES_IN = 60 * 30;
 const RESET_PASSWORD_EXPIRES_IN = 60 * 30;
 const isProduction = process.env.NODE_ENV === "production";
+const databaseAdapter =
+  isDatabaseConfigured && db
+    ? drizzleAdapter(db, {
+        provider: "pg",
+        schema,
+        camelCase: true
+      })
+    : memoryAdapter({
+        user: [],
+        session: [],
+        account: [],
+        verification: []
+      });
 
 if (!isDatabaseConfigured) {
   if (isProduction) {
@@ -33,18 +46,7 @@ export const auth = betterAuth({
   // Production should use Postgres persistence. Local development can fall
   // back to memory mode before Neon is ready, which keeps the app runnable
   // but does not preserve auth data after a restart.
-  database: isDatabaseConfigured
-    ? drizzleAdapter(db, {
-        provider: "pg",
-        schema,
-        camelCase: true
-      })
-    : memoryAdapter({
-        user: [],
-        session: [],
-        account: [],
-        verification: []
-      }),
+  database: databaseAdapter,
   emailVerification: {
     expiresIn: EMAIL_VERIFY_EXPIRES_IN,
     sendOnSignUp: true,
