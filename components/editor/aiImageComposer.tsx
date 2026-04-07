@@ -195,7 +195,27 @@ export default function AiImageComposer() {
         width: "min(720px, calc(100vw - 144px))"
       }}
     >
-      <Stack spacing={1} alignItems="center">
+      <Box sx={{ position: "relative", width: "100%" }}>
+        <IconButton
+          size="small"
+          onClick={() => setAiComposerOpen(false)}
+          sx={{
+            position: "absolute",
+            top: -14,
+            right: -14,
+            zIndex: 1,
+            color: "rgba(235,244,255,0.92)",
+            background: "rgba(10,16,34,0.96)",
+            border: "1px solid rgba(180,205,255,0.18)",
+            boxShadow: "0 14px 30px rgba(0,0,0,0.28)",
+            "&:hover": {
+              background: "rgba(18,28,56,0.98)"
+            }
+          }}
+        >
+          <CloseRoundedIcon sx={{ fontSize: 16 }} />
+        </IconButton>
+
         <Paper
           elevation={0}
           sx={{
@@ -258,18 +278,7 @@ export default function AiImageComposer() {
             </Stack>
           </Stack>
         </Paper>
-
-        <Stack
-          direction="row"
-          spacing={0.5}
-          alignItems="center"
-          sx={{ color: "rgba(220,232,255,0.78)", cursor: "pointer" }}
-          onClick={() => setAiComposerOpen(false)}
-        >
-          <CloseRoundedIcon sx={{ fontSize: 14 }} />
-          <Typography sx={{ fontSize: 12, fontWeight: 600 }}>{t("editor.ai.close")}</Typography>
-        </Stack>
-      </Stack>
+      </Box>
     </Box>
   );
 }
