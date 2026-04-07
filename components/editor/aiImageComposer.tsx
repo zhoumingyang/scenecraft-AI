@@ -15,6 +15,7 @@ import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import SendRoundedIcon from "@mui/icons-material/SendRounded";
 import AiImageModelMenu from "@/components/editor/aiImageModelMenu";
+import { getEditorThemeTokens } from "@/components/editor/theme";
 import { useI18n } from "@/lib/i18n";
 import { useEditorStore } from "@/stores/editorStore";
 
@@ -30,6 +31,7 @@ export default function AiImageComposer() {
   const router = useRouter();
   const { t } = useI18n();
   const app = useEditorStore((state) => state.app);
+  const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
   const {
     providerId,
     model,
@@ -47,6 +49,7 @@ export default function AiImageComposer() {
   const setAiComposerOpen = useEditorStore((state) => state.setAiComposerOpen);
   const setAiInspectorMode = useEditorStore((state) => state.setAiInspectorMode);
   const setAiGeneratingState = useEditorStore((state) => state.setAiGeneratingState);
+  const theme = getEditorThemeTokens(editorThemeMode);
 
   const filledReferenceImages = useMemo(
     () => referenceImages.filter((item) => Boolean(item.dataUrl)).map((item) => item.dataUrl as string),
@@ -167,11 +170,13 @@ export default function AiImageComposer() {
             px: 2.2,
             py: 1.2,
             borderRadius: "999px",
-            border: "1px solid rgba(180,205,255,0.28)",
+            border: theme.pillBorder,
             background:
-              "linear-gradient(135deg, rgba(15,24,52,0.94), rgba(24,39,82,0.88) 55%, rgba(42,84,168,0.82))",
-            boxShadow: "0 18px 40px rgba(0,0,0,0.28)",
-            color: "#eef5ff",
+              editorThemeMode === "dark"
+                ? "linear-gradient(135deg, rgba(15,24,52,0.94), rgba(24,39,82,0.88) 55%, rgba(42,84,168,0.82))"
+                : "linear-gradient(135deg, rgba(255,255,255,0.94), rgba(237,245,255,0.92) 55%, rgba(189,220,255,0.88))",
+            boxShadow: theme.panelShadow,
+            color: theme.pillText,
             cursor: "pointer"
           }}
         >
@@ -204,12 +209,12 @@ export default function AiImageComposer() {
             top: -14,
             right: -14,
             zIndex: 1,
-            color: "rgba(235,244,255,0.92)",
-            background: "rgba(10,16,34,0.96)",
-            border: "1px solid rgba(180,205,255,0.18)",
-            boxShadow: "0 14px 30px rgba(0,0,0,0.28)",
+            color: theme.pillText,
+            background: theme.panelBg,
+            border: theme.sectionBorder,
+            boxShadow: theme.panelShadow,
             "&:hover": {
-              background: "rgba(18,28,56,0.98)"
+              background: theme.sectionBg
             }
           }}
         >
@@ -221,10 +226,10 @@ export default function AiImageComposer() {
           sx={{
             width: "100%",
             borderRadius: "10px",
-            border: "1px solid rgba(180,205,255,0.24)",
-            background: "rgba(10,16,34,0.9)",
+            border: theme.panelBorder,
+            background: theme.panelBg,
             backdropFilter: "blur(16px)",
-            boxShadow: "0 24px 60px rgba(0,0,0,0.32)"
+            boxShadow: theme.panelShadow
           }}
         >
           <Stack spacing={0.5} sx={{ p: 1.2 }}>
@@ -241,9 +246,13 @@ export default function AiImageComposer() {
                 "& .MuiOutlinedInput-root": {
                   alignItems: "flex-start",
                   borderRadius: "12px",
-                  color: "#eef5ff",
+                  color: theme.pillText,
                   background: "transparent",
                   fontSize: 14
+                },
+                "& .MuiInputBase-input::placeholder": {
+                  color: theme.mutedText,
+                  opacity: 1
                 },
                 "& .MuiOutlinedInput-input": {
                   px: 0.2
@@ -264,16 +273,22 @@ export default function AiImageComposer() {
                   void handleSubmit();
                 }}
                 sx={{
-                  color: "rgba(235,244,255,0.98)",
+                  color: theme.pillText,
                   transform: "rotate(-90deg)",
                   background:
                     prompt.trim() && !isGenerating
-                      ? "linear-gradient(135deg, #2f6df4, #63a4ff)"
-                      : "rgba(255,255,255,0.08)",
-                  border: "1px solid rgba(180,205,255,0.14)"
+                      ? editorThemeMode === "dark"
+                        ? "linear-gradient(135deg, #2f6df4, #63a4ff)"
+                        : "linear-gradient(135deg, #4c86f7, #86b7ff)"
+                      : theme.itemBg,
+                  border: theme.sectionBorder
                 }}
               >
-                {isGenerating ? <CircularProgress size={16} sx={{ color: "#eef5ff" }} /> : <SendRoundedIcon sx={{ fontSize: 18 }} />}
+                {isGenerating ? (
+                  <CircularProgress size={16} sx={{ color: theme.pillText }} />
+                ) : (
+                  <SendRoundedIcon sx={{ fontSize: 18 }} />
+                )}
               </IconButton>
             </Stack>
           </Stack>

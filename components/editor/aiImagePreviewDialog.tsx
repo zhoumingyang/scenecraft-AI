@@ -2,7 +2,9 @@
 
 import { Box, Dialog, IconButton } from "@mui/material";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
+import { getEditorThemeTokens } from "@/components/editor/theme";
 import { useI18n } from "@/lib/i18n";
+import { useEditorStore } from "@/stores/editorStore";
 
 type AiImagePreviewDialogProps = {
   imageUrl: string | null;
@@ -11,6 +13,8 @@ type AiImagePreviewDialogProps = {
 
 export default function AiImagePreviewDialog({ imageUrl, onClose }: AiImagePreviewDialogProps) {
   const { t } = useI18n();
+  const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
+  const theme = getEditorThemeTokens(editorThemeMode);
 
   return (
     <Dialog
@@ -22,7 +26,9 @@ export default function AiImagePreviewDialog({ imageUrl, onClose }: AiImagePrevi
         backdrop: {
           sx: {
             background:
-              "radial-gradient(circle at 20% 18%, rgba(114,234,255,0.14), transparent 48%), rgba(5,8,19,0.82)",
+              editorThemeMode === "dark"
+                ? "radial-gradient(circle at 20% 18%, rgba(114,234,255,0.14), transparent 48%), rgba(5,8,19,0.82)"
+                : "radial-gradient(circle at 20% 18%, rgba(145,198,255,0.2), transparent 48%), rgba(242,247,255,0.7)",
             backdropFilter: "blur(6px)"
           }
         }
@@ -31,8 +37,8 @@ export default function AiImagePreviewDialog({ imageUrl, onClose }: AiImagePrevi
         sx: {
           overflow: "hidden",
           borderRadius: 1.5,
-          border: "1px solid rgba(160,190,255,0.18)",
-          background: "rgba(8,12,24,0.96)"
+          border: theme.panelBorder,
+          background: theme.panelBg
         }
       }}
     >
@@ -46,9 +52,9 @@ export default function AiImagePreviewDialog({ imageUrl, onClose }: AiImagePrevi
             top: 14,
             right: 14,
             zIndex: 1,
-            color: "#eef5ff",
-            border: "1px solid rgba(190,210,255,0.24)",
-            background: "rgba(8,12,24,0.72)"
+            color: theme.pillText,
+            border: theme.sectionBorder,
+            background: theme.pillBg
           }}
         >
           <CloseRoundedIcon sx={{ fontSize: 16 }} />

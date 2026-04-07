@@ -2,6 +2,8 @@
 
 import { ReactNode } from "react";
 import { Menu, MenuItem, MenuProps } from "@mui/material";
+import type { EditorThemeMode } from "@/stores/editorStore";
+import { getEditorThemeTokens } from "@/components/editor/theme";
 
 export type DropdownMenuItem = {
   key: string;
@@ -19,6 +21,7 @@ type DropdownMenuProps = {
   anchorOrigin?: MenuProps["anchorOrigin"];
   transformOrigin?: MenuProps["transformOrigin"];
   minWidth?: number;
+  themeMode?: EditorThemeMode;
 };
 
 export default function DropdownMenu({
@@ -28,8 +31,11 @@ export default function DropdownMenu({
   items,
   anchorOrigin = { vertical: "bottom", horizontal: "left" },
   transformOrigin = { vertical: "top", horizontal: "left" },
-  minWidth = 188
+  minWidth = 188,
+  themeMode = "dark"
 }: DropdownMenuProps) {
+  const theme = getEditorThemeTokens(themeMode);
+
   return (
     <Menu
       anchorEl={anchorEl}
@@ -44,10 +50,10 @@ export default function DropdownMenu({
             mt: 1,
             minWidth,
             borderRadius: 1,
-            border: "1px solid rgba(150,190,255,0.24)",
-            background: "linear-gradient(160deg, rgba(16,24,44,0.96), rgba(7,11,22,0.94))",
+            border: theme.menuBorder,
+            background: theme.menuBg,
             backdropFilter: "blur(14px)",
-            boxShadow: "0 14px 30px rgba(0,0,0,0.45), 0 0 0 1px rgba(130,180,255,0.08) inset",
+            boxShadow: theme.panelShadow,
             overflow: "hidden"
           }
         }
@@ -69,24 +75,24 @@ export default function DropdownMenu({
             my: 0.35,
             borderRadius: 1.2,
             minHeight: 36,
-            color: "rgba(232,241,255,0.92)",
+            color: theme.menuItemText,
             fontSize: 13,
             fontWeight: 500,
             letterSpacing: 0.2,
             transition: "all .16s ease",
             "&:hover": {
-              background: "rgba(115,170,255,0.18)",
-              color: "#f4f8ff"
+              background: theme.menuItemHoverBg,
+              color: theme.pillText
             },
             "&.Mui-selected": {
-              background: "linear-gradient(135deg, rgba(110,170,255,0.35), rgba(88,150,255,0.2))",
-              color: "#ffffff"
+              background: theme.menuItemSelectedBg,
+              color: theme.pillText
             },
             "&.Mui-selected:hover": {
-              background: "linear-gradient(135deg, rgba(120,180,255,0.42), rgba(98,160,255,0.24))"
+              background: theme.menuItemSelectedBg
             },
             "&.Mui-disabled": {
-              color: "rgba(232,241,255,0.45)"
+              color: theme.menuItemDisabledText
             }
           }}
         >

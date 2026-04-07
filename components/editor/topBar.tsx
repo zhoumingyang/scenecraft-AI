@@ -11,6 +11,7 @@ import LightModeRoundedIcon from "@mui/icons-material/LightModeRounded";
 import GridViewRoundedIcon from "@mui/icons-material/GridViewRounded";
 import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
 import DropdownMenu from "@/components/common/dropdownMenu";
+import { getEditorThemeTokens } from "@/components/editor/theme";
 import { useI18n, TranslationKey } from "@/lib/i18n";
 import { createDefaultEditorProjectJSON, inferModelFileFormat } from "@/render/editor";
 import { useEditorStore } from "@/stores/editorStore";
@@ -115,10 +116,12 @@ export default function TopBar() {
   const modelImportInputRef = useRef<HTMLInputElement | null>(null);
   const panoImportInputRef = useRef<HTMLInputElement | null>(null);
   const app = useEditorStore((state) => state.app);
+  const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
   const projectLoadVersion = useEditorStore((state) => state.projectLoadVersion);
   const [activeMenuId, setActiveMenuId] = useState<DropdownConfig["id"] | null>(null);
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [selectedValues, setSelectedValues] = useState<Record<string, string>>(defaultSelectedValues);
+  const theme = getEditorThemeTokens(editorThemeMode);
 
   const activeConfig = dropdownConfigs.find((item) => item.id === activeMenuId) || null;
 
@@ -303,9 +306,11 @@ export default function TopBar() {
           px: 1.2,
           py: 1,
           borderRadius: 2,
-          border: "1px solid rgba(180,205,255,0.3)",
-          background: "rgba(8,12,24,0.72)",
-          backdropFilter: "blur(10px)"
+          border: theme.pillBorder,
+          background: theme.pillBg,
+          backdropFilter: "blur(10px)",
+          boxShadow: theme.pillShadow,
+          color: theme.pillText
         }}
       >
         {dropdownConfigs
@@ -354,6 +359,7 @@ export default function TopBar() {
         anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
         transformOrigin={{ vertical: "top", horizontal: "left" }}
         items={activeItems}
+        themeMode={editorThemeMode}
       />
     </>
   );

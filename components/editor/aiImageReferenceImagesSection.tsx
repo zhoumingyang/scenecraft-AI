@@ -4,8 +4,9 @@ import { ChangeEvent } from "react";
 import { Stack, Typography } from "@mui/material";
 import PropertyPanelSection from "@/components/common/propertyPanelSection";
 import CompositeReferenceUploader from "@/components/editor/compositeReferenceUploader";
+import { getEditorThemeTokens } from "@/components/editor/theme";
 import { useI18n } from "@/lib/i18n";
-import type { AiReferenceImageSlot } from "@/stores/editorStore";
+import { useEditorStore, type AiReferenceImageSlot } from "@/stores/editorStore";
 
 type AiImageReferenceImagesSectionProps = {
   referenceImages: AiReferenceImageSlot[];
@@ -21,7 +22,9 @@ export default function AiImageReferenceImagesSection({
   onClearReferenceImage
 }: AiImageReferenceImagesSectionProps) {
   const { t } = useI18n();
+  const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
   const filledReferenceCount = referenceImages.filter((item) => item.dataUrl).length;
+  const theme = getEditorThemeTokens(editorThemeMode);
 
   return (
     <PropertyPanelSection title={t("editor.ai.sectionReferenceImages")}>
@@ -39,7 +42,7 @@ export default function AiImageReferenceImagesSection({
           ))}
         </Stack>
 
-        <Typography sx={{ fontSize: 11, color: "rgba(176,193,228,0.82)" }}>
+        <Typography sx={{ fontSize: 11, color: theme.mutedText }}>
           {t("editor.ai.referenceImageCount", { count: filledReferenceCount })}
         </Typography>
       </Stack>

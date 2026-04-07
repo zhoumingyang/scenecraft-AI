@@ -4,7 +4,8 @@ import { MouseEvent, ReactNode, useMemo, useState } from "react";
 import { IconButton, Menu, MenuItem, Tooltip } from "@mui/material";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import ImageRoundedIcon from "@mui/icons-material/ImageRounded";
-import type { AiImageModelId } from "@/stores/editorStore";
+import { getEditorThemeTokens } from "@/components/editor/theme";
+import { useEditorStore, type AiImageModelId } from "@/stores/editorStore";
 
 const MODELS: Array<{
   id: AiImageModelId;
@@ -34,7 +35,9 @@ export default function AiImageModelMenu({
   onChange,
   onFocus
 }: AiImageModelMenuProps) {
+  const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
+  const theme = getEditorThemeTokens(editorThemeMode);
   const activeModelMeta = useMemo(
     () => MODELS.find((item) => item.id === model) ?? MODELS[0],
     [model]
@@ -47,9 +50,9 @@ export default function AiImageModelMenu({
           size="small"
           onClick={(event: MouseEvent<HTMLElement>) => setAnchorEl(event.currentTarget)}
           sx={{
-            color: "rgba(230,239,255,0.96)",
-            background: "rgba(255,255,255,0.05)",
-            border: "1px solid rgba(180,205,255,0.14)"
+            color: theme.pillText,
+            background: theme.itemBg,
+            border: theme.sectionBorder
           }}
         >
           {activeModelMeta.icon}
@@ -67,10 +70,10 @@ export default function AiImageModelMenu({
             sx: {
               mb: 1,
               borderRadius: 1,
-              border: "1px solid rgba(180,205,255,0.18)",
-              background: "rgba(8,12,24,0.96)",
+              border: theme.menuBorder,
+              background: theme.menuBg,
               backdropFilter: "blur(12px)",
-              color: "#eef5ff"
+              color: theme.pillText
             }
           }
         }}
@@ -84,7 +87,22 @@ export default function AiImageModelMenu({
               setAnchorEl(null);
               onFocus();
             }}
-            sx={{ gap: 1, minWidth: 240, fontSize: 13 }}
+            sx={{
+              gap: 1,
+              minWidth: 240,
+              fontSize: 13,
+              color: theme.menuItemText,
+              "&.Mui-selected": {
+                background: theme.menuItemSelectedBg,
+                color: theme.pillText
+              },
+              "&.Mui-selected:hover": {
+                background: theme.menuItemSelectedBg
+              },
+              "&:hover": {
+                background: theme.menuItemHoverBg
+              }
+            }}
           >
             {item.icon}
             {item.label}

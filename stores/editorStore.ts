@@ -3,6 +3,7 @@ import type { EditorApp } from "@/render/editor";
 
 export type AiImageProviderId = "siliconflow";
 export type AiImageModelId = "Qwen/Qwen-Image" | "Qwen/Qwen-Image-Edit-2509";
+export type EditorThemeMode = "dark" | "light";
 export type AiImageSize =
   | "1328x1328"
   | "1664x928"
@@ -40,6 +41,7 @@ type AiImageSettings = {
 
 type EditorStoreState = {
   app: EditorApp | null;
+  editorThemeMode: EditorThemeMode;
   selectedEntityId: string | null;
   projectVersion: number;
   projectLoadVersion: number;
@@ -47,6 +49,7 @@ type EditorStoreState = {
   viewStateVersion: number;
   aiImage: AiImageSettings;
   setApp: (app: EditorApp | null) => void;
+  setEditorThemeMode: (mode: EditorThemeMode) => void;
   setSelectedEntityId: (selectedEntityId: string | null) => void;
   bumpProjectVersion: () => void;
   bumpProjectLoadVersion: () => void;
@@ -72,6 +75,7 @@ type EditorStoreState = {
 
 export const useEditorStore = create<EditorStoreState>((set) => ({
   app: null,
+  editorThemeMode: "dark",
   selectedEntityId: null,
   projectVersion: 0,
   projectLoadVersion: 0,
@@ -97,6 +101,7 @@ export const useEditorStore = create<EditorStoreState>((set) => ({
     lastSeed: null
   },
   setApp: (app) => set({ app }),
+  setEditorThemeMode: (editorThemeMode) => set({ editorThemeMode }),
   setSelectedEntityId: (selectedEntityId) => set({ selectedEntityId }),
   bumpProjectVersion: () => set((state) => ({ projectVersion: state.projectVersion + 1 })),
   bumpProjectLoadVersion: () =>

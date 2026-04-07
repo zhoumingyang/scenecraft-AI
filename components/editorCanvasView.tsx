@@ -13,6 +13,7 @@ import {
 import { createDefaultEditorProjectJSON } from "@/render/editor";
 import { createEditorSdk } from "@/render/editor/sdk";
 import { useEditorStore } from "@/stores/editorStore";
+import { getEditorThemeTokens } from "@/components/editor/theme";
 
 type EditorCanvasViewProps = {
   userEmail: string | null;
@@ -21,12 +22,15 @@ type EditorCanvasViewProps = {
 export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
   const canvasHostRef = useRef<HTMLDivElement | null>(null);
   const setApp = useEditorStore((state) => state.setApp);
+  const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
+  const setEditorThemeMode = useEditorStore((state) => state.setEditorThemeMode);
   const setSelectedEntityId = useEditorStore((state) => state.setSelectedEntityId);
   const bumpProjectVersion = useEditorStore((state) => state.bumpProjectVersion);
   const bumpProjectLoadVersion = useEditorStore((state) => state.bumpProjectLoadVersion);
   const bumpCameraVersion = useEditorStore((state) => state.bumpCameraVersion);
   const bumpViewStateVersion = useEditorStore((state) => state.bumpViewStateVersion);
   const setAiInspectorMode = useEditorStore((state) => state.setAiInspectorMode);
+  const theme = getEditorThemeTokens(editorThemeMode);
 
   useEffect(() => {
     if (!canvasHostRef.current) return;
@@ -96,13 +100,43 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
     setAiInspectorMode
   ]);
 
+  useEffect(() => {
+    const savedTheme = window.localStorage.getItem("editor-theme-mode");
+    if (savedTheme === "dark" || savedTheme === "light") {
+      setEditorThemeMode(savedTheme);
+    }
+  }, [setEditorThemeMode]);
+
+  useEffect(() => {
+    window.localStorage.setItem("editor-theme-mode", editorThemeMode);
+  }, [editorThemeMode]);
+
   return (
-    <Box sx={{ position: "relative", width: "100vw", height: "100vh", overflow: "hidden" }}>
+    <Box
+      sx={{
+        position: "relative",
+        width: "100vw",
+        height: "100vh",
+        overflow: "hidden",
+        color: theme.pillText,
+        colorScheme: editorThemeMode
+      }}
+    >
       <Box
         ref={canvasHostRef}
         sx={{
           position: "absolute",
-          inset: 0
+          inset: 0,
+          zIndex: 0
+        }}
+      />
+      <Box
+        sx={{
+          position: "absolute",
+          inset: 0,
+          zIndex: 1,
+          pointerEvents: "none",
+          background: `${theme.rootGlow}, ${theme.rootTint}`
         }}
       />
       <TopBar />

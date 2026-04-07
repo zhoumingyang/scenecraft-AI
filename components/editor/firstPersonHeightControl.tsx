@@ -6,7 +6,9 @@ import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import RemoveRoundedIcon from "@mui/icons-material/RemoveRounded";
 import HeightRoundedIcon from "@mui/icons-material/HeightRounded";
 import type { EditorApp } from "@/render/editor";
-import { viewportPillSx } from "./viewportControlStyles";
+import { useEditorStore } from "@/stores/editorStore";
+import { getEditorThemeTokens } from "@/components/editor/theme";
+import { getViewportPillSx } from "./viewportControlStyles";
 
 type FirstPersonHeightControlProps = {
   app: EditorApp | null;
@@ -23,9 +25,11 @@ export default function FirstPersonHeightControl({
   app,
   isFirstPerson
 }: FirstPersonHeightControlProps) {
+  const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
   const [heightInput, setHeightInput] = useState("1.80");
   const isEditingHeightRef = useRef(false);
   const firstPersonHeight = app?.getFirstPersonHeight() ?? 1.8;
+  const theme = getEditorThemeTokens(editorThemeMode);
 
   useEffect(() => {
     if (!isFirstPerson) {
@@ -67,7 +71,7 @@ export default function FirstPersonHeightControl({
       spacing={0.5}
       alignItems="center"
       sx={{
-        ...viewportPillSx,
+        ...getViewportPillSx(editorThemeMode),
         px: 0.5
       }}
     >
@@ -95,8 +99,8 @@ export default function FirstPersonHeightControl({
           "& .MuiOutlinedInput-root": {
             height: 24.5,
             borderRadius: 99,
-            color: "#e9f3ff",
-            background: "rgba(255,255,255,0.04)"
+            color: theme.pillText,
+            background: theme.inputBg
           }
         }}
         slotProps={{

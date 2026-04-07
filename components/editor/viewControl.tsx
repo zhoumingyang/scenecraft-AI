@@ -9,7 +9,9 @@ import LightModeRoundedIcon from "@mui/icons-material/LightModeRounded";
 import KeyboardArrowUpRoundedIcon from "@mui/icons-material/KeyboardArrowUpRounded";
 import type { EditorApp } from "@/render/editor";
 import { useI18n } from "@/lib/i18n";
-import { viewportPillSx } from "./viewportControlStyles";
+import { useEditorStore } from "@/stores/editorStore";
+import { getEditorThemeTokens } from "@/components/editor/theme";
+import { getViewportPillSx } from "./viewportControlStyles";
 
 type HelperKey = "gridHelper" | "transformGizmo" | "lightHelper";
 
@@ -20,7 +22,9 @@ type ViewControlProps = {
 
 export default function ViewControl({ app, viewStateVersion }: ViewControlProps) {
   const { t } = useI18n();
+  const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
   const [open, setOpen] = useState(false);
+  const theme = getEditorThemeTokens(editorThemeMode);
 
   const helperVisibility = useMemo(
     () =>
@@ -76,10 +80,10 @@ export default function ViewControl({ app, viewStateVersion }: ViewControlProps)
               minWidth: 220,
               p: 1,
               borderRadius: 1,
-              border: "1px solid rgba(180,205,255,0.26)",
-              background: "rgba(8,12,24,0.78)",
+              border: theme.panelBorder,
+              background: theme.panelBg,
               backdropFilter: "blur(12px)",
-              boxShadow: "0 18px 40px rgba(0,0,0,0.28)"
+              boxShadow: theme.panelShadow
             }}
           >
             <Stack spacing={0.75}>
@@ -91,7 +95,7 @@ export default function ViewControl({ app, viewStateVersion }: ViewControlProps)
                   fontWeight: 700,
                   letterSpacing: "0.06em",
                   textTransform: "uppercase",
-                  color: "rgba(220,232,255,0.92)"
+                  color: theme.titleText
                 }}
               >
                 {t("editor.view.title")}
@@ -107,8 +111,8 @@ export default function ViewControl({ app, viewStateVersion }: ViewControlProps)
                     px: 1.1,
                     py: 0.9,
                     borderRadius: 1.6,
-                    background: "rgba(255,255,255,0.03)",
-                    color: "rgba(219,230,255,0.84)",
+                    background: theme.itemBg,
+                    color: theme.text,
                     textTransform: "none"
                   }}
                 >
@@ -117,7 +121,7 @@ export default function ViewControl({ app, viewStateVersion }: ViewControlProps)
                     <Typography sx={{ flex: 1, fontSize: 13, textAlign: "left" }}>
                       {item.label}
                     </Typography>
-                    <Typography sx={{ fontSize: 12, color: "rgba(170,188,225,0.74)" }}>
+                    <Typography sx={{ fontSize: 12, color: theme.mutedText }}>
                       {item.visible ? t("editor.view.hide") : t("editor.view.show")}
                     </Typography>
                   </Stack>
@@ -133,7 +137,7 @@ export default function ViewControl({ app, viewStateVersion }: ViewControlProps)
           onClick={onToggle}
           startIcon={<VisibilityRoundedIcon />}
           endIcon={<KeyboardArrowUpRoundedIcon />}
-          sx={viewportPillSx}
+          sx={getViewportPillSx(editorThemeMode)}
         >
           {t("editor.view.title")}
         </Button>

@@ -17,6 +17,7 @@ import {
 } from "@/components/editor/propertyPanelSections";
 import AiImagePropertyPanel from "@/components/editor/aiImagePropertyPanel";
 import { getLightTypeLabel, getTextureDialogTitle } from "@/components/editor/propertyPanelSections/util";
+import { getEditorThemeTokens } from "@/components/editor/theme";
 
 const PANEL_WIDTH = 272;
 const COLLAPSED_VISIBLE_WIDTH = 44;
@@ -24,11 +25,13 @@ const COLLAPSED_VISIBLE_WIDTH = 44;
 export default function PropertyPanel() {
   const { t } = useI18n();
   const app = useEditorStore((state) => state.app);
+  const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
   const selectedEntityId = useEditorStore((state) => state.selectedEntityId);
   const projectVersion = useEditorStore((state) => state.projectVersion);
   const inspectorMode = useEditorStore((state) => state.aiImage.inspectorMode);
   const [open, setOpen] = useState(true);
   const [activeTextureField, setActiveTextureField] = useState<TextureFieldKey | null>(null);
+  const theme = getEditorThemeTokens(editorThemeMode);
 
   const entityRecord = useMemo(() => {
     const project = app?.projectModel;
@@ -80,11 +83,11 @@ export default function PropertyPanel() {
           position: "relative",
           height: "100%",
           borderRadius: "10px 0 0 10px",
-          border: "1px solid rgba(180,205,255,0.26)",
+          border: theme.panelBorder,
           borderRight: 0,
-          background: "rgba(8,12,24,0.78)",
+          background: theme.panelBg,
           backdropFilter: "blur(12px)",
-          boxShadow: "0 18px 40px rgba(0,0,0,0.28)",
+          boxShadow: theme.panelShadow,
           overflow: "visible"
         }}
       >
@@ -93,7 +96,7 @@ export default function PropertyPanel() {
             height: "100%",
             borderRadius: "10px 0 0 10px",
             overflow: "hidden",
-            background: "rgba(8,12,24,0.78)"
+            background: theme.panelBg
           }}
         >
           <Stack spacing={1} sx={{ height: "100%", p: open ? 1.05 : 0.7 }}>
@@ -102,9 +105,9 @@ export default function PropertyPanel() {
                 size="small"
                 onClick={() => setOpen((value) => !value)}
                 sx={{
-                  color: "rgba(162,196,255,0.92)",
-                  border: "1px solid rgba(180,205,255,0.18)",
-                  background: "rgba(255,255,255,0.03)"
+                  color: theme.titleText,
+                  border: theme.sectionBorder,
+                  background: theme.iconButtonBg
                 }}
               >
                 <TuneRoundedIcon sx={{ fontSize: 16 }} />
@@ -116,7 +119,7 @@ export default function PropertyPanel() {
                     fontWeight: 700,
                     letterSpacing: "0.06em",
                     textTransform: "uppercase",
-                    color: "rgba(220,232,255,0.92)"
+                    color: theme.titleText
                   }}
                 >
                   {t("editor.properties.title")}
@@ -140,7 +143,7 @@ export default function PropertyPanel() {
                   <Stack
                     spacing={0.7}
                     justifyContent="center"
-                    sx={{ height: "100%", minHeight: 180, color: "rgba(176,193,228,0.72)" }}
+                    sx={{ height: "100%", minHeight: 180, color: theme.mutedText }}
                   >
                     <Typography sx={{ fontSize: 14, fontWeight: 600 }}>
                       {t("editor.properties.none")}
@@ -151,7 +154,7 @@ export default function PropertyPanel() {
                   </Stack>
                 ) : (
                   <Stack spacing={0.9}>
-                    <Typography sx={{ px: 0.15, fontSize: 13, fontWeight: 600, color: "#eef5ff" }}>
+                    <Typography sx={{ px: 0.15, fontSize: 13, fontWeight: 600, color: theme.pillText }}>
                       {panelTitle}
                     </Typography>
 

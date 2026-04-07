@@ -4,10 +4,14 @@ import { useState } from "react";
 import { Button } from "@mui/material";
 import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
 import AccountCircleRoundedIcon from "@mui/icons-material/AccountCircleRounded";
+import DarkModeRoundedIcon from "@mui/icons-material/DarkModeRounded";
+import LightModeRoundedIcon from "@mui/icons-material/LightModeRounded";
 import { useRouter } from "next/navigation";
 import DropdownMenu from "@/components/common/dropdownMenu";
 import { useI18n } from "@/lib/i18n";
 import { authClient } from "@/lib/authClient";
+import { getEditorThemeTokens } from "@/components/editor/theme";
+import { useEditorStore } from "@/stores/editorStore";
 
 type AvatarMenuProps = {
   userEmail: string | null;
@@ -21,9 +25,12 @@ const truncateEmail = (email: string) =>
 export default function AvatarMenu({ userEmail }: AvatarMenuProps) {
   const router = useRouter();
   const { t } = useI18n();
+  const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
+  const setEditorThemeMode = useEditorStore((state) => state.setEditorThemeMode);
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [signOutBusy, setSignOutBusy] = useState(false);
   const displayLabel = userEmail ? truncateEmail(userEmail) : t("editor.avatar.default");
+  const theme = getEditorThemeTokens(editorThemeMode);
 
   const onSignOut = async () => {
     setSignOutBusy(true);
@@ -51,9 +58,11 @@ export default function AvatarMenu({ userEmail }: AvatarMenuProps) {
           top: 18,
           zIndex: 21,
           borderRadius: 99,
-          border: "1px solid rgba(180,205,255,0.3)",
-          background: "rgba(8,12,24,0.72)",
+          border: theme.pillBorder,
+          background: theme.pillBg,
           backdropFilter: "blur(10px)",
+          boxShadow: theme.pillShadow,
+          color: theme.pillText,
           maxWidth: 280
         }}
         title={userEmail || undefined}
@@ -80,12 +89,41 @@ export default function AvatarMenu({ userEmail }: AvatarMenuProps) {
         transformOrigin={{ vertical: "top", horizontal: "left" }}
         items={[
           {
+            key: "themeDark",
+            label: (
+              <>
+                <DarkModeRoundedIcon sx={{ mr: 1, fontSize: 18, verticalAlign: "text-bottom" }} />
+                {t("editor.avatar.themeDark")}
+              </>
+            ),
+            selected: editorThemeMode === "dark",
+            onClick: () => {
+              setEditorThemeMode("dark");
+              setAnchorEl(null);
+            }
+          },
+          {
+            key: "themeLight",
+            label: (
+              <>
+                <LightModeRoundedIcon sx={{ mr: 1, fontSize: 18, verticalAlign: "text-bottom" }} />
+                {t("editor.avatar.themeLight")}
+              </>
+            ),
+            selected: editorThemeMode === "light",
+            onClick: () => {
+              setEditorThemeMode("light");
+              setAnchorEl(null);
+            }
+          },
+          {
             key: "signOut",
             label: t("editor.avatar.signOut"),
             disabled: signOutBusy,
             onClick: onSignOut
           }
         ]}
+        themeMode={editorThemeMode}
       />
     </>
   );

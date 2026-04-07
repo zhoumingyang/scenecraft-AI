@@ -5,8 +5,9 @@ import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import VisibilityRoundedIcon from "@mui/icons-material/VisibilityRounded";
 import PropertyPanelSection from "@/components/common/propertyPanelSection";
+import { getEditorThemeTokens } from "@/components/editor/theme";
 import { useI18n } from "@/lib/i18n";
-import type { AiImageResult } from "@/stores/editorStore";
+import { useEditorStore, type AiImageResult } from "@/stores/editorStore";
 
 type AiImageResultsSectionProps = {
   errorMessage: string | null;
@@ -26,6 +27,8 @@ export default function AiImageResultsSection({
   onViewImage
 }: AiImageResultsSectionProps) {
   const { t } = useI18n();
+  const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
+  const theme = getEditorThemeTokens(editorThemeMode);
 
   return (
     <PropertyPanelSection title={t("editor.ai.sectionResults")}>
@@ -41,19 +44,19 @@ export default function AiImageResultsSection({
               px: 1,
               py: 1.1,
               borderRadius: 1,
-              border: "1px solid rgba(160,190,255,0.18)",
-              background: "rgba(255,255,255,0.03)"
+              border: theme.sectionBorder,
+              background: theme.itemBg
             }}
           >
-            <AutoAwesomeRoundedIcon sx={{ fontSize: 16, color: "rgba(162,196,255,0.95)" }} />
-            <Typography sx={{ fontSize: 11, color: "rgba(219,230,255,0.86)" }}>
+            <AutoAwesomeRoundedIcon sx={{ fontSize: 16, color: theme.titleText }} />
+            <Typography sx={{ fontSize: 11, color: theme.text }}>
               {t("editor.ai.generating")}
             </Typography>
           </Stack>
         ) : null}
 
         {lastSeed !== null ? (
-          <Typography sx={{ fontSize: 11, color: "rgba(176,193,228,0.82)" }}>
+          <Typography sx={{ fontSize: 11, color: theme.mutedText }}>
             {t("editor.ai.lastSeed", { seed: lastSeed })}
           </Typography>
         ) : null}
@@ -66,8 +69,8 @@ export default function AiImageResultsSection({
                 sx={{
                   overflow: "hidden",
                   borderRadius: 1,
-                  border: "1px solid rgba(160,190,255,0.16)",
-                  background: "rgba(255,255,255,0.04)"
+                  border: theme.sectionBorder,
+                  background: theme.sectionBg
                 }}
               >
                 <Box
@@ -82,9 +85,9 @@ export default function AiImageResultsSection({
                       size="small"
                       onClick={() => onDownloadImage(result.url, index)}
                       sx={{
-                        color: "#eef5ff",
-                        border: "1px solid rgba(160,190,255,0.16)",
-                        background: "rgba(255,255,255,0.03)"
+                        color: theme.pillText,
+                        border: theme.sectionBorder,
+                        background: theme.itemBg
                       }}
                     >
                       <DownloadRoundedIcon sx={{ fontSize: 16 }} />
@@ -95,9 +98,9 @@ export default function AiImageResultsSection({
                       size="small"
                       onClick={() => onViewImage(result.url)}
                       sx={{
-                        color: "#eef5ff",
-                        border: "1px solid rgba(160,190,255,0.16)",
-                        background: "rgba(255,255,255,0.03)"
+                        color: theme.pillText,
+                        border: theme.sectionBorder,
+                        background: theme.itemBg
                       }}
                     >
                       <VisibilityRoundedIcon sx={{ fontSize: 16 }} />
@@ -110,13 +113,13 @@ export default function AiImageResultsSection({
             <Box
               sx={{
                 borderRadius: 1,
-                border: "1px dashed rgba(160,190,255,0.22)",
-                background: "rgba(255,255,255,0.025)",
+                border: `1px dashed ${editorThemeMode === "dark" ? "rgba(160,190,255,0.22)" : "rgba(140,167,206,0.4)"}`,
+                background: theme.itemBg,
                 px: 1,
                 py: 1.4
               }}
             >
-              <Typography sx={{ fontSize: 11, color: "rgba(176,193,228,0.78)" }}>
+              <Typography sx={{ fontSize: 11, color: theme.mutedText }}>
                 {t("editor.ai.resultEmpty")}
               </Typography>
             </Box>

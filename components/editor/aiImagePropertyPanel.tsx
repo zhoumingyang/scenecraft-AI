@@ -6,6 +6,7 @@ import AiImageParametersSection from "@/components/editor/aiImageParametersSecti
 import AiImagePreviewDialog from "@/components/editor/aiImagePreviewDialog";
 import AiImageReferenceImagesSection from "@/components/editor/aiImageReferenceImagesSection";
 import AiImageResultsSection from "@/components/editor/aiImageResultsSection";
+import { getEditorThemeTokens } from "@/components/editor/theme";
 import { useI18n } from "@/lib/i18n";
 import { useEditorStore } from "@/stores/editorStore";
 
@@ -20,6 +21,7 @@ function readFileAsDataUrl(file: File) {
 
 export default function AiImagePropertyPanel() {
   const { t } = useI18n();
+  const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
   const app = useEditorStore((state) => state.app);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const {
@@ -40,6 +42,7 @@ export default function AiImagePropertyPanel() {
   const setAiInferenceSteps = useEditorStore((state) => state.setAiInferenceSteps);
   const setAiReferenceImageAt = useEditorStore((state) => state.setAiReferenceImageAt);
   const clearAiReferenceImageAt = useEditorStore((state) => state.clearAiReferenceImageAt);
+  const theme = getEditorThemeTokens(editorThemeMode);
 
   const isEditModel = model === "Qwen/Qwen-Image-Edit-2509";
 
@@ -75,7 +78,7 @@ export default function AiImagePropertyPanel() {
 
   return (
     <Stack spacing={0.9}>
-      <Typography sx={{ px: 0.15, fontSize: 13, fontWeight: 600, color: "#eef5ff" }}>
+      <Typography sx={{ px: 0.15, fontSize: 13, fontWeight: 600, color: theme.pillText }}>
         {t("editor.ai.panelTitle")}
       </Typography>
 

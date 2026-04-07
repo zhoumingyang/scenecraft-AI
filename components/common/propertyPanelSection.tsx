@@ -1,6 +1,8 @@
 "use client";
 
 import { Box, Stack, Typography } from "@mui/material";
+import { getEditorThemeTokens } from "@/components/editor/theme";
+import { useEditorStore } from "@/stores/editorStore";
 
 type PropertyPanelSectionProps = {
   title: string;
@@ -11,12 +13,15 @@ export default function PropertyPanelSection({
   title,
   children
 }: PropertyPanelSectionProps) {
+  const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
+  const theme = getEditorThemeTokens(editorThemeMode);
+
   return (
     <Box
       sx={{
         borderRadius: 0.5,
-        border: "1px solid rgba(160,190,255,0.14)",
-        background: "rgba(255,255,255,0.03)"
+        border: theme.sectionBorder,
+        background: theme.sectionBg
       }}
     >
       <Stack spacing={1.25} sx={{ p: 1.4 }}>
@@ -26,7 +31,7 @@ export default function PropertyPanelSection({
             fontWeight: 700,
             letterSpacing: "0.08em",
             textTransform: "uppercase",
-            color: "rgba(210,225,255,0.7)"
+            color: theme.mutedText
           }}
         >
           {title}

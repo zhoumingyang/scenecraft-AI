@@ -18,6 +18,7 @@ import VisibilityRoundedIcon from "@mui/icons-material/VisibilityRounded";
 import { useI18n } from "@/lib/i18n";
 import { SCENE_NODE_ID } from "@/render/editor";
 import { useEditorStore } from "@/stores/editorStore";
+import { getEditorThemeTokens } from "@/components/editor/theme";
 
 type SceneTreeNode = {
   id: string;
@@ -56,9 +57,11 @@ function getLightLabel(lightType: number, index: number, t: ReturnType<typeof us
 export default function SceneTreePanel() {
   const { t } = useI18n();
   const app = useEditorStore((state) => state.app);
+  const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
   const selectedEntityId = useEditorStore((state) => state.selectedEntityId);
   const projectVersion = useEditorStore((state) => state.projectVersion);
   const [open, setOpen] = useState(false);
+  const theme = getEditorThemeTokens(editorThemeMode);
 
   const sections = useMemo<SceneTreeSection[]>(() => {
     const project = app?.projectModel;
@@ -191,10 +194,10 @@ export default function SceneTreePanel() {
             maxHeight: "42vh",
             overflowY: "auto",
             borderRadius: 1,
-            border: "1px solid rgba(180,205,255,0.26)",
-            background: "rgba(8,12,24,0.78)",
+            border: theme.panelBorder,
+            background: theme.panelBg,
             backdropFilter: "blur(12px)",
-            boxShadow: "0 18px 40px rgba(0,0,0,0.28)"
+            boxShadow: theme.panelShadow
           }}
         >
           <Stack spacing={1.5} sx={{ p: 1.5 }}>
@@ -204,7 +207,7 @@ export default function SceneTreePanel() {
                 fontWeight: 700,
                 letterSpacing: "0.06em",
                 textTransform: "uppercase",
-                color: "rgba(220,232,255,0.92)"
+                color: theme.titleText
               }}
             >
               {t("editor.sceneTree.title")}
@@ -215,8 +218,8 @@ export default function SceneTreePanel() {
                 key={section.id}
                 sx={{
                   borderRadius: 1,
-                  border: "1px solid rgba(160,190,255,0.14)",
-                  background: "rgba(255,255,255,0.03)"
+                  border: theme.sectionBorder,
+                  background: theme.sectionBg
                 }}
               >
                 <Stack
@@ -226,13 +229,13 @@ export default function SceneTreePanel() {
                   sx={{
                     px: 1.2,
                     py: 0.9,
-                    color: "rgba(211,224,255,0.8)"
+                    color: theme.text
                   }}
                 >
                   <section.icon sx={{ fontSize: 17 }} />
                   <Typography sx={{ fontSize: 13, fontWeight: 600 }}>{section.label}</Typography>
                   <Box sx={{ flex: 1 }} />
-                  <Typography sx={{ fontSize: 12, color: "rgba(170,188,225,0.74)" }}>
+                  <Typography sx={{ fontSize: 12, color: theme.mutedText }}>
                     {section.nodes.length}
                   </Typography>
                 </Stack>
@@ -244,7 +247,7 @@ export default function SceneTreePanel() {
                         px: 1.1,
                         py: 0.8,
                         fontSize: 12,
-                        color: "rgba(165,180,212,0.62)"
+                        color: theme.mutedText
                       }}
                     >
                       {t("editor.sceneTree.empty")}
@@ -255,20 +258,20 @@ export default function SceneTreePanel() {
                       const actionsDisabled = node.locked || node.type === "scene";
                       const canToggleVisible = node.type !== "light" && node.type !== "scene";
                       const rowColor = node.locked
-                        ? "rgba(166,178,203,0.6)"
+                        ? theme.mutedText
                         : selected
-                          ? "#e9f3ff"
-                          : "rgba(219,230,255,0.84)";
+                          ? theme.pillText
+                          : theme.text;
 
                       const iconButtonSx = {
                         color: rowColor,
                         opacity: 0.9,
                         p: 0.45,
                         "&:hover": {
-                          background: "rgba(255,255,255,0.08)"
+                          background: theme.itemHoverBg
                         },
                         "&.Mui-disabled": {
-                          color: "rgba(125,138,166,0.5)"
+                          color: theme.menuItemDisabledText
                         }
                       };
 
@@ -283,11 +286,11 @@ export default function SceneTreePanel() {
                             py: 0.35,
                             borderRadius: 1.6,
                             border: selected
-                              ? "1px solid rgba(124,183,255,0.8)"
+                              ? theme.itemSelectedBorder
                               : "1px solid transparent",
                             background: selected
-                              ? "rgba(78,140,255,0.18)"
-                              : "rgba(255,255,255,0.02)",
+                              ? theme.itemSelectedBg
+                              : theme.itemBg,
                             opacity: node.visible ? 1 : 0.6
                           }}
                         >
@@ -429,9 +432,11 @@ export default function SceneTreePanel() {
           bottom: 72,
           zIndex: 21,
           borderRadius: 99,
-          border: "1px solid rgba(180,205,255,0.3)",
-          background: "rgba(8,12,24,0.72)",
-          backdropFilter: "blur(10px)"
+          border: theme.pillBorder,
+          background: theme.pillBg,
+          backdropFilter: "blur(10px)",
+          boxShadow: theme.pillShadow,
+          color: theme.pillText
         }}
       >
         {t("editor.sceneTree.button")}

@@ -2,20 +2,9 @@
 
 import { MenuItem, Slider, Stack, TextField, Typography } from "@mui/material";
 import PropertyPanelSection from "@/components/common/propertyPanelSection";
+import { getEditorThemeTokens } from "@/components/editor/theme";
 import { useI18n } from "@/lib/i18n";
-import type { AiImageModelId, AiImageSize } from "@/stores/editorStore";
-
-const fieldSx = {
-  "& .MuiOutlinedInput-root": {
-    color: "#eef5ff",
-    background: "rgba(10,18,38,0.55)",
-    minHeight: 30,
-    fontSize: 12
-  },
-  "& .MuiInputLabel-root": {
-    color: "rgba(176,197,238,0.78)"
-  }
-};
+import { useEditorStore, type AiImageModelId, type AiImageSize } from "@/stores/editorStore";
 
 type AiImageParametersSectionProps = {
   model: AiImageModelId;
@@ -51,7 +40,20 @@ export default function AiImageParametersSection({
   onInferenceStepsChange
 }: AiImageParametersSectionProps) {
   const { t } = useI18n();
+  const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
   const supportsImageSize = model === "Qwen/Qwen-Image";
+  const theme = getEditorThemeTokens(editorThemeMode);
+  const fieldSx = {
+    "& .MuiOutlinedInput-root": {
+      color: theme.pillText,
+      background: theme.inputBg,
+      minHeight: 30,
+      fontSize: 12
+    },
+    "& .MuiInputLabel-root": {
+      color: theme.mutedText
+    }
+  } as const;
 
   return (
     <PropertyPanelSection title={t("editor.ai.sectionParameters")}>
@@ -83,7 +85,7 @@ export default function AiImageParametersSection({
         ) : null}
 
         <Stack spacing={0.55}>
-          <Typography sx={{ fontSize: 11, color: "rgba(205,220,255,0.78)" }}>
+          <Typography sx={{ fontSize: 11, color: theme.mutedText }}>
             {t("editor.ai.cfg")}
           </Typography>
           <Stack direction="row" spacing={0.9} alignItems="center">
@@ -94,10 +96,10 @@ export default function AiImageParametersSection({
               step={0.01}
               value={cfg}
               onChange={(_, value) => onCfgChange(value as number)}
-              sx={{ flex: 1 }}
+              sx={{ flex: 1, color: editorThemeMode === "dark" ? "#72a8ff" : "#5f93ef" }}
             />
             <Typography
-              sx={{ minWidth: 36, textAlign: "right", fontSize: 11, color: "rgba(227,236,255,0.92)" }}
+              sx={{ minWidth: 36, textAlign: "right", fontSize: 11, color: theme.pillText }}
             >
               {cfg.toFixed(2)}
             </Typography>
@@ -105,7 +107,7 @@ export default function AiImageParametersSection({
         </Stack>
 
         <Stack spacing={0.55}>
-          <Typography sx={{ fontSize: 11, color: "rgba(205,220,255,0.78)" }}>
+          <Typography sx={{ fontSize: 11, color: theme.mutedText }}>
             {t("editor.ai.inferenceSteps")}
           </Typography>
           <Stack direction="row" spacing={0.9} alignItems="center">
@@ -116,10 +118,10 @@ export default function AiImageParametersSection({
               step={1}
               value={inferenceSteps}
               onChange={(_, value) => onInferenceStepsChange(value as number)}
-              sx={{ flex: 1 }}
+              sx={{ flex: 1, color: editorThemeMode === "dark" ? "#72a8ff" : "#5f93ef" }}
             />
             <Typography
-              sx={{ minWidth: 28, textAlign: "right", fontSize: 11, color: "rgba(227,236,255,0.92)" }}
+              sx={{ minWidth: 28, textAlign: "right", fontSize: 11, color: theme.pillText }}
             >
               {inferenceSteps}
             </Typography>
