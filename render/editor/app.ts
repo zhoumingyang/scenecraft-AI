@@ -281,6 +281,11 @@ export class EditorApp {
     return this.session.pick(clientX, clientY);
   }
 
+  captureViewportImage() {
+    this.runtime.renderFrame();
+    return this.runtime.renderer.domElement.toDataURL("image/png");
+  }
+
   setSelectedEntity(entityId: string | null, source: SyncSource = "ui") {
     void this.dispatch({
       type: "selection.set",
