@@ -2,7 +2,14 @@
 
 import { useEffect, useRef } from "react";
 import { Box } from "@mui/material";
-import { AvatarMenu, PropertyPanel, SceneTreePanel, TopBar, ViewportControls } from "@/components/editor";
+import {
+  AiImageComposer,
+  AvatarMenu,
+  PropertyPanel,
+  SceneTreePanel,
+  TopBar,
+  ViewportControls
+} from "@/components/editor";
 import { createDefaultEditorProjectJSON } from "@/render/editor";
 import { createEditorSdk } from "@/render/editor/sdk";
 import { useEditorStore } from "@/stores/editorStore";
@@ -19,6 +26,7 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
   const bumpProjectLoadVersion = useEditorStore((state) => state.bumpProjectLoadVersion);
   const bumpCameraVersion = useEditorStore((state) => state.bumpCameraVersion);
   const bumpViewStateVersion = useEditorStore((state) => state.bumpViewStateVersion);
+  const setAiInspectorMode = useEditorStore((state) => state.setAiInspectorMode);
 
   useEffect(() => {
     if (!canvasHostRef.current) return;
@@ -29,6 +37,9 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
     const unsubscribe = app.subscribe((event) => {
       if (event.type === "selectionChanged") {
         setSelectedEntityId(event.selectedEntityId);
+        if (event.selectedEntityId) {
+          setAiInspectorMode("entity");
+        }
         return;
       }
 
@@ -81,7 +92,8 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
     bumpCameraVersion,
     bumpViewStateVersion,
     setApp,
-    setSelectedEntityId
+    setSelectedEntityId,
+    setAiInspectorMode
   ]);
 
   return (
@@ -98,6 +110,7 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
       <SceneTreePanel />
       <ViewportControls />
       <PropertyPanel />
+      <AiImageComposer />
     </Box>
   );
 }

@@ -15,6 +15,7 @@ import {
   TextureFieldKey,
   TransformSection
 } from "@/components/editor/propertyPanelSections";
+import AiImagePropertyPanel from "@/components/editor/aiImagePropertyPanel";
 import { getLightTypeLabel, getTextureDialogTitle } from "@/components/editor/propertyPanelSections/util";
 
 const PANEL_WIDTH = 272;
@@ -25,6 +26,7 @@ export default function PropertyPanel() {
   const app = useEditorStore((state) => state.app);
   const selectedEntityId = useEditorStore((state) => state.selectedEntityId);
   const projectVersion = useEditorStore((state) => state.projectVersion);
+  const inspectorMode = useEditorStore((state) => state.aiImage.inspectorMode);
   const [open, setOpen] = useState(true);
   const [activeTextureField, setActiveTextureField] = useState<TextureFieldKey | null>(null);
 
@@ -46,15 +48,18 @@ export default function PropertyPanel() {
     };
   }, [app, selectedEntityId, projectVersion]);
 
-  const panelTitle = entityRecord
-    ? entityRecord.kind === "scene"
-      ? t("editor.sceneTree.scene")
-      : entityRecord.kind === "model"
-      ? t("editor.sceneTree.model")
-      : entityRecord.kind === "mesh"
-        ? t("editor.sceneTree.meshes")
-        : getLightTypeLabel(entityRecord.item.lightType, t)
-    : t("editor.properties.none");
+  const panelTitle =
+    inspectorMode === "ai"
+      ? t("editor.ai.panelTitle")
+      : entityRecord
+        ? entityRecord.kind === "scene"
+          ? t("editor.sceneTree.scene")
+          : entityRecord.kind === "model"
+            ? t("editor.sceneTree.model")
+            : entityRecord.kind === "mesh"
+              ? t("editor.sceneTree.meshes")
+              : getLightTypeLabel(entityRecord.item.lightType, t)
+        : t("editor.properties.none");
 
   return (
     <Box
@@ -129,7 +134,9 @@ export default function PropertyPanel() {
                   pr: 0.25
                 }}
               >
-                {!entityRecord ? (
+                {inspectorMode === "ai" ? (
+                  <AiImagePropertyPanel />
+                ) : !entityRecord ? (
                   <Stack
                     spacing={0.7}
                     justifyContent="center"

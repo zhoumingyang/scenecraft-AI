@@ -5,3 +5,4 @@ export { default as PropertyPanel } from "./propertyPanel";
 export { default as FirstPersonHeightControl } from "./firstPersonHeightControl";
 export { default as ViewControl } from "./viewControl";
 export { default as ViewportControls } from "./viewportControls";
+export { default as AiImageComposer } from "./aiImageComposer";
