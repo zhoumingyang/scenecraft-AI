@@ -1,39 +1,22 @@
 "use client";
 
-import { KeyboardEvent, MouseEvent, useMemo, useState } from "react";
+import { KeyboardEvent, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   Box,
   CircularProgress,
   IconButton,
-  Menu,
-  MenuItem,
   Paper,
   Stack,
   TextField,
-  Tooltip,
   Typography
 } from "@mui/material";
 import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
-import EditRoundedIcon from "@mui/icons-material/EditRounded";
-import ImageRoundedIcon from "@mui/icons-material/ImageRounded";
 import SendRoundedIcon from "@mui/icons-material/SendRounded";
+import AiImageModelMenu from "@/components/editor/aiImageModelMenu";
 import { useI18n } from "@/lib/i18n";
 import { useEditorStore } from "@/stores/editorStore";
-
-const MODELS = [
-  {
-    id: "Qwen/Qwen-Image",
-    icon: <ImageRoundedIcon sx={{ fontSize: 18 }} />,
-    label: "Qwen/Qwen-Image"
-  },
-  {
-    id: "Qwen/Qwen-Image-Edit-2509",
-    icon: <EditRoundedIcon sx={{ fontSize: 18 }} />,
-    label: "Qwen/Qwen-Image-Edit-2509"
-  }
-] as const;
 
 function parseSeed(seedText: string) {
   const trimmed = seedText.trim();
@@ -65,8 +48,6 @@ export default function AiImageComposer() {
   const setAiInspectorMode = useEditorStore((state) => state.setAiInspectorMode);
   const setAiGeneratingState = useEditorStore((state) => state.setAiGeneratingState);
 
-  const [modelMenuAnchor, setModelMenuAnchor] = useState<HTMLElement | null>(null);
-  const activeModelMeta = useMemo(() => MODELS.find((item) => item.id === model) ?? MODELS[0], [model]);
   const filledReferenceImages = useMemo(
     () => referenceImages.filter((item) => Boolean(item.dataUrl)).map((item) => item.dataUrl as string),
     [referenceImages]
@@ -254,42 +235,26 @@ export default function AiImageComposer() {
             />
 
             <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ pt: 0.3 }}>
-              <Tooltip title={activeModelMeta.label}>
-                <IconButton
-                  size="small"
-                  onClick={(event: MouseEvent<HTMLElement>) => setModelMenuAnchor(event.currentTarget)}
-                  sx={{
-                    color: "rgba(230,239,255,0.96)",
-                    background: "rgba(255,255,255,0.05)",
-                    border: "1px solid rgba(180,205,255,0.14)"
-                  }}
-                >
-                  {activeModelMeta.icon}
-                </IconButton>
-              </Tooltip>
+              <AiImageModelMenu model={model} onChange={setAiModel} onFocus={focusAiMode} />
 
-              <Tooltip title={t("editor.ai.generate")}>
-                <span>
-                  <IconButton
-                    size="small"
-                    disabled={isGenerating || !prompt.trim()}
-                    onClick={() => {
-                      void handleSubmit();
-                    }}
-                    sx={{
-                      color: "rgba(235,244,255,0.98)",
-                      transform: "rotate(-90deg)",
-                      background:
-                        prompt.trim() && !isGenerating
-                          ? "linear-gradient(135deg, #2f6df4, #63a4ff)"
-                          : "rgba(255,255,255,0.08)",
-                      border: "1px solid rgba(180,205,255,0.14)"
-                    }}
-                  >
-                    {isGenerating ? <CircularProgress size={16} sx={{ color: "#eef5ff" }} /> : <SendRoundedIcon sx={{ fontSize: 18 }} />}
-                  </IconButton>
-                </span>
-              </Tooltip>
+              <IconButton
+                size="small"
+                disabled={isGenerating || !prompt.trim()}
+                onClick={() => {
+                  void handleSubmit();
+                }}
+                sx={{
+                  color: "rgba(235,244,255,0.98)",
+                  transform: "rotate(-90deg)",
+                  background:
+                    prompt.trim() && !isGenerating
+                      ? "linear-gradient(135deg, #2f6df4, #63a4ff)"
+                      : "rgba(255,255,255,0.08)",
+                  border: "1px solid rgba(180,205,255,0.14)"
+                }}
+              >
+                {isGenerating ? <CircularProgress size={16} sx={{ color: "#eef5ff" }} /> : <SendRoundedIcon sx={{ fontSize: 18 }} />}
+              </IconButton>
             </Stack>
           </Stack>
         </Paper>
@@ -305,42 +270,6 @@ export default function AiImageComposer() {
           <Typography sx={{ fontSize: 12, fontWeight: 600 }}>{t("editor.ai.close")}</Typography>
         </Stack>
       </Stack>
-
-      <Menu
-        anchorEl={modelMenuAnchor}
-        open={Boolean(modelMenuAnchor)}
-        onClose={() => setModelMenuAnchor(null)}
-        anchorOrigin={{ vertical: "top", horizontal: "left" }}
-        transformOrigin={{ vertical: "bottom", horizontal: "left" }}
-        slotProps={{
-          paper: {
-            sx: {
-              mb: 1,
-              borderRadius: 2,
-              border: "1px solid rgba(180,205,255,0.18)",
-              background: "rgba(8,12,24,0.96)",
-              backdropFilter: "blur(12px)",
-              color: "#eef5ff"
-            }
-          }
-        }}
-      >
-        {MODELS.map((item) => (
-          <MenuItem
-            key={item.id}
-            selected={item.id === model}
-            onClick={() => {
-              setAiModel(item.id);
-              setModelMenuAnchor(null);
-              focusAiMode();
-            }}
-            sx={{ gap: 1, minWidth: 240, fontSize: 13 }}
-          >
-            {item.icon}
-            {item.label}
-          </MenuItem>
-        ))}
-      </Menu>
     </Box>
   );
 }
