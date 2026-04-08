@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader.js";
@@ -21,13 +22,17 @@ export type LoadedModelAsset = ParsedModelAsset & {
 };
 
 export class ModelLoaderFactory {
+  private readonly dracoLoader: DRACOLoader;
   private readonly gltfLoader: GLTFLoader;
   private readonly fbxLoader: FBXLoader;
   private readonly objLoader: OBJLoader;
   private readonly assetCache = new Map<string, Promise<ParsedModelAsset>>();
 
   constructor() {
+    this.dracoLoader = new DRACOLoader();
+    this.dracoLoader.setDecoderPath("/draco/gltf/");
     this.gltfLoader = new GLTFLoader();
+    this.gltfLoader.setDRACOLoader(this.dracoLoader);
     this.fbxLoader = new FBXLoader();
     this.objLoader = new OBJLoader();
   }
