@@ -1,12 +1,16 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import { Alert, Box, IconButton, Stack, Tooltip, Typography } from "@mui/material";
 import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
+import FormatPaintRoundedIcon from "@mui/icons-material/FormatPaintRounded";
 import VisibilityRoundedIcon from "@mui/icons-material/VisibilityRounded";
+import AiImageApplyMeshPanel from "@/components/editor/aiImageApplyMeshPanel";
 import PropertyPanelSection from "@/components/common/propertyPanelSection";
 import { getEditorThemeTokens } from "@/components/editor/theme";
 import { useI18n } from "@/lib/i18n";
+import type { EditorMeshListItem } from "@/render/editor";
 import { useEditorStore, type AiImageResult } from "@/stores/editorStore";
 
 type AiImageResultsSectionProps = {
@@ -27,8 +31,53 @@ export default function AiImageResultsSection({
   onViewImage
 }: AiImageResultsSectionProps) {
   const { t } = useI18n();
+  const app = useEditorStore((state) => state.app);
   const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
+  const projectVersion = useEditorStore((state) => state.projectVersion);
   const theme = getEditorThemeTokens(editorThemeMode);
+  const [applyPanel, setApplyPanel] = useState<{
+    index: number;
+    imageUrl: string;
+    anchorEl: HTMLElement | null;
+  } | null>(null);
+  const meshItems = useMemo<EditorMeshListItem[]>(() => app?.getMeshList() ?? [], [app, projectVersion]);
+
+  useEffect(() => {
+    if (meshItems.length > 0) return;
+    setApplyPanel(null);
+  }, [meshItems]);
+
+  useEffect(() => () => app?.setOutlineEntity(null), [app]);
+
+  const handleApplyPanelToggle = (index: number, imageUrl: string, anchorEl: HTMLElement) => {
+    setApplyPanel((current) => {
+      const shouldClose = current?.index === index;
+      if (shouldClose) {
+        app?.setOutlineEntity(null);
+        return null;
+      }
+      return {
+        index,
+        imageUrl,
+        anchorEl
+      };
+    });
+  };
+
+  const handleApplyPanelClose = () => {
+    app?.setOutlineEntity(null);
+    setApplyPanel(null);
+  };
+
+  const handleApplyToMesh = (meshId: string) => {
+    if (!app) return;
+    app.updateMeshMaterial(meshId, {
+      diffuseMap: {
+        url: applyPanel?.imageUrl ?? ""
+      }
+    });
+    handleApplyPanelClose();
+  };
 
   return (
     <PropertyPanelSection title={t("editor.ai.sectionResults")}>
@@ -67,19 +116,42 @@ export default function AiImageResultsSection({
               <Box
                 key={`${result.url}-${index}`}
                 sx={{
-                  overflow: "hidden",
                   borderRadius: 1,
                   border: theme.sectionBorder,
                   background: theme.sectionBg
                 }}
               >
-                <Box
-                  component="img"
-                  src={result.url}
-                  alt={`generated-${index + 1}`}
-                  sx={{ width: "100%", display: "block", objectFit: "cover", maxHeight: 180 }}
-                />
+                <Box sx={{ overflow: "hidden", borderTopLeftRadius: 4, borderTopRightRadius: 4 }}>
+                  <Box
+                    component="img"
+                    src={result.url}
+                    alt={`generated-${index + 1}`}
+                    sx={{ width: "100%", display: "block", objectFit: "cover", maxHeight: 180 }}
+                  />
+                </Box>
                 <Stack direction="row" justifyContent="flex-end" spacing={0.4} sx={{ p: 0.7 }}>
+                  <Tooltip title={t("editor.ai.applyResult")}>
+                    <span>
+                      <IconButton
+                        size="small"
+                        onClick={(event) =>
+                          handleApplyPanelToggle(index, result.url, event.currentTarget)
+                        }
+                        disabled={!app}
+                        sx={{
+                          color: theme.pillText,
+                          border:
+                            applyPanel?.index === index
+                              ? theme.itemSelectedBorder
+                              : theme.sectionBorder,
+                          background:
+                            applyPanel?.index === index ? theme.itemSelectedBg : theme.itemBg
+                        }}
+                      >
+                        <FormatPaintRoundedIcon sx={{ fontSize: 16 }} />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
                   <Tooltip title={t("editor.ai.downloadResult")}>
                     <IconButton
                       size="small"
@@ -125,6 +197,13 @@ export default function AiImageResultsSection({
             </Box>
           )}
         </Stack>
+        <AiImageApplyMeshPanel
+          anchorEl={applyPanel?.anchorEl ?? null}
+          open={Boolean(applyPanel?.anchorEl)}
+          meshItems={meshItems}
+          onApply={handleApplyToMesh}
+          onClose={handleApplyPanelClose}
+        />
       </Stack>
     </PropertyPanelSection>
   );

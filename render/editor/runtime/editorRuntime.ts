@@ -1,5 +1,8 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
+import { OutlinePass } from "three/examples/jsm/postprocessing/OutlinePass.js";
+import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { HDRLoader } from "three/examples/jsm/loaders/HDRLoader.js";
 import { RectAreaLightUniformsLib } from "three/examples/jsm/lights/RectAreaLightUniformsLib.js";
 
@@ -20,6 +23,7 @@ export class EditorRuntime {
   readonly scene: THREE.Scene;
   readonly camera: THREE.PerspectiveCamera;
   readonly renderer: THREE.WebGLRenderer;
+  readonly composer: EffectComposer;
   readonly modelLoaderFactory: ModelLoaderFactory;
   readonly textureLoader: THREE.TextureLoader;
   readonly hdrLoader: HDRLoader;
@@ -42,6 +46,7 @@ export class EditorRuntime {
   private environmentTexture: THREE.Texture | null = null;
   private environmentMapTexture: THREE.Texture | null = null;
   private readonly pmremGenerator: THREE.PMREMGenerator;
+  private readonly outlinePass: OutlinePass;
 
   constructor(host: HTMLDivElement) {
     RectAreaLightUniformsLib.init();
@@ -59,6 +64,16 @@ export class EditorRuntime {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.toneMapping = THREE.NoToneMapping;
     this.renderer.toneMappingExposure = 1;
+    this.composer = new EffectComposer(this.renderer);
+    this.composer.addPass(new RenderPass(this.scene, this.camera));
+    this.outlinePass = new OutlinePass(new THREE.Vector2(1, 1), this.scene, this.camera);
+    this.outlinePass.edgeStrength = 5.5;
+    this.outlinePass.edgeGlow = 0.45;
+    this.outlinePass.edgeThickness = 1.4;
+    this.outlinePass.pulsePeriod = 0;
+    this.outlinePass.visibleEdgeColor.set("#7bc4ff");
+    this.outlinePass.hiddenEdgeColor.set("#2a5a88");
+    this.composer.addPass(this.outlinePass);
 
     this.modelLoaderFactory = new ModelLoaderFactory();
     this.textureLoader = new THREE.TextureLoader();
@@ -122,7 +137,7 @@ export class EditorRuntime {
   }
 
   renderFrame() {
-    this.renderer.render(this.scene, this.camera);
+    this.composer.render();
   }
 
   applyCameraModel(cameraModel: CameraModel) {
@@ -281,6 +296,10 @@ export class EditorRuntime {
     this.environmentMapTexture = null;
   }
 
+  setOutlineSelection(objects: THREE.Object3D[]) {
+    this.outlinePass.selectedObjects = objects;
+  }
+
   applyEnvConfig(envConfig: Required<EditorEnvConfigJSON>) {
     this.scene.environment =
       envConfig.environment === 1 && this.environmentMapTexture ? this.environmentMapTexture : null;
@@ -323,6 +342,9 @@ export class EditorRuntime {
     const height = this.host.clientHeight || window.innerHeight;
     this.renderer.setSize(width, height);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.composer.setSize(width, height);
+    this.composer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.outlinePass.setSize(width, height);
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
   };

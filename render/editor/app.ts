@@ -16,6 +16,16 @@ import { SCENE_NODE_ID as SCENE_SELECTION_ID } from "./core/types";
 
 const PICK_POINTER_MOVE_THRESHOLD_PX = 6;
 
+export type EditorMeshListItem = {
+  id: string;
+  label: string;
+};
+
+function formatTitleCase(value: string) {
+  if (!value) return "Mesh";
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
 type PendingPick = {
   pointerId: number;
   startX: number;
@@ -94,6 +104,15 @@ export class EditorApp {
 
   getRenderObject(entityId: string): THREE.Object3D | null {
     return this.session.getRenderObject(entityId);
+  }
+
+  getMeshList(): EditorMeshListItem[] {
+    const meshes = this.projectModel?.meshes;
+    if (!meshes) return [];
+    return Array.from(meshes.values()).map((mesh, index) => ({
+      id: mesh.id,
+      label: `${formatTitleCase(mesh.geometryName)} ${index + 1}`
+    }));
   }
 
   isFirstPersonCamera() {
@@ -284,6 +303,16 @@ export class EditorApp {
   captureViewportImage() {
     this.runtime.renderFrame();
     return this.runtime.renderer.domElement.toDataURL("image/png");
+  }
+
+  setOutlineEntity(entityId: string | null) {
+    if (!entityId) {
+      this.runtime.setOutlineSelection([]);
+      return;
+    }
+
+    const object = this.getRenderObject(entityId);
+    this.runtime.setOutlineSelection(object ? [object] : []);
   }
 
   setSelectedEntity(entityId: string | null, source: SyncSource = "ui") {
