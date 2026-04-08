@@ -1,6 +1,6 @@
 "use client";
 
-import { KeyboardEvent, useMemo } from "react";
+import { KeyboardEvent, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Box,
@@ -12,10 +12,13 @@ import {
   Typography
 } from "@mui/material";
 import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
+import AutoFixHighRoundedIcon from "@mui/icons-material/AutoFixHighRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import SendRoundedIcon from "@mui/icons-material/SendRounded";
+import TranslateRoundedIcon from "@mui/icons-material/TranslateRounded";
 import AiImageModelMenu from "@/components/editor/aiImageModelMenu";
 import { getEditorThemeTokens } from "@/components/editor/theme";
+import { getImageGenerationModelConfig } from "@/lib/ai/image-generation/models";
 import { useI18n } from "@/lib/i18n";
 import { useEditorStore } from "@/stores/editorStore";
 
@@ -30,6 +33,10 @@ function parseSeed(seedText: string) {
 export default function AiImageComposer() {
   const router = useRouter();
   const { t } = useI18n();
+  const [activePromptAction, setActivePromptAction] = useState<"optimize" | "translate-en" | null>(
+    null
+  );
+  const promptActionLockRef = useRef(false);
   const app = useEditorStore((state) => state.app);
   const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
   const {
@@ -55,6 +62,20 @@ export default function AiImageComposer() {
     () => referenceImages.filter((item) => Boolean(item.dataUrl)).map((item) => item.dataUrl as string),
     [referenceImages]
   );
+  const isPromptActionPending = activePromptAction !== null;
+  const utilityIconButtonSx = {
+    color: theme.pillText,
+    background: theme.iconButtonBg,
+    border: theme.sectionBorder,
+    "&:hover": {
+      background: theme.itemHoverBg
+    },
+    "&.Mui-disabled": {
+      color: theme.mutedText,
+      background: theme.itemBg,
+      border: theme.sectionBorder
+    }
+  } as const;
 
   const focusAiMode = () => {
     setAiInspectorMode("ai");
@@ -63,9 +84,10 @@ export default function AiImageComposer() {
 
   const handleSubmit = async () => {
     const trimmedPrompt = prompt.trim();
-    if (!trimmedPrompt || isGenerating) return;
+    if (!trimmedPrompt || isGenerating || isPromptActionPending) return;
 
     const parsedSeed = parseSeed(seed);
+    const modelConfig = getImageGenerationModelConfig(model);
 
     if (parsedSeed === null) {
       setAiGeneratingState({
@@ -75,7 +97,7 @@ export default function AiImageComposer() {
       return;
     }
 
-    if (model === "Qwen/Qwen-Image-Edit-2509" && filledReferenceImages.length < 1) {
+    if (filledReferenceImages.length < modelConfig.minReferenceImages) {
       setAiGeneratingState({
         isGenerating: false,
         errorMessage: t("editor.ai.referenceImageRequired")
@@ -99,10 +121,13 @@ export default function AiImageComposer() {
           model,
           prompt: trimmedPrompt,
           seed: parsedSeed,
-          imageSize: model === "Qwen/Qwen-Image" ? imageSize : undefined,
+          imageSize: modelConfig.supportsImageSize ? imageSize : undefined,
           cfg,
           inferenceSteps,
-          referenceImages: model === "Qwen/Qwen-Image-Edit-2509" ? filledReferenceImages : []
+          referenceImages:
+            modelConfig.maxReferenceImages > 0
+              ? filledReferenceImages.slice(0, modelConfig.maxReferenceImages)
+              : []
         })
       });
 
@@ -143,6 +168,62 @@ export default function AiImageComposer() {
     if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
       event.preventDefault();
       void handleSubmit();
+    }
+  };
+
+  const handlePromptTransform = async (mode: "optimize" | "translate-en") => {
+    const trimmedPrompt = prompt.trim();
+    if (!trimmedPrompt || isGenerating || isPromptActionPending || promptActionLockRef.current) {
+      return;
+    }
+
+    promptActionLockRef.current = true;
+    setActivePromptAction(mode);
+    setAiGeneratingState({
+      isGenerating: false,
+      errorMessage: null
+    });
+
+    try {
+      const response = await fetch("/api/ai/prompts/transform", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          mode,
+          prompt: trimmedPrompt
+        })
+      });
+
+      if (response.status === 401) {
+        router.push("/home");
+        return;
+      }
+
+      const payload = (await response.json().catch(() => null)) as
+        | { prompt?: string; message?: string }
+        | null;
+
+      if (!response.ok) {
+        throw new Error(payload?.message || t("editor.ai.promptTransformFailed"));
+      }
+
+      const nextPrompt = typeof payload?.prompt === "string" ? payload.prompt.trim() : "";
+
+      if (!nextPrompt) {
+        throw new Error(t("editor.ai.promptTransformEmpty"));
+      }
+
+      setAiPrompt(nextPrompt);
+    } catch (error) {
+      setAiGeneratingState({
+        isGenerating: false,
+        errorMessage: error instanceof Error ? error.message : t("editor.ai.promptTransformFailed")
+      });
+    } finally {
+      promptActionLockRef.current = false;
+      setActivePromptAction(null);
     }
   };
 
@@ -264,11 +345,43 @@ export default function AiImageComposer() {
             />
 
             <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ pt: 0.3 }}>
-              <AiImageModelMenu model={model} onChange={setAiModel} onFocus={focusAiMode} />
+              <Stack direction="row" spacing={0.8} alignItems="center">
+                <AiImageModelMenu model={model} onChange={setAiModel} onFocus={focusAiMode} />
+                <IconButton
+                  size="small"
+                  disabled={isGenerating || isPromptActionPending || !prompt.trim()}
+                  onClick={() => {
+                    void handlePromptTransform("optimize");
+                  }}
+                  title={t("editor.ai.optimizePrompt")}
+                  sx={utilityIconButtonSx}
+                >
+                  {activePromptAction === "optimize" ? (
+                    <CircularProgress size={16} sx={{ color: theme.pillText }} />
+                  ) : (
+                    <AutoFixHighRoundedIcon sx={{ fontSize: 18 }} />
+                  )}
+                </IconButton>
+                <IconButton
+                  size="small"
+                  disabled={isGenerating || isPromptActionPending || !prompt.trim()}
+                  onClick={() => {
+                    void handlePromptTransform("translate-en");
+                  }}
+                  title={t("editor.ai.translatePrompt")}
+                  sx={utilityIconButtonSx}
+                >
+                  {activePromptAction === "translate-en" ? (
+                    <CircularProgress size={16} sx={{ color: theme.pillText }} />
+                  ) : (
+                    <TranslateRoundedIcon sx={{ fontSize: 18 }} />
+                  )}
+                </IconButton>
+              </Stack>
 
               <IconButton
                 size="small"
-                disabled={isGenerating || !prompt.trim()}
+                disabled={isGenerating || isPromptActionPending || !prompt.trim()}
                 onClick={() => {
                   void handleSubmit();
                 }}
@@ -276,7 +389,7 @@ export default function AiImageComposer() {
                   color: theme.pillText,
                   transform: "rotate(-90deg)",
                   background:
-                    prompt.trim() && !isGenerating
+                    prompt.trim() && !isGenerating && !isPromptActionPending
                       ? editorThemeMode === "dark"
                         ? "linear-gradient(135deg, #2f6df4, #63a4ff)"
                         : "linear-gradient(135deg, #4c86f7, #86b7ff)"

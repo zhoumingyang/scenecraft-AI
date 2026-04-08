@@ -10,6 +10,7 @@ import { useEditorStore, type AiReferenceImageSlot } from "@/stores/editorStore"
 
 type AiImageReferenceImagesSectionProps = {
   referenceImages: AiReferenceImageSlot[];
+  maxReferenceImages: number;
   onUploadFromFile: (index: number, event: ChangeEvent<HTMLInputElement>) => Promise<void>;
   onCaptureViewport: (index: number) => void;
   onClearReferenceImage: (index: number) => void;
@@ -17,6 +18,7 @@ type AiImageReferenceImagesSectionProps = {
 
 export default function AiImageReferenceImagesSection({
   referenceImages,
+  maxReferenceImages,
   onUploadFromFile,
   onCaptureViewport,
   onClearReferenceImage
@@ -43,7 +45,10 @@ export default function AiImageReferenceImagesSection({
         </Stack>
 
         <Typography sx={{ fontSize: 11, color: theme.mutedText }}>
-          {t("editor.ai.referenceImageCount", { count: filledReferenceCount })}
+          {t("editor.ai.referenceImageCount", {
+            count: filledReferenceCount,
+            max: maxReferenceImages
+          })}
         </Typography>
       </Stack>
     </PropertyPanelSection>

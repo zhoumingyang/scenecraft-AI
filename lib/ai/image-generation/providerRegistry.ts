@@ -1,4 +1,5 @@
 import { SiliconFlowImageGenerationProvider } from "@/lib/ai/image-generation/providers/siliconflow";
+import { OpenRouterImageGenerationProvider } from "@/lib/ai/image-generation/providers/openrouter";
 import type {
   ImageGenerationProvider,
   ImageGenerationProviderId
@@ -16,9 +17,13 @@ export function createImageGenerationProvider(
 
       return new SiliconFlowImageGenerationProvider(apiKey);
     }
-    case "openrouter":
-    case "aliyun":
-    case "google":
-      throw new Error(`Image generation provider "${providerId}" has not been implemented yet.`);
+    case "openrouter": {
+      const apiKey = process.env.OPENROUTER_API_KEY;
+      if (!apiKey) {
+        throw new Error("Missing OPENROUTER_API_KEY env.");
+      }
+
+      return new OpenRouterImageGenerationProvider(apiKey);
+    }
   }
 }

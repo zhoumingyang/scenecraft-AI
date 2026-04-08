@@ -5,24 +5,23 @@ import { IconButton, Menu, MenuItem, Tooltip } from "@mui/material";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import ImageRoundedIcon from "@mui/icons-material/ImageRounded";
 import { getEditorThemeTokens } from "@/components/editor/theme";
+import { IMAGE_GENERATION_MODELS, getImageGenerationModelConfig } from "@/lib/ai/image-generation/models";
 import { useEditorStore, type AiImageModelId } from "@/stores/editorStore";
 
 const MODELS: Array<{
   id: AiImageModelId;
   icon: ReactNode;
   label: string;
-}> = [
-  {
-    id: "Qwen/Qwen-Image",
-    icon: <ImageRoundedIcon sx={{ fontSize: 18 }} />,
-    label: "Qwen/Qwen-Image"
-  },
-  {
-    id: "Qwen/Qwen-Image-Edit-2509",
-    icon: <EditRoundedIcon sx={{ fontSize: 18 }} />,
-    label: "Qwen/Qwen-Image-Edit-2509"
-  }
-];
+}> = IMAGE_GENERATION_MODELS.map((model) => ({
+  id: model.id,
+  icon:
+    model.maxReferenceImages > 0 ? (
+      <EditRoundedIcon sx={{ fontSize: 18 }} />
+    ) : (
+      <ImageRoundedIcon sx={{ fontSize: 18 }} />
+    ),
+  label: model.label
+}));
 
 type AiImageModelMenuProps = {
   model: AiImageModelId;
@@ -42,10 +41,11 @@ export default function AiImageModelMenu({
     () => MODELS.find((item) => item.id === model) ?? MODELS[0],
     [model]
   );
+  const activeModelConfig = getImageGenerationModelConfig(activeModelMeta.id);
 
   return (
     <>
-      <Tooltip title={activeModelMeta.label}>
+      <Tooltip title={`${activeModelMeta.label} (${activeModelConfig.providerId})`}>
         <IconButton
           size="small"
           onClick={(event: MouseEvent<HTMLElement>) => setAnchorEl(event.currentTarget)}

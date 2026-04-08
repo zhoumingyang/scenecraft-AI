@@ -186,7 +186,7 @@ const dictionaries: Record<Locale, Dictionary> = {
     "editor.ai.referenceImageHint": "Required for Qwen/Qwen-Image-Edit-2509. Upload 1 to 3 base images.",
     "editor.ai.referenceImageEmpty": "No reference image yet.",
     "editor.ai.uploadSlot": "Upload",
-    "editor.ai.referenceImageCount": "{count} / 3 selected",
+    "editor.ai.referenceImageCount": "{count} / {max} selected",
     "editor.ai.referenceImageRequired": "This model requires at least 1 reference image.",
     "editor.ai.modelGenerateHint": "Text-to-image generation without a base image.",
     "editor.ai.modelEditHint": "Edit or continue generation based on uploaded images.",
@@ -197,7 +197,11 @@ const dictionaries: Record<Locale, Dictionary> = {
     "editor.ai.previewTitle": "Generated image preview",
     "editor.ai.generateFailed": "Image generation failed.",
     "editor.ai.emptyResult": "The provider returned no generated images.",
-    "editor.ai.lastSeed": "Last seed: {seed}"
+    "editor.ai.lastSeed": "Last seed: {seed}",
+    "editor.ai.optimizePrompt": "Optimize prompt",
+    "editor.ai.translatePrompt": "Translate to English",
+    "editor.ai.promptTransformFailed": "Prompt processing failed.",
+    "editor.ai.promptTransformEmpty": "The provider returned an empty prompt."
   },
   zh: {
     "language.label": "语言",
@@ -379,7 +383,7 @@ const dictionaries: Record<Locale, Dictionary> = {
     "editor.ai.referenceImageHint": "Qwen/Qwen-Image-Edit-2509 必须上传 1 到 3 张基础图片。",
     "editor.ai.referenceImageEmpty": "当前还没有参考图。",
     "editor.ai.uploadSlot": "上传",
-    "editor.ai.referenceImageCount": "已选择 {count} / 3",
+    "editor.ai.referenceImageCount": "已选择 {count} / {max}",
     "editor.ai.referenceImageRequired": "当前模型至少需要 1 张参考图。",
     "editor.ai.modelGenerateHint": "纯文本生图，不需要基础图片。",
     "editor.ai.modelEditHint": "基于上传图片继续生成或编辑。",
@@ -390,7 +394,11 @@ const dictionaries: Record<Locale, Dictionary> = {
     "editor.ai.previewTitle": "生成图片预览",
     "editor.ai.generateFailed": "生图失败。",
     "editor.ai.emptyResult": "服务商没有返回生成结果。",
-    "editor.ai.lastSeed": "最近一次 Seed：{seed}"
+    "editor.ai.lastSeed": "最近一次 Seed：{seed}",
+    "editor.ai.optimizePrompt": "提示词优化",
+    "editor.ai.translatePrompt": "翻译为英文",
+    "editor.ai.promptTransformFailed": "提示词处理失败。",
+    "editor.ai.promptTransformEmpty": "服务商返回了空提示词。"
   }
 };
 

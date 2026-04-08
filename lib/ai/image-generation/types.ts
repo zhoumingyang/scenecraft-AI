@@ -1,14 +1,9 @@
-export type ImageGenerationProviderId = "siliconflow" | "openrouter" | "aliyun" | "google";
+import type {
+  ImageGenerationImageSize,
+  ImageGenerationModelId
+} from "@/lib/ai/image-generation/models";
 
-export type ImageGenerationModelId = "Qwen/Qwen-Image" | "Qwen/Qwen-Image-Edit-2509";
-export type ImageGenerationImageSize =
-  | "1328x1328"
-  | "1664x928"
-  | "928x1664"
-  | "1472x1140"
-  | "1140x1472"
-  | "1584x1056"
-  | "1056x1584";
+export type ImageGenerationProviderId = "siliconflow" | "openrouter";
 
 export type ImageGenerationRequest = {
   providerId: ImageGenerationProviderId;

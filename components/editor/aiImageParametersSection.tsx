@@ -3,6 +3,10 @@
 import { MenuItem, Slider, Stack, TextField, Typography } from "@mui/material";
 import PropertyPanelSection from "@/components/common/propertyPanelSection";
 import { getEditorThemeTokens } from "@/components/editor/theme";
+import {
+  IMAGE_SIZE_OPTIONS,
+  getImageGenerationModelConfig
+} from "@/lib/ai/image-generation/models";
 import { useI18n } from "@/lib/i18n";
 import { useEditorStore, type AiImageModelId, type AiImageSize } from "@/stores/editorStore";
 
@@ -18,16 +22,6 @@ type AiImageParametersSectionProps = {
   onInferenceStepsChange: (value: number) => void;
 };
 
-const QWEN_IMAGE_SIZE_OPTIONS: Array<{ value: AiImageSize; label: string }> = [
-  { value: "1328x1328", label: "1328x1328 (1:1)" },
-  { value: "1664x928", label: "1664x928 (16:9)" },
-  { value: "928x1664", label: "928x1664 (9:16)" },
-  { value: "1472x1140", label: "1472x1140 (4:3)" },
-  { value: "1140x1472", label: "1140x1472 (3:4)" },
-  { value: "1584x1056", label: "1584x1056 (3:2)" },
-  { value: "1056x1584", label: "1056x1584 (2:3)" }
-];
-
 export default function AiImageParametersSection({
   model,
   seed,
@@ -41,7 +35,7 @@ export default function AiImageParametersSection({
 }: AiImageParametersSectionProps) {
   const { t } = useI18n();
   const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
-  const supportsImageSize = model === "Qwen/Qwen-Image";
+  const supportsImageSize = getImageGenerationModelConfig(model).supportsImageSize;
   const theme = getEditorThemeTokens(editorThemeMode);
   const fieldSx = {
     "& .MuiOutlinedInput-root": {
@@ -76,7 +70,7 @@ export default function AiImageParametersSection({
             onChange={(event) => onImageSizeChange(event.target.value as AiImageSize)}
             sx={fieldSx}
           >
-            {QWEN_IMAGE_SIZE_OPTIONS.map((option) => (
+            {IMAGE_SIZE_OPTIONS.map((option) => (
               <MenuItem key={option.value} value={option.value}>
                 {option.label}
               </MenuItem>

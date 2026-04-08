@@ -1,17 +1,17 @@
 import { create } from "zustand";
+import {
+  DEFAULT_IMAGE_GENERATION_MODEL_ID,
+  MAX_REFERENCE_IMAGE_SLOTS,
+  getImageGenerationModelConfig,
+  type ImageGenerationImageSize,
+  type ImageGenerationModelId
+} from "@/lib/ai/image-generation/models";
 import type { EditorApp } from "@/render/editor";
 
-export type AiImageProviderId = "siliconflow";
-export type AiImageModelId = "Qwen/Qwen-Image" | "Qwen/Qwen-Image-Edit-2509";
+export type AiImageProviderId = "siliconflow" | "openrouter";
+export type AiImageModelId = ImageGenerationModelId;
 export type EditorThemeMode = "dark" | "light";
-export type AiImageSize =
-  | "1328x1328"
-  | "1664x928"
-  | "928x1664"
-  | "1472x1140"
-  | "1140x1472"
-  | "1584x1056"
-  | "1056x1584";
+export type AiImageSize = ImageGenerationImageSize;
 
 export type AiImageResult = {
   url: string;
@@ -82,14 +82,14 @@ export const useEditorStore = create<EditorStoreState>((set) => ({
   cameraVersion: 0,
   viewStateVersion: 0,
   aiImage: {
-    providerId: "siliconflow",
-    model: "Qwen/Qwen-Image",
+    providerId: getImageGenerationModelConfig(DEFAULT_IMAGE_GENERATION_MODEL_ID).providerId,
+    model: DEFAULT_IMAGE_GENERATION_MODEL_ID,
     prompt: "",
     seed: "",
     imageSize: "1328x1328",
     cfg: 4,
     inferenceSteps: 20,
-    referenceImages: Array.from({ length: 3 }, () => ({
+    referenceImages: Array.from({ length: MAX_REFERENCE_IMAGE_SLOTS }, () => ({
       dataUrl: null,
       fileName: null
     })),
@@ -139,19 +139,25 @@ export const useEditorStore = create<EditorStoreState>((set) => ({
       }
     })),
   setAiModel: (model) =>
-    set((state) => ({
-      aiImage: {
-        ...state.aiImage,
-        model,
-        referenceImages:
-          model === "Qwen/Qwen-Image"
-            ? Array.from({ length: 3 }, () => ({
-                dataUrl: null,
-                fileName: null
-              }))
-            : state.aiImage.referenceImages
-      }
-    })),
+    set((state) => {
+      const modelConfig = getImageGenerationModelConfig(model);
+
+      return {
+        aiImage: {
+          ...state.aiImage,
+          providerId: modelConfig.providerId,
+          model,
+          referenceImages: state.aiImage.referenceImages.map((item, index) =>
+            index < modelConfig.maxReferenceImages
+              ? item
+              : {
+                  dataUrl: null,
+                  fileName: null
+                }
+          )
+        }
+      };
+    }),
   setAiSeed: (seed) =>
     set((state) => ({
       aiImage: {

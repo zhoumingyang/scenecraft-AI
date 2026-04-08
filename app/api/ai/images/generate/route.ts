@@ -1,17 +1,13 @@
 import { NextResponse } from "next/server";
+import {
+  getImageGenerationModelConfig,
+  IMAGE_SIZE_OPTIONS
+} from "@/lib/ai/image-generation/models";
 import { createImageGenerationProvider } from "@/lib/ai/image-generation/providerRegistry";
 import type { ImageGenerationRequest } from "@/lib/ai/image-generation/types";
 import { getSession } from "@/lib/server/auth/getSession";
 
-const QWEN_IMAGE_SIZES = new Set([
-  "1328x1328",
-  "1664x928",
-  "928x1664",
-  "1472x1140",
-  "1140x1472",
-  "1584x1056",
-  "1056x1584"
-] as const);
+const IMAGE_SIZES = new Set(IMAGE_SIZE_OPTIONS.map((item) => item.value));
 
 function validateRequestBody(body: unknown): ImageGenerationRequest {
   if (!body || typeof body !== "object") {
@@ -20,17 +16,18 @@ function validateRequestBody(body: unknown): ImageGenerationRequest {
 
   const payload = body as Partial<ImageGenerationRequest>;
   const prompt = typeof payload.prompt === "string" ? payload.prompt.trim() : "";
+  const modelConfig = payload.model ? getImageGenerationModelConfig(payload.model) : null;
 
   if (!prompt) {
     throw new Error("Prompt is required.");
   }
 
-  if (payload.providerId !== "siliconflow") {
-    throw new Error("Unsupported image generation provider.");
+  if (!modelConfig) {
+    throw new Error("Unsupported image generation model.");
   }
 
-  if (payload.model !== "Qwen/Qwen-Image" && payload.model !== "Qwen/Qwen-Image-Edit-2509") {
-    throw new Error("Unsupported image generation model.");
+  if (payload.providerId !== modelConfig.providerId) {
+    throw new Error("Unsupported image generation provider.");
   }
 
   if (
@@ -58,7 +55,7 @@ function validateRequestBody(body: unknown): ImageGenerationRequest {
     throw new Error("Seed must be an integer between 0 and 9999999999.");
   }
 
-  if (payload.imageSize !== undefined && !QWEN_IMAGE_SIZES.has(payload.imageSize)) {
+  if (payload.imageSize !== undefined && !IMAGE_SIZES.has(payload.imageSize)) {
     throw new Error("Unsupported image size.");
   }
 
@@ -66,19 +63,28 @@ function validateRequestBody(body: unknown): ImageGenerationRequest {
     ? payload.referenceImages.filter((item): item is string => typeof item === "string" && item.length > 0)
     : [];
 
-  if (payload.model === "Qwen/Qwen-Image-Edit-2509") {
-    if (referenceImages.length < 1 || referenceImages.length > 3) {
-      throw new Error("Qwen/Qwen-Image-Edit-2509 requires between 1 and 3 reference images.");
+  if (
+    referenceImages.length < modelConfig.minReferenceImages ||
+    referenceImages.length > modelConfig.maxReferenceImages
+  ) {
+    if (modelConfig.maxReferenceImages === 0) {
+      throw new Error(`${payload.model} does not support reference images.`);
     }
 
-    if (payload.imageSize !== undefined) {
-      throw new Error("Qwen/Qwen-Image-Edit-2509 does not support image_size.");
-    }
+    throw new Error(
+      `${payload.model} requires between ${modelConfig.minReferenceImages} and ${modelConfig.maxReferenceImages} reference images.`
+    );
   }
+
+  if (payload.imageSize !== undefined && !modelConfig.supportsImageSize) {
+    throw new Error(`${payload.model} does not support image_size.`);
+  }
+
+  const model = modelConfig.id;
 
   return {
     providerId: payload.providerId,
-    model: payload.model,
+    model,
     prompt,
     seed: payload.seed,
     imageSize: payload.imageSize,

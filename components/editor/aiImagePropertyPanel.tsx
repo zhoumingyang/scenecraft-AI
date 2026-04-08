@@ -7,6 +7,7 @@ import AiImagePreviewDialog from "@/components/editor/aiImagePreviewDialog";
 import AiImageReferenceImagesSection from "@/components/editor/aiImageReferenceImagesSection";
 import AiImageResultsSection from "@/components/editor/aiImageResultsSection";
 import { getEditorThemeTokens } from "@/components/editor/theme";
+import { getImageGenerationModelConfig } from "@/lib/ai/image-generation/models";
 import { useI18n } from "@/lib/i18n";
 import { useEditorStore } from "@/stores/editorStore";
 
@@ -43,8 +44,8 @@ export default function AiImagePropertyPanel() {
   const setAiReferenceImageAt = useEditorStore((state) => state.setAiReferenceImageAt);
   const clearAiReferenceImageAt = useEditorStore((state) => state.clearAiReferenceImageAt);
   const theme = getEditorThemeTokens(editorThemeMode);
-
-  const isEditModel = model === "Qwen/Qwen-Image-Edit-2509";
+  const modelConfig = getImageGenerationModelConfig(model);
+  const visibleReferenceImages = referenceImages.slice(0, modelConfig.maxReferenceImages);
 
   const handleUploadFromFile = async (index: number, event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -82,9 +83,10 @@ export default function AiImagePropertyPanel() {
         {t("editor.ai.panelTitle")}
       </Typography>
 
-      {isEditModel ? (
+      {modelConfig.maxReferenceImages > 0 ? (
         <AiImageReferenceImagesSection
-          referenceImages={referenceImages}
+          referenceImages={visibleReferenceImages}
+          maxReferenceImages={modelConfig.maxReferenceImages}
           onUploadFromFile={handleUploadFromFile}
           onCaptureViewport={handleCaptureViewport}
           onClearReferenceImage={clearAiReferenceImageAt}
