@@ -34,6 +34,7 @@ export function createDefaultEditorProjectJSON(): EditorProjectJSON {
     model: [],
     mesh: [],
     light: [],
+    groups: [],
     camera: createDefaultEditorCameraJSON()
   };
 }
@@ -51,6 +52,7 @@ export function createEmptyEditorProjectJSON(projectId = createUuid()): EditorPr
     model: [],
     mesh: [],
     light: [],
+    groups: [],
     camera: createDefaultEditorCameraJSON()
   };
 }

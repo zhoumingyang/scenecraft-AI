@@ -135,6 +135,16 @@ export type EditorLightJSON = {
   height?: number;
 };
 
+export type EditorGroupJSON = {
+  id: string;
+  children: string[];
+  locked?: boolean;
+  visible?: boolean;
+  position?: number[];
+  quaternion?: number[];
+  scale?: number[];
+};
+
 export type EditorCameraJSON = {
   type?: number;
   fov?: number;
@@ -157,10 +167,11 @@ export type EditorProjectJSON = {
   model?: EditorModelJSON[];
   mesh?: EditorMeshJSON[];
   light?: EditorLightJSON[];
+  groups?: EditorGroupJSON[];
   camera?: EditorCameraJSON;
 };
 
-export type EntityKind = "model" | "mesh" | "light";
+export type EntityKind = "model" | "mesh" | "light" | "group";
 export type SyncSource = "load" | "ui" | "render";
 
 export const SCENE_NODE_ID = "scene";

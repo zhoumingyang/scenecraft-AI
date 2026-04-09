@@ -23,13 +23,13 @@ import { getEditorThemeTokens } from "@/components/editor/theme";
 type SceneTreeNode = {
   id: string;
   label: string;
-  type: "scene" | "model" | "mesh" | "light";
+  type: "scene" | "group" | "model" | "mesh" | "light";
   locked: boolean;
   visible: boolean;
 };
 
 type SceneTreeSection = {
-  id: "scene" | "model" | "mesh" | "light";
+  id: "scene" | "group" | "model" | "mesh" | "light";
   label: string;
   icon: typeof FolderRoundedIcon;
   nodes: SceneTreeNode[];
@@ -82,6 +82,12 @@ export default function SceneTreePanel() {
           ]
         },
         {
+          id: "group",
+          label: t("editor.sceneTree.groups"),
+          icon: AccountTreeRoundedIcon,
+          nodes: []
+        },
+        {
           id: "model",
           label: t("editor.sceneTree.models"),
           icon: FolderRoundedIcon,
@@ -116,6 +122,18 @@ export default function SceneTreePanel() {
             label: t("editor.sceneTree.scene")
           }
         ]
+      },
+      {
+        id: "group",
+        label: t("editor.sceneTree.groups"),
+        icon: AccountTreeRoundedIcon,
+        nodes: Array.from(project.groups.values()).map((group, index) => ({
+          id: group.id,
+          type: "group",
+          locked: group.locked,
+          visible: group.visible,
+          label: `${t("editor.sceneTree.group")} ${index + 1}`
+        }))
       },
       {
         id: "model",
@@ -255,8 +273,11 @@ export default function SceneTreePanel() {
                   ) : (
                     section.nodes.map((node) => {
                       const selected = node.id === selectedEntityId;
-                      const actionsDisabled = node.locked || node.type === "scene";
-                      const canToggleVisible = node.type !== "light" && node.type !== "scene";
+      const lockDisabled = node.type === "scene";
+      const canToggleVisible = node.type !== "light" && node.type !== "scene";
+      const canDuplicate = node.type !== "scene" && node.type !== "group" && !node.locked;
+      const canDelete = node.type !== "scene" && node.type !== "group" && !node.locked;
+      const canToggleLock = !lockDisabled;
                       const rowColor = node.locked
                         ? theme.mutedText
                         : selected
@@ -297,11 +318,13 @@ export default function SceneTreePanel() {
                           <Button
                             fullWidth
                             color="inherit"
-                            disabled={node.locked}
+                            disabled={node.type !== "scene" && node.locked}
                             onClick={() => void onSelectEntity(node.id)}
                             startIcon={
                               node.type === "scene" ? (
                                 <PublicRoundedIcon sx={{ fontSize: 16 }} />
+                              ) : node.type === "group" ? (
+                                <AccountTreeRoundedIcon sx={{ fontSize: 16 }} />
                               ) : node.type === "model" ? (
                                 <FolderRoundedIcon sx={{ fontSize: 16 }} />
                               ) : node.type === "mesh" ? (
@@ -341,7 +364,7 @@ export default function SceneTreePanel() {
                               <span>
                                 <IconButton
                                   size="small"
-                                  disabled={actionsDisabled}
+                                  disabled={node.locked}
                                   onClick={(event) => {
                                     event.stopPropagation();
                                     onToggleVisible(node.id, node.visible);
@@ -362,7 +385,7 @@ export default function SceneTreePanel() {
                             <span>
                               <IconButton
                                 size="small"
-                                disabled={actionsDisabled}
+                                disabled={!canToggleLock}
                                 onClick={(event) => {
                                   event.stopPropagation();
                                   onToggleLock(node.id, node.locked);
@@ -382,7 +405,7 @@ export default function SceneTreePanel() {
                             <span>
                               <IconButton
                                 size="small"
-                                disabled={actionsDisabled}
+                                disabled={!canDuplicate}
                                 onClick={(event) => {
                                   event.stopPropagation();
                                   onDuplicateEntity(node.id);
@@ -398,7 +421,7 @@ export default function SceneTreePanel() {
                             <span>
                               <IconButton
                                 size="small"
-                                disabled={actionsDisabled}
+                                disabled={!canDelete}
                                 onClick={(event) => {
                                   event.stopPropagation();
                                   onDeleteEntity(node.id);

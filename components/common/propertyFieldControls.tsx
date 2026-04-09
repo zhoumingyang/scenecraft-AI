@@ -171,7 +171,7 @@ export function AxisNumberInputs({
 }
 
 type AxisSliderGroupProps = {
-  label: string;
+  label?: string;
   values: [number, number, number];
   min: number;
   max: number;
@@ -195,7 +195,7 @@ export function AxisSliderGroup({
 }: AxisSliderGroupProps) {
   return (
     <Stack spacing={0.65}>
-      <Typography sx={{ fontSize: 11, color: "rgba(205,220,255,0.78)" }}>{label}</Typography>
+      {label ? <Typography sx={{ fontSize: 11, color: "rgba(205,220,255,0.78)" }}>{label}</Typography> : null}
       {AXES.map((axis, index) => (
         <Stack key={axis} direction="row" spacing={0.9} alignItems="center">
           <Typography

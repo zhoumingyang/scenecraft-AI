@@ -40,6 +40,19 @@ export class BindingRegistry {
     return this.bindingsById.get(entityId)?.object ?? null;
   }
 
+  attach(entityId: string, parentId: string | null, scene: THREE.Scene) {
+    const binding = this.bindingsById.get(entityId);
+    if (!binding) return null;
+
+    const nextParent = parentId ? this.bindingsById.get(parentId)?.object ?? null : scene;
+    if (!nextParent || binding.object.parent === nextParent) return binding;
+
+    nextParent.add(binding.object);
+    binding.model.applyTransformToObject(binding.object);
+    binding.lastTransformSignature = buildTransformSignature(binding.object);
+    return binding;
+  }
+
   list() {
     return Array.from(this.bindingsById.values());
   }
