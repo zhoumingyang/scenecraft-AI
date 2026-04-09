@@ -54,7 +54,7 @@ export class EditorRuntime {
     this.host = host;
     this.scene = new THREE.Scene();
     this.scene.background = this.defaultBackground;
-    this.scene.fog = new THREE.Fog("#05070f", 20, 180);
+    // this.scene.fog = new THREE.Fog("#05070f", 20, 180);
 
     this.camera = new THREE.PerspectiveCamera(60, 1, 0.1, 2000);
     this.camera.position.set(10, 10, 10);
@@ -87,7 +87,7 @@ export class EditorRuntime {
     this.firstPersonController = new FirstPersonController(this.camera, this.renderer.domElement);
     this.transformGizmo = new CustomTransformGizmo(this.camera, this.renderer.domElement, this.raycaster);
 
-    this.gridHelper = new THREE.GridHelper(80, 80, 0x335588, 0x22334f);
+    this.gridHelper = new THREE.GridHelper(80, 80, 0x5f8fc7, 0x39567f);
     this.gridHelper.position.y = -0.0001;
     this.scene.add(this.gridHelper);
     this.scene.add(this.transformGizmo.root);
@@ -309,7 +309,6 @@ export class EditorRuntime {
         : this.defaultBackground;
     this.renderer.toneMapping = envConfig.toneMapping as THREE.ToneMapping;
     this.renderer.toneMappingExposure = envConfig.toneMappingExposure;
-    console.log('environment: ', this.scene.environment);
   }
 
   private setTransformDragging(isDragging: boolean) {
