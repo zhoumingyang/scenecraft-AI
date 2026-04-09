@@ -71,6 +71,8 @@ const dictionaries: Record<Locale, Dictionary> = {
     "editor.sceneTree.title": "Scene Tree",
     "editor.sceneTree.sceneGroup": "Scene",
     "editor.sceneTree.scene": "scene",
+    "editor.sceneTree.group": "Group",
+    "editor.sceneTree.groups": "Groups",
     "editor.sceneTree.models": "Models",
     "editor.sceneTree.meshes": "Meshes",
     "editor.sceneTree.lights": "Lights",
@@ -99,6 +101,7 @@ const dictionaries: Record<Locale, Dictionary> = {
     "editor.properties.position": "Position",
     "editor.properties.rotation": "Rotation",
     "editor.properties.scale": "Scale",
+    "editor.properties.uniformScale": "Uniform",
     "editor.properties.appearance": "Appearance",
     "editor.properties.light": "Light",
     "editor.properties.color": "Color",
@@ -204,7 +207,17 @@ const dictionaries: Record<Locale, Dictionary> = {
     "editor.ai.optimizePrompt": "Optimize prompt",
     "editor.ai.translatePrompt": "Translate to English",
     "editor.ai.promptTransformFailed": "Prompt processing failed.",
-    "editor.ai.promptTransformEmpty": "The provider returned an empty prompt."
+    "editor.ai.promptTransformEmpty": "The provider returned an empty prompt.",
+    "editor.ai.modeImage": "Image",
+    "editor.ai.mode3d": "3D",
+    "editor.ai3d.promptPlaceholder": "Describe a simple 3D blockout. Press Cmd/Ctrl + Enter to preview.",
+    "editor.ai3d.mockLabel": "Local mock preview",
+    "editor.ai3d.helperText": "Preview a minecraft/blockout-style, box-heavy blockout before applying it to the scene.",
+    "editor.ai3d.generateFailed": "3D preview generation failed.",
+    "editor.ai3d.applyFailed": "Applying the 3D preview failed.",
+    "editor.ai3d.discard": "Discard",
+    "editor.ai3d.apply": "Apply",
+    "editor.ai3d.primitiveCount": "{count} primitives"
   },
   zh: {
     "language.label": "语言",
@@ -271,6 +284,8 @@ const dictionaries: Record<Locale, Dictionary> = {
     "editor.sceneTree.title": "场景树",
     "editor.sceneTree.sceneGroup": "场景",
     "editor.sceneTree.scene": "scene",
+    "editor.sceneTree.group": "组",
+    "editor.sceneTree.groups": "组",
     "editor.sceneTree.models": "模型",
     "editor.sceneTree.meshes": "网格",
     "editor.sceneTree.lights": "光照",
@@ -299,6 +314,7 @@ const dictionaries: Record<Locale, Dictionary> = {
     "editor.properties.position": "Position",
     "editor.properties.rotation": "Rotation",
     "editor.properties.scale": "Scale",
+    "editor.properties.uniformScale": "等比缩放",
     "editor.properties.appearance": "外观",
     "editor.properties.light": "光照属性",
     "editor.properties.color": "颜色",
@@ -404,7 +420,17 @@ const dictionaries: Record<Locale, Dictionary> = {
     "editor.ai.optimizePrompt": "提示词优化",
     "editor.ai.translatePrompt": "翻译为英文",
     "editor.ai.promptTransformFailed": "提示词处理失败。",
-    "editor.ai.promptTransformEmpty": "服务商返回了空提示词。"
+    "editor.ai.promptTransformEmpty": "服务商返回了空提示词。",
+    "editor.ai.modeImage": "图片",
+    "editor.ai.mode3d": "3D",
+    "editor.ai3d.promptPlaceholder": "描述一个简易 3D 草模，按 Cmd/Ctrl + Enter 预览。",
+    "editor.ai3d.mockLabel": "本地 mock 预览",
+    "editor.ai3d.helperText": "先预览 Minecraft / blockout 风格、以 box 为主的草模，确认后再写入场景。",
+    "editor.ai3d.generateFailed": "3D 预览生成失败。",
+    "editor.ai3d.applyFailed": "应用 3D 预览失败。",
+    "editor.ai3d.discard": "丢弃",
+    "editor.ai3d.apply": "应用",
+    "editor.ai3d.primitiveCount": "{count} 个 primitive"
   }
 };
 

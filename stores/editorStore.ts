@@ -6,7 +6,7 @@ import {
   type ImageGenerationImageSize,
   type ImageGenerationModelId
 } from "@/lib/ai/image-generation/models";
-import type { EditorApp } from "@/render/editor";
+import type { Ai3DPlan, EditorApp } from "@/render/editor";
 
 export type AiImageProviderId = "siliconflow" | "openrouter";
 export type AiImageModelId = ImageGenerationModelId;
@@ -16,6 +16,8 @@ export type AiImageSize = ImageGenerationImageSize;
 export type AiImageResult = {
   url: string;
 };
+
+export type AiMode = "image" | "3d";
 
 export type AiReferenceImageSlot = {
   dataUrl: string | null;
@@ -39,6 +41,14 @@ type AiImageSettings = {
   lastSeed: number | null;
 };
 
+type Ai3DSettings = {
+  prompt: string;
+  isGenerating: boolean;
+  errorMessage: string | null;
+  previewStatus: "idle" | "ready";
+  plan: Ai3DPlan | null;
+};
+
 type EditorStoreState = {
   app: EditorApp | null;
   editorThemeMode: EditorThemeMode;
@@ -47,7 +57,9 @@ type EditorStoreState = {
   projectLoadVersion: number;
   cameraVersion: number;
   viewStateVersion: number;
+  aiMode: AiMode;
   aiImage: AiImageSettings;
+  ai3d: Ai3DSettings;
   setApp: (app: EditorApp | null) => void;
   setEditorThemeMode: (mode: EditorThemeMode) => void;
   setSelectedEntityId: (selectedEntityId: string | null) => void;
@@ -55,6 +67,7 @@ type EditorStoreState = {
   bumpProjectLoadVersion: () => void;
   bumpCameraVersion: () => void;
   bumpViewStateVersion: () => void;
+  setAiMode: (mode: AiMode) => void;
   setAiInspectorMode: (mode: AiImageSettings["inspectorMode"]) => void;
   setAiComposerOpen: (open: boolean) => void;
   setAiPrompt: (prompt: string) => void;
@@ -65,6 +78,8 @@ type EditorStoreState = {
   setAiInferenceSteps: (steps: number) => void;
   setAiReferenceImageAt: (index: number, image: AiReferenceImageSlot) => void;
   clearAiReferenceImageAt: (index: number) => void;
+  setAi3dPrompt: (prompt: string) => void;
+  setAi3dState: (payload: Partial<Ai3DSettings>) => void;
   setAiGeneratingState: (payload: {
     isGenerating: boolean;
     errorMessage?: string | null;
@@ -81,6 +96,7 @@ export const useEditorStore = create<EditorStoreState>((set) => ({
   projectLoadVersion: 0,
   cameraVersion: 0,
   viewStateVersion: 0,
+  aiMode: "image",
   aiImage: {
     providerId: getImageGenerationModelConfig(DEFAULT_IMAGE_GENERATION_MODEL_ID).providerId,
     model: DEFAULT_IMAGE_GENERATION_MODEL_ID,
@@ -100,6 +116,13 @@ export const useEditorStore = create<EditorStoreState>((set) => ({
     results: [],
     lastSeed: null
   },
+  ai3d: {
+    prompt: "",
+    isGenerating: false,
+    errorMessage: null,
+    previewStatus: "idle",
+    plan: null
+  },
   setApp: (app) => set({ app }),
   setEditorThemeMode: (editorThemeMode) => set({ editorThemeMode }),
   setSelectedEntityId: (selectedEntityId) => set({ selectedEntityId }),
@@ -116,6 +139,7 @@ export const useEditorStore = create<EditorStoreState>((set) => ({
     set((state) => ({
       viewStateVersion: state.viewStateVersion + 1
     })),
+  setAiMode: (aiMode) => set({ aiMode }),
   setAiInspectorMode: (mode) =>
     set((state) => ({
       aiImage: {
@@ -207,6 +231,20 @@ export const useEditorStore = create<EditorStoreState>((set) => ({
               }
             : item
         )
+      }
+    })),
+  setAi3dPrompt: (prompt) =>
+    set((state) => ({
+      ai3d: {
+        ...state.ai3d,
+        prompt
+      }
+    })),
+  setAi3dState: (payload) =>
+    set((state) => ({
+      ai3d: {
+        ...state.ai3d,
+        ...payload
       }
     })),
   setAiGeneratingState: (payload) =>

@@ -1,5 +1,7 @@
 import * as THREE from "three";
 
+import type { Ai3DPlan, Ai3DMeshDraft } from "../ai3d/plan";
+import { buildAi3DMeshDrafts } from "../ai3d/plan";
 import type { EditorCommand, MeshMaterialPatch } from "../core/commands";
 import type {
   EditorCameraJSON,
@@ -17,12 +19,20 @@ import { pickEntityId } from "../interaction/picker";
 import { EditorProjectModel, ModelEntityModel } from "../models";
 import { createEmptyEditorProjectJSON } from "../factories/projectFactory";
 import { EditorRuntime } from "../runtime/editorRuntime";
+import { createBuiltinGeometry } from "../utils/geometry";
 import { inferModelFileFormat } from "../utils/modelFile";
 import { SCENE_NODE_ID as SCENE_SELECTION_ID } from "../core/types";
 
 type Emit = (event: EditorAppEvent) => void;
 
-function createEntityId(prefix: "model" | "mesh" | "light") {
+type PreviewMeshRecord = {
+  nodeId: string;
+  mesh: THREE.Mesh;
+  geometry: THREE.BufferGeometry;
+  material: THREE.MeshStandardMaterial;
+};
+
+function createEntityId(prefix: "model" | "mesh" | "light" | "group") {
   return globalThis.crypto?.randomUUID?.() ?? `${prefix}-${Date.now().toString(36)}`;
 }
 
@@ -32,6 +42,10 @@ function createLightEntityId() {
 
 function createMeshEntityId() {
   return createEntityId("mesh");
+}
+
+function createGroupEntityId() {
+  return createEntityId("group");
 }
 
 function createMeshPayload(geometryName: string) {
@@ -136,6 +150,7 @@ export class EditorSession {
   private readonly registry: BindingRegistry;
   private readonly emit: Emit;
   private readonly ownedModelUrls = new Set<string>();
+  private readonly aiPreviewRecords = new Map<string, PreviewMeshRecord>();
   private selectedEntityId: string | null = null;
 
   projectModel: EditorProjectModel | null = null;
@@ -151,12 +166,14 @@ export class EditorSession {
   }
 
   dispose() {
+    this.clearAi3DPreview();
     this.clearProjectObjects();
     this.revokeOwnedModelUrls();
   }
 
   async loadProject(projectJson: EditorProjectJSON) {
     this.releaseUnusedOwnedModelUrls(projectJson);
+    this.clearAi3DPreview();
     this.clearProjectObjects();
 
     this.projectModel = EditorProjectModel.fromJSON(projectJson);
@@ -168,9 +185,11 @@ export class EditorSession {
     this.runtime.applyEnvConfig(this.projectModel.envConfig);
     this.runtime.applyCameraModel(this.projectModel.camera);
 
+    this.projectModel.groups.forEach((group) => this.registry.create(group));
     this.projectModel.models.forEach((model) => this.registry.create(model));
     this.projectModel.meshes.forEach((mesh) => this.registry.create(mesh));
     this.projectModel.lights.forEach((light) => this.registry.create(light));
+    this.rebuildGroupHierarchy();
     this.runtime.syncLightHelperVisibility();
 
     if (this.projectModel.lights.size === 0) {
@@ -195,6 +214,88 @@ export class EditorSession {
 
   getRenderObject(entityId: string) {
     return this.registry.getObject(entityId);
+  }
+
+  previewAi3DPlan(plan: Ai3DPlan) {
+    const drafts = buildAi3DMeshDrafts(plan);
+    this.clearAi3DPreview();
+
+    drafts.forEach((draft) => {
+      const geometry = createBuiltinGeometry(draft.mesh.geometryName || "Box");
+      const material = new THREE.MeshStandardMaterial();
+      material.color.set(draft.mesh.material?.color || "#d9e8ff");
+      material.opacity = draft.mesh.material?.opacity ?? 1;
+      material.transparent = (draft.mesh.material?.opacity ?? 1) < 1;
+      material.metalness = draft.mesh.material?.metalness ?? 0;
+      material.roughness = draft.mesh.material?.roughness ?? 1;
+      material.emissive.set(draft.mesh.material?.emissive || "#000000");
+      material.emissiveIntensity = draft.mesh.material?.emissiveIntensity ?? 1;
+
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.name = `ai-preview:${draft.nodeId}`;
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      mesh.position.set(
+        draft.mesh.position?.[0] ?? 0,
+        draft.mesh.position?.[1] ?? 0.8,
+        draft.mesh.position?.[2] ?? 0
+      );
+      mesh.quaternion.set(
+        draft.mesh.quaternion?.[0] ?? 0,
+        draft.mesh.quaternion?.[1] ?? 0,
+        draft.mesh.quaternion?.[2] ?? 0,
+        draft.mesh.quaternion?.[3] ?? 1
+      );
+      mesh.scale.set(
+        draft.mesh.scale?.[0] ?? 1,
+        draft.mesh.scale?.[1] ?? 1,
+        draft.mesh.scale?.[2] ?? 1
+      );
+
+      this.runtime.scene.add(mesh);
+      this.aiPreviewRecords.set(draft.nodeId, {
+        nodeId: draft.nodeId,
+        mesh,
+        geometry,
+        material
+      });
+    });
+  }
+
+  clearAi3DPreview() {
+    this.aiPreviewRecords.forEach((record) => {
+      this.runtime.scene.remove(record.mesh);
+      record.geometry.dispose();
+      record.material.dispose();
+    });
+    this.aiPreviewRecords.clear();
+  }
+
+  async applyAi3DPlan(plan: Ai3DPlan, source: SyncSource = "ui") {
+    const drafts = buildAi3DMeshDrafts(plan);
+
+    if (!this.projectModel) {
+      await this.loadProject(createEmptyEditorProjectJSON());
+    }
+    if (!this.projectModel) return;
+
+    if (drafts.length > 1) {
+      const groupId = this.createGroupFromAiDrafts(drafts, source);
+      this.clearAi3DPreview();
+      this.setSelectedEntity(groupId, source);
+      return;
+    }
+
+    let lastCreatedEntityId: string | null = null;
+    drafts.forEach((draft) => {
+      lastCreatedEntityId = this.createMeshFromDraft(draft, source);
+    });
+
+    this.clearAi3DPreview();
+
+    if (lastCreatedEntityId) {
+      this.setSelectedEntity(lastCreatedEntityId, source);
+    }
   }
 
   async dispatch(command: EditorCommand) {
@@ -378,15 +479,15 @@ export class EditorSession {
     }
     if (!this.projectModel) return;
 
-    const mesh = this.projectModel.addMesh(createMeshPayload(geometryName));
-    this.registry.create(mesh);
-    this.emit({
-      type: "entityUpdated",
-      entityId: mesh.id,
-      entityKind: "mesh",
+    const meshId = this.createMeshFromDraft(
+      {
+        nodeId: createMeshEntityId(),
+        label: geometryName,
+        mesh: createMeshPayload(geometryName)
+      },
       source
-    });
-    this.setSelectedEntity(mesh.id, source);
+    );
+    this.setSelectedEntity(meshId, source);
   }
 
   updateLight(entityId: string, patch: Partial<EditorLightJSON>, source: SyncSource = "ui") {
@@ -470,14 +571,98 @@ export class EditorSession {
     this.emit({ type: "selectionChanged", selectedEntityId: entityId, source });
   }
 
+  private createMeshFromDraft(draft: Ai3DMeshDraft, source: SyncSource) {
+    if (!this.projectModel) {
+      throw new Error("Project model is not initialized.");
+    }
+
+    const mesh = this.projectModel.addMesh({
+      ...draft.mesh,
+      id: createMeshEntityId()
+    });
+    this.registry.create(mesh);
+    this.rebuildGroupHierarchy();
+    this.emit({
+      type: "entityUpdated",
+      entityId: mesh.id,
+      entityKind: "mesh",
+      source
+    });
+    return mesh.id;
+  }
+
+  private createGroupFromAiDrafts(drafts: Ai3DMeshDraft[], source: SyncSource) {
+    if (!this.projectModel) {
+      throw new Error("Project model is not initialized.");
+    }
+
+    const center = drafts.reduce<[number, number, number]>(
+      (acc, draft) => {
+        acc[0] += draft.mesh.position?.[0] ?? 0;
+        acc[1] += draft.mesh.position?.[1] ?? 0;
+        acc[2] += draft.mesh.position?.[2] ?? 0;
+        return acc;
+      },
+      [0, 0, 0]
+    );
+
+    center[0] /= drafts.length;
+    center[1] /= drafts.length;
+    center[2] /= drafts.length;
+
+    const childIds = drafts.map((draft) =>
+      this.createMeshFromDraft(
+        {
+          ...draft,
+          mesh: {
+            ...draft.mesh,
+            position: [
+              (draft.mesh.position?.[0] ?? 0) - center[0],
+              (draft.mesh.position?.[1] ?? 0) - center[1],
+              (draft.mesh.position?.[2] ?? 0) - center[2]
+            ]
+          }
+        },
+        source
+      )
+    );
+
+    const group = this.projectModel.addGroup({
+      id: createGroupEntityId(),
+      children: childIds,
+      locked: false,
+      visible: true,
+      position: center,
+      quaternion: [0, 0, 0, 1],
+      scale: [1, 1, 1]
+    });
+
+    this.registry.create(group);
+    this.rebuildGroupHierarchy();
+    this.emit({
+      type: "entityUpdated",
+      entityId: group.id,
+      entityKind: "group",
+      source
+    });
+    return group.id;
+  }
+
   removeEntity(entityId: string, source: SyncSource = "ui") {
     if (!this.projectModel) return;
     const binding = this.registry.get(entityId);
     if (!binding || binding.model.locked) return;
 
+    if (binding.kind === "group") {
+      this.projectModel.listDirectChildren(entityId).forEach((childId) => {
+        this.registry.attach(childId, null, this.runtime.scene);
+      });
+    }
+
     const removedKind = this.projectModel.removeEntity(entityId);
     if (!removedKind) return;
     this.registry.remove(entityId);
+    this.rebuildGroupHierarchy();
     this.runtime.syncLightHelperVisibility();
 
     if (this.projectModel.lights.size === 0) {
@@ -519,6 +704,7 @@ export class EditorSession {
         scale: [...record.item.scale]
       });
       this.registry.create(duplicate);
+      this.rebuildGroupHierarchy();
       this.emit({
         type: "entityUpdated",
         entityId: duplicate.id,
@@ -591,6 +777,7 @@ export class EditorSession {
         scale: [...record.item.scale]
       });
       this.registry.create(duplicate);
+      this.rebuildGroupHierarchy();
       this.emit({
         type: "entityUpdated",
         entityId: duplicate.id,
@@ -598,6 +785,10 @@ export class EditorSession {
         source
       });
       this.setSelectedEntity(duplicate.id, source);
+      return;
+    }
+
+    if (record.kind !== "light") {
       return;
     }
 
@@ -619,6 +810,7 @@ export class EditorSession {
     });
     this.runtime.scene.remove(this.runtime.fallbackAmbientLight);
     this.registry.create(duplicate);
+    this.rebuildGroupHierarchy();
     this.runtime.syncLightHelperVisibility();
     this.emit({
       type: "entityUpdated",
@@ -688,6 +880,30 @@ export class EditorSession {
       }
       URL.revokeObjectURL(url);
       this.ownedModelUrls.delete(url);
+    });
+  }
+
+  private rebuildGroupHierarchy() {
+    if (!this.projectModel) return;
+
+    this.projectModel.groups.forEach((group) => {
+      const parentGroupId = this.projectModel?.getParentGroupId(group.id) ?? null;
+      this.registry.attach(group.id, parentGroupId, this.runtime.scene);
+    });
+
+    this.projectModel.models.forEach((model) => {
+      const parentGroupId = this.projectModel?.getParentGroupId(model.id) ?? null;
+      this.registry.attach(model.id, parentGroupId, this.runtime.scene);
+    });
+
+    this.projectModel.meshes.forEach((mesh) => {
+      const parentGroupId = this.projectModel?.getParentGroupId(mesh.id) ?? null;
+      this.registry.attach(mesh.id, parentGroupId, this.runtime.scene);
+    });
+
+    this.projectModel.lights.forEach((light) => {
+      const parentGroupId = this.projectModel?.getParentGroupId(light.id) ?? null;
+      this.registry.attach(light.id, parentGroupId, this.runtime.scene);
     });
   }
 

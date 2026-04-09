@@ -57,6 +57,8 @@ export default function PropertyPanel() {
       : entityRecord
         ? entityRecord.kind === "scene"
           ? t("editor.sceneTree.scene")
+          : entityRecord.kind === "group"
+            ? t("editor.sceneTree.group")
           : entityRecord.kind === "model"
             ? t("editor.sceneTree.model")
             : entityRecord.kind === "mesh"

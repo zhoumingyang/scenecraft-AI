@@ -1,5 +1,6 @@
 export { createEditorApp, EditorApp } from "./app";
 export type { EditorMeshListItem } from "./app";
+export type { Ai3DOperation, Ai3DPlan, Ai3DPrimitiveType } from "./ai3d/plan";
 export { createEditorSdk } from "./sdk";
 export type { EditorSdk } from "./sdk";
 export type { EditorCommand, MeshMaterialPatch } from "./core/commands";

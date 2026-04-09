@@ -1,5 +1,6 @@
 import type * as THREE from "three";
 
+import type { Ai3DPlan } from "./ai3d/plan";
 import type { EditorCommand, MeshMaterialPatch } from "./core/commands";
 import type { EditorAppEvent, EditorAppListener } from "./core/events";
 import type {
@@ -92,6 +93,18 @@ export class EditorApp {
 
   async dispatch(command: EditorCommand) {
     await this.session.dispatch(command);
+  }
+
+  previewAi3DPlan(plan: Ai3DPlan) {
+    this.session.previewAi3DPlan(plan);
+  }
+
+  clearAi3DPreview() {
+    this.session.clearAi3DPreview();
+  }
+
+  async applyAi3DPlan(plan: Ai3DPlan, source: SyncSource = "ui") {
+    await this.session.applyAi3DPlan(plan, source);
   }
 
   getProjectJSON(): EditorProjectJSON | null {

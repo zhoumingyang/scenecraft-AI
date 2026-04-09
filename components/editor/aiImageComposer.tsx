@@ -4,6 +4,7 @@ import { KeyboardEvent, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Box,
+  Button,
   CircularProgress,
   IconButton,
   Paper,
@@ -20,6 +21,7 @@ import AiImageModelMenu from "@/components/editor/aiImageModelMenu";
 import { getEditorThemeTokens } from "@/components/editor/theme";
 import { getImageGenerationModelConfig } from "@/lib/ai/image-generation/models";
 import { useI18n } from "@/lib/i18n";
+import { createMockAi3DPlan } from "@/render/editor/ai3d/mock";
 import { useEditorStore } from "@/stores/editorStore";
 
 function parseSeed(seedText: string) {
@@ -39,6 +41,7 @@ export default function AiImageComposer() {
   const promptActionLockRef = useRef(false);
   const app = useEditorStore((state) => state.app);
   const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
+  const aiMode = useEditorStore((state) => state.aiMode);
   const {
     providerId,
     model,
@@ -51,15 +54,20 @@ export default function AiImageComposer() {
     isComposerOpen,
     isGenerating
   } = useEditorStore((state) => state.aiImage);
+  const ai3d = useEditorStore((state) => state.ai3d);
+  const setAiMode = useEditorStore((state) => state.setAiMode);
   const setAiPrompt = useEditorStore((state) => state.setAiPrompt);
   const setAiModel = useEditorStore((state) => state.setAiModel);
   const setAiComposerOpen = useEditorStore((state) => state.setAiComposerOpen);
   const setAiInspectorMode = useEditorStore((state) => state.setAiInspectorMode);
+  const setAi3dPrompt = useEditorStore((state) => state.setAi3dPrompt);
+  const setAi3dState = useEditorStore((state) => state.setAi3dState);
   const setAiGeneratingState = useEditorStore((state) => state.setAiGeneratingState);
   const theme = getEditorThemeTokens(editorThemeMode);
 
   const filledReferenceImages = useMemo(
-    () => referenceImages.filter((item) => Boolean(item.dataUrl)).map((item) => item.dataUrl as string),
+    () =>
+      referenceImages.filter((item) => Boolean(item.dataUrl)).map((item) => item.dataUrl as string),
     [referenceImages]
   );
   const isPromptActionPending = activePromptAction !== null;
@@ -80,6 +88,11 @@ export default function AiImageComposer() {
   const focusAiMode = () => {
     setAiInspectorMode("ai");
     app?.setSelectedEntity(null);
+  };
+
+  const focusAi3dMode = () => {
+    setAiMode("3d");
+    focusAiMode();
   };
 
   const handleSubmit = async () => {
@@ -164,10 +177,45 @@ export default function AiImageComposer() {
     }
   };
 
+  const handleAi3dSubmit = async () => {
+    const trimmedPrompt = ai3d.prompt.trim();
+    if (!trimmedPrompt || ai3d.isGenerating) return;
+
+    setAi3dState({
+      isGenerating: true,
+      errorMessage: null
+    });
+
+    try {
+      const plan = createMockAi3DPlan(trimmedPrompt);
+      app?.previewAi3DPlan(plan);
+      setAi3dState({
+        isGenerating: false,
+        errorMessage: null,
+        previewStatus: "ready",
+        plan
+      });
+    } catch (error) {
+      app?.clearAi3DPreview();
+      setAi3dState({
+        isGenerating: false,
+        errorMessage: error instanceof Error ? error.message : t("editor.ai3d.generateFailed"),
+        previewStatus: "idle",
+        plan: null
+      });
+    }
+  };
+
   const handlePromptKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
       event.preventDefault();
-      void handleSubmit();
+
+      if (aiMode === "image") {
+        void handleSubmit();
+        return;
+      }
+
+      void handleAi3dSubmit();
     }
   };
 
@@ -224,6 +272,40 @@ export default function AiImageComposer() {
     } finally {
       promptActionLockRef.current = false;
       setActivePromptAction(null);
+    }
+  };
+
+  const handleAi3dDiscard = () => {
+    app?.clearAi3DPreview();
+    setAi3dState({
+      errorMessage: null,
+      previewStatus: "idle",
+      plan: null
+    });
+  };
+
+  const handleAi3dApply = async () => {
+    if (!ai3d.plan) return;
+
+    setAi3dState({
+      isGenerating: true,
+      errorMessage: null
+    });
+
+    try {
+      await app?.applyAi3DPlan(ai3d.plan);
+      setAi3dState({
+        isGenerating: false,
+        errorMessage: null,
+        previewStatus: "idle",
+        plan: null
+      });
+      setAiInspectorMode("entity");
+    } catch (error) {
+      setAi3dState({
+        isGenerating: false,
+        errorMessage: error instanceof Error ? error.message : t("editor.ai3d.applyFailed")
+      });
     }
   };
 
@@ -318,11 +400,21 @@ export default function AiImageComposer() {
               multiline
               minRows={2}
               maxRows={5}
-              value={prompt}
-              onFocus={focusAiMode}
-              onChange={(event) => setAiPrompt(event.target.value)}
+              value={aiMode === "image" ? prompt : ai3d.prompt}
+              onFocus={aiMode === "image" ? focusAiMode : focusAi3dMode}
+              onChange={(event) => {
+                if (aiMode === "image") {
+                  setAiPrompt(event.target.value);
+                  return;
+                }
+                setAi3dPrompt(event.target.value);
+              }}
               onKeyDown={handlePromptKeyDown}
-              placeholder={t("editor.ai.promptPlaceholder")}
+              placeholder={
+                aiMode === "image"
+                  ? t("editor.ai.promptPlaceholder")
+                  : t("editor.ai3d.promptPlaceholder")
+              }
               sx={{
                 "& .MuiOutlinedInput-root": {
                   alignItems: "flex-start",
@@ -346,50 +438,131 @@ export default function AiImageComposer() {
 
             <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ pt: 0.3 }}>
               <Stack direction="row" spacing={0.8} alignItems="center">
-                <AiImageModelMenu model={model} onChange={setAiModel} onFocus={focusAiMode} />
-                <IconButton
+                <Button
                   size="small"
-                  disabled={isGenerating || isPromptActionPending || !prompt.trim()}
-                  onClick={() => {
-                    void handlePromptTransform("optimize");
+                  onClick={() => setAiMode("image")}
+                  sx={{
+                    minWidth: 56,
+                    color: aiMode === "image" ? theme.pillText : theme.mutedText,
+                    border: theme.sectionBorder,
+                    background: aiMode === "image" ? theme.iconButtonBg : "transparent",
+                    textTransform: "none"
                   }}
-                  title={t("editor.ai.optimizePrompt")}
-                  sx={utilityIconButtonSx}
                 >
-                  {activePromptAction === "optimize" ? (
-                    <CircularProgress size={16} sx={{ color: theme.pillText }} />
-                  ) : (
-                    <AutoFixHighRoundedIcon sx={{ fontSize: 18 }} />
-                  )}
-                </IconButton>
-                <IconButton
+                  {t("editor.ai.modeImage")}
+                </Button>
+                <Button
                   size="small"
-                  disabled={isGenerating || isPromptActionPending || !prompt.trim()}
-                  onClick={() => {
-                    void handlePromptTransform("translate-en");
+                  onClick={focusAi3dMode}
+                  sx={{
+                    minWidth: 56,
+                    color: aiMode === "3d" ? theme.pillText : theme.mutedText,
+                    border: theme.sectionBorder,
+                    background: aiMode === "3d" ? theme.iconButtonBg : "transparent",
+                    textTransform: "none"
                   }}
-                  title={t("editor.ai.translatePrompt")}
-                  sx={utilityIconButtonSx}
                 >
-                  {activePromptAction === "translate-en" ? (
-                    <CircularProgress size={16} sx={{ color: theme.pillText }} />
-                  ) : (
-                    <TranslateRoundedIcon sx={{ fontSize: 18 }} />
-                  )}
-                </IconButton>
+                  {t("editor.ai.mode3d")}
+                </Button>
               </Stack>
+
+              {aiMode === "image" ? (
+                <Stack direction="row" spacing={0.8} alignItems="center">
+                  <AiImageModelMenu model={model} onChange={setAiModel} onFocus={focusAiMode} />
+                  <IconButton
+                    size="small"
+                    disabled={isGenerating || isPromptActionPending || !prompt.trim()}
+                    onClick={() => {
+                      void handlePromptTransform("optimize");
+                    }}
+                    title={t("editor.ai.optimizePrompt")}
+                    sx={utilityIconButtonSx}
+                  >
+                    {activePromptAction === "optimize" ? (
+                      <CircularProgress size={16} sx={{ color: theme.pillText }} />
+                    ) : (
+                      <AutoFixHighRoundedIcon sx={{ fontSize: 18 }} />
+                    )}
+                  </IconButton>
+                  <IconButton
+                    size="small"
+                    disabled={isGenerating || isPromptActionPending || !prompt.trim()}
+                    onClick={() => {
+                      void handlePromptTransform("translate-en");
+                    }}
+                    title={t("editor.ai.translatePrompt")}
+                    sx={utilityIconButtonSx}
+                  >
+                    {activePromptAction === "translate-en" ? (
+                      <CircularProgress size={16} sx={{ color: theme.pillText }} />
+                    ) : (
+                      <TranslateRoundedIcon sx={{ fontSize: 18 }} />
+                    )}
+                  </IconButton>
+                </Stack>
+              ) : (
+                <Stack direction="row" spacing={0.8} alignItems="center">
+                  <Typography sx={{ fontSize: 12, color: theme.mutedText }}>
+                    {ai3d.plan
+                      ? t("editor.ai3d.primitiveCount", {
+                          count: ai3d.plan.operations.filter((item) => item.type === "create_primitive").length
+                        })
+                      : t("editor.ai3d.mockLabel")}
+                  </Typography>
+                  {ai3d.previewStatus === "ready" ? (
+                    <>
+                      <Button
+                        size="small"
+                        onClick={handleAi3dDiscard}
+                        sx={{
+                          color: theme.mutedText,
+                          border: theme.sectionBorder,
+                          textTransform: "none"
+                        }}
+                      >
+                        {t("editor.ai3d.discard")}
+                      </Button>
+                      <Button
+                        size="small"
+                        onClick={() => {
+                          void handleAi3dApply();
+                        }}
+                        disabled={ai3d.isGenerating}
+                        sx={{
+                          color: theme.pillText,
+                          border: theme.sectionBorder,
+                          background: theme.iconButtonBg,
+                          textTransform: "none"
+                        }}
+                      >
+                        {t("editor.ai3d.apply")}
+                      </Button>
+                    </>
+                  ) : null}
+                </Stack>
+              )}
 
               <IconButton
                 size="small"
-                disabled={isGenerating || isPromptActionPending || !prompt.trim()}
+                disabled={
+                  aiMode === "image"
+                    ? isGenerating || isPromptActionPending || !prompt.trim()
+                    : ai3d.isGenerating || !ai3d.prompt.trim()
+                }
                 onClick={() => {
-                  void handleSubmit();
+                  if (aiMode === "image") {
+                    void handleSubmit();
+                    return;
+                  }
+                  void handleAi3dSubmit();
                 }}
                 sx={{
                   color: theme.pillText,
                   transform: "rotate(-90deg)",
                   background:
-                    prompt.trim() && !isGenerating && !isPromptActionPending
+                    (aiMode === "image"
+                      ? prompt.trim() && !isGenerating && !isPromptActionPending
+                      : ai3d.prompt.trim() && !ai3d.isGenerating)
                       ? editorThemeMode === "dark"
                         ? "linear-gradient(135deg, #2f6df4, #63a4ff)"
                         : "linear-gradient(135deg, #4c86f7, #86b7ff)"
@@ -397,13 +570,24 @@ export default function AiImageComposer() {
                   border: theme.sectionBorder
                 }}
               >
-                {isGenerating ? (
+                {(aiMode === "image" ? isGenerating : ai3d.isGenerating) ? (
                   <CircularProgress size={16} sx={{ color: theme.pillText }} />
                 ) : (
                   <SendRoundedIcon sx={{ fontSize: 18 }} />
                 )}
               </IconButton>
             </Stack>
+
+            {aiMode === "3d" ? (
+              <Stack spacing={0.5} sx={{ px: 0.2, pt: 0.4 }}>
+                <Typography sx={{ fontSize: 12, color: theme.mutedText }}>
+                  {ai3d.plan?.summary || t("editor.ai3d.helperText")}
+                </Typography>
+                {ai3d.errorMessage ? (
+                  <Typography sx={{ fontSize: 12, color: "#ff8f8f" }}>{ai3d.errorMessage}</Typography>
+                ) : null}
+              </Stack>
+            ) : null}
           </Stack>
         </Paper>
       </Box>

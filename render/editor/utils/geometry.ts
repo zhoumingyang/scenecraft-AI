@@ -1,7 +1,10 @@
 import * as THREE from "three";
 
-import type { EditorMeshUvJSON, EditorMeshVertexJSON } from "../core/types";
+import type { EditorMeshJSON, EditorMeshUvJSON, EditorMeshVertexJSON } from "../core/types";
 import type { MeshEntityModel } from "../models";
+
+export type ShapePreset = "star" | "heart";
+export type TubePreset = "arc" | "wave" | "loop";
 
 export function createBuiltinGeometry(name: string): THREE.BufferGeometry {
   const normalized = name.trim().toLowerCase();
@@ -52,6 +55,157 @@ export function toFloatArray2(uvs: EditorMeshUvJSON[]): Float32Array {
     output.push(uv.x, uv.y);
   });
   return new Float32Array(output);
+}
+
+function readAttributeVec3(attribute: THREE.BufferAttribute | THREE.InterleavedBufferAttribute) {
+  const output: EditorMeshVertexJSON[] = [];
+  for (let index = 0; index < attribute.count; index += 1) {
+    output.push({
+      x: attribute.getX(index),
+      y: attribute.getY(index),
+      z: attribute.getZ(index)
+    });
+  }
+  return output;
+}
+
+function readAttributeVec2(attribute: THREE.BufferAttribute | THREE.InterleavedBufferAttribute) {
+  const output: EditorMeshUvJSON[] = [];
+  for (let index = 0; index < attribute.count; index += 1) {
+    output.push({
+      x: attribute.getX(index),
+      y: attribute.getY(index)
+    });
+  }
+  return output;
+}
+
+export function createShapePresetShape(preset: ShapePreset): THREE.Shape {
+  if (preset === "heart") {
+    const shape = new THREE.Shape();
+    shape.moveTo(0, 0.3);
+    shape.bezierCurveTo(0, 0.8, -0.8, 1.05, -0.8, 0.35);
+    shape.bezierCurveTo(-0.8, -0.15, -0.25, -0.55, 0, -0.9);
+    shape.bezierCurveTo(0.25, -0.55, 0.8, -0.15, 0.8, 0.35);
+    shape.bezierCurveTo(0.8, 1.05, 0, 0.8, 0, 0.3);
+    return shape;
+  }
+
+  const shape = new THREE.Shape();
+  const outerRadius = 1;
+  const innerRadius = 0.45;
+  const points = 5;
+  for (let index = 0; index < points * 2; index += 1) {
+    const radius = index % 2 === 0 ? outerRadius : innerRadius;
+    const angle = (index / (points * 2)) * Math.PI * 2 - Math.PI / 2;
+    const x = Math.cos(angle) * radius;
+    const y = Math.sin(angle) * radius;
+    if (index === 0) {
+      shape.moveTo(x, y);
+    } else {
+      shape.lineTo(x, y);
+    }
+  }
+  shape.closePath();
+  return shape;
+}
+
+export function createTubePresetCurve(preset: TubePreset): THREE.Curve<THREE.Vector3> {
+  if (preset === "loop") {
+    return new THREE.CatmullRomCurve3(
+      [
+        new THREE.Vector3(-0.7, 0, 0),
+        new THREE.Vector3(0, 0.65, 0.35),
+        new THREE.Vector3(0.7, 0, 0),
+        new THREE.Vector3(0, -0.65, -0.35),
+        new THREE.Vector3(-0.7, 0, 0)
+      ],
+      true
+    );
+  }
+
+  if (preset === "wave") {
+    return new THREE.CatmullRomCurve3([
+      new THREE.Vector3(-1.2, 0, 0),
+      new THREE.Vector3(-0.5, 0.45, 0.15),
+      new THREE.Vector3(0.2, -0.35, -0.15),
+      new THREE.Vector3(0.8, 0.35, 0.12),
+      new THREE.Vector3(1.2, 0, 0)
+    ]);
+  }
+
+  return new THREE.CatmullRomCurve3([
+    new THREE.Vector3(-0.9, -0.35, 0),
+    new THREE.Vector3(-0.45, 0.4, 0.18),
+    new THREE.Vector3(0.1, 0.55, 0.08),
+    new THREE.Vector3(0.65, 0.15, -0.1),
+    new THREE.Vector3(0.95, -0.18, 0)
+  ]);
+}
+
+export function geometryToCustomMesh(geometry: THREE.BufferGeometry): Pick<
+  EditorMeshJSON,
+  "type" | "geometryName" | "vertices" | "uvs" | "normals" | "indices"
+> {
+  const clone = geometry.clone();
+  if (!clone.getAttribute("normal")) {
+    clone.computeVertexNormals();
+  }
+
+  const positionAttribute = clone.getAttribute("position");
+  const normalAttribute = clone.getAttribute("normal");
+  const uvAttribute = clone.getAttribute("uv");
+
+  if (!positionAttribute) {
+    clone.dispose();
+    throw new Error("Custom geometry requires position data.");
+  }
+
+  const indices = clone.getIndex();
+  const mesh = {
+    type: 2,
+    geometryName: "Custom",
+    vertices: readAttributeVec3(positionAttribute),
+    normals: normalAttribute ? readAttributeVec3(normalAttribute) : [],
+    uvs: uvAttribute ? readAttributeVec2(uvAttribute) : [],
+    indices: indices ? Array.from(indices.array as ArrayLike<number>, (item) => Number(item)) : []
+  } satisfies Pick<EditorMeshJSON, "type" | "geometryName" | "vertices" | "uvs" | "normals" | "indices">;
+
+  clone.dispose();
+  return mesh;
+}
+
+export function createShapePresetGeometry(preset: ShapePreset) {
+  return new THREE.ShapeGeometry(createShapePresetShape(preset), 24);
+}
+
+export function createExtrudedShapePresetGeometry(
+  preset: ShapePreset,
+  depth = 0.35,
+  bevelEnabled = false
+) {
+  return new THREE.ExtrudeGeometry(createShapePresetShape(preset), {
+    depth,
+    steps: 1,
+    bevelEnabled,
+    curveSegments: 24
+  });
+}
+
+export function createTubePresetGeometry(
+  preset: TubePreset,
+  radius = 0.14,
+  tubularSegments = 64,
+  radialSegments = 10,
+  closed = false
+) {
+  return new THREE.TubeGeometry(
+    createTubePresetCurve(preset),
+    tubularSegments,
+    radius,
+    radialSegments,
+    closed
+  );
 }
 
 function createCustomGeometry(model: MeshEntityModel): THREE.BufferGeometry {
