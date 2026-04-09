@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Checkbox, FormControlLabel, Stack, Typography } from "@mui/material";
 import PropertyPanelSection from "@/components/common/propertyPanelSection";
 import {
   Axis,
@@ -26,6 +27,7 @@ export function TransformSection({
 }: TransformSectionProps) {
   const { t } = useI18n();
   const app = useEditorStore((state) => state.app);
+  const [isUniformScaleEnabled, setIsUniformScaleEnabled] = useState(false);
   const [activePositionAxis, setActivePositionAxis] = useState<Axis | null>(null);
   const [activeRotationAxis, setActiveRotationAxis] = useState<Axis | null>(null);
   const [positionDraft, setPositionDraft] = useState(buildDefaultPositionDraft);
@@ -102,7 +104,24 @@ export function TransformSection({
   const updateScale = (axis: Axis, value: number) => {
     if (!app) return;
     const nextScale = [...scaleValues] as [number, number, number];
-    nextScale[AXIS_INDEX[axis]] = value;
+    const axisIndex = AXIS_INDEX[axis];
+
+    if (isUniformScaleEnabled) {
+      const baseValue = scaleValues[axisIndex];
+      if (Math.abs(baseValue) < 1e-6) {
+        nextScale[0] = value;
+        nextScale[1] = value;
+        nextScale[2] = value;
+      } else {
+        const ratio = value / baseValue;
+        nextScale[0] = Number((scaleValues[0] * ratio).toFixed(4));
+        nextScale[1] = Number((scaleValues[1] * ratio).toFixed(4));
+        nextScale[2] = Number((scaleValues[2] * ratio).toFixed(4));
+      }
+    } else {
+      nextScale[axisIndex] = value;
+    }
+
     app.updateEntityTransform(entityId, { scale: nextScale });
   };
 
@@ -149,15 +168,44 @@ export function TransformSection({
         onChangeCommit={commitRotation}
       />
 
-      <AxisSliderGroup
-        label={t("editor.properties.scale")}
-        values={scaleValues}
-        min={0}
-        max={10}
-        step={0.1}
-        formatter={(value) => formatNumber(value, 1)}
-        onChange={updateScale}
-      />
+      <Stack spacing={0.65}>
+        <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
+          <Typography sx={{ fontSize: 11, color: "rgba(205,220,255,0.78)" }}>
+            {t("editor.properties.scale")}
+          </Typography>
+          <FormControlLabel
+            control={
+              <Checkbox
+                size="small"
+                checked={isUniformScaleEnabled}
+                onChange={(event) => setIsUniformScaleEnabled(event.target.checked)}
+              />
+            }
+            label={t("editor.properties.uniformScale")}
+            sx={{
+              mr: 0,
+              gap: 0.35,
+              "& .MuiFormControlLabel-label": {
+                fontSize: 11,
+                color: "rgba(205,220,255,0.78)"
+              },
+              "& .MuiCheckbox-root": {
+                p: 0.25,
+                color: "rgba(150,182,255,0.86)"
+              }
+            }}
+          />
+        </Stack>
+        <AxisSliderGroup
+          label=""
+          values={scaleValues}
+          min={0}
+          max={10}
+          step={0.1}
+          formatter={(value) => formatNumber(value, 1)}
+          onChange={updateScale}
+        />
+      </Stack>
     </PropertyPanelSection>
   );
 }
