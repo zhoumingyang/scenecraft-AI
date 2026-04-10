@@ -5,7 +5,7 @@ import { IconButton, Menu, MenuItem, Tooltip } from "@mui/material";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import ImageRoundedIcon from "@mui/icons-material/ImageRounded";
 import { getEditorThemeTokens } from "@/components/editor/theme";
-import { IMAGE_GENERATION_MODELS, getImageGenerationModelConfig } from "@/lib/ai/image-generation/models";
+import { IMAGE_GENERATION_MODELS } from "@/lib/ai/image-generation/models";
 import { useEditorStore, type AiImageModelId } from "@/stores/editorStore";
 
 const MODELS: Array<{
@@ -41,11 +41,10 @@ export default function AiImageModelMenu({
     () => MODELS.find((item) => item.id === model) ?? MODELS[0],
     [model]
   );
-  const activeModelConfig = getImageGenerationModelConfig(activeModelMeta.id);
 
   return (
     <>
-      <Tooltip title={`${activeModelMeta.label} (${activeModelConfig.providerId})`}>
+      <Tooltip title={activeModelMeta.label}>
         <IconButton
           size="small"
           onClick={(event: MouseEvent<HTMLElement>) => setAnchorEl(event.currentTarget)}
