@@ -1,5 +1,9 @@
+import axios from "axios";
+import { createHttpClient, getResponseHeader } from "@/lib/http/axios";
+
 const OPENROUTER_TEXT_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
 const OPENROUTER_PROMPT_MODEL = "moonshotai/kimi-k2.5";
+const openRouterTextClient = createHttpClient();
 
 export type PromptTransformMode = "optimize" | "translate-en";
 
@@ -73,46 +77,53 @@ export async function transformPromptWithOpenRouter({
   mode: PromptTransformMode;
   prompt: string;
 }) {
-  const response = await fetch(OPENROUTER_TEXT_ENDPOINT, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      model: OPENROUTER_PROMPT_MODEL,
-      messages: [
-        {
-          role: "system",
-          content: getSystemPrompt(mode)
-        },
-        {
-          role: "user",
-          content: prompt
+  try {
+    const response = await openRouterTextClient.post<OpenRouterTextResponse>(
+      OPENROUTER_TEXT_ENDPOINT,
+      {
+        model: OPENROUTER_PROMPT_MODEL,
+        messages: [
+          {
+            role: "system",
+            content: getSystemPrompt(mode)
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        temperature: 0.2,
+        stream: false
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${apiKey}`
         }
-      ],
-      temperature: 0.2,
-      stream: false
-    })
-  });
+      }
+    );
 
-  const payload = (await response.json().catch(() => null)) as OpenRouterTextResponse | null;
-  const traceId = response.headers.get("x-request-id") ?? payload?.id ?? null;
+    const traceId = getResponseHeader(response.headers, "x-request-id") ?? response.data.id ?? null;
+    const result = readTextContent(response.data?.choices?.[0]?.message?.content);
 
-  if (!response.ok) {
-    const message =
-      payload?.error?.message || `OpenRouter prompt transform failed with status ${response.status}.`;
-    throw new Error(traceId ? `${message} (trace: ${traceId})` : message);
+    if (!result) {
+      throw new Error("OpenRouter returned an empty prompt.");
+    }
+
+    return {
+      prompt: result,
+      traceId
+    };
+  } catch (error) {
+    if (axios.isAxiosError<OpenRouterTextResponse>(error)) {
+      const traceId =
+        getResponseHeader(error.response?.headers, "x-request-id") ?? error.response?.data?.id ?? null;
+      const status = error.response?.status ?? "unknown";
+      const message =
+        error.response?.data?.error?.message ||
+        `OpenRouter prompt transform failed with status ${status}.`;
+      throw new Error(traceId ? `${message} (trace: ${traceId})` : message);
+    }
+
+    throw error;
   }
-
-  const result = readTextContent(payload?.choices?.[0]?.message?.content);
-
-  if (!result) {
-    throw new Error("OpenRouter returned an empty prompt.");
-  }
-
-  return {
-    prompt: result,
-    traceId
-  };
 }

@@ -1,21 +1,14 @@
 import { NextResponse } from "next/server";
-import {
-  transformPromptWithOpenRouter,
-  type PromptTransformMode
-} from "@/lib/ai/prompt-transform/openrouter";
+import { transformPromptWithOpenRouter } from "@/lib/ai/prompt-transform/openrouter";
+import type { TransformPromptRequest } from "@/lib/api/contracts/ai";
 import { getSession } from "@/lib/server/auth/getSession";
-
-type PromptTransformRequest = {
-  mode?: PromptTransformMode;
-  prompt?: string;
-};
 
 function validateRequestBody(body: unknown) {
   if (!body || typeof body !== "object") {
     throw new Error("Invalid request body.");
   }
 
-  const payload = body as PromptTransformRequest;
+  const payload = body as Partial<TransformPromptRequest>;
   const prompt = typeof payload.prompt === "string" ? payload.prompt.trim() : "";
 
   if (!prompt) {

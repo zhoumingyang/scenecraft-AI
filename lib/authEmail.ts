@@ -1,5 +1,9 @@
+import axios from "axios";
+import { createHttpClient } from "@/lib/http/axios";
+
 const resendApiKey = process.env.RESEND_API_KEY;
 const authEmailFrom = process.env.AUTH_EMAIL_FROM;
+const resendClient = createHttpClient();
 
 type SendAuthEmailArgs = {
   to: string;
@@ -12,23 +16,32 @@ async function sendByResend({ to, subject, html }: SendAuthEmailArgs) {
     throw new Error("Missing RESEND_API_KEY or AUTH_EMAIL_FROM env");
   }
 
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${resendApiKey}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      from: authEmailFrom,
-      to,
-      subject,
-      html
-    })
-  });
+  try {
+    await resendClient.post(
+      "https://api.resend.com/emails",
+      {
+        from: authEmailFrom,
+        to,
+        subject,
+        html
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${resendApiKey}`
+        }
+      }
+    );
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const status = error.response?.status ?? "unknown";
+      const payload =
+        typeof error.response?.data === "string"
+          ? error.response.data
+          : JSON.stringify(error.response?.data ?? {});
+      throw new Error(`Resend send failed: ${status} ${payload}`);
+    }
 
-  if (!response.ok) {
-    const payload = await response.text();
-    throw new Error(`Resend send failed: ${response.status} ${payload}`);
+    throw error;
   }
 }
 

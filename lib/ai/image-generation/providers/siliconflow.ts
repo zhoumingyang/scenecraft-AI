@@ -1,3 +1,5 @@
+import axios from "axios";
+import { createHttpClient, getResponseHeader } from "@/lib/http/axios";
 import type {
   ImageGenerationProvider,
   ImageGenerationRequest,
@@ -6,6 +8,7 @@ import type {
 
 const SILICONFLOW_IMAGE_ENDPOINT = "https://api.siliconflow.cn/v1/images/generations";
 const QWEN_IMAGE_DEFAULT_SIZE = "1328x1328";
+const siliconFlowImageClient = createHttpClient();
 
 type SiliconFlowResponse = {
   images?: Array<{
@@ -21,30 +24,37 @@ export class SiliconFlowImageGenerationProvider implements ImageGenerationProvid
   constructor(private readonly apiKey: string) {}
 
   async generateImage(request: ImageGenerationRequest): Promise<ImageGenerationResult> {
-    const response = await fetch(SILICONFLOW_IMAGE_ENDPOINT, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${this.apiKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(this.buildRequestBody(request))
-    });
+    try {
+      const response = await siliconFlowImageClient.post<SiliconFlowResponse>(
+        SILICONFLOW_IMAGE_ENDPOINT,
+        this.buildRequestBody(request),
+        {
+          headers: {
+            Authorization: `Bearer ${this.apiKey}`
+          }
+        }
+      );
 
-    const traceId = response.headers.get("x-siliconcloud-trace-id");
-    const payload = (await response.json().catch(() => null)) as SiliconFlowResponse | null;
+      const traceId = getResponseHeader(response.headers, "x-siliconcloud-trace-id");
 
-    if (!response.ok) {
-      const message =
-        payload?.message || `SiliconFlow image request failed with status ${response.status}.`;
-      throw new Error(traceId ? `${message} (trace: ${traceId})` : message);
+      return {
+        images:
+          response.data?.images?.filter((item): item is { url: string } => typeof item.url === "string") ??
+          [],
+        seed: typeof response.data?.seed === "number" ? response.data.seed : null,
+        traceId
+      };
+    } catch (error) {
+      if (axios.isAxiosError<SiliconFlowResponse>(error)) {
+        const traceId = getResponseHeader(error.response?.headers, "x-siliconcloud-trace-id");
+        const status = error.response?.status ?? "unknown";
+        const message =
+          error.response?.data?.message || `SiliconFlow image request failed with status ${status}.`;
+        throw new Error(traceId ? `${message} (trace: ${traceId})` : message);
+      }
+
+      throw error;
     }
-
-    return {
-      images:
-        payload?.images?.filter((item): item is { url: string } => typeof item.url === "string") ?? [],
-      seed: typeof payload?.seed === "number" ? payload.seed : null,
-      traceId
-    };
   }
 
   private buildRequestBody(request: ImageGenerationRequest) {

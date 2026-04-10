@@ -5,6 +5,7 @@ import {
 } from "@/lib/ai/image-generation/models";
 import { createImageGenerationProvider } from "@/lib/ai/image-generation/providerRegistry";
 import type { ImageGenerationRequest } from "@/lib/ai/image-generation/types";
+import type { GenerateAiImagesRequest } from "@/lib/api/contracts/ai";
 import { getSession } from "@/lib/server/auth/getSession";
 
 const IMAGE_SIZES = new Set(IMAGE_SIZE_OPTIONS.map((item) => item.value));
@@ -14,7 +15,7 @@ function validateRequestBody(body: unknown): ImageGenerationRequest {
     throw new Error("Invalid request body.");
   }
 
-  const payload = body as Partial<ImageGenerationRequest>;
+  const payload = body as Partial<GenerateAiImagesRequest>;
   const prompt = typeof payload.prompt === "string" ? payload.prompt.trim() : "";
   const modelConfig = payload.model ? getImageGenerationModelConfig(payload.model) : null;
 
@@ -24,10 +25,6 @@ function validateRequestBody(body: unknown): ImageGenerationRequest {
 
   if (!modelConfig) {
     throw new Error("Unsupported image generation model.");
-  }
-
-  if (payload.providerId !== modelConfig.providerId) {
-    throw new Error("Unsupported image generation provider.");
   }
 
   if (
@@ -83,7 +80,7 @@ function validateRequestBody(body: unknown): ImageGenerationRequest {
   const model = modelConfig.id;
 
   return {
-    providerId: payload.providerId,
+    providerId: modelConfig.providerId,
     model,
     prompt,
     seed: payload.seed,

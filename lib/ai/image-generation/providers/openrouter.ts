@@ -1,7 +1,9 @@
+import axios from "axios";
 import {
   getImageGenerationModelConfig,
   imageSizeToAspectRatio
 } from "@/lib/ai/image-generation/models";
+import { createHttpClient, getResponseHeader } from "@/lib/http/axios";
 import type {
   ImageGenerationProvider,
   ImageGenerationRequest,
@@ -9,6 +11,7 @@ import type {
 } from "@/lib/ai/image-generation/types";
 
 const OPENROUTER_IMAGE_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
+const openRouterImageClient = createHttpClient();
 
 type OpenRouterResponse = {
   id?: string;
@@ -36,36 +39,43 @@ export class OpenRouterImageGenerationProvider implements ImageGenerationProvide
   constructor(private readonly apiKey: string) {}
 
   async generateImage(request: ImageGenerationRequest): Promise<ImageGenerationResult> {
-    const response = await fetch(OPENROUTER_IMAGE_ENDPOINT, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${this.apiKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(this.buildRequestBody(request))
-    });
+    try {
+      const response = await openRouterImageClient.post<OpenRouterResponse>(
+        OPENROUTER_IMAGE_ENDPOINT,
+        this.buildRequestBody(request),
+        {
+          headers: {
+            Authorization: `Bearer ${this.apiKey}`
+          }
+        }
+      );
 
-    const payload = (await response.json().catch(() => null)) as OpenRouterResponse | null;
-    const traceId = response.headers.get("x-request-id") ?? payload?.id ?? null;
+      const traceId = getResponseHeader(response.headers, "x-request-id") ?? response.data?.id ?? null;
+      const message = response.data?.choices?.[0]?.message;
+      const images =
+        message?.images
+          ?.map((item) => item.image_url?.url ?? item.imageUrl?.url)
+          .filter((url): url is string => typeof url === "string" && url.length > 0)
+          .map((url) => ({ url })) ?? [];
 
-    if (!response.ok) {
-      const message =
-        payload?.error?.message || `OpenRouter image request failed with status ${response.status}.`;
-      throw new Error(traceId ? `${message} (trace: ${traceId})` : message);
+      return {
+        images,
+        seed: typeof request.seed === "number" ? request.seed : null,
+        traceId
+      };
+    } catch (error) {
+      if (axios.isAxiosError<OpenRouterResponse>(error)) {
+        const traceId =
+          getResponseHeader(error.response?.headers, "x-request-id") ?? error.response?.data?.id ?? null;
+        const status = error.response?.status ?? "unknown";
+        const message =
+          error.response?.data?.error?.message ||
+          `OpenRouter image request failed with status ${status}.`;
+        throw new Error(traceId ? `${message} (trace: ${traceId})` : message);
+      }
+
+      throw error;
     }
-
-    const message = payload?.choices?.[0]?.message;
-    const images =
-      message?.images
-        ?.map((item) => item.image_url?.url ?? item.imageUrl?.url)
-        .filter((url): url is string => typeof url === "string" && url.length > 0)
-        .map((url) => ({ url })) ?? [];
-
-    return {
-      images,
-      seed: typeof request.seed === "number" ? request.seed : null,
-      traceId
-    };
   }
 
   private buildRequestBody(request: ImageGenerationRequest) {
