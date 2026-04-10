@@ -275,8 +275,8 @@ export default function SceneTreePanel() {
                       const selected = node.id === selectedEntityId;
       const lockDisabled = node.type === "scene";
       const canToggleVisible = node.type !== "light" && node.type !== "scene";
-      const canDuplicate = node.type !== "scene" && node.type !== "group" && !node.locked;
-      const canDelete = node.type !== "scene" && node.type !== "group" && !node.locked;
+      const canDuplicate = node.type !== "scene" && !node.locked;
+      const canDelete = node.type !== "scene" && !node.locked;
       const canToggleLock = !lockDisabled;
                       const rowColor = node.locked
                         ? theme.mutedText

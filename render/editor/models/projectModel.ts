@@ -239,9 +239,24 @@ export class EditorProjectModel {
   }
 
   removeEntity(id: string) {
-    if (this.groups.delete(id)) {
-      this.groups.forEach((group) => {
-        group.children = group.children.filter((childId) => childId !== id);
+    const group = this.groups.get(id);
+    if (group) {
+      const parentGroupId = this.getParentGroupId(id);
+      this.groups.delete(id);
+      this.groups.forEach((item) => {
+        if (item.id === parentGroupId) {
+          const nextChildren: string[] = [];
+          item.children.forEach((childId) => {
+            if (childId === id) {
+              nextChildren.push(...group.children);
+              return;
+            }
+            nextChildren.push(childId);
+          });
+          item.children = nextChildren;
+          return;
+        }
+        item.children = item.children.filter((childId) => childId !== id);
       });
       return "group";
     }

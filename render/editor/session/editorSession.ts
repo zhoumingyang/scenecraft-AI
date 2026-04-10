@@ -670,8 +670,9 @@ export class EditorSession {
     if (!binding || binding.model.locked) return;
 
     if (binding.kind === "group") {
+      const parentGroupId = this.projectModel.getParentGroupId(entityId);
       this.projectModel.listDirectChildren(entityId).forEach((childId) => {
-        this.registry.attach(childId, null, this.runtime.scene);
+        this.registry.attach(childId, parentGroupId, this.runtime.scene);
       });
     }
 
@@ -702,6 +703,43 @@ export class EditorSession {
     const record = this.projectModel.getEntityById(entityId);
     if (!record || record.item.locked) return;
 
+    const duplicate = this.cloneEntity(entityId, source);
+    if (!duplicate) return;
+
+    this.rebuildGroupHierarchy();
+    this.runtime.syncLightHelperVisibility();
+    this.setSelectedEntity(duplicate.id, source);
+  }
+
+  private cloneEntity(entityId: string, source: SyncSource) {
+    if (!this.projectModel) return null;
+    const record = this.projectModel.getEntityById(entityId);
+    if (!record || record.item.locked) return null;
+
+    if (record.kind === "group") {
+      const childIds = record.item.children
+        .map((childId) => this.cloneEntity(childId, source)?.id ?? null)
+        .filter((childId): childId is string => Boolean(childId));
+
+      const duplicate = this.projectModel.addGroup({
+        id: createEntityId("group"),
+        children: childIds,
+        locked: false,
+        visible: record.item.visible,
+        position: [...record.item.position],
+        quaternion: [...record.item.quaternion],
+        scale: [...record.item.scale]
+      });
+      this.registry.create(duplicate);
+      this.emit({
+        type: "entityUpdated",
+        entityId: duplicate.id,
+        entityKind: "group",
+        source
+      });
+      return { id: duplicate.id, kind: "group" as const };
+    }
+
     if (record.kind === "model") {
       const duplicate = this.projectModel.addModel({
         id: createEntityId("model"),
@@ -720,15 +758,13 @@ export class EditorSession {
         scale: [...record.item.scale]
       });
       this.registry.create(duplicate);
-      this.rebuildGroupHierarchy();
       this.emit({
         type: "entityUpdated",
         entityId: duplicate.id,
         entityKind: "model",
         source
       });
-      this.setSelectedEntity(duplicate.id, source);
-      return;
+      return { id: duplicate.id, kind: "model" as const };
     }
 
     if (record.kind === "mesh") {
@@ -793,19 +829,17 @@ export class EditorSession {
         scale: [...record.item.scale]
       });
       this.registry.create(duplicate);
-      this.rebuildGroupHierarchy();
       this.emit({
         type: "entityUpdated",
         entityId: duplicate.id,
         entityKind: "mesh",
         source
       });
-      this.setSelectedEntity(duplicate.id, source);
-      return;
+      return { id: duplicate.id, kind: "mesh" as const };
     }
 
     if (record.kind !== "light") {
-      return;
+      return null;
     }
 
     const duplicate = this.projectModel.addLight({
@@ -826,15 +860,13 @@ export class EditorSession {
     });
     this.runtime.scene.remove(this.runtime.fallbackAmbientLight);
     this.registry.create(duplicate);
-    this.rebuildGroupHierarchy();
-    this.runtime.syncLightHelperVisibility();
     this.emit({
       type: "entityUpdated",
       entityId: duplicate.id,
       entityKind: "light",
       source
     });
-    this.setSelectedEntity(duplicate.id, source);
+    return { id: duplicate.id, kind: "light" as const };
   }
 
   setEntityLocked(entityId: string, locked: boolean, source: SyncSource = "ui") {
