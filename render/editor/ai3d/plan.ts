@@ -1,96 +1,268 @@
-import type { EditorMeshJSON, EditorMeshMaterialJSON, TransformPatch } from "../core/types";
+import type { EditorMeshJSON, EditorMeshMaterialJSON } from "../core/types";
 import {
   createExtrudedShapePresetGeometry,
   createShapePresetGeometry,
   createTubePresetGeometry,
-  geometryToCustomMesh,
-  type ShapePreset,
-  type TubePreset
+  geometryToCustomMesh
 } from "../utils/geometry";
+import { z } from "zod";
 
 const MAX_AI_3D_PRIMITIVES = 16;
 const MIN_BOX_HEAVY_RATIO = 0.5;
 
-export type Ai3DPrimitiveType =
-  | "box"
-  | "sphere"
-  | "cylinder"
-  | "capsule"
-  | "cone"
-  | "torus"
-  | "plane";
+export const AI3D_TOOL_NAME = "generate_minecraft_ai3d_model" as const;
+export const AI3D_PRIMITIVE_TYPES = [
+  "box",
+  "sphere",
+  "cylinder",
+  "capsule",
+  "cone",
+  "torus",
+  "plane"
+] as const;
+export const AI3D_SHAPE_PRESETS = ["star", "heart"] as const;
+export const AI3D_TUBE_PRESETS = ["arc", "wave", "loop"] as const;
 
-export type Ai3DCreatePrimitiveOperation = {
-  type: "create_primitive";
-  nodeId: string;
-  primitive: Ai3DPrimitiveType;
-  label?: string;
-  transform?: TransformPatch;
-  material?: Partial<EditorMeshMaterialJSON>;
+const ai3dNodeIdSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .regex(/^[a-z][a-z0-9_]*$/, "nodeId must use lowercase snake_case.");
+
+const ai3dLabelSchema = z.string().trim().min(1).max(80);
+const ai3dVec3Schema = z.tuple([z.number().finite(), z.number().finite(), z.number().finite()]);
+const ai3dQuatSchema = z.tuple([
+  z.number().finite(),
+  z.number().finite(),
+  z.number().finite(),
+  z.number().finite()
+]);
+const ai3dColorSchema = z.string().regex(/^#[0-9a-fA-F]{6}$/, "Color must be a 6-digit hex string.");
+
+const ai3dTransformPatchSchema = z
+  .object({
+    position: ai3dVec3Schema.optional(),
+    quaternion: ai3dQuatSchema.optional(),
+    scale: ai3dVec3Schema.optional()
+  })
+  .strict()
+  .refine((value) => value.position || value.quaternion || value.scale, {
+    message: "Transform patch must include at least one field."
+  });
+
+const ai3dMaterialPatchSchema = z
+  .object({
+    color: ai3dColorSchema.optional(),
+    opacity: z.number().finite().min(0).max(1).optional(),
+    metalness: z.number().finite().min(0).max(1).optional(),
+    roughness: z.number().finite().min(0).max(1).optional(),
+    emissive: ai3dColorSchema.optional(),
+    emissiveIntensity: z.number().finite().min(0).max(10).optional()
+  })
+  .strict()
+  .refine(
+    (value) =>
+      value.color !== undefined ||
+      value.opacity !== undefined ||
+      value.metalness !== undefined ||
+      value.roughness !== undefined ||
+      value.emissive !== undefined ||
+      value.emissiveIntensity !== undefined,
+    {
+      message: "Material patch must include at least one supported field."
+    }
+  );
+
+const ai3dCreateBaseOperationSchema = {
+  nodeId: ai3dNodeIdSchema,
+  label: ai3dLabelSchema.optional(),
+  transform: ai3dTransformPatchSchema
+    .refine((value) => value.position !== undefined && value.scale !== undefined, {
+      message: "Create operations require transform.position and transform.scale."
+    }),
+  material: ai3dMaterialPatchSchema.optional()
 };
 
-export type Ai3DCreateShapeOperation = {
-  type: "create_shape";
-  nodeId: string;
-  preset: ShapePreset;
-  label?: string;
-  transform?: TransformPatch;
-  material?: Partial<EditorMeshMaterialJSON>;
-};
+export const ai3dCreatePrimitiveOperationSchema = z
+  .object({
+    type: z.literal("create_primitive"),
+    primitive: z.enum(AI3D_PRIMITIVE_TYPES),
+    ...ai3dCreateBaseOperationSchema
+  })
+  .strict();
 
-export type Ai3DCreateExtrudeOperation = {
-  type: "create_extrude";
-  nodeId: string;
-  preset: ShapePreset;
-  depth?: number;
-  label?: string;
-  transform?: TransformPatch;
-  material?: Partial<EditorMeshMaterialJSON>;
-};
+export const ai3dCreateShapeOperationSchema = z
+  .object({
+    type: z.literal("create_shape"),
+    preset: z.enum(AI3D_SHAPE_PRESETS),
+    ...ai3dCreateBaseOperationSchema
+  })
+  .strict();
 
-export type Ai3DCreateTubeOperation = {
-  type: "create_tube";
-  nodeId: string;
-  preset: TubePreset;
-  radius?: number;
-  tubularSegments?: number;
-  radialSegments?: number;
-  closed?: boolean;
-  label?: string;
-  transform?: TransformPatch;
-  material?: Partial<EditorMeshMaterialJSON>;
-};
+export const ai3dCreateExtrudeOperationSchema = z
+  .object({
+    type: z.literal("create_extrude"),
+    preset: z.enum(AI3D_SHAPE_PRESETS),
+    depth: z.number().finite().positive().max(4).optional(),
+    ...ai3dCreateBaseOperationSchema
+  })
+  .strict();
 
-export type Ai3DSetTransformOperation = {
-  type: "set_transform";
-  nodeId: string;
-  transform: TransformPatch;
-};
+export const ai3dCreateTubeOperationSchema = z
+  .object({
+    type: z.literal("create_tube"),
+    preset: z.enum(AI3D_TUBE_PRESETS),
+    radius: z.number().finite().positive().max(2).optional(),
+    tubularSegments: z.number().int().min(3).max(128).optional(),
+    radialSegments: z.number().int().min(3).max(32).optional(),
+    closed: z.boolean().optional(),
+    ...ai3dCreateBaseOperationSchema
+  })
+  .strict();
 
-export type Ai3DSetMaterialOperation = {
-  type: "set_material";
-  nodeId: string;
-  material: Partial<EditorMeshMaterialJSON>;
-};
+export const ai3dSetTransformOperationSchema = z
+  .object({
+    type: z.literal("set_transform"),
+    nodeId: ai3dNodeIdSchema,
+    transform: ai3dTransformPatchSchema
+  })
+  .strict();
 
-export type Ai3DOperation =
-  | Ai3DCreatePrimitiveOperation
-  | Ai3DCreateShapeOperation
-  | Ai3DCreateExtrudeOperation
-  | Ai3DCreateTubeOperation
-  | Ai3DSetTransformOperation
-  | Ai3DSetMaterialOperation;
+export const ai3dSetMaterialOperationSchema = z
+  .object({
+    type: z.literal("set_material"),
+    nodeId: ai3dNodeIdSchema,
+    material: ai3dMaterialPatchSchema
+  })
+  .strict();
 
-export type Ai3DPlan = {
-  summary: string;
-  operations: Ai3DOperation[];
-};
+export const ai3dOperationSchema = z.discriminatedUnion("type", [
+  ai3dCreatePrimitiveOperationSchema,
+  ai3dCreateShapeOperationSchema,
+  ai3dCreateExtrudeOperationSchema,
+  ai3dCreateTubeOperationSchema,
+  ai3dSetTransformOperationSchema,
+  ai3dSetMaterialOperationSchema
+]);
+
+export const ai3dPlanSchema = z
+  .object({
+    summary: z.string().trim().min(1).max(240),
+    operations: z.array(ai3dOperationSchema).min(1)
+  })
+  .strict();
+
+export const ai3dToolCallSchema = z
+  .object({
+    toolName: z.literal(AI3D_TOOL_NAME),
+    plan: ai3dPlanSchema
+  })
+  .strict();
+
+export type Ai3DPrimitiveType = z.infer<typeof ai3dCreatePrimitiveOperationSchema>["primitive"];
+export type Ai3DCreatePrimitiveOperation = z.infer<typeof ai3dCreatePrimitiveOperationSchema>;
+export type Ai3DCreateShapeOperation = z.infer<typeof ai3dCreateShapeOperationSchema>;
+export type Ai3DCreateExtrudeOperation = z.infer<typeof ai3dCreateExtrudeOperationSchema>;
+export type Ai3DCreateTubeOperation = z.infer<typeof ai3dCreateTubeOperationSchema>;
+export type Ai3DSetTransformOperation = z.infer<typeof ai3dSetTransformOperationSchema>;
+export type Ai3DSetMaterialOperation = z.infer<typeof ai3dSetMaterialOperationSchema>;
+export type Ai3DOperation = z.infer<typeof ai3dOperationSchema>;
+export type Ai3DPlan = z.infer<typeof ai3dPlanSchema>;
+export type Ai3DToolCall = z.infer<typeof ai3dToolCallSchema>;
 
 export type Ai3DMeshDraft = {
   nodeId: string;
   label: string;
   mesh: EditorMeshJSON;
 };
+
+function toAi3DPlanErrorMessage(error: z.ZodError) {
+  const issue = error.issues[0];
+  if (!issue) {
+    return "AI 3D plan validation failed.";
+  }
+
+  const path = issue.path.length > 0 ? issue.path.join(".") : "root";
+  return `${path}: ${issue.message}`;
+}
+
+export function validateAi3DPlan(plan: unknown): Ai3DPlan {
+  const parsed = ai3dPlanSchema.safeParse(plan);
+
+  if (!parsed.success) {
+    throw new Error(toAi3DPlanErrorMessage(parsed.error));
+  }
+
+  assertAi3DPlanSemantics(parsed.data);
+
+  return parsed.data;
+}
+
+export function validateAi3DToolCall(toolCall: unknown): Ai3DToolCall {
+  const parsed = ai3dToolCallSchema.safeParse(toolCall);
+
+  if (!parsed.success) {
+    throw new Error(toAi3DPlanErrorMessage(parsed.error));
+  }
+
+  assertAi3DPlanSemantics(parsed.data.plan);
+
+  return parsed.data;
+}
+
+function isCreateOperation(
+  operation: Ai3DOperation
+): operation is
+  | Ai3DCreatePrimitiveOperation
+  | Ai3DCreateShapeOperation
+  | Ai3DCreateExtrudeOperation
+  | Ai3DCreateTubeOperation {
+  return (
+    operation.type === "create_primitive" ||
+    operation.type === "create_shape" ||
+    operation.type === "create_extrude" ||
+    operation.type === "create_tube"
+  );
+}
+
+export function assertAi3DPlanSemantics(plan: Ai3DPlan) {
+  const createdNodeIds = new Set<string>();
+  let createOperationCount = 0;
+  let primitiveCount = 0;
+  let boxCount = 0;
+
+  plan.operations.forEach((operation) => {
+    if (isCreateOperation(operation)) {
+      createOperationCount += 1;
+
+      if (createOperationCount > MAX_AI_3D_PRIMITIVES) {
+        throw new Error(`AI 3D plan exceeded the limit of ${MAX_AI_3D_PRIMITIVES} create operations.`);
+      }
+
+      if (createdNodeIds.has(operation.nodeId)) {
+        throw new Error(`AI 3D plan contains a duplicate node id: ${operation.nodeId}.`);
+      }
+
+      createdNodeIds.add(operation.nodeId);
+
+      if (operation.type === "create_primitive") {
+        primitiveCount += 1;
+        if (operation.primitive === "box") {
+          boxCount += 1;
+        }
+      }
+      return;
+    }
+
+    if (!createdNodeIds.has(operation.nodeId)) {
+      throw new Error(`AI 3D plan references an unknown node id: ${operation.nodeId}.`);
+    }
+  });
+
+  if (primitiveCount > 0 && boxCount / primitiveCount < MIN_BOX_HEAVY_RATIO) {
+    throw new Error("AI 3D plan must follow the minecraft/blockout style and stay box-heavy.");
+  }
+}
 
 function toGeometryName(primitive: Ai3DPrimitiveType) {
   switch (primitive) {
@@ -200,37 +372,12 @@ function createCustomDraftMesh(
 }
 
 export function buildAi3DMeshDrafts(plan: Ai3DPlan): Ai3DMeshDraft[] {
-  if (!plan.summary.trim()) {
-    throw new Error("AI 3D plan summary is required.");
-  }
-
-  if (plan.operations.length === 0) {
-    throw new Error("AI 3D plan must include at least one operation.");
-  }
+  validateAi3DPlan(plan);
 
   const drafts = new Map<string, Ai3DMeshDraft>();
-  let primitiveCount = 0;
-  let boxCount = 0;
 
   plan.operations.forEach((operation) => {
-    if (
-      operation.type === "create_primitive" ||
-      operation.type === "create_shape" ||
-      operation.type === "create_extrude" ||
-      operation.type === "create_tube"
-    ) {
-      if (drafts.size >= MAX_AI_3D_PRIMITIVES) {
-        throw new Error(`AI 3D plan exceeded the limit of ${MAX_AI_3D_PRIMITIVES} primitives.`);
-      }
-      if (drafts.has(operation.nodeId)) {
-        throw new Error(`AI 3D plan contains a duplicate node id: ${operation.nodeId}.`);
-      }
-      if (operation.type === "create_primitive") {
-        primitiveCount += 1;
-        if (operation.primitive === "box") {
-          boxCount += 1;
-        }
-      }
+    if (isCreateOperation(operation)) {
       drafts.set(operation.nodeId, {
         nodeId: operation.nodeId,
         label:
@@ -268,10 +415,6 @@ export function buildAi3DMeshDrafts(plan: Ai3DPlan): Ai3DMeshDraft[] {
       material: mergeMaterial(draft.mesh.material, operation.material)
     };
   });
-
-  if (primitiveCount > 0 && boxCount / primitiveCount < MIN_BOX_HEAVY_RATIO) {
-    throw new Error("AI 3D plan must follow the minecraft/blockout style and stay box-heavy.");
-  }
 
   return Array.from(drafts.values());
 }

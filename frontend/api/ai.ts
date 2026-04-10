@@ -23,7 +23,10 @@ export async function generateAi3D(payload: GenerateAi3DRequest) {
   return postJson<GenerateAi3DResponse, GenerateAi3DRequest>(
     appApiClient,
     "/ai/3d/generate",
-    payload
+    payload,
+    {
+      timeout: 180_000
+    }
   );
 }
 

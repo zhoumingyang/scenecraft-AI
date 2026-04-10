@@ -3,6 +3,8 @@ import { generateAi3DPlanWithOpenRouter } from "@/lib/ai/ai3d/openrouter";
 import type { GenerateAi3DRequest } from "@/lib/api/contracts/ai";
 import { getSession } from "@/lib/server/auth/getSession";
 
+export const maxDuration = 180;
+
 function validateRequestBody(body: unknown) {
   if (!body || typeof body !== "object") {
     throw new Error("Invalid request body.");

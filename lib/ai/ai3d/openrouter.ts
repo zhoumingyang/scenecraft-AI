@@ -1,13 +1,11 @@
 import axios from "axios";
 import { createHttpClient, getResponseHeader } from "@/lib/http/axios";
-import type {
-  Ai3DCreateExtrudeOperation,
-  Ai3DCreatePrimitiveOperation,
-  Ai3DCreateShapeOperation,
-  Ai3DCreateTubeOperation,
-  Ai3DOperation,
-  Ai3DPlan,
-  Ai3DPrimitiveType
+import {
+  AI3D_PRIMITIVE_TYPES,
+  AI3D_SHAPE_PRESETS,
+  AI3D_TUBE_PRESETS,
+  validateAi3DToolCall,
+  type Ai3DToolCall
 } from "@/render/editor/ai3d/plan";
 
 const OPENROUTER_TEXT_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
@@ -15,19 +13,6 @@ const OPENROUTER_AI3D_MODEL = "moonshotai/kimi-k2.5";
 const openRouterAi3DClient = createHttpClient({
   timeout: 90_000
 });
-
-const AI3D_TOOL_NAME = "generate_minecraft_ai3d_model" as const;
-const AI3D_PRIMITIVE_TYPES = new Set<Ai3DPrimitiveType>([
-  "box",
-  "sphere",
-  "cylinder",
-  "capsule",
-  "cone",
-  "torus",
-  "plane"
-]);
-const SHAPE_PRESETS = new Set(["star", "heart"]);
-const TUBE_PRESETS = new Set(["arc", "wave", "loop"]);
 
 type OpenRouterTextResponse = {
   id?: string;
@@ -54,30 +39,59 @@ type OpenRouterTextContent =
     }>
   | undefined;
 
-type Ai3DToolCall = {
-  toolName: typeof AI3D_TOOL_NAME;
-  plan: Ai3DPlan;
-};
-
 function getSystemPrompt() {
+  const supportedMaterialFields = [
+    "color",
+    "opacity",
+    "metalness",
+    "roughness",
+    "emissive",
+    "emissiveIntensity"
+  ].join(", ");
+
   return [
     "You are a 3D blockout planning model for a browser editor.",
-    "Convert the user's request into a concise Minecraft-style sketch model plan.",
-    "Return only valid JSON with this exact shape:",
-    '{"toolName":"generate_minecraft_ai3d_model","plan":{"summary":"...","operations":[...]}}',
-    "Do not return markdown, code fences, prose, or explanations.",
-    "The plan must be box-heavy and align with Minecraft aesthetics.",
-    "Use at most 16 create operations.",
-    "Prefer create_primitive with primitive=box unless another primitive is clearly necessary.",
-    "Allowed operation types: create_primitive, create_shape, create_extrude, create_tube, set_transform, set_material.",
-    "Allowed primitives: box, sphere, cylinder, capsule, cone, torus, plane.",
-    "Allowed shape presets: star, heart.",
-    "Allowed tube presets: arc, wave, loop.",
-    "Each created node must have a unique nodeId using lowercase snake_case.",
-    "Every create operation should include a transform.position and transform.scale.",
-    "Keep materials simple with flat Minecraft-like colors.",
-    "Do not generate textures, nested structures, or unsupported fields.",
-    "The plan must be immediately executable by the editor as a rough voxel-like blockout."
+    "Convert each user request into an immediately executable Minecraft-style blockout plan.",
+    "You are authoring a DSL, not explaining steps.",
+    "Return only one valid JSON object with this exact shape:",
+    '{"toolName":"generate_minecraft_ai3d_model","plan":{"summary":"short text","operations":[...]}}',
+    "Never return markdown, comments, prose, or code fences.",
+    "The plan is the contract. The editor will execute operations exactly as written.",
+    "STYLE RULES:",
+    "1. The result must be a rough voxel-like blockout with simple silhouettes.",
+    "2. Prefer create_primitive with primitive=box for body parts and main masses.",
+    "3. If any create_primitive operations are used, at least half of them must be primitive=box.",
+    "4. Use at most 16 create operations total.",
+    "5. Keep materials flat and simple with Minecraft-like colors.",
+    "6. Do not use unsupported fields, nesting, parenting, textures, maps, or metadata.",
+    "AVAILABLE OPERATION TYPES:",
+    "create_primitive: create one primitive mesh. Required fields: nodeId, primitive, transform.position, transform.scale. Optional: label, transform.quaternion, material.",
+    "create_shape: create a flat preset silhouette. Required fields: nodeId, preset, transform.position, transform.scale. Optional: label, transform.quaternion, material.",
+    "create_extrude: create an extruded preset silhouette. Required fields: nodeId, preset, transform.position, transform.scale. Optional: depth, label, transform.quaternion, material.",
+    "create_tube: create a tube along a preset curve. Required fields: nodeId, preset, transform.position, transform.scale. Optional: radius, tubularSegments, radialSegments, closed, label, transform.quaternion, material.",
+    "set_transform: update an existing node's transform. Required fields: nodeId, transform. transform can contain position and/or scale and/or quaternion.",
+    "set_material: update an existing node's material. Required fields: nodeId, material.",
+    `ALLOWED PRIMITIVES: ${AI3D_PRIMITIVE_TYPES.join(", ")}.`,
+    `ALLOWED SHAPE PRESETS: ${AI3D_SHAPE_PRESETS.join(", ")}.`,
+    `ALLOWED TUBE PRESETS: ${AI3D_TUBE_PRESETS.join(", ")}.`,
+    `ALLOWED MATERIAL FIELDS: ${supportedMaterialFields}.`,
+    "NODE RULES:",
+    "Each created node must have a unique lowercase snake_case nodeId such as head, left_arm, star_badge.",
+    "A set_transform or set_material operation can only target a nodeId that has already been created earlier in the operations array.",
+    "TRANSFORM RULES:",
+    "position is [x, y, z]. scale is [x, y, z]. quaternion is [x, y, z, w].",
+    "For create operations, always include transform.position and transform.scale. Add quaternion only when rotation is truly needed.",
+    "COMPOSITION GUIDANCE:",
+    "For humanoids or animals, assemble them from 5 to 10 mostly box primitives: head, torso, limbs, tail, ears, etc.",
+    "For icons like a star or heart, prefer create_extrude with the matching preset unless the user explicitly asks for a box-built version.",
+    "For arches, tails, smiles, halos, or curved accents, use create_tube with arc, wave, or loop.",
+    "EXAMPLE: user='draw a human'",
+    '{"toolName":"generate_minecraft_ai3d_model","plan":{"summary":"A simple Minecraft-style human made from box primitives.","operations":[{"type":"create_primitive","nodeId":"torso","primitive":"box","label":"Torso","transform":{"position":[0,1.4,0],"scale":[1,1.4,0.6]},"material":{"color":"#5b8def","roughness":1}},{"type":"create_primitive","nodeId":"head","primitive":"box","label":"Head","transform":{"position":[0,2.45,0],"scale":[0.8,0.8,0.8]},"material":{"color":"#f2c29b","roughness":1}},{"type":"create_primitive","nodeId":"left_arm","primitive":"box","label":"Left Arm","transform":{"position":[-0.95,1.35,0],"scale":[0.35,1.2,0.35]},"material":{"color":"#f2c29b","roughness":1}},{"type":"create_primitive","nodeId":"right_arm","primitive":"box","label":"Right Arm","transform":{"position":[0.95,1.35,0],"scale":[0.35,1.2,0.35]},"material":{"color":"#f2c29b","roughness":1}},{"type":"create_primitive","nodeId":"left_leg","primitive":"box","label":"Left Leg","transform":{"position":[-0.28,0.35,0],"scale":[0.4,1.1,0.4]},"material":{"color":"#334155","roughness":1}},{"type":"create_primitive","nodeId":"right_leg","primitive":"box","label":"Right Leg","transform":{"position":[0.28,0.35,0],"scale":[0.4,1.1,0.4]},"material":{"color":"#334155","roughness":1}}]}}',
+    "EXAMPLE: user='draw a star'",
+    '{"toolName":"generate_minecraft_ai3d_model","plan":{"summary":"A chunky extruded star badge.","operations":[{"type":"create_extrude","nodeId":"star_badge","preset":"star","depth":0.35,"label":"Star Badge","transform":{"position":[0,1.2,0],"scale":[0.9,0.9,0.35]},"material":{"color":"#f5c542","roughness":1}}]}}',
+    "BAD EXAMPLE NOTES:",
+    "Do not invent fields like children, geometry, dimensions, rotationEuler, textureUrl, bevel, points, parentId, or groupId.",
+    "Do not omit transform.position or transform.scale on create operations."
   ].join(" ");
 }
 
@@ -122,182 +136,38 @@ function extractJsonObject(raw: string) {
   throw new Error("OpenRouter did not return a valid JSON object for the 3D tool call.");
 }
 
-function isFiniteNumber(value: unknown) {
-  return typeof value === "number" && Number.isFinite(value);
-}
-
-function validateVector(value: unknown, fieldName: string) {
-  if (!Array.isArray(value) || value.length !== 3 || !value.every(isFiniteNumber)) {
-    throw new Error(`${fieldName} must be a numeric [x, y, z] tuple.`);
-  }
-}
-
-function validateQuaternion(value: unknown, fieldName: string) {
-  if (!Array.isArray(value) || value.length !== 4 || !value.every(isFiniteNumber)) {
-    throw new Error(`${fieldName} must be a numeric [x, y, z, w] tuple.`);
-  }
-}
-
-function validateTransform(transform: unknown, fieldName: string) {
-  if (!transform || typeof transform !== "object") {
-    throw new Error(`${fieldName} must be an object.`);
-  }
-
-  const payload = transform as Record<string, unknown>;
-
-  if ("position" in payload && payload.position !== undefined) {
-    validateVector(payload.position, `${fieldName}.position`);
-  }
-  if ("scale" in payload && payload.scale !== undefined) {
-    validateVector(payload.scale, `${fieldName}.scale`);
-  }
-  if ("quaternion" in payload && payload.quaternion !== undefined) {
-    validateQuaternion(payload.quaternion, `${fieldName}.quaternion`);
-  }
-}
-
-function validateMaterial(material: unknown, fieldName: string) {
-  if (!material || typeof material !== "object") {
-    throw new Error(`${fieldName} must be an object.`);
-  }
-}
-
-function validateCreatePrimitiveOperation(operation: Record<string, unknown>) {
-  if (!AI3D_PRIMITIVE_TYPES.has(operation.primitive as Ai3DPrimitiveType)) {
-    throw new Error(`Unsupported primitive: ${String(operation.primitive)}.`);
-  }
-
-  if (operation.transform === undefined) {
-    throw new Error("create_primitive requires operation.transform.");
-  }
-
-  validateTransform(operation.transform, "operation.transform");
-  const transform = operation.transform as Record<string, unknown>;
-
-  if (transform.position === undefined || transform.scale === undefined) {
-    throw new Error("create_primitive requires transform.position and transform.scale.");
-  }
-
-  if (operation.material !== undefined) {
-    validateMaterial(operation.material, "operation.material");
-  }
-}
-
-function validateCreateShapeLikeOperation(
-  operation: Record<string, unknown>,
-  type: "create_shape" | "create_extrude" | "create_tube"
-) {
-  const preset = operation.preset;
-  const presetSet = type === "create_tube" ? TUBE_PRESETS : SHAPE_PRESETS;
-
-  if (typeof preset !== "string" || !presetSet.has(preset)) {
-    throw new Error(`Unsupported ${type} preset: ${String(preset)}.`);
-  }
-
-  if (operation.transform === undefined) {
-    throw new Error(`${type} requires operation.transform.`);
-  }
-
-  validateTransform(operation.transform, "operation.transform");
-  const transform = operation.transform as Record<string, unknown>;
-
-  if (transform.position === undefined || transform.scale === undefined) {
-    throw new Error(`${type} requires transform.position and transform.scale.`);
-  }
-
-  if (operation.material !== undefined) {
-    validateMaterial(operation.material, "operation.material");
-  }
-}
-
-function validateOperation(operation: unknown, index: number): Ai3DOperation {
-  if (!operation || typeof operation !== "object") {
-    throw new Error(`Operation ${index + 1} must be an object.`);
-  }
-
-  const payload = operation as Record<string, unknown>;
-  const type = payload.type;
-  const nodeId = payload.nodeId;
-
-  if (typeof type !== "string") {
-    throw new Error(`Operation ${index + 1} is missing a type.`);
-  }
-
-  if (typeof nodeId !== "string" || !nodeId.trim()) {
-    throw new Error(`Operation ${index + 1} is missing a nodeId.`);
-  }
-
-  if (payload.label !== undefined && typeof payload.label !== "string") {
-    throw new Error(`Operation ${index + 1} label must be a string.`);
-  }
-
-  switch (type) {
-    case "create_primitive":
-      validateCreatePrimitiveOperation(payload);
-      return payload as unknown as Ai3DCreatePrimitiveOperation;
-    case "create_shape":
-      validateCreateShapeLikeOperation(payload, "create_shape");
-      return payload as unknown as Ai3DCreateShapeOperation;
-    case "create_extrude":
-      validateCreateShapeLikeOperation(payload, "create_extrude");
-      return payload as unknown as Ai3DCreateExtrudeOperation;
-    case "create_tube":
-      validateCreateShapeLikeOperation(payload, "create_tube");
-      return payload as unknown as Ai3DCreateTubeOperation;
-    case "set_transform":
-      validateTransform(payload.transform, "operation.transform");
-      return payload as unknown as Ai3DOperation;
-    case "set_material":
-      validateMaterial(payload.material, "operation.material");
-      return payload as unknown as Ai3DOperation;
-    default:
-      throw new Error(`Unsupported AI 3D operation type: ${type}.`);
-  }
-}
-
 function parseAi3DToolCall(raw: string): Ai3DToolCall {
-  const parsed = JSON.parse(extractJsonObject(raw)) as Record<string, unknown>;
-  const toolName = parsed.toolName;
-  const plan = parsed.plan;
+  return validateAi3DToolCall(JSON.parse(extractJsonObject(raw)));
+}
 
-  if (toolName !== AI3D_TOOL_NAME) {
-    throw new Error(`OpenRouter returned an unexpected tool name: ${String(toolName)}.`);
-  }
-
-  if (!plan || typeof plan !== "object") {
-    throw new Error("OpenRouter did not return a valid AI 3D plan.");
-  }
-
-  const planPayload = plan as Record<string, unknown>;
-  const summary = typeof planPayload.summary === "string" ? planPayload.summary.trim() : "";
-  const operationsRaw = Array.isArray(planPayload.operations) ? planPayload.operations : null;
-
-  if (!summary) {
-    throw new Error("AI 3D plan summary is required.");
-  }
-
-  if (!operationsRaw || operationsRaw.length === 0) {
-    throw new Error("AI 3D plan must contain at least one operation.");
-  }
-
-  const operations = operationsRaw.map(validateOperation);
-  const createOperationCount = operations.filter((operation) =>
-    operation.type === "create_primitive" ||
-    operation.type === "create_shape" ||
-    operation.type === "create_extrude" ||
-    operation.type === "create_tube"
-  ).length;
-
-  if (createOperationCount > 16) {
-    throw new Error("AI 3D plan must contain at most 16 create operations.");
-  }
+async function requestAi3DPlan({
+  apiKey,
+  messages
+}: {
+  apiKey: string;
+  messages: Array<{
+    role: "system" | "user" | "assistant";
+    content: string;
+  }>;
+}) {
+  const response = await openRouterAi3DClient.post<OpenRouterTextResponse>(
+    OPENROUTER_TEXT_ENDPOINT,
+    {
+      model: OPENROUTER_AI3D_MODEL,
+      messages,
+      temperature: 0.2,
+      stream: false
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${apiKey}`
+      }
+    }
+  );
 
   return {
-    toolName: AI3D_TOOL_NAME,
-    plan: {
-      summary,
-      operations
-    }
+    traceId: getResponseHeader(response.headers, "x-request-id") ?? response.data.id ?? null,
+    rawContent: readTextContent(response.data?.choices?.[0]?.message?.content)
   };
 }
 
@@ -309,33 +179,60 @@ export async function generateAi3DPlanWithOpenRouter({
   prompt: string;
 }) {
   try {
-    const response = await openRouterAi3DClient.post<OpenRouterTextResponse>(
-      OPENROUTER_TEXT_ENDPOINT,
-      {
-        model: OPENROUTER_AI3D_MODEL,
+    const systemPrompt = getSystemPrompt();
+    const initialAttempt = await requestAi3DPlan({
+      apiKey,
+      messages: [
+        {
+          role: "system",
+          content: systemPrompt
+        },
+        {
+          role: "user",
+          content: prompt
+        }
+      ]
+    });
+
+    let traceId = initialAttempt.traceId;
+    let result: Ai3DToolCall;
+
+    try {
+      result = parseAi3DToolCall(initialAttempt.rawContent);
+    } catch (validationError) {
+      const repairReason =
+        validationError instanceof Error
+          ? validationError.message
+          : "The previous response did not satisfy the required JSON schema.";
+      const repairAttempt = await requestAi3DPlan({
+        apiKey,
         messages: [
           {
             role: "system",
-            content: getSystemPrompt()
+            content: systemPrompt
           },
           {
             role: "user",
             content: prompt
+          },
+          {
+            role: "assistant",
+            content: initialAttempt.rawContent
+          },
+          {
+            role: "user",
+            content: [
+              "Repair the previous response.",
+              "Return only one corrected JSON object with the same top-level shape.",
+              `Validation error: ${repairReason}`
+            ].join(" ")
           }
-        ],
-        temperature: 0.2,
-        stream: false
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${apiKey}`
-        }
-      }
-    );
+        ]
+      });
 
-    const traceId = getResponseHeader(response.headers, "x-request-id") ?? response.data.id ?? null;
-    const rawContent = readTextContent(response.data?.choices?.[0]?.message?.content);
-    const result = parseAi3DToolCall(rawContent);
+      traceId = repairAttempt.traceId ?? traceId;
+      result = parseAi3DToolCall(repairAttempt.rawContent);
+    }
 
     return {
       ...result,

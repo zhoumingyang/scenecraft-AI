@@ -1,6 +1,18 @@
 export { createEditorApp, EditorApp } from "./app";
 export type { EditorMeshListItem } from "./app";
-export type { Ai3DOperation, Ai3DPlan, Ai3DPrimitiveType } from "./ai3d/plan";
+export type { Ai3DOperation, Ai3DPlan, Ai3DPrimitiveType, Ai3DToolCall } from "./ai3d/plan";
+export {
+  AI3D_PRIMITIVE_TYPES,
+  AI3D_SHAPE_PRESETS,
+  AI3D_TOOL_NAME,
+  AI3D_TUBE_PRESETS,
+  ai3dOperationSchema,
+  ai3dPlanSchema,
+  ai3dToolCallSchema,
+  assertAi3DPlanSemantics,
+  validateAi3DPlan,
+  validateAi3DToolCall
+} from "./ai3d/plan";
 export { createEditorSdk } from "./sdk";
 export type { EditorSdk } from "./sdk";
 export type { EditorCommand, MeshMaterialPatch } from "./core/commands";
