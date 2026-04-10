@@ -48,6 +48,20 @@ function createGroupEntityId() {
   return createEntityId("group");
 }
 
+function resolveCanvasPickedEntityId(projectModel: EditorProjectModel | null, entityId: string | null) {
+  if (!projectModel || !entityId) return entityId;
+
+  let resolvedEntityId = entityId;
+  let parentGroupId = projectModel.getParentGroupId(resolvedEntityId);
+
+  while (parentGroupId) {
+    resolvedEntityId = parentGroupId;
+    parentGroupId = projectModel.getParentGroupId(resolvedEntityId);
+  }
+
+  return resolvedEntityId;
+}
+
 function createMeshPayload(geometryName: string) {
   const normalizedGeometryName = geometryName.trim() || "Box";
   return {
@@ -549,7 +563,7 @@ export class EditorSession {
   }
 
   pick(clientX: number, clientY: number): string | null {
-    return pickEntityId({
+    const pickedEntityId = pickEntityId({
       camera: this.runtime.camera,
       raycaster: this.runtime.raycaster,
       domElement: this.runtime.renderer.domElement,
@@ -557,6 +571,8 @@ export class EditorSession {
       clientX,
       clientY
     });
+
+    return resolveCanvasPickedEntityId(this.projectModel, pickedEntityId);
   }
 
   setSelectedEntity(entityId: string | null, source: SyncSource = "ui") {
