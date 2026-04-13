@@ -1,6 +1,6 @@
 "use client";
 
-import { KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
+import { KeyboardEvent, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Box,
@@ -9,54 +9,30 @@ import {
   Paper,
   Snackbar,
   Stack,
-  TextField,
-  ToggleButton,
-  ToggleButtonGroup,
   Typography
 } from "@mui/material";
 import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
-import AutoFixHighRoundedIcon from "@mui/icons-material/AutoFixHighRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import SendRoundedIcon from "@mui/icons-material/SendRounded";
-import TranslateRoundedIcon from "@mui/icons-material/TranslateRounded";
-import ViewInArRoundedIcon from "@mui/icons-material/ViewInArRounded";
-import AiImageModelMenu from "@/components/editor/aiImageModelMenu";
 import { getEditorThemeTokens } from "@/components/editor/theme";
-import { generateAi3D, generateAiImages, transformAiPrompt } from "@/frontend/api/ai";
-import { getImageGenerationModelConfig } from "@/lib/ai/image-generation/models";
-import { getApiErrorMessage } from "@/lib/http/axios";
+import PromptInput from "@/components/editor/aiComposer/promptInput";
+import ModeToggle from "@/components/editor/aiComposer/modeToggle";
+import ImageToolbar from "@/components/editor/aiComposer/imageToolbar";
+import Ai3dToolbar from "@/components/editor/aiComposer/ai3dToolbar";
+import Ai3dPreviewActions from "@/components/editor/aiComposer/ai3dPreviewActions";
+import { useAiImageComposer } from "@/components/editor/aiComposer/useAiImageComposer";
+import { useAi3dComposer } from "@/components/editor/aiComposer/useAi3dComposer";
+import { usePromptTransform } from "@/components/editor/aiComposer/usePromptTransform";
 import { useI18n } from "@/lib/i18n";
 import { useEditorStore } from "@/stores/editorStore";
-
-function parseSeed(seedText: string) {
-  const trimmed = seedText.trim();
-  if (!trimmed) return undefined;
-  const parsed = Number(trimmed);
-  if (!Number.isInteger(parsed) || parsed < 0) return null;
-  return parsed;
-}
 
 export default function AiImageComposer() {
   const { t } = useI18n();
   const [isAi3dErrorToastOpen, setIsAi3dErrorToastOpen] = useState(false);
-  const [activePromptAction, setActivePromptAction] = useState<"optimize" | "translate-en" | null>(
-    null
-  );
-  const promptActionLockRef = useRef(false);
   const app = useEditorStore((state) => state.app);
   const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
   const aiMode = useEditorStore((state) => state.aiMode);
-  const {
-    model,
-    prompt,
-    seed,
-    imageSize,
-    cfg,
-    inferenceSteps,
-    referenceImages,
-    isComposerOpen,
-    isGenerating
-  } = useEditorStore((state) => state.aiImage);
+  const aiImage = useEditorStore((state) => state.aiImage);
   const ai3d = useEditorStore((state) => state.ai3d);
   const setAiMode = useEditorStore((state) => state.setAiMode);
   const setAiPrompt = useEditorStore((state) => state.setAiPrompt);
@@ -73,25 +49,23 @@ export default function AiImageComposer() {
     setIsAi3dErrorToastOpen(true);
   }, [ai3d.errorMessage]);
 
-  const filledReferenceImages = useMemo(
+  const utilityIconButtonSx = useMemo(
     () =>
-      referenceImages.filter((item) => Boolean(item.dataUrl)).map((item) => item.dataUrl as string),
-    [referenceImages]
+      ({
+        color: theme.pillText,
+        background: theme.iconButtonBg,
+        border: theme.sectionBorder,
+        "&:hover": {
+          background: theme.itemHoverBg
+        },
+        "&.Mui-disabled": {
+          color: theme.mutedText,
+          background: theme.itemBg,
+          border: theme.sectionBorder
+        }
+      }) as const,
+    [theme]
   );
-  const isPromptActionPending = activePromptAction !== null;
-  const utilityIconButtonSx = {
-    color: theme.pillText,
-    background: theme.iconButtonBg,
-    border: theme.sectionBorder,
-    "&:hover": {
-      background: theme.itemHoverBg
-    },
-    "&.Mui-disabled": {
-      color: theme.mutedText,
-      background: theme.itemBg,
-      border: theme.sectionBorder
-    }
-  } as const;
 
   const focusAiMode = () => {
     setAiInspectorMode("ai");
@@ -100,105 +74,59 @@ export default function AiImageComposer() {
 
   const focusAi3dMode = () => {
     setAiMode("3d");
-    focusAiMode();
+    setAiInspectorMode("entity");
   };
 
-  const handleSubmit = async () => {
-    const trimmedPrompt = prompt.trim();
-    if (!trimmedPrompt || isGenerating || isPromptActionPending) return;
+  const {
+    activePromptAction,
+    isPromptActionPending,
+    handlePromptTransform
+  } = usePromptTransform({
+    aiMode,
+    prompt: aiImage.prompt,
+    ai3dPrompt: ai3d.prompt,
+    isImageBusy: aiImage.isGenerating,
+    isAi3dBusy: ai3d.isGenerating || ai3d.isOptimizing,
+    setAiPrompt,
+    setAi3dPrompt,
+    setAiGeneratingState,
+    setAi3dState,
+    t
+  });
 
-    const parsedSeed = parseSeed(seed);
-    const modelConfig = getImageGenerationModelConfig(model);
+  const { handleSubmit } = useAiImageComposer({
+    model: aiImage.model,
+    prompt: aiImage.prompt,
+    seed: aiImage.seed,
+    imageSize: aiImage.imageSize,
+    cfg: aiImage.cfg,
+    inferenceSteps: aiImage.inferenceSteps,
+    referenceImages: aiImage.referenceImages,
+    isGenerating: aiImage.isGenerating,
+    isPromptActionPending,
+    setAiGeneratingState,
+    t
+  });
 
-    if (parsedSeed === null) {
-      setAiGeneratingState({
-        isGenerating: false,
-        errorMessage: t("editor.ai.seedInvalid")
-      });
-      return;
-    }
-
-    if (filledReferenceImages.length < modelConfig.minReferenceImages) {
-      setAiGeneratingState({
-        isGenerating: false,
-        errorMessage: t("editor.ai.referenceImageRequired")
-      });
-      return;
-    }
-
-    setAiGeneratingState({
-      isGenerating: true,
-      errorMessage: null
-    });
-
-    try {
-      const payload = await generateAiImages({
-        model,
-        prompt: trimmedPrompt,
-        seed: parsedSeed,
-        imageSize: modelConfig.supportsImageSize ? imageSize : undefined,
-        cfg,
-        inferenceSteps,
-        referenceImages:
-          modelConfig.maxReferenceImages > 0
-            ? filledReferenceImages.slice(0, modelConfig.maxReferenceImages)
-            : []
-      });
-      const images = payload.images ?? [];
-
-      if (images.length === 0) {
-        throw new Error(t("editor.ai.emptyResult"));
-      }
-
-      setAiGeneratingState({
-        isGenerating: false,
-        errorMessage: null,
-        results: images,
-        lastSeed: typeof payload?.seed === "number" ? payload.seed : null
-      });
-    } catch (error) {
-      setAiGeneratingState({
-        isGenerating: false,
-        errorMessage: getApiErrorMessage(error, t("editor.ai.generateFailed"))
-      });
-    }
-  };
-
-  const handleAi3dSubmit = async () => {
-    const trimmedPrompt = ai3d.prompt.trim();
-    if (!trimmedPrompt || ai3d.isGenerating) return;
-
-    setAi3dState({
-      isGenerating: true,
-      errorMessage: null
-    });
-
-    try {
-      const payload = await generateAi3D({
-        prompt: trimmedPrompt
-      });
-
-      if (payload.toolName !== "generate_minecraft_ai3d_model") {
-        throw new Error(t("editor.ai3d.generateFailed"));
-      }
-
-      await app?.applyAi3DPlan(payload.plan);
-      setAi3dState({
-        isGenerating: false,
-        errorMessage: null,
-        previewStatus: "idle",
-        plan: null
-      });
-      setAiInspectorMode("entity");
-    } catch (error) {
-      setAi3dState({
-        isGenerating: false,
-        errorMessage: error instanceof Error ? error.message : t("editor.ai3d.generateFailed"),
-        previewStatus: "idle",
-        plan: null
-      });
-    }
-  };
+  const {
+    isAi3dBusy,
+    hasAi3dPreview,
+    canShowOriginal,
+    canShowOptimized,
+    ai3dCreateCount,
+    handleAi3dSubmit,
+    handleAi3dOptimize,
+    handleAi3dShowOriginal,
+    handleAi3dShowOptimized,
+    handleAi3dDiscard,
+    handleAi3dApply
+  } = useAi3dComposer({
+    app,
+    ai3d,
+    setAi3dState,
+    setAiInspectorMode,
+    t
+  });
 
   const handlePromptKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
@@ -213,43 +141,7 @@ export default function AiImageComposer() {
     }
   };
 
-  const handlePromptTransform = async (mode: "optimize" | "translate-en") => {
-    const trimmedPrompt = prompt.trim();
-    if (!trimmedPrompt || isGenerating || isPromptActionPending || promptActionLockRef.current) {
-      return;
-    }
-
-    promptActionLockRef.current = true;
-    setActivePromptAction(mode);
-    setAiGeneratingState({
-      isGenerating: false,
-      errorMessage: null
-    });
-
-    try {
-      const payload = await transformAiPrompt({
-        mode,
-        prompt: trimmedPrompt
-      });
-      const nextPrompt = typeof payload.prompt === "string" ? payload.prompt.trim() : "";
-
-      if (!nextPrompt) {
-        throw new Error(t("editor.ai.promptTransformEmpty"));
-      }
-
-      setAiPrompt(nextPrompt);
-    } catch (error) {
-      setAiGeneratingState({
-        isGenerating: false,
-        errorMessage: getApiErrorMessage(error, t("editor.ai.promptTransformFailed"))
-      });
-    } finally {
-      promptActionLockRef.current = false;
-      setActivePromptAction(null);
-    }
-  };
-
-  if (!isComposerOpen) {
+  if (!aiImage.isComposerOpen) {
     return (
       <Box
         sx={{
@@ -336,167 +228,75 @@ export default function AiImageComposer() {
           }}
         >
           <Stack spacing={0.5} sx={{ p: 1.2 }}>
-            <TextField
-              multiline
-              minRows={2}
-              maxRows={5}
-              value={aiMode === "image" ? prompt : ai3d.prompt}
+            <PromptInput
+              value={aiMode === "image" ? aiImage.prompt : ai3d.prompt}
+              placeholder={
+                aiMode === "image" ? t("editor.ai.promptPlaceholder") : t("editor.ai3d.promptPlaceholder")
+              }
+              theme={theme}
               onFocus={aiMode === "image" ? focusAiMode : focusAi3dMode}
-              onChange={(event) => {
+              onChange={(value) => {
                 if (aiMode === "image") {
-                  setAiPrompt(event.target.value);
+                  setAiPrompt(value);
                   return;
                 }
-                setAi3dPrompt(event.target.value);
+                setAi3dPrompt(value);
               }}
               onKeyDown={handlePromptKeyDown}
-              placeholder={
-                aiMode === "image"
-                  ? t("editor.ai.promptPlaceholder")
-                  : t("editor.ai3d.promptPlaceholder")
-              }
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  alignItems: "flex-start",
-                  borderRadius: "12px",
-                  color: theme.pillText,
-                  background: "transparent",
-                  fontSize: 14
-                },
-                "& .MuiInputBase-input::placeholder": {
-                  color: theme.mutedText,
-                  opacity: 1
-                },
-                "& .MuiOutlinedInput-input": {
-                  px: 0.2
-                },
-                "& .MuiOutlinedInput-notchedOutline": {
-                  border: "none"
-                }
-              }}
             />
 
             <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ pt: 0.3 }}>
               <Stack direction="row" spacing={0.8} alignItems="center">
-                <ToggleButtonGroup
-                  exclusive
-                  size="small"
-                  value={aiMode}
-                  onChange={(_, nextMode: "image" | "3d" | null) => {
-                    if (!nextMode) return;
-                    if (nextMode === "image") {
+                <ModeToggle
+                  aiMode={aiMode}
+                  theme={theme}
+                  t={t}
+                  onChange={(mode) => {
+                    if (mode === "image") {
                       setAiMode("image");
                       focusAiMode();
                       return;
                     }
                     focusAi3dMode();
                   }}
-                  sx={{
-                    gap: 0.8,
-                    "& .MuiToggleButtonGroup-grouped": {
-                      m: 0,
-                      borderRadius: "10px",
-                      border: theme.sectionBorder
-                    }
-                  }}
-                >
-                  <ToggleButton
-                    value="image"
-                    title={t("editor.ai.modeImage")}
-                    aria-label={t("editor.ai.modeImage")}
-                    sx={{
-                      width: 36,
-                      height: 36,
-                      color: theme.mutedText,
-                      background: "transparent",
-                      "&.Mui-selected": {
-                        color: theme.pillText,
-                        background: theme.iconButtonBg
-                      },
-                      "&.Mui-selected:hover": {
-                        background: theme.iconButtonBg
-                      },
-                      "&:hover": {
-                        background: theme.itemHoverBg
-                      }
-                    }}
-                  >
-                    <AutoAwesomeRoundedIcon sx={{ fontSize: 18 }} />
-                  </ToggleButton>
-                  <ToggleButton
-                    value="3d"
-                    title={t("editor.ai.mode3d")}
-                    aria-label={t("editor.ai.mode3d")}
-                    sx={{
-                      width: 36,
-                      height: 36,
-                      color: theme.mutedText,
-                      background: "transparent",
-                      "&.Mui-selected": {
-                        color: theme.pillText,
-                        background: theme.iconButtonBg
-                      },
-                      "&.Mui-selected:hover": {
-                        background: theme.iconButtonBg
-                      },
-                      "&:hover": {
-                        background: theme.itemHoverBg
-                      }
-                    }}
-                  >
-                    <ViewInArRoundedIcon sx={{ fontSize: 18 }} />
-                  </ToggleButton>
-                </ToggleButtonGroup>
+                />
               </Stack>
 
               {aiMode === "image" ? (
-                <Stack direction="row" spacing={0.8} alignItems="center">
-                  <AiImageModelMenu model={model} onChange={setAiModel} onFocus={focusAiMode} />
-                  <IconButton
-                    size="small"
-                    disabled={isGenerating || isPromptActionPending || !prompt.trim()}
-                    onClick={() => {
-                      void handlePromptTransform("optimize");
-                    }}
-                    title={t("editor.ai.optimizePrompt")}
-                    sx={utilityIconButtonSx}
-                  >
-                    {activePromptAction === "optimize" ? (
-                      <CircularProgress size={16} sx={{ color: theme.pillText }} />
-                    ) : (
-                      <AutoFixHighRoundedIcon sx={{ fontSize: 18 }} />
-                    )}
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    disabled={isGenerating || isPromptActionPending || !prompt.trim()}
-                    onClick={() => {
-                      void handlePromptTransform("translate-en");
-                    }}
-                    title={t("editor.ai.translatePrompt")}
-                    sx={utilityIconButtonSx}
-                  >
-                    {activePromptAction === "translate-en" ? (
-                      <CircularProgress size={16} sx={{ color: theme.pillText }} />
-                    ) : (
-                      <TranslateRoundedIcon sx={{ fontSize: 18 }} />
-                    )}
-                  </IconButton>
-                </Stack>
+                <ImageToolbar
+                  model={aiImage.model}
+                  theme={theme}
+                  utilityIconButtonSx={utilityIconButtonSx}
+                  isGenerating={aiImage.isGenerating}
+                  isPromptActionPending={isPromptActionPending}
+                  prompt={aiImage.prompt}
+                  activePromptAction={activePromptAction}
+                  setAiModel={setAiModel}
+                  focusAiMode={focusAiMode}
+                  handlePromptTransform={handlePromptTransform}
+                  t={t}
+                />
               ) : (
-                <Stack direction="row" spacing={0.8} alignItems="center">
-                  <Typography sx={{ fontSize: 12, color: theme.mutedText }}>
-                    {ai3d.isGenerating ? t("editor.ai3d.generatingLabel") : ""}
-                  </Typography>
-                </Stack>
+                <Ai3dToolbar
+                  theme={theme}
+                  utilityIconButtonSx={utilityIconButtonSx}
+                  isAi3dBusy={isAi3dBusy}
+                  isPromptActionPending={isPromptActionPending}
+                  prompt={ai3d.prompt}
+                  isGenerating={ai3d.isGenerating}
+                  isOptimizing={ai3d.isOptimizing}
+                  activePromptAction={activePromptAction}
+                  handlePromptTransform={handlePromptTransform}
+                  t={t}
+                />
               )}
 
               <IconButton
                 size="small"
                 disabled={
                   aiMode === "image"
-                    ? isGenerating || isPromptActionPending || !prompt.trim()
-                    : ai3d.isGenerating || !ai3d.prompt.trim()
+                    ? aiImage.isGenerating || isPromptActionPending || !aiImage.prompt.trim()
+                    : isAi3dBusy || !ai3d.prompt.trim()
                 }
                 onClick={() => {
                   if (aiMode === "image") {
@@ -510,8 +310,8 @@ export default function AiImageComposer() {
                   transform: "rotate(-90deg)",
                   background:
                     (aiMode === "image"
-                      ? prompt.trim() && !isGenerating && !isPromptActionPending
-                      : ai3d.prompt.trim() && !ai3d.isGenerating)
+                      ? aiImage.prompt.trim() && !aiImage.isGenerating && !isPromptActionPending
+                      : ai3d.prompt.trim() && !isAi3dBusy)
                       ? editorThemeMode === "dark"
                         ? "linear-gradient(135deg, #2f6df4, #63a4ff)"
                         : "linear-gradient(135deg, #4c86f7, #86b7ff)"
@@ -519,7 +319,7 @@ export default function AiImageComposer() {
                   border: theme.sectionBorder
                 }}
               >
-                {(aiMode === "image" ? isGenerating : ai3d.isGenerating) ? (
+                {(aiMode === "image" ? aiImage.isGenerating : isAi3dBusy) ? (
                   <CircularProgress size={16} sx={{ color: theme.pillText }} />
                 ) : (
                   <SendRoundedIcon sx={{ fontSize: 18 }} />
@@ -527,9 +327,29 @@ export default function AiImageComposer() {
               </IconButton>
             </Stack>
 
+            {aiMode === "3d" && hasAi3dPreview ? (
+              <Ai3dPreviewActions
+                theme={theme}
+                utilityIconButtonSx={utilityIconButtonSx}
+                previewVariant={ai3d.previewVariant}
+                helperText={t("editor.ai3d.helperText")}
+                primitiveCountText={t("editor.ai3d.primitiveCount", { count: ai3dCreateCount })}
+                canShowOriginal={canShowOriginal}
+                canShowOptimized={canShowOptimized}
+                isAi3dBusy={isAi3dBusy}
+                isOptimizing={ai3d.isOptimizing}
+                onShowOriginal={handleAi3dShowOriginal}
+                onShowOptimized={handleAi3dShowOptimized}
+                onOptimize={handleAi3dOptimize}
+                onDiscard={handleAi3dDiscard}
+                onApply={handleAi3dApply}
+                t={t}
+              />
+            ) : null}
           </Stack>
         </Paper>
       </Box>
+
       <Snackbar
         open={isAi3dErrorToastOpen && Boolean(ai3d.errorMessage)}
         autoHideDuration={4000}

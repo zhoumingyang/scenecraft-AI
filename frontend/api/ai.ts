@@ -5,6 +5,8 @@ import type {
   GenerateAi3DResponse,
   GenerateAiImagesRequest,
   GenerateAiImagesResponse,
+  OptimizeAi3DRequest,
+  OptimizeAi3DResponse,
   TransformPromptRequest,
   TransformPromptResponse
 } from "@/lib/api/contracts/ai";
@@ -26,6 +28,17 @@ export async function generateAi3D(payload: GenerateAi3DRequest) {
     payload,
     {
       timeout: 180_000
+    }
+  );
+}
+
+export async function optimizeAi3D(payload: OptimizeAi3DRequest) {
+  return postJson<OptimizeAi3DResponse, OptimizeAi3DRequest>(
+    appApiClient,
+    "/ai/3d/optimize",
+    payload,
+    {
+      timeout: 240_000
     }
   );
 }

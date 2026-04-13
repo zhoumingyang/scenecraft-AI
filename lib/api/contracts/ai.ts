@@ -33,10 +33,18 @@ export type GenerateAi3DRequest = {
 };
 
 export type GenerateAi3DResponse = {
-  toolName: "generate_minecraft_ai3d_model";
+  toolName: "generate_stylized_ai3d_model";
   plan: Ai3DPlan;
   traceId: string | null;
 };
+
+export type OptimizeAi3DRequest = {
+  prompt: string;
+  plan: Ai3DPlan;
+  images: string[];
+};
+
+export type OptimizeAi3DResponse = GenerateAi3DResponse;
 
 export type ApiErrorResponse = {
   message: string;

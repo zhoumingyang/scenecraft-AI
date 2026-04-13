@@ -3,8 +3,8 @@ import * as THREE from "three";
 import type { EditorMeshJSON, EditorMeshUvJSON, EditorMeshVertexJSON } from "../core/types";
 import type { MeshEntityModel } from "../models";
 
-export type ShapePreset = "star" | "heart";
-export type TubePreset = "arc" | "wave" | "loop";
+export type ShapePreset = "star" | "heart" | "leaf" | "wing" | "fin";
+export type TubePreset = "arc" | "wave" | "loop" | "s_curve" | "snake";
 
 export function createBuiltinGeometry(name: string): THREE.BufferGeometry {
   const normalized = name.trim().toLowerCase();
@@ -81,6 +81,35 @@ function readAttributeVec2(attribute: THREE.BufferAttribute | THREE.InterleavedB
 }
 
 export function createShapePresetShape(preset: ShapePreset): THREE.Shape {
+  if (preset === "leaf") {
+    const shape = new THREE.Shape();
+    shape.moveTo(0, -1);
+    shape.bezierCurveTo(-0.75, -0.45, -0.95, 0.45, 0, 1);
+    shape.bezierCurveTo(0.95, 0.45, 0.75, -0.45, 0, -1);
+    shape.closePath();
+    return shape;
+  }
+
+  if (preset === "wing") {
+    const shape = new THREE.Shape();
+    shape.moveTo(-0.9, -0.2);
+    shape.quadraticCurveTo(-0.55, 0.9, 0.15, 0.8);
+    shape.quadraticCurveTo(0.85, 0.45, 1, -0.15);
+    shape.quadraticCurveTo(0.35, -0.05, -0.2, -0.55);
+    shape.quadraticCurveTo(-0.6, -0.75, -0.9, -0.2);
+    shape.closePath();
+    return shape;
+  }
+
+  if (preset === "fin") {
+    const shape = new THREE.Shape();
+    shape.moveTo(-0.9, -0.5);
+    shape.quadraticCurveTo(-0.25, 0.95, 0.9, 0);
+    shape.quadraticCurveTo(0.05, 0.15, -0.9, -0.5);
+    shape.closePath();
+    return shape;
+  }
+
   if (preset === "heart") {
     const shape = new THREE.Shape();
     shape.moveTo(0, 0.3);
@@ -111,6 +140,27 @@ export function createShapePresetShape(preset: ShapePreset): THREE.Shape {
 }
 
 export function createTubePresetCurve(preset: TubePreset): THREE.Curve<THREE.Vector3> {
+  if (preset === "snake") {
+    return new THREE.CatmullRomCurve3([
+      new THREE.Vector3(-1.2, -0.15, 0),
+      new THREE.Vector3(-0.75, 0.15, 0.24),
+      new THREE.Vector3(-0.2, -0.1, -0.18),
+      new THREE.Vector3(0.35, 0.12, 0.16),
+      new THREE.Vector3(0.82, 0.02, -0.1),
+      new THREE.Vector3(1.15, 0.2, 0.08)
+    ]);
+  }
+
+  if (preset === "s_curve") {
+    return new THREE.CatmullRomCurve3([
+      new THREE.Vector3(-1.1, -0.55, 0),
+      new THREE.Vector3(-0.55, -0.05, 0.12),
+      new THREE.Vector3(0.05, 0.5, -0.1),
+      new THREE.Vector3(0.55, 0.1, 0.08),
+      new THREE.Vector3(1.05, -0.38, 0)
+    ]);
+  }
+
   if (preset === "loop") {
     return new THREE.CatmullRomCurve3(
       [

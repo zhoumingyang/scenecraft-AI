@@ -44,9 +44,13 @@ type AiImageSettings = {
 type Ai3DSettings = {
   prompt: string;
   isGenerating: boolean;
+  isOptimizing: boolean;
   errorMessage: string | null;
   previewStatus: "idle" | "ready";
   plan: Ai3DPlan | null;
+  originalPlan: Ai3DPlan | null;
+  optimizedPlan: Ai3DPlan | null;
+  previewVariant: "original" | "optimized";
 };
 
 type EditorStoreState = {
@@ -119,9 +123,13 @@ export const useEditorStore = create<EditorStoreState>((set) => ({
   ai3d: {
     prompt: "",
     isGenerating: false,
+    isOptimizing: false,
     errorMessage: null,
     previewStatus: "idle",
-    plan: null
+    plan: null,
+    originalPlan: null,
+    optimizedPlan: null,
+    previewVariant: "original"
   },
   setApp: (app) => set({ app }),
   setEditorThemeMode: (editorThemeMode) => set({ editorThemeMode }),

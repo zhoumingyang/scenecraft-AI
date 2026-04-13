@@ -8,9 +8,8 @@ import {
 import { z } from "zod";
 
 const MAX_AI_3D_PRIMITIVES = 16;
-const MIN_BOX_HEAVY_RATIO = 0.5;
 
-export const AI3D_TOOL_NAME = "generate_minecraft_ai3d_model" as const;
+export const AI3D_TOOL_NAME = "generate_stylized_ai3d_model" as const;
 export const AI3D_PRIMITIVE_TYPES = [
   "box",
   "sphere",
@@ -20,8 +19,8 @@ export const AI3D_PRIMITIVE_TYPES = [
   "torus",
   "plane"
 ] as const;
-export const AI3D_SHAPE_PRESETS = ["star", "heart"] as const;
-export const AI3D_TUBE_PRESETS = ["arc", "wave", "loop"] as const;
+export const AI3D_SHAPE_PRESETS = ["star", "heart", "leaf", "wing", "fin"] as const;
+export const AI3D_TUBE_PRESETS = ["arc", "wave", "loop", "s_curve", "snake"] as const;
 
 const ai3dNodeIdSchema = z
   .string()
@@ -228,8 +227,6 @@ function isCreateOperation(
 export function assertAi3DPlanSemantics(plan: Ai3DPlan) {
   const createdNodeIds = new Set<string>();
   let createOperationCount = 0;
-  let primitiveCount = 0;
-  let boxCount = 0;
 
   plan.operations.forEach((operation) => {
     if (isCreateOperation(operation)) {
@@ -244,13 +241,6 @@ export function assertAi3DPlanSemantics(plan: Ai3DPlan) {
       }
 
       createdNodeIds.add(operation.nodeId);
-
-      if (operation.type === "create_primitive") {
-        primitiveCount += 1;
-        if (operation.primitive === "box") {
-          boxCount += 1;
-        }
-      }
       return;
     }
 
@@ -258,10 +248,6 @@ export function assertAi3DPlanSemantics(plan: Ai3DPlan) {
       throw new Error(`AI 3D plan references an unknown node id: ${operation.nodeId}.`);
     }
   });
-
-  if (primitiveCount > 0 && boxCount / primitiveCount < MIN_BOX_HEAVY_RATIO) {
-    throw new Error("AI 3D plan must follow the minecraft/blockout style and stay box-heavy.");
-  }
 }
 
 function toGeometryName(primitive: Ai3DPrimitiveType) {

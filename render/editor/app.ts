@@ -103,6 +103,10 @@ export class EditorApp {
     this.session.clearAi3DPreview();
   }
 
+  captureAi3DPreviewImages(plan: Ai3DPlan) {
+    return this.session.captureAi3DPreviewImages(plan);
+  }
+
   async applyAi3DPlan(plan: Ai3DPlan, source: SyncSource = "ui") {
     await this.session.applyAi3DPlan(plan, source);
   }

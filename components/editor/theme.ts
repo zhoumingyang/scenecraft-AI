@@ -1,6 +1,6 @@
 import type { EditorThemeMode } from "@/stores/editorStore";
 
-type EditorThemeTokens = {
+export type EditorThemeTokens = {
   rootTint: string;
   rootGlow: string;
   pillBorder: string;

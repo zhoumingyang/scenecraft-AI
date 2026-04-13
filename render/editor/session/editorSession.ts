@@ -16,10 +16,10 @@ import { BindingRegistry } from "../bindings/bindingRegistry";
 import { updateLightBinding } from "../bindings/lightBinding";
 import { updateMeshBindingMaterial } from "../bindings/meshBinding";
 import { pickEntityId } from "../interaction/picker";
-import { EditorProjectModel, ModelEntityModel } from "../models";
+import { EditorProjectModel, MeshEntityModel, ModelEntityModel } from "../models";
 import { createEmptyEditorProjectJSON } from "../factories/projectFactory";
 import { EditorRuntime } from "../runtime/editorRuntime";
-import { createBuiltinGeometry } from "../utils/geometry";
+import { createMeshGeometry } from "../utils/geometry";
 import { inferModelFileFormat } from "../utils/modelFile";
 import { SCENE_NODE_ID as SCENE_SELECTION_ID } from "../core/types";
 
@@ -31,6 +31,51 @@ type PreviewMeshRecord = {
   geometry: THREE.BufferGeometry;
   material: THREE.MeshStandardMaterial;
 };
+
+function createPreviewMeshRecord(draft: Ai3DMeshDraft): PreviewMeshRecord {
+  const geometry = createMeshGeometry(new MeshEntityModel(0, draft.mesh));
+  const material = new THREE.MeshStandardMaterial();
+  material.color.set(draft.mesh.material?.color || "#d9e8ff");
+  material.opacity = draft.mesh.material?.opacity ?? 1;
+  material.transparent = (draft.mesh.material?.opacity ?? 1) < 1;
+  material.metalness = draft.mesh.material?.metalness ?? 0;
+  material.roughness = draft.mesh.material?.roughness ?? 1;
+  material.emissive.set(draft.mesh.material?.emissive || "#000000");
+  material.emissiveIntensity = draft.mesh.material?.emissiveIntensity ?? 1;
+
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.name = `ai-preview:${draft.nodeId}`;
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  mesh.position.set(
+    draft.mesh.position?.[0] ?? 0,
+    draft.mesh.position?.[1] ?? 0.8,
+    draft.mesh.position?.[2] ?? 0
+  );
+  mesh.quaternion.set(
+    draft.mesh.quaternion?.[0] ?? 0,
+    draft.mesh.quaternion?.[1] ?? 0,
+    draft.mesh.quaternion?.[2] ?? 0,
+    draft.mesh.quaternion?.[3] ?? 1
+  );
+  mesh.scale.set(
+    draft.mesh.scale?.[0] ?? 1,
+    draft.mesh.scale?.[1] ?? 1,
+    draft.mesh.scale?.[2] ?? 1
+  );
+
+  return {
+    nodeId: draft.nodeId,
+    mesh,
+    geometry,
+    material
+  };
+}
+
+function disposePreviewMeshRecord(record: PreviewMeshRecord) {
+  record.geometry.dispose();
+  record.material.dispose();
+}
 
 function createEntityId(prefix: "model" | "mesh" | "light" | "group") {
   return globalThis.crypto?.randomUUID?.() ?? `${prefix}-${Date.now().toString(36)}`;
@@ -235,52 +280,27 @@ export class EditorSession {
     this.clearAi3DPreview();
 
     drafts.forEach((draft) => {
-      const geometry = createBuiltinGeometry(draft.mesh.geometryName || "Box");
-      const material = new THREE.MeshStandardMaterial();
-      material.color.set(draft.mesh.material?.color || "#d9e8ff");
-      material.opacity = draft.mesh.material?.opacity ?? 1;
-      material.transparent = (draft.mesh.material?.opacity ?? 1) < 1;
-      material.metalness = draft.mesh.material?.metalness ?? 0;
-      material.roughness = draft.mesh.material?.roughness ?? 1;
-      material.emissive.set(draft.mesh.material?.emissive || "#000000");
-      material.emissiveIntensity = draft.mesh.material?.emissiveIntensity ?? 1;
-
-      const mesh = new THREE.Mesh(geometry, material);
-      mesh.name = `ai-preview:${draft.nodeId}`;
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
-      mesh.position.set(
-        draft.mesh.position?.[0] ?? 0,
-        draft.mesh.position?.[1] ?? 0.8,
-        draft.mesh.position?.[2] ?? 0
-      );
-      mesh.quaternion.set(
-        draft.mesh.quaternion?.[0] ?? 0,
-        draft.mesh.quaternion?.[1] ?? 0,
-        draft.mesh.quaternion?.[2] ?? 0,
-        draft.mesh.quaternion?.[3] ?? 1
-      );
-      mesh.scale.set(
-        draft.mesh.scale?.[0] ?? 1,
-        draft.mesh.scale?.[1] ?? 1,
-        draft.mesh.scale?.[2] ?? 1
-      );
-
-      this.runtime.scene.add(mesh);
-      this.aiPreviewRecords.set(draft.nodeId, {
-        nodeId: draft.nodeId,
-        mesh,
-        geometry,
-        material
-      });
+      const record = createPreviewMeshRecord(draft);
+      this.runtime.scene.add(record.mesh);
+      this.aiPreviewRecords.set(draft.nodeId, record);
     });
+  }
+
+  captureAi3DPreviewImages(plan: Ai3DPlan) {
+    const drafts = buildAi3DMeshDrafts(plan);
+    const records = drafts.map(createPreviewMeshRecord);
+
+    try {
+      return this.runtime.captureAiPreviewImages(records.map((record) => record.mesh));
+    } finally {
+      records.forEach(disposePreviewMeshRecord);
+    }
   }
 
   clearAi3DPreview() {
     this.aiPreviewRecords.forEach((record) => {
       this.runtime.scene.remove(record.mesh);
-      record.geometry.dispose();
-      record.material.dispose();
+      disposePreviewMeshRecord(record);
     });
     this.aiPreviewRecords.clear();
   }
