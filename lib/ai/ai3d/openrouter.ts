@@ -1,4 +1,5 @@
 import axios from "axios";
+import { getOpenRouterChatCompletionsEndpoint } from "@/lib/ai/openrouter/config";
 import { createHttpClient, getResponseHeader } from "@/lib/http/axios";
 import {
   AI3D_TOOL_NAME,
@@ -10,8 +11,7 @@ import {
   type Ai3DToolCall
 } from "@/render/editor/ai3d/plan";
 
-const OPENROUTER_TEXT_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
-const OPENROUTER_AI3D_MODEL = "moonshotai/kimi-k2.5";
+const OPENROUTER_AI3D_MODEL = "openai/gpt-5.4";
 const openRouterAi3DClient = createHttpClient({
   timeout: 180_000
 });
@@ -197,7 +197,7 @@ async function requestAi3DPlan({
   messages: OpenRouterRequestMessage[];
 }) {
   const response = await openRouterAi3DClient.post<OpenRouterTextResponse>(
-    OPENROUTER_TEXT_ENDPOINT,
+    getOpenRouterChatCompletionsEndpoint(),
     {
       model: model ?? OPENROUTER_AI3D_MODEL,
       messages,

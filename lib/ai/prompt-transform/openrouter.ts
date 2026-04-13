@@ -1,8 +1,8 @@
 import axios from "axios";
+import { getOpenRouterChatCompletionsEndpoint } from "@/lib/ai/openrouter/config";
 import { createHttpClient, getResponseHeader } from "@/lib/http/axios";
 
-const OPENROUTER_TEXT_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
-const OPENROUTER_PROMPT_MODEL = "moonshotai/kimi-k2.5";
+const OPENROUTER_PROMPT_MODEL = "openai/gpt-5.4";
 const openRouterTextClient = createHttpClient();
 
 export type PromptTransformMode = "optimize" | "translate-en";
@@ -79,7 +79,7 @@ export async function transformPromptWithOpenRouter({
 }) {
   try {
     const response = await openRouterTextClient.post<OpenRouterTextResponse>(
-      OPENROUTER_TEXT_ENDPOINT,
+      getOpenRouterChatCompletionsEndpoint(),
       {
         model: OPENROUTER_PROMPT_MODEL,
         messages: [

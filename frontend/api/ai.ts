@@ -27,7 +27,7 @@ export async function generateAi3D(payload: GenerateAi3DRequest) {
     "/ai/3d/generate",
     payload,
     {
-      timeout: 180_000
+      timeout: 240_000
     }
   );
 }

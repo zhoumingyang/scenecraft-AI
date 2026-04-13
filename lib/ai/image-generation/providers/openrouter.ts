@@ -1,4 +1,5 @@
 import axios from "axios";
+import { getOpenRouterChatCompletionsEndpoint } from "@/lib/ai/openrouter/config";
 import {
   getImageGenerationModelConfig,
   imageSizeToAspectRatio
@@ -10,7 +11,6 @@ import type {
   ImageGenerationResult
 } from "@/lib/ai/image-generation/types";
 
-const OPENROUTER_IMAGE_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
 const openRouterImageClient = createHttpClient();
 
 type OpenRouterResponse = {
@@ -41,7 +41,7 @@ export class OpenRouterImageGenerationProvider implements ImageGenerationProvide
   async generateImage(request: ImageGenerationRequest): Promise<ImageGenerationResult> {
     try {
       const response = await openRouterImageClient.post<OpenRouterResponse>(
-        OPENROUTER_IMAGE_ENDPOINT,
+        getOpenRouterChatCompletionsEndpoint(),
         this.buildRequestBody(request),
         {
           headers: {
