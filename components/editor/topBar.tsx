@@ -282,7 +282,7 @@ export default function TopBar() {
       <input
         ref={modelImportInputRef}
         type="file"
-        accept=".gltf,.glb,.fbx,.obj"
+        accept=".gltf,.glb,.fbx,.obj,.vrm"
         onChange={onImportModelFile}
         style={{ display: "none" }}
       />
