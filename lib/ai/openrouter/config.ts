@@ -35,3 +35,17 @@ export function getOpenRouterApiBaseUrl() {
 export function getOpenRouterChatCompletionsEndpoint() {
   return `${getOpenRouterApiBaseUrl()}/v1/chat/completions`;
 }
+
+export function getOpenRouterHeaders(apiKey: string) {
+  const cloudflareGatewayToken =
+    readEnv("CLOUDFLARE_AI_GATEWAY_TOKEN") ?? readEnv("CF_AIG_TOKEN");
+
+  return {
+    Authorization: `Bearer ${apiKey}`,
+    ...(cloudflareGatewayToken
+      ? {
+          "cf-aig-authorization": `Bearer ${cloudflareGatewayToken}`
+        }
+      : {})
+  };
+}
