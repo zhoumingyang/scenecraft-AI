@@ -1,5 +1,8 @@
 import axios from "axios";
-import { getOpenRouterChatCompletionsEndpoint } from "@/lib/ai/openrouter/config";
+import {
+  getOpenRouterChatCompletionsEndpoint,
+  getOpenRouterHeaders
+} from "@/lib/ai/openrouter/config";
 import {
   getImageGenerationModelConfig,
   imageSizeToAspectRatio
@@ -44,9 +47,7 @@ export class OpenRouterImageGenerationProvider implements ImageGenerationProvide
         getOpenRouterChatCompletionsEndpoint(),
         this.buildRequestBody(request),
         {
-          headers: {
-            Authorization: `Bearer ${this.apiKey}`
-          }
+          headers: getOpenRouterHeaders(this.apiKey)
         }
       );
 

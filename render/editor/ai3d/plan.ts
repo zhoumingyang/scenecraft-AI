@@ -7,7 +7,7 @@ import {
 } from "../utils/geometry";
 import { z } from "zod";
 
-const MAX_AI_3D_PRIMITIVES = 16;
+const MAX_AI_3D_PRIMITIVES = 32;
 
 export const AI3D_TOOL_NAME = "generate_stylized_ai3d_model" as const;
 export const AI3D_PRIMITIVE_TYPES = [

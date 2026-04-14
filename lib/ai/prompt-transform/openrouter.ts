@@ -1,5 +1,8 @@
 import axios from "axios";
-import { getOpenRouterChatCompletionsEndpoint } from "@/lib/ai/openrouter/config";
+import {
+  getOpenRouterChatCompletionsEndpoint,
+  getOpenRouterHeaders
+} from "@/lib/ai/openrouter/config";
 import { createHttpClient, getResponseHeader } from "@/lib/http/axios";
 
 const OPENROUTER_PROMPT_MODEL = "openai/gpt-5.4";
@@ -96,9 +99,7 @@ export async function transformPromptWithOpenRouter({
         stream: false
       },
       {
-        headers: {
-          Authorization: `Bearer ${apiKey}`
-        }
+        headers: getOpenRouterHeaders(apiKey)
       }
     );
 

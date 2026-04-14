@@ -1,5 +1,8 @@
 import axios from "axios";
-import { getOpenRouterChatCompletionsEndpoint } from "@/lib/ai/openrouter/config";
+import {
+  getOpenRouterChatCompletionsEndpoint,
+  getOpenRouterHeaders
+} from "@/lib/ai/openrouter/config";
 import { createHttpClient, getResponseHeader } from "@/lib/http/axios";
 import {
   AI3D_TOOL_NAME,
@@ -83,11 +86,11 @@ function getSystemPrompt() {
     "Never return markdown, comments, prose, or code fences.",
     "The plan is the contract. The editor will execute operations exactly as written.",
     "STYLE RULES:",
-    "1. The result must be a readable stylized low-poly sketch with simple silhouettes and a small number of parts.",
+    "1. The result must be a readable stylized low-poly sketch with clear silhouettes and enough parts to describe the subject convincingly.",
     "2. Prefer the geometry that best matches the form instead of defaulting to boxes.",
-    "3. Use at most 16 create operations total.",
+    "3. Use at most 32 create operations total.",
     "4. Keep materials flat and simple with clean, stylized colors.",
-    "5. Avoid unnecessary fragmentation or noisy detail.",
+    "5. Add meaningful secondary forms when they improve readability, such as joints, hands, feet, ears, fins, tails, or simple facial features.",
     "6. Do not use unsupported fields, nesting, parenting, textures, maps, or metadata.",
     "AVAILABLE OPERATION TYPES:",
     "create_primitive: create one primitive mesh. Required fields: nodeId, primitive, transform.position, transform.scale. Optional: label, transform.quaternion, material.",
@@ -107,13 +110,17 @@ function getSystemPrompt() {
     "position is [x, y, z]. scale is [x, y, z]. quaternion is [x, y, z, w].",
     "For create operations, always include transform.position and transform.scale. Add quaternion only when rotation is truly needed.",
     "COMPOSITION GUIDANCE:",
-    "For humanoids or rigid props, use primitive meshes for head, torso, limbs, joints, or hard masses.",
+    "For humanoids or rigid props, use primitive meshes for head, torso, pelvis, limbs, joints, or hard masses.",
+    "For humanoids, prefer splitting each arm into upper_arm and lower_arm, and each leg into upper_leg and lower_leg when budget allows.",
+    "For humanoids, add simple hands and feet when they improve the read of the pose.",
+    "For faces on characters or animals, add a few large readable features such as eyes, nose, beak, snout, mouth, ears, or horns when they materially help recognition.",
+    "Do not stop at a mannequin if the prompt clearly implies a recognizable character, creature, or expressive subject.",
     "For snakes, worms, tentacles, vines, ropes, tails, cables, smiles, arches, halos, or other curved bodies, prefer create_tube for the main body.",
     "For wings, leaves, fins, petals, badges, and other thin silhouette-driven parts, prefer create_extrude or create_shape.",
     "For icons like a star or heart, prefer create_extrude with the matching preset unless the user explicitly asks for primitive-only construction.",
     "A snake should not be built mainly from box segments when a tube can represent the body more clearly.",
     "EXAMPLE: user='draw a human'",
-    `{"toolName":"${AI3D_TOOL_NAME}","plan":{"summary":"A stylized low-poly human using simple primitives.","operations":[{"type":"create_primitive","nodeId":"torso","primitive":"capsule","label":"Torso","transform":{"position":[0,1.45,0],"scale":[0.78,1.28,0.52]},"material":{"color":"#5b8def","roughness":1}},{"type":"create_primitive","nodeId":"head","primitive":"sphere","label":"Head","transform":{"position":[0,2.45,0],"scale":[0.62,0.7,0.62]},"material":{"color":"#f2c29b","roughness":1}},{"type":"create_primitive","nodeId":"left_arm","primitive":"cylinder","label":"Left Arm","transform":{"position":[-0.88,1.45,0],"scale":[0.22,0.92,0.22]},"material":{"color":"#f2c29b","roughness":1}},{"type":"create_primitive","nodeId":"right_arm","primitive":"cylinder","label":"Right Arm","transform":{"position":[0.88,1.45,0],"scale":[0.22,0.92,0.22]},"material":{"color":"#f2c29b","roughness":1}},{"type":"create_primitive","nodeId":"left_leg","primitive":"cylinder","label":"Left Leg","transform":{"position":[-0.28,0.42,0],"scale":[0.24,1.02,0.24]},"material":{"color":"#334155","roughness":1}},{"type":"create_primitive","nodeId":"right_leg","primitive":"cylinder","label":"Right Leg","transform":{"position":[0.28,0.42,0],"scale":[0.24,1.02,0.24]},"material":{"color":"#334155","roughness":1}}]}}`,
+    `{"toolName":"${AI3D_TOOL_NAME}","plan":{"summary":"A stylized low-poly human with segmented limbs and simple facial features.","operations":[{"type":"create_primitive","nodeId":"torso","primitive":"capsule","label":"Torso","transform":{"position":[0,1.52,0],"scale":[0.8,1.18,0.5]},"material":{"color":"#5b8def","roughness":1}},{"type":"create_primitive","nodeId":"pelvis","primitive":"box","label":"Pelvis","transform":{"position":[0,0.82,0],"scale":[0.62,0.34,0.4]},"material":{"color":"#334155","roughness":1}},{"type":"create_primitive","nodeId":"head","primitive":"sphere","label":"Head","transform":{"position":[0,2.5,0],"scale":[0.62,0.72,0.62]},"material":{"color":"#f2c29b","roughness":1}},{"type":"create_primitive","nodeId":"nose","primitive":"cone","label":"Nose","transform":{"position":[0.3,2.46,0],"scale":[0.08,0.14,0.08]},"material":{"color":"#e8b38d","roughness":1}},{"type":"create_primitive","nodeId":"left_eye","primitive":"sphere","label":"Left Eye","transform":{"position":[0.22,2.58,0.14],"scale":[0.06,0.06,0.06]},"material":{"color":"#111827","roughness":0.9}},{"type":"create_primitive","nodeId":"right_eye","primitive":"sphere","label":"Right Eye","transform":{"position":[0.22,2.58,-0.14],"scale":[0.06,0.06,0.06]},"material":{"color":"#111827","roughness":0.9}},{"type":"create_primitive","nodeId":"mouth","primitive":"capsule","label":"Mouth","transform":{"position":[0.26,2.34,0],"scale":[0.05,0.14,0.22]},"material":{"color":"#c26a5a","roughness":1}},{"type":"create_primitive","nodeId":"left_upper_arm","primitive":"cylinder","label":"Left Upper Arm","transform":{"position":[-0.84,1.74,0],"scale":[0.18,0.56,0.18]},"material":{"color":"#f2c29b","roughness":1}},{"type":"create_primitive","nodeId":"left_lower_arm","primitive":"cylinder","label":"Left Lower Arm","transform":{"position":[-1.08,1.15,0],"scale":[0.16,0.5,0.16]},"material":{"color":"#f2c29b","roughness":1}},{"type":"create_primitive","nodeId":"right_upper_arm","primitive":"cylinder","label":"Right Upper Arm","transform":{"position":[0.84,1.74,0],"scale":[0.18,0.56,0.18]},"material":{"color":"#f2c29b","roughness":1}},{"type":"create_primitive","nodeId":"right_lower_arm","primitive":"cylinder","label":"Right Lower Arm","transform":{"position":[1.08,1.15,0],"scale":[0.16,0.5,0.16]},"material":{"color":"#f2c29b","roughness":1}},{"type":"create_primitive","nodeId":"left_hand","primitive":"sphere","label":"Left Hand","transform":{"position":[-1.16,0.72,0],"scale":[0.12,0.12,0.12]},"material":{"color":"#f2c29b","roughness":1}},{"type":"create_primitive","nodeId":"right_hand","primitive":"sphere","label":"Right Hand","transform":{"position":[1.16,0.72,0],"scale":[0.12,0.12,0.12]},"material":{"color":"#f2c29b","roughness":1}},{"type":"create_primitive","nodeId":"left_upper_leg","primitive":"cylinder","label":"Left Upper Leg","transform":{"position":[-0.22,0.34,0],"scale":[0.22,0.64,0.22]},"material":{"color":"#334155","roughness":1}},{"type":"create_primitive","nodeId":"left_lower_leg","primitive":"cylinder","label":"Left Lower Leg","transform":{"position":[-0.22,-0.42,0],"scale":[0.2,0.62,0.2]},"material":{"color":"#334155","roughness":1}},{"type":"create_primitive","nodeId":"right_upper_leg","primitive":"cylinder","label":"Right Upper Leg","transform":{"position":[0.22,0.34,0],"scale":[0.22,0.64,0.22]},"material":{"color":"#334155","roughness":1}},{"type":"create_primitive","nodeId":"right_lower_leg","primitive":"cylinder","label":"Right Lower Leg","transform":{"position":[0.22,-0.42,0],"scale":[0.2,0.62,0.2]},"material":{"color":"#334155","roughness":1}},{"type":"create_primitive","nodeId":"left_foot","primitive":"box","label":"Left Foot","transform":{"position":[-0.22,-0.92,0.14],"scale":[0.18,0.08,0.32]},"material":{"color":"#1f2937","roughness":1}},{"type":"create_primitive","nodeId":"right_foot","primitive":"box","label":"Right Foot","transform":{"position":[0.22,-0.92,0.14],"scale":[0.18,0.08,0.32]},"material":{"color":"#1f2937","roughness":1}}]}}`,
     "EXAMPLE: user='draw a snake'",
     `{"toolName":"${AI3D_TOOL_NAME}","plan":{"summary":"A stylized snake with a curved tube body and a simple head.","operations":[{"type":"create_tube","nodeId":"body","preset":"snake","radius":0.16,"tubularSegments":72,"radialSegments":10,"label":"Body","transform":{"position":[0,0.9,0],"scale":[1.2,0.72,0.9]},"material":{"color":"#4f8a41","roughness":1}},{"type":"create_primitive","nodeId":"head","primitive":"capsule","label":"Head","transform":{"position":[1.22,1.05,0.04],"scale":[0.34,0.24,0.28]},"material":{"color":"#5f9a4f","roughness":1}},{"type":"create_primitive","nodeId":"left_eye","primitive":"sphere","label":"Left Eye","transform":{"position":[1.33,1.12,0.1],"scale":[0.05,0.05,0.05]},"material":{"color":"#101010","roughness":0.8}},{"type":"create_primitive","nodeId":"right_eye","primitive":"sphere","label":"Right Eye","transform":{"position":[1.33,1.12,-0.02],"scale":[0.05,0.05,0.05]},"material":{"color":"#101010","roughness":0.8}}]}}`,
     "EXAMPLE: user='draw a fish'",
@@ -135,7 +142,8 @@ function getOptimizeSystemPrompt() {
     `{"toolName":"${AI3D_TOOL_NAME}","plan":{"summary":"short text","operations":[...]}}`,
     "You may adjust transforms, swap geometry choices, add necessary parts, delete bad parts, or replace awkward structures.",
     "Any additions, replacements, or deletions must remain faithful to the original prompt and improve the current result.",
-    "Focus on visual issues such as wrong part orientation, messy layout, intersections, floating parts, awkward support, bad proportions, or overly clumsy structure.",
+    "Focus on visual issues such as wrong part orientation, messy layout, intersections, floating parts, awkward support, bad proportions, missing secondary forms, or overly clumsy structure.",
+    "If the result reads as too primitive or mannequin-like, increase part separation with a few meaningful forms such as segmented limbs, hands, feet, facial features, ears, fins, or tails while staying within the create-operation budget.",
     "Do not drift away from the subject. Do not add unnecessary detail. Keep the result clean and executable.",
     "Return a complete replacement plan, not a patch.",
     "Never return markdown, prose, or code fences."
@@ -205,9 +213,7 @@ async function requestAi3DPlan({
       stream: false
     },
     {
-      headers: {
-        Authorization: `Bearer ${apiKey}`
-      }
+      headers: getOpenRouterHeaders(apiKey)
     }
   );
 
