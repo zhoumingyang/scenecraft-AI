@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { validateAi3DIntentInput } from "@/lib/ai/ai3d/intent";
 import { generateAi3DPlanWithOpenRouter } from "@/lib/ai/ai3d/openrouter";
 import type { GenerateAi3DRequest } from "@/lib/api/contracts/ai";
 import { getSession } from "@/lib/server/auth/getSession";
@@ -12,13 +13,18 @@ function validateRequestBody(body: unknown) {
 
   const payload = body as Partial<GenerateAi3DRequest>;
   const prompt = typeof payload.prompt === "string" ? payload.prompt.trim() : "";
+  const referenceImages = Array.isArray(payload.referenceImages)
+    ? payload.referenceImages.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+    : [];
 
   if (!prompt) {
     throw new Error("Prompt is required.");
   }
 
   return {
-    prompt
+    prompt,
+    intent: validateAi3DIntentInput(payload.intent),
+    referenceImages
   };
 }
 
@@ -39,7 +45,9 @@ export async function POST(request: Request) {
     const body = validateRequestBody(await request.json());
     const result = await generateAi3DPlanWithOpenRouter({
       apiKey,
-      prompt: body.prompt
+      prompt: body.prompt,
+      intent: body.intent,
+      referenceImages: body.referenceImages
     });
 
     return NextResponse.json(result);

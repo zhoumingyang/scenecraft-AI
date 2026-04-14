@@ -1,4 +1,8 @@
 import { NextResponse } from "next/server";
+import {
+  validateAi3DIntentInput,
+  validateAi3DPlanDiagnostics
+} from "@/lib/ai/ai3d/intent";
 import { optimizeAi3DPlanWithOpenRouter } from "@/lib/ai/ai3d/openrouter";
 import type { OptimizeAi3DRequest } from "@/lib/api/contracts/ai";
 import { validateAi3DPlan } from "@/render/editor/ai3d/plan";
@@ -28,7 +32,9 @@ function validateRequestBody(body: unknown) {
   return {
     prompt,
     images,
-    plan: validateAi3DPlan(payload.plan)
+    plan: validateAi3DPlan(payload.plan),
+    intent: validateAi3DIntentInput(payload.intent),
+    diagnostics: payload.diagnostics ? validateAi3DPlanDiagnostics(payload.diagnostics) : undefined
   };
 }
 
@@ -51,7 +57,9 @@ export async function POST(request: Request) {
       apiKey,
       prompt: body.prompt,
       plan: body.plan,
-      images: body.images
+      images: body.images,
+      intent: body.intent,
+      diagnostics: body.diagnostics
     });
 
     return NextResponse.json(result);

@@ -1,12 +1,14 @@
 "use client";
 
 import { generateAi3D, optimizeAi3D } from "@/frontend/api/ai";
+import type { Ai3DIntentInput, Ai3DPlanDiagnostics } from "@/lib/ai/ai3d/intent";
 import { getApiErrorMessage } from "@/lib/http/axios";
 import type { EditorApp } from "@/render/editor";
 import type { Ai3DPlan } from "@/render/editor/ai3d/plan";
 
 type Ai3dState = {
   prompt: string;
+  intentDraft: Partial<Ai3DIntentInput>;
   isGenerating: boolean;
   isOptimizing: boolean;
   errorMessage: string | null;
@@ -15,6 +17,7 @@ type Ai3dState = {
   originalPlan: Ai3DPlan | null;
   optimizedPlan: Ai3DPlan | null;
   previewVariant: "original" | "optimized";
+  lastDiagnostics: Ai3DPlanDiagnostics | null;
 };
 
 type Params = {
@@ -47,7 +50,8 @@ export function useAi3dComposer({ app, ai3d, setAi3dState, setAiInspectorMode, t
 
     try {
       const payload = await generateAi3D({
-        prompt: trimmedPrompt
+        prompt: trimmedPrompt,
+        intent: ai3d.intentDraft
       });
 
       if (payload.toolName !== "generate_stylized_ai3d_model") {
@@ -62,7 +66,8 @@ export function useAi3dComposer({ app, ai3d, setAi3dState, setAiInspectorMode, t
         plan: payload.plan,
         originalPlan: payload.plan,
         optimizedPlan: null,
-        previewVariant: "original"
+        previewVariant: "original",
+        lastDiagnostics: payload.diagnostics
       });
     } catch (error) {
       setAi3dState({
@@ -86,7 +91,9 @@ export function useAi3dComposer({ app, ai3d, setAi3dState, setAiInspectorMode, t
       const payload = await optimizeAi3D({
         prompt: trimmedPrompt,
         plan: ai3d.plan,
-        images
+        images,
+        intent: ai3d.intentDraft,
+        diagnostics: ai3d.lastDiagnostics ?? undefined
       });
 
       if (payload.toolName !== "generate_stylized_ai3d_model") {
@@ -100,7 +107,8 @@ export function useAi3dComposer({ app, ai3d, setAi3dState, setAiInspectorMode, t
         previewStatus: "ready",
         plan: payload.plan,
         optimizedPlan: payload.plan,
-        previewVariant: "optimized"
+        previewVariant: "optimized",
+        lastDiagnostics: payload.diagnostics
       });
     } catch (error) {
       setAi3dState({
@@ -115,7 +123,8 @@ export function useAi3dComposer({ app, ai3d, setAi3dState, setAiInspectorMode, t
     app.previewAi3DPlan(ai3d.originalPlan);
     setAi3dState({
       plan: ai3d.originalPlan,
-      previewVariant: "original"
+      previewVariant: "original",
+      lastDiagnostics: null
     });
   };
 
@@ -138,7 +147,8 @@ export function useAi3dComposer({ app, ai3d, setAi3dState, setAiInspectorMode, t
       plan: null,
       originalPlan: null,
       optimizedPlan: null,
-      previewVariant: "original"
+      previewVariant: "original",
+      lastDiagnostics: null
     });
   };
 
@@ -160,7 +170,8 @@ export function useAi3dComposer({ app, ai3d, setAi3dState, setAiInspectorMode, t
         plan: null,
         originalPlan: null,
         optimizedPlan: null,
-        previewVariant: "original"
+        previewVariant: "original",
+        lastDiagnostics: null
       });
       setAiInspectorMode("entity");
     } catch (error) {

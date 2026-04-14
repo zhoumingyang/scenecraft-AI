@@ -19,6 +19,7 @@ import PromptInput from "@/components/editor/aiComposer/promptInput";
 import ModeToggle from "@/components/editor/aiComposer/modeToggle";
 import ImageToolbar from "@/components/editor/aiComposer/imageToolbar";
 import Ai3dToolbar from "@/components/editor/aiComposer/ai3dToolbar";
+import Ai3dIntentControls from "@/components/editor/aiComposer/ai3dIntentControls";
 import Ai3dPreviewActions from "@/components/editor/aiComposer/ai3dPreviewActions";
 import { useAiImageComposer } from "@/components/editor/aiComposer/useAiImageComposer";
 import { useAi3dComposer } from "@/components/editor/aiComposer/useAi3dComposer";
@@ -40,6 +41,7 @@ export default function AiImageComposer() {
   const setAiComposerOpen = useEditorStore((state) => state.setAiComposerOpen);
   const setAiInspectorMode = useEditorStore((state) => state.setAiInspectorMode);
   const setAi3dPrompt = useEditorStore((state) => state.setAi3dPrompt);
+  const setAi3dIntentDraft = useEditorStore((state) => state.setAi3dIntentDraft);
   const setAi3dState = useEditorStore((state) => state.setAi3dState);
   const setAiGeneratingState = useEditorStore((state) => state.setAiGeneratingState);
   const theme = getEditorThemeTokens(editorThemeMode);
@@ -244,6 +246,15 @@ export default function AiImageComposer() {
               }}
               onKeyDown={handlePromptKeyDown}
             />
+
+            {aiMode === "3d" ? (
+              <Ai3dIntentControls
+                theme={theme}
+                value={ai3d.intentDraft}
+                onChange={setAi3dIntentDraft}
+                t={t}
+              />
+            ) : null}
 
             <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ pt: 0.3 }}>
               <Stack direction="row" spacing={0.8} alignItems="center">

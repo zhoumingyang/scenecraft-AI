@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { Ai3DIntentInput, Ai3DPlanDiagnostics } from "@/lib/ai/ai3d/intent";
 import {
   DEFAULT_IMAGE_GENERATION_MODEL_ID,
   MAX_REFERENCE_IMAGE_SLOTS,
@@ -43,6 +44,7 @@ type AiImageSettings = {
 
 type Ai3DSettings = {
   prompt: string;
+  intentDraft: Partial<Ai3DIntentInput>;
   isGenerating: boolean;
   isOptimizing: boolean;
   errorMessage: string | null;
@@ -51,6 +53,7 @@ type Ai3DSettings = {
   originalPlan: Ai3DPlan | null;
   optimizedPlan: Ai3DPlan | null;
   previewVariant: "original" | "optimized";
+  lastDiagnostics: Ai3DPlanDiagnostics | null;
 };
 
 type EditorStoreState = {
@@ -83,6 +86,7 @@ type EditorStoreState = {
   setAiReferenceImageAt: (index: number, image: AiReferenceImageSlot) => void;
   clearAiReferenceImageAt: (index: number) => void;
   setAi3dPrompt: (prompt: string) => void;
+  setAi3dIntentDraft: (payload: Partial<Ai3DIntentInput>) => void;
   setAi3dState: (payload: Partial<Ai3DSettings>) => void;
   setAiGeneratingState: (payload: {
     isGenerating: boolean;
@@ -122,6 +126,7 @@ export const useEditorStore = create<EditorStoreState>((set) => ({
   },
   ai3d: {
     prompt: "",
+    intentDraft: {},
     isGenerating: false,
     isOptimizing: false,
     errorMessage: null,
@@ -129,7 +134,8 @@ export const useEditorStore = create<EditorStoreState>((set) => ({
     plan: null,
     originalPlan: null,
     optimizedPlan: null,
-    previewVariant: "original"
+    previewVariant: "original",
+    lastDiagnostics: null
   },
   setApp: (app) => set({ app }),
   setEditorThemeMode: (editorThemeMode) => set({ editorThemeMode }),
@@ -246,6 +252,16 @@ export const useEditorStore = create<EditorStoreState>((set) => ({
       ai3d: {
         ...state.ai3d,
         prompt
+      }
+    })),
+  setAi3dIntentDraft: (payload) =>
+    set((state) => ({
+      ai3d: {
+        ...state.ai3d,
+        intentDraft: {
+          ...state.ai3d.intentDraft,
+          ...payload
+        }
       }
     })),
   setAi3dState: (payload) =>
