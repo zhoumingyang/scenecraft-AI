@@ -89,7 +89,13 @@ export function normalizeModelFormat(
 ): ModelFileFormat {
   if (typeof value !== "string") return fallback;
   const normalized = value.trim().toLowerCase();
-  if (normalized === "gltf" || normalized === "glb" || normalized === "fbx" || normalized === "obj") {
+  if (
+    normalized === "gltf" ||
+    normalized === "glb" ||
+    normalized === "fbx" ||
+    normalized === "obj" ||
+    normalized === "vrm"
+  ) {
     return normalized;
   }
   return fallback;

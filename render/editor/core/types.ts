@@ -14,7 +14,7 @@ export type TransformPatch = {
   scale?: number[];
 };
 
-export type ModelFileFormat = "gltf" | "glb" | "fbx" | "obj";
+export type ModelFileFormat = "gltf" | "glb" | "fbx" | "obj" | "vrm";
 export type AssetUnit = "m" | "cm" | "mm" | "unknown";
 export type ModelAnimationPlaybackState = "playing" | "paused" | "stopped";
 

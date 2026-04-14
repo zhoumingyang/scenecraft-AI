@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { VRM, VRMLoaderPlugin, VRMUtils } from "@pixiv/three-vrm";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
@@ -11,6 +12,9 @@ import { buildModelAnimationId } from "../utils/modelAnimation";
 type ParsedModelAsset = {
   object: THREE.Object3D;
   clips: THREE.AnimationClip[];
+  update?: (deltaSeconds: number) => void;
+  dispose?: (object: THREE.Object3D) => void;
+  canClone?: boolean;
 };
 
 export type LoadedModelAsset = ParsedModelAsset & {
@@ -33,26 +37,32 @@ export class ModelLoaderFactory {
     this.dracoLoader.setDecoderPath("/draco/gltf/");
     this.gltfLoader = new GLTFLoader();
     this.gltfLoader.setDRACOLoader(this.dracoLoader);
+    this.gltfLoader.register((parser) => new VRMLoaderPlugin(parser));
     this.fbxLoader = new FBXLoader();
     this.objLoader = new OBJLoader();
   }
 
   load(source: string, format: ModelFileFormat): Promise<LoadedModelAsset> {
     const cacheKey = `${format}:${source}`;
-    const cached = this.assetCache.get(cacheKey);
+    const shouldCache = format !== "vrm";
+    const cached = shouldCache ? this.assetCache.get(cacheKey) : undefined;
     const parsedAssetPromise =
       cached ??
       this.loadParsedAsset(source, format).catch((error) => {
-        this.assetCache.delete(cacheKey);
+        if (shouldCache) {
+          this.assetCache.delete(cacheKey);
+        }
         throw error;
       });
-    if (!cached) {
+    if (!cached && shouldCache) {
       this.assetCache.set(cacheKey, parsedAssetPromise);
     }
 
     return parsedAssetPromise.then((asset) => ({
-      object: cloneSkeleton(asset.object),
+      object: asset.canClone === false ? asset.object : cloneSkeleton(asset.object),
       clips: asset.clips,
+      update: asset.update,
+      dispose: asset.dispose,
       animations: asset.clips.map((clip, index) => ({
         id: buildModelAnimationId(clip.name || `Animation ${index + 1}`, index),
         name: clip.name || `Animation ${index + 1}`,
@@ -77,6 +87,35 @@ export class ModelLoaderFactory {
                 object: gltf.scene,
                 clips: gltf.animations ?? []
               }),
+            undefined,
+            (error) => reject(error)
+          );
+        });
+      case "vrm":
+        return new Promise((resolve, reject) => {
+          this.gltfLoader.load(
+            source,
+            (gltf) => {
+              const vrm = gltf.userData.vrm as VRM | undefined;
+              if (!vrm) {
+                reject(new Error("Failed to parse VRM asset"));
+                return;
+              }
+
+              VRMUtils.rotateVRM0(vrm);
+
+              resolve({
+                object: vrm.scene,
+                clips: gltf.animations ?? [],
+                update: (deltaSeconds) => {
+                  vrm.update(deltaSeconds);
+                },
+                dispose: (object) => {
+                  VRMUtils.deepDispose(object);
+                },
+                canClone: false
+              });
+            },
             undefined,
             (error) => reject(error)
           );
@@ -111,6 +150,12 @@ export class ModelLoaderFactory {
   }
 
   isSupportedFormat(format: string): format is ModelFileFormat {
-    return format === "gltf" || format === "glb" || format === "fbx" || format === "obj";
+    return (
+      format === "gltf" ||
+      format === "glb" ||
+      format === "fbx" ||
+      format === "obj" ||
+      format === "vrm"
+    );
   }
 }

@@ -33,6 +33,8 @@ export function createModelBinding(context: BindingContext, model: ModelEntityMo
   let disposed = false;
   let mixer: THREE.AnimationMixer | null = null;
   let currentAssetRoot: THREE.Object3D | null = null;
+  let currentAssetUpdate: ((deltaSeconds: number) => void) | null = null;
+  let currentAssetDispose: ((object: THREE.Object3D) => void) | null = null;
   let clipsById = new Map<string, THREE.AnimationClip>();
   let actionsById = new Map<string, THREE.AnimationAction>();
   let currentActionId: string | null = null;
@@ -111,10 +113,12 @@ export function createModelBinding(context: BindingContext, model: ModelEntityMo
     .load(model.source, model.format)
     .then((asset) => {
       if (disposed) {
-        disposeObject3D(asset.object);
+        asset.dispose?.(asset.object) ?? disposeObject3D(asset.object);
         return;
       }
       currentAssetRoot = asset.object;
+      currentAssetUpdate = asset.update ?? null;
+      currentAssetDispose = asset.dispose ?? null;
       mixer = new THREE.AnimationMixer(asset.object);
       clipsById = new Map(asset.animations.map((clip, index) => [clip.id, asset.clips[index]]));
       actionsById = new Map(
@@ -142,9 +146,11 @@ export function createModelBinding(context: BindingContext, model: ModelEntityMo
     },
     lastTransformSignature: buildTransformSignature(group),
     refresh: (deltaSeconds) => {
-      if (!mixer || model.animationPlaybackState !== "playing") return;
-      mixer.timeScale = model.animationTimeScale;
-      mixer.update(deltaSeconds);
+      if (mixer && model.animationPlaybackState === "playing") {
+        mixer.timeScale = model.animationTimeScale;
+        mixer.update(deltaSeconds);
+      }
+      currentAssetUpdate?.(deltaSeconds);
     },
     dispose: () => {
       disposed = true;
@@ -155,8 +161,14 @@ export function createModelBinding(context: BindingContext, model: ModelEntityMo
       clipsById.clear();
       actionsById.clear();
       scene.remove(group);
-      disposeObject3D(group);
+      if (currentAssetRoot) {
+        currentAssetDispose?.(currentAssetRoot);
+        currentAssetRoot = null;
+      }
+      currentAssetUpdate = null;
+      currentAssetDispose = null;
       group.clear();
+      disposeObject3D(group);
     }
   };
 }
