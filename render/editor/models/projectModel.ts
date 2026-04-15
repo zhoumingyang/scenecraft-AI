@@ -214,6 +214,26 @@ export class EditorProjectModel {
     return this.groups.get(groupId)?.children ?? [];
   }
 
+  isEntityEffectivelyVisible(id: string) {
+    const record = this.getEntityById(id);
+    if (!record) return false;
+
+    if (record.kind !== "light" && !record.item.visible) {
+      return false;
+    }
+
+    let parentGroupId = this.getParentGroupId(id);
+    while (parentGroupId) {
+      const parentGroup = this.groups.get(parentGroupId);
+      if (!parentGroup?.visible) {
+        return false;
+      }
+      parentGroupId = this.getParentGroupId(parentGroupId);
+    }
+
+    return true;
+  }
+
   addModel(source: ConstructorParameters<typeof ModelEntityModel>[1]) {
     const model = new ModelEntityModel(this.models.size, source);
     this.models.set(model.id, model);

@@ -26,6 +26,7 @@ type SceneTreeNode = {
   type: "scene" | "group" | "model" | "mesh" | "light";
   locked: boolean;
   visible: boolean;
+  effectivelyVisible: boolean;
 };
 
 type SceneTreeSection = {
@@ -77,6 +78,7 @@ export default function SceneTreePanel() {
               type: "scene",
               locked: false,
               visible: true,
+              effectivelyVisible: true,
               label: t("editor.sceneTree.scene")
             }
           ]
@@ -119,6 +121,7 @@ export default function SceneTreePanel() {
             type: "scene",
             locked: false,
             visible: true,
+            effectivelyVisible: true,
             label: t("editor.sceneTree.scene")
           }
         ]
@@ -132,6 +135,7 @@ export default function SceneTreePanel() {
           type: "group",
           locked: group.locked,
           visible: group.visible,
+          effectivelyVisible: project.isEntityEffectivelyVisible(group.id),
           label: `${t("editor.sceneTree.group")} ${index + 1}`
         }))
       },
@@ -144,6 +148,7 @@ export default function SceneTreePanel() {
           type: "model",
           locked: model.locked,
           visible: model.visible,
+          effectivelyVisible: project.isEntityEffectivelyVisible(model.id),
           label: `${t("editor.sceneTree.model")} ${index + 1}`
         }))
       },
@@ -156,6 +161,7 @@ export default function SceneTreePanel() {
           type: "mesh",
           locked: mesh.locked,
           visible: mesh.visible,
+          effectivelyVisible: project.isEntityEffectivelyVisible(mesh.id),
           label: `${formatTitleCase(mesh.geometryName)} ${index + 1}`
         }))
       },
@@ -168,6 +174,7 @@ export default function SceneTreePanel() {
           type: "light",
           locked: light.locked,
           visible: true,
+          effectivelyVisible: project.isEntityEffectivelyVisible(light.id),
           label: getLightLabel(light.lightType, index, t)
         }))
       }
@@ -273,11 +280,12 @@ export default function SceneTreePanel() {
                   ) : (
                     section.nodes.map((node) => {
                       const selected = node.id === selectedEntityId;
-      const lockDisabled = node.type === "scene";
-      const canToggleVisible = node.type !== "light" && node.type !== "scene";
-      const canDuplicate = node.type !== "scene" && !node.locked;
-      const canDelete = node.type !== "scene" && !node.locked;
-      const canToggleLock = !lockDisabled;
+                      const selectionDisabled = node.type !== "scene" && (!node.effectivelyVisible || node.locked);
+                      const lockDisabled = node.type === "scene" || !node.effectivelyVisible;
+                      const canToggleVisible = node.type !== "light" && node.type !== "scene";
+                      const canDuplicate = node.type !== "scene" && !node.locked && node.effectivelyVisible;
+                      const canDelete = node.type !== "scene" && !node.locked && node.effectivelyVisible;
+                      const canToggleLock = !lockDisabled;
                       const rowColor = node.locked
                         ? theme.mutedText
                         : selected
@@ -312,13 +320,13 @@ export default function SceneTreePanel() {
                             background: selected
                               ? theme.itemSelectedBg
                               : theme.itemBg,
-                            opacity: node.visible ? 1 : 0.6
+                            opacity: node.effectivelyVisible ? 1 : 0.6
                           }}
                         >
                           <Button
                             fullWidth
                             color="inherit"
-                            disabled={node.type !== "scene" && node.locked}
+                            disabled={selectionDisabled}
                             onClick={() => void onSelectEntity(node.id)}
                             startIcon={
                               node.type === "scene" ? (
@@ -341,7 +349,8 @@ export default function SceneTreePanel() {
                               color: rowColor,
                               textTransform: "none",
                               "&.Mui-disabled": {
-                                color: rowColor
+                                color: rowColor,
+                                opacity: 1
                               }
                             }}
                           >

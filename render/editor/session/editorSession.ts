@@ -626,7 +626,7 @@ export class EditorSession {
   setSelectedEntity(entityId: string | null, source: SyncSource = "ui") {
     if (entityId && entityId !== SCENE_SELECTION_ID) {
       const binding = this.registry.get(entityId);
-      if (!binding || binding.model.locked) return;
+      if (!binding || binding.model.locked || !this.projectModel?.isEntityEffectivelyVisible(entityId)) return;
     }
     if (this.selectedEntityId === entityId) return;
     this.selectedEntityId = entityId;
@@ -718,7 +718,7 @@ export class EditorSession {
       this.clearEntityIsolation(source);
     }
     const binding = this.registry.get(entityId);
-    if (!binding || binding.model.locked) return;
+    if (!binding || binding.model.locked || !this.projectModel.isEntityEffectivelyVisible(entityId)) return;
 
     if (binding.kind === "group") {
       const parentGroupId = this.projectModel.getParentGroupId(entityId);
@@ -755,7 +755,7 @@ export class EditorSession {
       this.clearEntityIsolation(source);
     }
     const record = this.projectModel.getEntityById(entityId);
-    if (!record || record.item.locked) return;
+    if (!record || record.item.locked || !this.projectModel.isEntityEffectivelyVisible(entityId)) return;
 
     const duplicate = this.cloneEntity(entityId, source);
     if (!duplicate) return;
@@ -926,7 +926,7 @@ export class EditorSession {
   setEntityLocked(entityId: string, locked: boolean, source: SyncSource = "ui") {
     if (!this.projectModel) return;
     const record = this.projectModel.getEntityById(entityId);
-    if (!record || record.item.locked === locked) return;
+    if (!record || record.item.locked === locked || !this.projectModel.isEntityEffectivelyVisible(entityId)) return;
 
     record.item.locked = locked;
     if (locked && this.selectedEntityId === entityId) {
@@ -1061,7 +1061,7 @@ export class EditorSession {
     const binding = this.registry.get(entityId);
     binding?.applyState?.();
 
-    if (!visible && this.selectedEntityId === entityId) {
+    if (this.selectedEntityId && !this.projectModel.isEntityEffectivelyVisible(this.selectedEntityId)) {
       this.setSelectedEntity(null, source);
     }
 
