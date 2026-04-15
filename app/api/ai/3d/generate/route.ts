@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { validateAi3DIntentInput } from "@/lib/ai/ai3d/intent";
-import { generateAi3DPlanWithOpenRouter } from "@/lib/ai/ai3d/openrouter";
+import { generateAi3DPlan } from "@/lib/ai/ai3d/core/pipeline";
 import type { GenerateAi3DRequest } from "@/lib/api/contracts/ai";
 import { getSession } from "@/lib/server/auth/getSession";
 
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
 
   try {
     const body = validateRequestBody(await request.json());
-    const result = await generateAi3DPlanWithOpenRouter({
+    const result = await generateAi3DPlan({
       apiKey,
       prompt: body.prompt,
       intent: body.intent,

@@ -343,7 +343,6 @@ export default function AiImageComposer() {
                 theme={theme}
                 utilityIconButtonSx={utilityIconButtonSx}
                 previewVariant={ai3d.previewVariant}
-                helperText={t("editor.ai3d.helperText")}
                 primitiveCountText={t("editor.ai3d.primitiveCount", { count: ai3dCreateCount })}
                 canShowOriginal={canShowOriginal}
                 canShowOptimized={canShowOptimized}

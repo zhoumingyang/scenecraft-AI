@@ -3,7 +3,7 @@ import {
   validateAi3DIntentInput,
   validateAi3DPlanDiagnostics
 } from "@/lib/ai/ai3d/intent";
-import { optimizeAi3DPlanWithOpenRouter } from "@/lib/ai/ai3d/openrouter";
+import { optimizeAi3DPlan } from "@/lib/ai/ai3d/core/pipeline";
 import type { OptimizeAi3DRequest } from "@/lib/api/contracts/ai";
 import { validateAi3DPlan } from "@/render/editor/ai3d/plan";
 import { getSession } from "@/lib/server/auth/getSession";
@@ -53,7 +53,7 @@ export async function POST(request: Request) {
 
   try {
     const body = validateRequestBody(await request.json());
-    const result = await optimizeAi3DPlanWithOpenRouter({
+    const result = await optimizeAi3DPlan({
       apiKey,
       prompt: body.prompt,
       plan: body.plan,

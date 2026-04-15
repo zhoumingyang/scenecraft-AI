@@ -11,7 +11,6 @@ type Props = {
   theme: EditorThemeTokens;
   utilityIconButtonSx: object;
   previewVariant: "original" | "optimized";
-  helperText: string;
   primitiveCountText: string;
   canShowOriginal: boolean;
   canShowOptimized: boolean;
@@ -29,7 +28,6 @@ export default function Ai3dPreviewActions({
   theme,
   utilityIconButtonSx,
   previewVariant,
-  helperText,
   primitiveCountText,
   canShowOriginal,
   canShowOptimized,
@@ -61,7 +59,7 @@ export default function Ai3dPreviewActions({
             : t("editor.ai3d.previewReady")}
         </Typography>
         <Typography sx={{ fontSize: 12, color: theme.mutedText }}>
-          {helperText} · {primitiveCountText}
+          {primitiveCountText}
         </Typography>
       </Stack>
 
