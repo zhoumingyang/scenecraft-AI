@@ -119,6 +119,10 @@ export class EditorApp {
     return this.session.getSelectedEntityId();
   }
 
+  getIsolatedEntityId(): string | null {
+    return this.session.getIsolatedEntityId();
+  }
+
   getRenderObject(entityId: string): THREE.Object3D | null {
     return this.session.getRenderObject(entityId);
   }
@@ -238,6 +242,10 @@ export class EditorApp {
       visible,
       source
     });
+  }
+
+  toggleEntityIsolation(entityId: string, source: SyncSource = "ui") {
+    this.session.toggleEntityIsolation(entityId, source);
   }
 
   updateCamera(update: Partial<EditorCameraJSON>, source: SyncSource = "ui") {

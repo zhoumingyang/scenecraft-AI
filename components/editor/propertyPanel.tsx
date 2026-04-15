@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Box, IconButton, Stack, Typography } from "@mui/material";
+import { Box, IconButton, Stack, Tooltip, Typography } from "@mui/material";
+import CenterFocusStrongRoundedIcon from "@mui/icons-material/CenterFocusStrongRounded";
 import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
 import { useI18n } from "@/lib/i18n";
 import { SCENE_NODE_ID } from "@/render/editor";
@@ -28,6 +29,7 @@ export default function PropertyPanel() {
   const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
   const selectedEntityId = useEditorStore((state) => state.selectedEntityId);
   const projectVersion = useEditorStore((state) => state.projectVersion);
+  const viewStateVersion = useEditorStore((state) => state.viewStateVersion);
   const inspectorMode = useEditorStore((state) => state.aiImage.inspectorMode);
   const [open, setOpen] = useState(true);
   const [activeTextureField, setActiveTextureField] = useState<TextureFieldKey | null>(null);
@@ -65,6 +67,24 @@ export default function PropertyPanel() {
               ? t("editor.sceneTree.meshes")
               : getLightTypeLabel(entityRecord.item.lightType, t)
         : t("editor.properties.none");
+
+  const isolatedEntityId = useMemo(
+    () => app?.getIsolatedEntityId() ?? null,
+    [app, viewStateVersion]
+  );
+  const canIsolateCurrentEntity =
+    inspectorMode !== "ai" &&
+    Boolean(
+      entityRecord &&
+        (entityRecord.kind === "group" || entityRecord.kind === "model" || entityRecord.kind === "mesh")
+    );
+  const currentIsolatableEntityId =
+    entityRecord && (entityRecord.kind === "group" || entityRecord.kind === "model" || entityRecord.kind === "mesh")
+      ? entityRecord.item.id
+      : null;
+  const isCurrentEntityIsolated = Boolean(
+    canIsolateCurrentEntity && currentIsolatableEntityId && isolatedEntityId === currentIsolatableEntityId
+  );
 
   return (
     <Box
@@ -156,9 +176,45 @@ export default function PropertyPanel() {
                   </Stack>
                 ) : (
                   <Stack spacing={0.9}>
-                    <Typography sx={{ px: 0.15, fontSize: 13, fontWeight: 600, color: theme.pillText }}>
-                      {panelTitle}
-                    </Typography>
+                    <Stack direction="row" spacing={0.6} alignItems="center" sx={{ minWidth: 0 }}>
+                      <Typography
+                        sx={{
+                          px: 0.15,
+                          minWidth: 0,
+                          flex: 1,
+                          fontSize: 13,
+                          fontWeight: 600,
+                          color: theme.pillText
+                        }}
+                      >
+                        {panelTitle}
+                      </Typography>
+                      {canIsolateCurrentEntity && currentIsolatableEntityId ? (
+                        <Tooltip
+                          title={
+                            isCurrentEntityIsolated
+                              ? t("editor.properties.restoreVisibility")
+                              : t("editor.properties.isolate")
+                          }
+                          arrow
+                        >
+                          <IconButton
+                            size="small"
+                            onClick={() => app?.toggleEntityIsolation(currentIsolatableEntityId)}
+                            sx={{
+                              color: isCurrentEntityIsolated ? theme.pillText : theme.mutedText,
+                              border: theme.sectionBorder,
+                              background: isCurrentEntityIsolated ? theme.iconButtonBg : "transparent",
+                              "&:hover": {
+                                background: theme.iconButtonBg
+                              }
+                            }}
+                          >
+                            <CenterFocusStrongRoundedIcon sx={{ fontSize: 15 }} />
+                          </IconButton>
+                        </Tooltip>
+                      ) : null}
+                    </Stack>
 
                     {entityRecord.kind === "scene" ? (
                       <SceneSettingsSection envConfig={entityRecord.envConfig} />

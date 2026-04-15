@@ -25,6 +25,8 @@ import { SCENE_NODE_ID as SCENE_SELECTION_ID } from "../core/types";
 
 type Emit = (event: EditorAppEvent) => void;
 
+type EntityVisibilitySnapshot = Map<string, boolean>;
+
 type PreviewMeshRecord = {
   nodeId: string;
   mesh: THREE.Mesh;
@@ -211,6 +213,8 @@ export class EditorSession {
   private readonly ownedModelUrls = new Set<string>();
   private readonly aiPreviewRecords = new Map<string, PreviewMeshRecord>();
   private selectedEntityId: string | null = null;
+  private isolatedEntityId: string | null = null;
+  private isolatedVisibilitySnapshot: EntityVisibilitySnapshot | null = null;
 
   projectModel: EditorProjectModel | null = null;
 
@@ -264,11 +268,35 @@ export class EditorSession {
   }
 
   getProjectJSON(): EditorProjectJSON | null {
-    return this.projectModel?.toJSON() ?? null;
+    if (!this.projectModel) return null;
+
+    const projectJson = this.projectModel.toJSON();
+    if (!this.isolatedVisibilitySnapshot) {
+      return projectJson;
+    }
+
+    projectJson.groups = (projectJson.groups || []).map((group) => ({
+      ...group,
+      visible: this.isolatedVisibilitySnapshot?.get(group.id) ?? group.visible
+    }));
+    projectJson.model = (projectJson.model || []).map((model) => ({
+      ...model,
+      visible: this.isolatedVisibilitySnapshot?.get(model.id) ?? model.visible
+    }));
+    projectJson.mesh = (projectJson.mesh || []).map((mesh) => ({
+      ...mesh,
+      visible: this.isolatedVisibilitySnapshot?.get(mesh.id) ?? mesh.visible
+    }));
+
+    return projectJson;
   }
 
   getSelectedEntityId(): string | null {
     return this.selectedEntityId;
+  }
+
+  getIsolatedEntityId(): string | null {
+    return this.isolatedEntityId;
   }
 
   getRenderObject(entityId: string) {
@@ -686,6 +714,9 @@ export class EditorSession {
 
   removeEntity(entityId: string, source: SyncSource = "ui") {
     if (!this.projectModel) return;
+    if (this.isolatedVisibilitySnapshot) {
+      this.clearEntityIsolation(source);
+    }
     const binding = this.registry.get(entityId);
     if (!binding || binding.model.locked) return;
 
@@ -720,6 +751,9 @@ export class EditorSession {
 
   duplicateEntity(entityId: string, source: SyncSource = "ui") {
     if (!this.projectModel) return;
+    if (this.isolatedVisibilitySnapshot) {
+      this.clearEntityIsolation(source);
+    }
     const record = this.projectModel.getEntityById(entityId);
     if (!record || record.item.locked) return;
 
@@ -907,11 +941,121 @@ export class EditorSession {
     });
   }
 
-  setEntityVisible(entityId: string, visible: boolean, source: SyncSource = "ui") {
+  toggleEntityIsolation(entityId: string, source: SyncSource = "ui") {
     if (!this.projectModel) return;
     const record = this.projectModel.getEntityById(entityId);
+    if (!record || record.kind === "light" || record.item.locked) return;
+
+    if (this.isolatedEntityId === entityId) {
+      this.clearEntityIsolation(source);
+      return;
+    }
+
+    if (this.isolatedVisibilitySnapshot) {
+      this.clearEntityIsolation(source);
+    }
+
+    const snapshot = this.captureEntityVisibilitySnapshot();
+    const keepVisibleIds = this.collectIsolationVisibleIds(entityId);
+
+    snapshot.forEach((visible, targetEntityId) => {
+      const nextVisible = keepVisibleIds.has(targetEntityId) ? visible : false;
+      this.applyEntityVisibleState(targetEntityId, nextVisible, source);
+    });
+
+    this.isolatedEntityId = entityId;
+    this.isolatedVisibilitySnapshot = snapshot;
+    this.emit({ type: "viewStateUpdated" });
+  }
+
+  setEntityVisible(entityId: string, visible: boolean, source: SyncSource = "ui") {
+    if (!this.projectModel) return;
+    if (this.isolatedVisibilitySnapshot) {
+      this.clearEntityIsolation(source);
+    }
+    const record = this.projectModel.getEntityById(entityId);
     if (!record || record.item.locked || record.kind === "light") return;
-    if (record.item.visible === visible) return;
+    this.applyEntityVisibleState(entityId, visible, source);
+  }
+
+  private clearProjectObjects() {
+    this.registry.clear();
+    this.runtime.scene.remove(this.runtime.fallbackAmbientLight);
+    this.projectModel = null;
+    this.isolatedEntityId = null;
+    this.isolatedVisibilitySnapshot = null;
+    this.setSelectedEntity(null, "load");
+  }
+
+  private captureEntityVisibilitySnapshot(): EntityVisibilitySnapshot {
+    const snapshot: EntityVisibilitySnapshot = new Map();
+    if (!this.projectModel) return snapshot;
+
+    this.projectModel.groups.forEach((group) => {
+      snapshot.set(group.id, group.visible);
+    });
+    this.projectModel.models.forEach((model) => {
+      snapshot.set(model.id, model.visible);
+    });
+    this.projectModel.meshes.forEach((mesh) => {
+      snapshot.set(mesh.id, mesh.visible);
+    });
+
+    return snapshot;
+  }
+
+  private collectIsolationVisibleIds(entityId: string) {
+    const keepVisibleIds = new Set<string>([entityId]);
+    if (!this.projectModel) return keepVisibleIds;
+
+    let currentEntityId = entityId;
+    let parentGroupId = this.projectModel.getParentGroupId(currentEntityId);
+    while (parentGroupId) {
+      keepVisibleIds.add(parentGroupId);
+      currentEntityId = parentGroupId;
+      parentGroupId = this.projectModel.getParentGroupId(currentEntityId);
+    }
+
+    const record = this.projectModel.getEntityById(entityId);
+    if (record?.kind === "group") {
+      this.collectGroupDescendantIds(entityId, keepVisibleIds);
+    }
+
+    return keepVisibleIds;
+  }
+
+  private collectGroupDescendantIds(groupId: string, keepVisibleIds: Set<string>) {
+    if (!this.projectModel) return;
+
+    this.projectModel.listDirectChildren(groupId).forEach((childId) => {
+      const childRecord = this.projectModel?.getEntityById(childId);
+      if (!childRecord || childRecord.kind === "light") return;
+
+      keepVisibleIds.add(childId);
+      if (childRecord.kind === "group") {
+        this.collectGroupDescendantIds(childId, keepVisibleIds);
+      }
+    });
+  }
+
+  private clearEntityIsolation(source: SyncSource) {
+    const snapshot = this.isolatedVisibilitySnapshot;
+    if (!snapshot) return;
+
+    this.isolatedEntityId = null;
+    this.isolatedVisibilitySnapshot = null;
+
+    snapshot.forEach((visible, entityId) => {
+      this.applyEntityVisibleState(entityId, visible, source);
+    });
+
+    this.emit({ type: "viewStateUpdated" });
+  }
+
+  private applyEntityVisibleState(entityId: string, visible: boolean, source: SyncSource) {
+    if (!this.projectModel) return;
+    const record = this.projectModel.getEntityById(entityId);
+    if (!record || record.kind === "light" || record.item.visible === visible) return;
 
     record.item.visible = visible;
     const binding = this.registry.get(entityId);
@@ -927,13 +1071,6 @@ export class EditorSession {
       entityKind: record.kind,
       source
     });
-  }
-
-  private clearProjectObjects() {
-    this.registry.clear();
-    this.runtime.scene.remove(this.runtime.fallbackAmbientLight);
-    this.projectModel = null;
-    this.setSelectedEntity(null, "load");
   }
 
   private releaseUnusedOwnedModelUrls(projectJson: EditorProjectJSON) {
