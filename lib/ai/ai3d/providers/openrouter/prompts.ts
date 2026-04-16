@@ -53,6 +53,8 @@ function getDslCorePrompt() {
 function getCategoryModulePrompt(intent: Ai3DIntent) {
   const shared = [
     `Subject type: ${intent.subjectType}.`,
+    `Archetype: ${intent.archetype}.`,
+    `Assembly strategy: ${intent.assemblyStrategy}.`,
     `Subject label: ${intent.subjectLabel}.`,
     `Primary silhouette: ${intent.primarySilhouette}.`,
     `Key parts: ${intent.keyParts.join(", ")}.`,
@@ -124,8 +126,13 @@ export function getIntentSystemPrompt() {
     "You read a user's natural-language prompt plus optional structured hints and optional reference images.",
     "Infer a single modeling intent that will help a second model build a readable stylized low-poly sketch.",
     "Return only one valid JSON object with this exact shape:",
-    '{"subjectType":"character|animal|prop|icon|abstract","subjectLabel":"short noun phrase","primarySilhouette":"short silhouette description","keyParts":["part"],"secondaryParts":["part"],"geometryBias":["primitive|tube|extrude|shape"],"detailBudget":"low|medium|high","pose":"standing|sitting|flying|coiled|static","symmetry":"symmetric|asymmetric","styleBias":"stylized|cute|clean|chunky","negativeConstraints":["constraint"]}',
+    '{"subjectType":"character|animal|prop|icon|abstract","archetype":"humanoid|quadruped|fish|bird|tree|plant|rock|abstract_curve|freeform_object","assemblyStrategy":"template_first|rule_first|freeform_first","subjectLabel":"short noun phrase","primarySilhouette":"short silhouette description","keyParts":["part"],"secondaryParts":["part"],"geometryBias":["primitive|tube|extrude|shape"],"detailBudget":"low|medium|high","pose":"standing|sitting|flying|coiled|static","symmetry":"symmetric|asymmetric","styleBias":"stylized|cute|clean|chunky","negativeConstraints":["constraint"]}',
     "Choose exactly one subjectType.",
+    "Choose exactly one archetype that best matches the object's structure.",
+    "Choose exactly one assemblyStrategy.",
+    "Use template_first for strongly structured forms such as humanoids, quadrupeds, fish, and birds.",
+    "Use rule_first for growth-like or layered forms such as trees and plants.",
+    "Use freeform_first for rocks, abstract curves, and miscellaneous weak-topology objects.",
     "Use the structured intent hints whenever they are helpful, but correct them if they clearly conflict with the prompt or reference images.",
     "keyParts must list the highest-value readable forms first.",
     "secondaryParts should stay optional and low priority.",
@@ -140,7 +147,7 @@ export function getIntentSystemPrompt() {
 export function getReviewSystemPrompt(intent: Ai3DIntent) {
   return [
     getDslCorePrompt(),
-    `You are reviewing a generated plan for a ${intent.subjectType}.`,
+    `You are reviewing a generated plan for a ${intent.subjectType} with archetype ${intent.archetype} and strategy ${intent.assemblyStrategy}.`,
     "You will receive the original prompt, the resolved intent, the current plan, and diagnostics.",
     "Return a complete replacement plan only when the current plan clearly misses key parts, overuses generic primitives, chooses the wrong geometry family, feels too mannequin-like, or wastes budget on low-value detail.",
     "If you revise the plan, keep the same subject and stay faithful to the prompt.",
@@ -151,7 +158,7 @@ export function getReviewSystemPrompt(intent: Ai3DIntent) {
 export function getOptimizeSystemPrompt(intent: Ai3DIntent) {
   return [
     getDslCorePrompt(),
-    `You are optimizing a rendered ${intent.subjectType} plan using screenshots and diagnostics.`,
+    `You are optimizing a rendered ${intent.subjectType} plan using screenshots and diagnostics. The resolved archetype is ${intent.archetype} and the current strategy is ${intent.assemblyStrategy}.`,
     "The screenshots are isolated front, side, and top views of the current generated model.",
     "First identify the three most serious visual problems internally, then fix only those issues in the replacement plan.",
     "Focus on wrong proportions, weak silhouette, missing key parts, bad geometry choice, floating parts, messy layout, or awkward primitive stacking.",

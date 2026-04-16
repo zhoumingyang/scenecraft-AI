@@ -1,6 +1,6 @@
 import { getAi3DPlanDiagnostics, shouldAcceptAi3DPlanCandidate, type Ai3DPlanDiagnostics } from "@/lib/ai/ai3d/intent";
 import { AI3D_TOOL_NAME, type Ai3DPlan } from "@/render/editor/ai3d/plan";
-import { getAi3DProvider } from "./registry";
+import { getAi3DProvider, getAi3DProviderForIntent } from "./registry";
 import type { Ai3DGenerateContext, Ai3DOptimizeContext } from "./types";
 
 function toError(message: string) {
@@ -13,15 +13,16 @@ export async function generateAi3DPlan({
   intent,
   referenceImages = []
 }: Ai3DGenerateContext) {
-  const provider = getAi3DProvider();
+  const intentProvider = getAi3DProvider();
 
   try {
-    const intentResult = await provider.resolveIntent({
+    const intentResult = await intentProvider.resolveIntent({
       apiKey,
       prompt,
       intent,
       referenceImages
     });
+    const provider = getAi3DProviderForIntent(intentResult.result);
     const planResult = await provider.generatePlan({
       apiKey,
       prompt,
@@ -36,7 +37,11 @@ export async function generateAi3DPlan({
     });
     let traceId = planResult.traceId ?? intentResult.traceId;
 
-    if (finalDiagnostics.missingKeyParts.length > 0 || finalDiagnostics.warnings.length > 0) {
+    if (
+      finalDiagnostics.structuralScore < 75 ||
+      finalDiagnostics.problemCodes.length > 0 ||
+      finalDiagnostics.missingKeyParts.length > 0
+    ) {
       try {
         const reviewResult = await provider.reviewPlan({
           apiKey,
@@ -73,7 +78,7 @@ export async function generateAi3DPlan({
       traceId
     };
   } catch (error) {
-    throw toError(provider.toErrorMessage(error, "OpenRouter AI 3D generation"));
+    throw toError(intentProvider.toErrorMessage(error, "OpenRouter AI 3D generation"));
   }
 }
 
@@ -85,16 +90,17 @@ export async function optimizeAi3DPlan({
   intent,
   diagnostics
 }: Ai3DOptimizeContext) {
-  const provider = getAi3DProvider();
+  const intentProvider = getAi3DProvider();
 
   try {
-    const intentResult = await provider.resolveIntent({
+    const intentResult = await intentProvider.resolveIntent({
       apiKey,
       prompt,
       intent,
       referenceImages: [],
       diagnostics
     });
+    const provider = getAi3DProviderForIntent(intentResult.result);
     const baselineDiagnostics: Ai3DPlanDiagnostics =
       diagnostics ??
       getAi3DPlanDiagnostics({
@@ -126,7 +132,7 @@ export async function optimizeAi3DPlan({
       traceId: optimizeResult.traceId ?? intentResult.traceId
     };
   } catch (error) {
-    throw toError(provider.toErrorMessage(error, "OpenRouter AI 3D optimization"));
+    throw toError(intentProvider.toErrorMessage(error, "OpenRouter AI 3D optimization"));
   }
 }
 
