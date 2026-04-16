@@ -1,21 +1,35 @@
 import * as THREE from "three";
 
 import type { QuatTuple, TransformLike, TransformPatch, Vec3Tuple } from "../core/types";
-import { DEFAULT_POSITION, DEFAULT_QUATERNION, DEFAULT_SCALE, normalizeBoolean, normalizeQuat, normalizeVec3 } from "../utils/normalize";
+import {
+  DEFAULT_POSITION,
+  DEFAULT_QUATERNION,
+  DEFAULT_SCALE,
+  normalizeBoolean,
+  normalizeQuat,
+  normalizeString,
+  normalizeVec3
+} from "../utils/normalize";
 
 export class BaseEntityModel {
   readonly id: string;
+  label: string;
   locked: boolean;
   position: Vec3Tuple;
   quaternion: QuatTuple;
   scale: Vec3Tuple;
 
-  constructor(id: string, transform?: TransformLike & { locked?: boolean }) {
+  constructor(id: string, transform?: TransformLike & { locked?: boolean; label?: string }) {
     this.id = id;
+    this.label = normalizeString(transform?.label);
     this.locked = normalizeBoolean(transform?.locked, false);
     this.position = normalizeVec3(transform?.position, DEFAULT_POSITION);
     this.quaternion = normalizeQuat(transform?.quaternion, DEFAULT_QUATERNION);
     this.scale = normalizeVec3(transform?.scale, DEFAULT_SCALE);
+  }
+
+  patchLabel(label: string) {
+    this.label = normalizeString(label);
   }
 
   patchTransform(patch: TransformPatch) {

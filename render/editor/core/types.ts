@@ -26,6 +26,7 @@ export type ModelAnimationClipJSON = {
 
 export type EditorModelJSON = {
   id: string;
+  label?: string;
   source: string;
   format?: ModelFileFormat;
   assetUnit?: AssetUnit;
@@ -102,6 +103,7 @@ export type ResolvedMeshMaterialJSON = {
 
 export type EditorMeshJSON = {
   id: string;
+  label?: string;
   type: number;
   geometryName?: string;
   vertices?: EditorMeshVertexJSON[];
@@ -120,6 +122,7 @@ export type EditorMeshJSON = {
 
 export type EditorLightJSON = {
   id: string;
+  label?: string;
   type: number | string;
   locked?: boolean;
   position?: number[];
@@ -137,6 +140,7 @@ export type EditorLightJSON = {
 
 export type EditorGroupJSON = {
   id: string;
+  label?: string;
   children: string[];
   locked?: boolean;
   visible?: boolean;

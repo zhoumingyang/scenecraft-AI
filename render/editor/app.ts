@@ -132,7 +132,7 @@ export class EditorApp {
     if (!meshes) return [];
     return Array.from(meshes.values()).map((mesh, index) => ({
       id: mesh.id,
-      label: `${formatTitleCase(mesh.geometryName)} ${index + 1}`
+      label: mesh.label || `${formatTitleCase(mesh.geometryName)} ${index + 1}`
     }));
   }
 
@@ -206,6 +206,15 @@ export class EditorApp {
       type: "entity.transform",
       entityId,
       patch,
+      source
+    });
+  }
+
+  updateEntityLabel(entityId: string, label: string, source: SyncSource = "ui") {
+    void this.dispatch({
+      type: "entity.label",
+      entityId,
+      label,
       source
     });
   }

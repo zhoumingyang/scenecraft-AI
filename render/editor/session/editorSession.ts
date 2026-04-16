@@ -83,6 +83,44 @@ function createEntityId(prefix: "model" | "mesh" | "light" | "group") {
   return globalThis.crypto?.randomUUID?.() ?? `${prefix}-${Date.now().toString(36)}`;
 }
 
+function formatTitleCase(value: string) {
+  if (!value) return "Mesh";
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function createDefaultGroupLabel(index: number) {
+  return `Group ${index + 1}`;
+}
+
+function createDefaultModelLabel(index: number) {
+  return `Model ${index + 1}`;
+}
+
+function createDefaultMeshLabel(geometryName: string, index: number) {
+  return `${formatTitleCase(geometryName.trim() || "Mesh")} ${index + 1}`;
+}
+
+function createDefaultLightLabel(lightType: EditorLightJSON["type"], index: number) {
+  const normalizedType = typeof lightType === "string" ? lightType : Number(lightType);
+  const typeLabel =
+    normalizedType === 2 || normalizedType === "directional"
+      ? "Directional Light"
+      : normalizedType === 3 || normalizedType === "point"
+        ? "Point Light"
+        : normalizedType === 4 || normalizedType === "spot"
+          ? "Spot Light"
+          : normalizedType === 5 || normalizedType === "rectArea"
+            ? "Rect Area Light"
+            : "Ambient Light";
+  return `${typeLabel} ${index + 1}`;
+}
+
+function getFileBaseName(fileName: string) {
+  const trimmed = fileName.trim();
+  if (!trimmed) return "";
+  return trimmed.replace(/\.[^.]+$/, "").trim();
+}
+
 function createLightEntityId() {
   return createEntityId("light");
 }
@@ -113,6 +151,7 @@ function createMeshPayload(geometryName: string) {
   const normalizedGeometryName = geometryName.trim() || "Box";
   return {
     id: createMeshEntityId(),
+    label: normalizedGeometryName,
     type: 1,
     geometryName: normalizedGeometryName,
     material: {
@@ -171,6 +210,7 @@ function createLightPayload(lightType: EditorLightJSON["type"]): EditorLightJSON
   const normalizedType = typeof lightType === "string" ? lightType : Number(lightType);
   const base: EditorLightJSON = {
     id: createLightEntityId(),
+    label: "",
     type: normalizedType,
     position: [0, 0, 0],
     quaternion: [0, 0, 0, 1],
@@ -389,6 +429,9 @@ export class EditorSession {
       case "entity.transform":
         this.updateEntityTransform(command.entityId, command.patch, command.source ?? "ui");
         return;
+      case "entity.label":
+        this.updateEntityLabel(command.entityId, command.label, command.source ?? "ui");
+        return;
       case "camera.patch":
         this.updateCamera(command.patch, command.source ?? "ui");
         return;
@@ -442,6 +485,7 @@ export class EditorSession {
 
     const model = this.projectModel.addModel({
       id: createEntityId("model"),
+      label: getFileBaseName(file.name) || createDefaultModelLabel(this.projectModel.models.size),
       source: objectUrl,
       format,
       assetUnit: "m",
@@ -472,6 +516,20 @@ export class EditorSession {
       type: "entityUpdated",
       entityId,
       entityKind: binding.kind,
+      source
+    });
+  }
+
+  updateEntityLabel(entityId: string, label: string, source: SyncSource = "ui") {
+    if (!this.projectModel) return;
+    const record = this.projectModel.getEntityById(entityId);
+    if (!record) return;
+
+    record.item.patchLabel(label);
+    this.emit({
+      type: "entityUpdated",
+      entityId,
+      entityKind: record.kind,
       source
     });
   }
@@ -568,7 +626,10 @@ export class EditorSession {
   createLight(lightType: EditorLightJSON["type"], source: SyncSource = "ui") {
     if (!this.projectModel) return;
 
-    const light = this.projectModel.addLight(createLightPayload(lightType));
+    const light = this.projectModel.addLight({
+      ...createLightPayload(lightType),
+      label: createDefaultLightLabel(lightType, this.projectModel.lights.size)
+    });
     this.runtime.scene.remove(this.runtime.fallbackAmbientLight);
     this.registry.create(light);
     this.runtime.syncLightHelperVisibility();
@@ -642,6 +703,10 @@ export class EditorSession {
 
     const mesh = this.projectModel.addMesh({
       ...draft.mesh,
+      label:
+        draft.mesh.label ||
+        draft.label ||
+        createDefaultMeshLabel(draft.mesh.geometryName ?? "", this.projectModel.meshes.size),
       id: createMeshEntityId()
     });
     this.registry.create(mesh);
@@ -693,6 +758,7 @@ export class EditorSession {
 
     const group = this.projectModel.addGroup({
       id: createGroupEntityId(),
+      label: createDefaultGroupLabel(this.projectModel.groups.size),
       children: childIds,
       locked: false,
       visible: true,
@@ -777,6 +843,7 @@ export class EditorSession {
 
       const duplicate = this.projectModel.addGroup({
         id: createEntityId("group"),
+        label: record.item.label,
         children: childIds,
         locked: false,
         visible: record.item.visible,
@@ -797,6 +864,7 @@ export class EditorSession {
     if (record.kind === "model") {
       const duplicate = this.projectModel.addModel({
         id: createEntityId("model"),
+        label: record.item.label,
         source: record.item.source,
         format: record.item.format,
         assetUnit: record.item.assetUnit,
@@ -824,6 +892,7 @@ export class EditorSession {
     if (record.kind === "mesh") {
       const duplicate = this.projectModel.addMesh({
         id: createEntityId("mesh"),
+        label: record.item.label,
         type: record.item.meshType,
         geometryName: record.item.geometryName,
         vertices: record.item.vertices.map((vertex) => ({ ...vertex })),
@@ -898,6 +967,7 @@ export class EditorSession {
 
     const duplicate = this.projectModel.addLight({
       id: createEntityId("light"),
+      label: record.item.label,
       type: record.item.lightType,
       locked: false,
       position: [...record.item.position],

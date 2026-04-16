@@ -79,6 +79,7 @@ export class EditorProjectModel {
       },
       model: Array.from(this.models.values()).map((item) => ({
         id: item.id,
+        label: item.label,
         source: item.source,
         format: item.format,
         assetUnit: item.assetUnit,
@@ -95,6 +96,7 @@ export class EditorProjectModel {
       })),
       mesh: Array.from(this.meshes.values()).map((item) => ({
         id: item.id,
+        label: item.label,
         type: item.meshType,
         geometryName: item.geometryName,
         vertices: item.vertices.map((vertex) => ({ ...vertex })),
@@ -155,6 +157,7 @@ export class EditorProjectModel {
       })),
       light: Array.from(this.lights.values()).map((item) => ({
         id: item.id,
+        label: item.label,
         type: item.lightType,
         locked: item.locked,
         position: [...item.position],
@@ -171,6 +174,7 @@ export class EditorProjectModel {
       })),
       groups: Array.from(this.groups.values()).map((item) => ({
         id: item.id,
+        label: item.label,
         children: [...item.children],
         locked: item.locked,
         visible: item.visible,

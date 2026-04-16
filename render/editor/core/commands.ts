@@ -57,6 +57,12 @@ export type EditorCommand =
       source?: SyncSource;
     }
   | {
+      type: "entity.label";
+      entityId: string;
+      label: string;
+      source?: SyncSource;
+    }
+  | {
       type: "camera.patch";
       patch: Partial<EditorCameraJSON>;
       source?: SyncSource;
