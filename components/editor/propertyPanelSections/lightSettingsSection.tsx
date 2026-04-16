@@ -14,6 +14,7 @@ type LightSettingsSectionProps = {
   entityId: string;
   lightType: number;
   color: string;
+  groundColor: string;
   angle: number;
   penumbra: number;
   intensity: number;
@@ -27,6 +28,7 @@ export function LightSettingsSection({
   entityId,
   lightType,
   color,
+  groundColor,
   angle,
   penumbra,
   intensity,
@@ -59,6 +61,10 @@ export function LightSettingsSection({
 
   const updateColor = (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     app?.updateLight(entityId, { color: event.target.value });
+  };
+
+  const updateGroundColor = (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    app?.updateLight(entityId, { groundColor: event.target.value });
   };
 
   const commitNumber = (field: LightNumberField) => {
@@ -97,27 +103,74 @@ export function LightSettingsSection({
   return (
     <PropertyPanelSection title={t("editor.properties.light")}>
       <Stack spacing={0.8}>
-        <Stack direction="row" spacing={0.8} alignItems="center">
-          <Typography sx={{ width: 64, fontSize: 11, color: "rgba(205,220,255,0.78)" }}>
-            {t("editor.properties.intensity")}
-          </Typography>
-          <CommitNumberField
-            value={lightNumberDraft.intensity}
-            onFocus={() => setActiveField("intensity")}
-            onChange={(value) => setLightNumberDraft((prev) => ({ ...prev, intensity: value }))}
-            onCommit={() => commitNumber("intensity")}
-            onNudge={(delta) => nudgeNumber("intensity", delta)}
-            nudgeStep={0.02}
-            compact
-          />
-        </Stack>
+        {lightType === 6 ? (
+          <>
+            <Stack direction="row" spacing={0.8} alignItems="center">
+              <Typography sx={{ width: 64, fontSize: 11, color: "rgba(205,220,255,0.78)" }}>
+                {t("editor.properties.skyColor")}
+              </Typography>
+              <ColorField value={color} onChange={updateColor} compact />
+            </Stack>
 
-        <Stack direction="row" spacing={0.8} alignItems="center">
-          <Typography sx={{ width: 64, fontSize: 11, color: "rgba(205,220,255,0.78)" }}>
-            {t("editor.properties.color")}
-          </Typography>
-          <ColorField value={color} onChange={updateColor} compact />
-        </Stack>
+            <Stack direction="row" spacing={0.8} alignItems="center">
+              <Typography sx={{ width: 64, fontSize: 11, color: "rgba(205,220,255,0.78)" }}>
+                {t("editor.properties.groundColor")}
+              </Typography>
+              <ColorField value={groundColor} onChange={updateGroundColor} compact />
+            </Stack>
+
+            <Stack spacing={0.55}>
+              <Typography sx={{ fontSize: 11, color: "rgba(205,220,255,0.78)" }}>
+                {t("editor.properties.intensity")}
+              </Typography>
+              <Stack direction="row" spacing={0.9} alignItems="center">
+                <Slider
+                  size="small"
+                  min={0}
+                  max={5}
+                  step={0.01}
+                  value={intensity}
+                  onChange={(_, value) => app?.updateLight(entityId, { intensity: value as number })}
+                  sx={{ flex: 1 }}
+                />
+                <Typography
+                  sx={{
+                    minWidth: 36,
+                    textAlign: "right",
+                    fontSize: 11,
+                    color: "rgba(227,236,255,0.92)"
+                  }}
+                >
+                  {formatNumber(intensity, 2)}
+                </Typography>
+              </Stack>
+            </Stack>
+          </>
+        ) : (
+          <>
+            <Stack direction="row" spacing={0.8} alignItems="center">
+              <Typography sx={{ width: 64, fontSize: 11, color: "rgba(205,220,255,0.78)" }}>
+                {t("editor.properties.intensity")}
+              </Typography>
+              <CommitNumberField
+                value={lightNumberDraft.intensity}
+                onFocus={() => setActiveField("intensity")}
+                onChange={(value) => setLightNumberDraft((prev) => ({ ...prev, intensity: value }))}
+                onCommit={() => commitNumber("intensity")}
+                onNudge={(delta) => nudgeNumber("intensity", delta)}
+                nudgeStep={0.02}
+                compact
+              />
+            </Stack>
+
+            <Stack direction="row" spacing={0.8} alignItems="center">
+              <Typography sx={{ width: 64, fontSize: 11, color: "rgba(205,220,255,0.78)" }}>
+                {t("editor.properties.color")}
+              </Typography>
+              <ColorField value={color} onChange={updateColor} compact />
+            </Stack>
+          </>
+        )}
 
         {lightType === 3 || lightType === 4 ? (
           <>

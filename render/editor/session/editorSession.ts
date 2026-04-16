@@ -111,7 +111,9 @@ function createDefaultLightLabel(lightType: EditorLightJSON["type"], index: numb
           ? "Spot Light"
           : normalizedType === 5 || normalizedType === "rectArea"
             ? "Rect Area Light"
-            : "Ambient Light";
+            : normalizedType === 6 || normalizedType === "hemisphere"
+              ? "Hemisphere Light"
+              : "Ambient Light";
   return `${typeLabel} ${index + 1}`;
 }
 
@@ -216,6 +218,7 @@ function createLightPayload(lightType: EditorLightJSON["type"]): EditorLightJSON
     quaternion: [0, 0, 0, 1],
     scale: [1, 1, 1],
     color: "#ffffff",
+    groundColor: "#2a3548",
     intensity: 1,
     distance: 0,
     decay: 2,
@@ -241,6 +244,13 @@ function createLightPayload(lightType: EditorLightJSON["type"]): EditorLightJSON
       helper.quaternion.w
     ];
     base.intensity = 1.1;
+  }
+
+  if (normalizedType === 6 || normalizedType === "hemisphere") {
+    base.position = [0, 8, 0];
+    base.intensity = 0.9;
+    base.color = "#d7ecff";
+    base.groundColor = "#2b3244";
   }
 
   return base;
@@ -294,10 +304,6 @@ export class EditorSession {
     this.projectModel.lights.forEach((light) => this.registry.create(light));
     this.rebuildGroupHierarchy();
     this.runtime.syncLightHelperVisibility();
-
-    if (this.projectModel.lights.size === 0) {
-      this.runtime.scene.add(this.runtime.fallbackAmbientLight);
-    }
 
     this.emit({ type: "projectLoaded", projectId: this.projectModel.id });
   }
@@ -630,7 +636,6 @@ export class EditorSession {
       ...createLightPayload(lightType),
       label: createDefaultLightLabel(lightType, this.projectModel.lights.size)
     });
-    this.runtime.scene.remove(this.runtime.fallbackAmbientLight);
     this.registry.create(light);
     this.runtime.syncLightHelperVisibility();
     this.emit({
@@ -798,10 +803,6 @@ export class EditorSession {
     this.registry.remove(entityId);
     this.rebuildGroupHierarchy();
     this.runtime.syncLightHelperVisibility();
-
-    if (this.projectModel.lights.size === 0) {
-      this.runtime.scene.add(this.runtime.fallbackAmbientLight);
-    }
 
     if (this.selectedEntityId === entityId) {
       this.setSelectedEntity(null, source);
@@ -974,6 +975,7 @@ export class EditorSession {
       quaternion: [...record.item.quaternion],
       scale: [...record.item.scale],
       color: record.item.color,
+      groundColor: record.item.groundColor,
       intensity: record.item.intensity,
       distance: record.item.distance,
       decay: record.item.decay,
@@ -982,7 +984,6 @@ export class EditorSession {
       width: record.item.width,
       height: record.item.height
     });
-    this.runtime.scene.remove(this.runtime.fallbackAmbientLight);
     this.registry.create(duplicate);
     this.emit({
       type: "entityUpdated",
@@ -1050,7 +1051,6 @@ export class EditorSession {
 
   private clearProjectObjects() {
     this.registry.clear();
-    this.runtime.scene.remove(this.runtime.fallbackAmbientLight);
     this.projectModel = null;
     this.isolatedEntityId = null;
     this.isolatedVisibilitySnapshot = null;

@@ -251,6 +251,7 @@ export default function PropertyPanel() {
                         entityId={entityRecord.item.id}
                         lightType={entityRecord.item.lightType}
                         color={entityRecord.item.color}
+                        groundColor={entityRecord.item.groundColor}
                         angle={entityRecord.item.angle}
                         penumbra={entityRecord.item.penumbra}
                         intensity={entityRecord.item.intensity}

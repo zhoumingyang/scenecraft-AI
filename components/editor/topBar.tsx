@@ -40,6 +40,7 @@ const cameraOptions: SelectOption[] = [
 
 const lightOptions: SelectOption[] = [
   { value: "ambient", labelKey: "editor.light.ambient" },
+  { value: "hemisphere", labelKey: "editor.light.hemisphere" },
   { value: "directional", labelKey: "editor.light.directional" },
   { value: "point", labelKey: "editor.light.point" },
   { value: "spot", labelKey: "editor.light.spot" },
@@ -107,7 +108,7 @@ const dropdownConfigs: DropdownConfig[] = [
 
 const defaultSelectedValues: Record<string, string> = {
   camera: "bird",
-  light: "ambient",
+  light: "hemisphere",
   mesh: "box"
 };
 

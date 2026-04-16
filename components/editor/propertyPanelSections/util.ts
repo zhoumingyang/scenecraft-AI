@@ -82,6 +82,7 @@ export function getLightTypeLabel(lightType: number, t: ReturnType<typeof useI18
   if (lightType === 3) return t("editor.light.point");
   if (lightType === 4) return t("editor.light.spot");
   if (lightType === 5) return t("editor.light.rectArea");
+  if (lightType === 6) return t("editor.light.hemisphere");
   return t("editor.light.ambient");
 }
 

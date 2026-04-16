@@ -24,7 +24,9 @@ function getLightLabel(lightType: number, index: number, t: ReturnType<typeof us
           ? "editor.light.spot"
           : lightType === 5
             ? "editor.light.rectArea"
-            : "editor.light.ambient";
+            : lightType === 6
+              ? "editor.light.hemisphere"
+              : "editor.light.ambient";
   return `${t(key)} ${index + 1}`;
 }
 

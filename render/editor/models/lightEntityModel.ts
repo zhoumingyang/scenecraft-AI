@@ -11,6 +11,7 @@ import { BaseEntityModel } from "./baseEntity";
 export class LightEntityModel extends BaseEntityModel {
   lightType: number;
   color: string;
+  groundColor: string;
   intensity: number;
   distance: number;
   decay: number;
@@ -23,6 +24,7 @@ export class LightEntityModel extends BaseEntityModel {
     super(normalizeId("light", source.id, index), source);
     this.lightType = normalizeLightType(source.type);
     this.color = normalizeColor(source.color, "#ffffff");
+    this.groundColor = normalizeColor(source.groundColor, "#2a3548");
     this.intensity = normalizeNumber(source.intensity, 1);
     this.distance = normalizeNumber(source.distance, 0);
     this.decay = normalizeNumber(source.decay, 2);
@@ -34,6 +36,9 @@ export class LightEntityModel extends BaseEntityModel {
 
   patchLight(source: Partial<EditorLightJSON>) {
     if (source.color !== undefined) this.color = normalizeColor(source.color, this.color);
+    if (source.groundColor !== undefined) {
+      this.groundColor = normalizeColor(source.groundColor, this.groundColor);
+    }
     if (source.intensity !== undefined) this.intensity = normalizeNumber(source.intensity, this.intensity);
     if (source.distance !== undefined) this.distance = normalizeNumber(source.distance, this.distance);
     if (source.decay !== undefined) this.decay = normalizeNumber(source.decay, this.decay);

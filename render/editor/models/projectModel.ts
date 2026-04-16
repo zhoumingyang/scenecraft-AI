@@ -164,6 +164,7 @@ export class EditorProjectModel {
         quaternion: [...item.quaternion],
         scale: [...item.scale],
         color: item.color,
+        groundColor: item.groundColor,
         intensity: item.intensity,
         distance: item.distance,
         decay: item.decay,

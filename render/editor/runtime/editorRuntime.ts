@@ -28,7 +28,6 @@ export class EditorRuntime {
   readonly textureLoader: THREE.TextureLoader;
   readonly hdrLoader: HDRLoader;
   readonly raycaster: THREE.Raycaster;
-  readonly fallbackAmbientLight: THREE.AmbientLight;
   readonly orbitControls: OrbitControls;
   readonly firstPersonController: FirstPersonController;
   readonly transformGizmo: CustomTransformGizmo;
@@ -79,7 +78,6 @@ export class EditorRuntime {
     this.textureLoader = new THREE.TextureLoader();
     this.hdrLoader = new HDRLoader();
     this.raycaster = new THREE.Raycaster();
-    this.fallbackAmbientLight = new THREE.AmbientLight("#ffffff", 0.55);
     this.orbitControls = new OrbitControls(this.camera, this.renderer.domElement);
     this.orbitControls.enableDamping = true;
     this.orbitControls.enablePan = true;

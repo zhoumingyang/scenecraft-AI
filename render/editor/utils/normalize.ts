@@ -68,7 +68,9 @@ export function normalizeLightType(value: number | string | undefined): number {
       spot: 4,
       rect: 5,
       rectarea: 5,
-      "rect area": 5
+      "rect area": 5,
+      hemisphere: 6,
+      hemi: 6
     };
     const normalized = value.trim().toLowerCase();
     if (lookup[normalized]) return lookup[normalized];

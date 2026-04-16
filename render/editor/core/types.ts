@@ -129,6 +129,7 @@ export type EditorLightJSON = {
   quaternion?: number[];
   scale?: number[];
   color?: string;
+  groundColor?: string;
   intensity?: number;
   distance?: number;
   decay?: number;

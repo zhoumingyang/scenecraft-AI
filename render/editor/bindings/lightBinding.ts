@@ -8,6 +8,7 @@ import type { BindingContext, RenderBinding } from "./types";
 
 type SupportedLight =
   | THREE.AmbientLight
+  | THREE.HemisphereLight
   | THREE.DirectionalLight
   | THREE.PointLight
   | THREE.SpotLight
@@ -95,6 +96,14 @@ function createLightParts(model: LightEntityModel): LightBindingParts {
     return { root, light, helper };
   }
 
+  if (model.lightType === 6) {
+    const light = new THREE.HemisphereLight(model.color, model.groundColor, model.intensity);
+    root.add(light);
+    const helper = new THREE.HemisphereLightHelper(light, 0.8);
+    root.add(helper);
+    return { root, light, helper };
+  }
+
   const light = new THREE.AmbientLight(model.color, model.intensity);
   root.add(light);
   const helper = createAmbientHelper(model.color);
@@ -105,7 +114,11 @@ function createLightParts(model: LightEntityModel): LightBindingParts {
 function applyLightModelToObject(model: LightEntityModel, parts: LightBindingUpdateParts) {
   model.applyTransformToObject(parts.root);
 
-  if (parts.light instanceof THREE.AmbientLight) {
+  if (parts.light instanceof THREE.HemisphereLight) {
+    parts.light.color.set(model.color);
+    parts.light.groundColor.set(model.groundColor);
+    parts.light.intensity = model.intensity;
+  } else if (parts.light instanceof THREE.AmbientLight) {
     parts.light.color.set(model.color);
     parts.light.intensity = model.intensity;
   } else if (parts.light instanceof THREE.DirectionalLight) {
@@ -135,6 +148,8 @@ function applyLightModelToObject(model: LightEntityModel, parts: LightBindingUpd
   }
 
   if (parts.helper instanceof THREE.DirectionalLightHelper) {
+    parts.helper.update();
+  } else if (parts.helper instanceof THREE.HemisphereLightHelper) {
     parts.helper.update();
   } else if (parts.helper instanceof THREE.SpotLightHelper) {
     parts.helper.update();
@@ -178,6 +193,8 @@ export function createLightBinding(context: BindingContext, model: LightEntityMo
     refresh: () => {
       if (parts.helper instanceof THREE.DirectionalLightHelper) {
         parts.helper.update();
+      } else if (parts.helper instanceof THREE.HemisphereLightHelper) {
+        parts.helper.update();
       } else if (parts.helper instanceof THREE.SpotLightHelper) {
         parts.helper.update();
       } else if (parts.helper instanceof THREE.PointLightHelper) {
@@ -194,6 +211,7 @@ export function createLightBinding(context: BindingContext, model: LightEntityMo
       disposeAmbientHelper(parts.helper);
       if (
         parts.helper instanceof THREE.DirectionalLightHelper ||
+        parts.helper instanceof THREE.HemisphereLightHelper ||
         parts.helper instanceof THREE.PointLightHelper ||
         parts.helper instanceof THREE.SpotLightHelper ||
         parts.helper instanceof RectAreaLightHelper
@@ -214,6 +232,7 @@ export function updateLightBinding(binding: RenderBinding, patch: Partial<Editor
     (child) =>
       child !== binding.object &&
       (child instanceof THREE.DirectionalLightHelper ||
+        child instanceof THREE.HemisphereLightHelper ||
         child instanceof THREE.PointLightHelper ||
         child instanceof THREE.SpotLightHelper ||
         child instanceof RectAreaLightHelper ||
