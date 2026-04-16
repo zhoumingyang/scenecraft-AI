@@ -29,6 +29,7 @@ export default function PropertyPanel() {
   const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
   const selectedEntityId = useEditorStore((state) => state.selectedEntityId);
   const projectVersion = useEditorStore((state) => state.projectVersion);
+  const entityRenderVersion = useEditorStore((state) => state.entityRenderVersion);
   const viewStateVersion = useEditorStore((state) => state.viewStateVersion);
   const inspectorMode = useEditorStore((state) => state.aiImage.inspectorMode);
   const [open, setOpen] = useState(true);
@@ -51,7 +52,7 @@ export default function PropertyPanel() {
     return {
       ...record
     };
-  }, [app, selectedEntityId, projectVersion]);
+  }, [app, selectedEntityId, projectVersion, entityRenderVersion]);
 
   const panelTitle =
     inspectorMode === "ai"

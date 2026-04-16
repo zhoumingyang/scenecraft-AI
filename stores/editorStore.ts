@@ -61,6 +61,7 @@ type EditorStoreState = {
   editorThemeMode: EditorThemeMode;
   selectedEntityId: string | null;
   projectVersion: number;
+  entityRenderVersion: number;
   projectLoadVersion: number;
   cameraVersion: number;
   viewStateVersion: number;
@@ -71,6 +72,7 @@ type EditorStoreState = {
   setEditorThemeMode: (mode: EditorThemeMode) => void;
   setSelectedEntityId: (selectedEntityId: string | null) => void;
   bumpProjectVersion: () => void;
+  bumpEntityRenderVersion: () => void;
   bumpProjectLoadVersion: () => void;
   bumpCameraVersion: () => void;
   bumpViewStateVersion: () => void;
@@ -101,6 +103,7 @@ export const useEditorStore = create<EditorStoreState>((set) => ({
   editorThemeMode: "dark",
   selectedEntityId: null,
   projectVersion: 0,
+  entityRenderVersion: 0,
   projectLoadVersion: 0,
   cameraVersion: 0,
   viewStateVersion: 0,
@@ -141,6 +144,10 @@ export const useEditorStore = create<EditorStoreState>((set) => ({
   setEditorThemeMode: (editorThemeMode) => set({ editorThemeMode }),
   setSelectedEntityId: (selectedEntityId) => set({ selectedEntityId }),
   bumpProjectVersion: () => set((state) => ({ projectVersion: state.projectVersion + 1 })),
+  bumpEntityRenderVersion: () =>
+    set((state) => ({
+      entityRenderVersion: state.entityRenderVersion + 1
+    })),
   bumpProjectLoadVersion: () =>
     set((state) => ({
       projectLoadVersion: state.projectLoadVersion + 1

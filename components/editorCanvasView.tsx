@@ -26,6 +26,7 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
   const setEditorThemeMode = useEditorStore((state) => state.setEditorThemeMode);
   const setSelectedEntityId = useEditorStore((state) => state.setSelectedEntityId);
   const bumpProjectVersion = useEditorStore((state) => state.bumpProjectVersion);
+  const bumpEntityRenderVersion = useEditorStore((state) => state.bumpEntityRenderVersion);
   const bumpProjectLoadVersion = useEditorStore((state) => state.bumpProjectLoadVersion);
   const bumpCameraVersion = useEditorStore((state) => state.bumpCameraVersion);
   const bumpViewStateVersion = useEditorStore((state) => state.bumpViewStateVersion);
@@ -56,6 +57,10 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
       }
 
       if (event.type === "entityUpdated") {
+        if (event.source === "render") {
+          bumpEntityRenderVersion();
+          return;
+        }
         bumpProjectVersion();
         return;
       }
@@ -93,6 +98,7 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
   }, [
     bumpProjectLoadVersion,
     bumpProjectVersion,
+    bumpEntityRenderVersion,
     bumpCameraVersion,
     bumpViewStateVersion,
     setApp,
