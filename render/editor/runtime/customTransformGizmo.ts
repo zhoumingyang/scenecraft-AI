@@ -33,6 +33,7 @@ type ActiveDrag =
       plane: THREE.Plane;
       startVector: THREE.Vector3;
       startQuaternion: THREE.Quaternion;
+      currentAngle: number;
     };
 
 type PointerInfo = {
@@ -208,6 +209,14 @@ export class CustomTransformGizmo {
     return this.dragging;
   }
 
+  getActiveRotateAxisDrag() {
+    if (!this.activeDrag || this.activeDrag.type !== "rotate-axis") return null;
+    return {
+      axis: this.activeDrag.axis,
+      angle: this.activeDrag.currentAngle
+    };
+  }
+
   beginPointerInteraction(info: PointerInfo): boolean {
     if (!this.target) return false;
 
@@ -289,7 +298,8 @@ export class CustomTransformGizmo {
         origin: origin.clone(),
         plane,
         startVector: point.sub(origin).normalize(),
-        startQuaternion: this.target.quaternion.clone()
+        startQuaternion: this.target.quaternion.clone(),
+        currentAngle: 0
       };
       this.dragging = true;
       this.updateVisualState();
@@ -332,6 +342,7 @@ export class CustomTransformGizmo {
     const sin = axisVector.dot(this.tmpV3.crossVectors(this.activeDrag.startVector, currentVector));
     const cos = this.activeDrag.startVector.dot(currentVector);
     const angle = Math.atan2(sin, cos);
+    this.activeDrag.currentAngle = angle;
 
     const rotation = new THREE.Quaternion().setFromAxisAngle(axisVector, angle);
     this.target.quaternion.copy(this.activeDrag.startQuaternion).premultiply(rotation);

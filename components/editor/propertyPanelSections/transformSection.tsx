@@ -1,5 +1,6 @@
 "use client";
 
+import * as THREE from "three";
 import { useEffect, useRef, useState } from "react";
 import { Checkbox, FormControlLabel, Stack, Typography } from "@mui/material";
 import PropertyPanelSection from "@/components/common/propertyPanelSection";
@@ -33,6 +34,10 @@ export function TransformSection({
   const [positionDraft, setPositionDraft] = useState(buildDefaultPositionDraft);
   const [rotationDraft, setRotationDraft] = useState<[number, number, number]>(buildDefaultRotationDraft);
   const lastRotationQuaternionRef = useRef<string | null>(null);
+  const gizmoRotationDraftRef = useRef<{
+    axis: Axis;
+    startDraft: [number, number, number];
+  } | null>(null);
 
   useEffect(() => {
     if (activePositionAxis) return;
@@ -53,6 +58,34 @@ export function TransformSection({
       return;
     }
 
+    const activeGizmoRotation = app?.getActiveTransformRotationDrag() ?? null;
+    if (activeGizmoRotation) {
+      setRotationDraft((prev) => {
+        const currentSession = gizmoRotationDraftRef.current;
+        if (!currentSession || currentSession.axis !== activeGizmoRotation.axis) {
+          gizmoRotationDraftRef.current = {
+            axis: activeGizmoRotation.axis,
+            startDraft: [...prev] as [number, number, number]
+          };
+        }
+
+        const session = gizmoRotationDraftRef.current;
+        if (!session) return prev;
+        const next = [...session.startDraft] as [number, number, number];
+        next[AXIS_INDEX[activeGizmoRotation.axis]] = THREE.MathUtils.euclideanModulo(
+          session.startDraft[AXIS_INDEX[activeGizmoRotation.axis]] +
+            THREE.MathUtils.radToDeg(activeGizmoRotation.angle),
+          360
+        );
+
+        return prev[0] === next[0] && prev[1] === next[1] && prev[2] === next[2] ? prev : next;
+      });
+      lastRotationQuaternionRef.current = quaternionKey;
+      return;
+    }
+
+    gizmoRotationDraftRef.current = null;
+
     if (lastRotationQuaternionRef.current === quaternionKey) return;
 
     setRotationDraft((prev) => {
@@ -60,7 +93,7 @@ export function TransformSection({
       return prev[0] === next[0] && prev[1] === next[1] && prev[2] === next[2] ? prev : next;
     });
     lastRotationQuaternionRef.current = quaternionKey;
-  }, [activeRotationAxis, quaternion]);
+  }, [activeRotationAxis, app, quaternion]);
 
   const commitPosition = () => {
     if (!app) return;

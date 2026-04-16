@@ -237,6 +237,10 @@ export class EditorRuntime {
     return this.transformGizmo.isVisible();
   }
 
+  getActiveTransformRotationDrag() {
+    return this.transformGizmo.getActiveRotateAxisDrag();
+  }
+
   setTransformGizmoVisible(visible: boolean) {
     this.transformGizmo.setVisible(visible);
   }

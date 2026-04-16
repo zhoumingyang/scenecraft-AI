@@ -167,6 +167,10 @@ export class EditorApp {
     };
   }
 
+  getActiveTransformRotationDrag() {
+    return this.runtime.getActiveTransformRotationDrag();
+  }
+
   setViewHelperVisibility(
     helper: "gridHelper" | "transformGizmo" | "lightHelper",
     visible: boolean
