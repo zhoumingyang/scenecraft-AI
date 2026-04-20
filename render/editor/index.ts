@@ -25,6 +25,8 @@ export {
   ModelEntityModel
 } from "./models";
 export { createDefaultEditorProjectJSON, createEmptyEditorProjectJSON } from "./factories/projectFactory";
+export { getLightPresetDefinition, LIGHT_PRESET_DEFINITIONS, LIGHT_PRESET_IDS } from "./lightPresets";
+export type { LightPresetDefinition, LightPresetId, LightPresetLightDefinition } from "./lightPresets";
 export * from "./core/types";
 export * from "./core/events";
 export * from "./utils/normalize";

@@ -16,6 +16,8 @@ import { BindingRegistry } from "../bindings/bindingRegistry";
 import { updateLightBinding } from "../bindings/lightBinding";
 import { updateMeshBindingMaterial } from "../bindings/meshBinding";
 import { pickEntityId } from "../interaction/picker";
+import { getLightPresetDefinition } from "../lightPresets";
+import type { LightPresetId } from "../lightPresets";
 import { EditorProjectModel, MeshEntityModel, ModelEntityModel } from "../models";
 import { createEmptyEditorProjectJSON } from "../factories/projectFactory";
 import { EditorRuntime } from "../runtime/editorRuntime";
@@ -456,6 +458,9 @@ export class EditorSession {
       case "light.create":
         this.createLight(command.lightType, command.source ?? "ui");
         return;
+      case "lightPreset.create":
+        await this.createLightPreset(command.presetId, command.source ?? "ui");
+        return;
       case "model.animation.select":
         this.selectModelAnimation(command.entityId, command.animationId, command.source ?? "ui");
         return;
@@ -647,6 +652,55 @@ export class EditorSession {
     this.setSelectedEntity(light.id, source);
   }
 
+  async createLightPreset(presetId: LightPresetId, source: SyncSource = "ui") {
+    if (!this.projectModel) {
+      await this.loadProject(createEmptyEditorProjectJSON());
+    }
+    if (!this.projectModel) return;
+
+    const preset = getLightPresetDefinition(presetId);
+    const group = this.projectModel.addGroup({
+      id: createGroupEntityId(),
+      label: preset.label,
+      children: [],
+      locked: false,
+      visible: true,
+      position: [0, 0, 0],
+      quaternion: [0, 0, 0, 1],
+      scale: [1, 1, 1]
+    });
+
+    this.registry.create(group);
+
+    const childIds = preset.lights.map((presetLight) => {
+      const light = this.projectModel!.addLight({
+        id: createLightEntityId(),
+        label: presetLight.label,
+        locked: false,
+        ...presetLight.light
+      });
+      this.registry.create(light);
+      this.emit({
+        type: "entityUpdated",
+        entityId: light.id,
+        entityKind: "light",
+        source
+      });
+      return light.id;
+    });
+
+    group.children = childIds;
+    this.rebuildGroupHierarchy();
+    this.runtime.syncLightHelperVisibility();
+    this.emit({
+      type: "entityUpdated",
+      entityId: group.id,
+      entityKind: "group",
+      source
+    });
+    this.setSelectedEntity(group.id, source);
+  }
+
   syncEntityModelFromRenderObject(entityId: string) {
     const binding = this.registry.syncObjectTransformToModel(entityId);
     if (!binding) return;
@@ -792,10 +846,28 @@ export class EditorSession {
     if (!binding || binding.model.locked || !this.projectModel.isEntityEffectivelyVisible(entityId)) return;
 
     if (binding.kind === "group") {
-      const parentGroupId = this.projectModel.getParentGroupId(entityId);
-      this.projectModel.listDirectChildren(entityId).forEach((childId) => {
-        this.registry.attach(childId, parentGroupId, this.runtime.scene);
-      });
+      const childIds = this.projectModel.listDirectChildren(entityId);
+      const shouldRemoveChildren =
+        childIds.length > 0 &&
+        childIds.every((childId) => this.projectModel?.getEntityById(childId)?.kind === "light");
+
+      if (shouldRemoveChildren) {
+        childIds.forEach((childId) => {
+          this.projectModel?.removeEntity(childId);
+          this.registry.remove(childId);
+          this.emit({
+            type: "entityUpdated",
+            entityId: childId,
+            entityKind: "light",
+            source
+          });
+        });
+      } else {
+        const parentGroupId = this.projectModel.getParentGroupId(entityId);
+        childIds.forEach((childId) => {
+          this.registry.attach(childId, parentGroupId, this.runtime.scene);
+        });
+      }
     }
 
     const removedKind = this.projectModel.removeEntity(entityId);

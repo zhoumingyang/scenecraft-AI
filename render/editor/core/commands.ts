@@ -7,6 +7,7 @@ import type {
   SyncSource,
   TransformPatch
 } from "./types";
+import type { LightPresetId } from "../lightPresets";
 
 export type MeshMaterialPatch = Partial<EditorMeshMaterialJSON>;
 
@@ -92,6 +93,11 @@ export type EditorCommand =
   | {
       type: "light.create";
       lightType: EditorLightJSON["type"];
+      source?: SyncSource;
+    }
+  | {
+      type: "lightPreset.create";
+      presetId: LightPresetId;
       source?: SyncSource;
     }
   | {

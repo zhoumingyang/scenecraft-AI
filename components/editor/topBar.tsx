@@ -10,9 +10,10 @@ import VideocamRoundedIcon from "@mui/icons-material/VideocamRounded";
 import LightModeRoundedIcon from "@mui/icons-material/LightModeRounded";
 import GridViewRoundedIcon from "@mui/icons-material/GridViewRounded";
 import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
-import DropdownMenu from "@/components/common/dropdownMenu";
+import DropdownMenu, { DropdownMenuItem } from "@/components/common/dropdownMenu";
 import { getEditorThemeTokens } from "@/components/editor/theme";
 import { useI18n, TranslationKey } from "@/lib/i18n";
+import type { LightPresetId } from "@/render/editor";
 import { createDefaultEditorProjectJSON, inferModelFileFormat } from "@/render/editor";
 import { useEditorStore } from "@/stores/editorStore";
 
@@ -45,6 +46,15 @@ const lightOptions: SelectOption[] = [
   { value: "point", labelKey: "editor.light.point" },
   { value: "spot", labelKey: "editor.light.spot" },
   { value: "rectArea", labelKey: "editor.light.rectArea" }
+];
+
+const lightPresetOptions: Array<{ value: LightPresetId; labelKey: TranslationKey }> = [
+  { value: "softDayInterior", labelKey: "editor.lightPreset.softDayInterior" },
+  { value: "warmHome", labelKey: "editor.lightPreset.warmHome" },
+  { value: "studioThreePoint", labelKey: "editor.lightPreset.studioThreePoint" },
+  { value: "productShowcase", labelKey: "editor.lightPreset.productShowcase" },
+  { value: "nightStreet", labelKey: "editor.lightPreset.nightStreet" },
+  { value: "moonlightExterior", labelKey: "editor.lightPreset.moonlightExterior" }
 ];
 
 const meshOptions: SelectOption[] = [
@@ -228,55 +238,94 @@ export default function TopBar() {
     await app.dispatch({ type: "project.clear" });
   };
 
-  const activeItems =
-    activeConfig?.options.map((option) => ({
-      key: option.value,
-      selected: selectedValues[activeConfig.id] === option.value,
-      label: t(option.labelKey),
-      onClick: async () => {
-        if (activeConfig.id === "project" && option.value === "new") {
-          await onCreateProject();
-          closeMenu();
-          return;
-        }
+  const createMenuItem = (
+    option: SelectOption | { value: LightPresetId; labelKey: TranslationKey },
+    kind: "default" | "lightPreset" = "default"
+  ): DropdownMenuItem => ({
+    key: `${kind}:${option.value}`,
+    selected: activeConfig ? selectedValues[activeConfig.id] === option.value : false,
+    label: t(option.labelKey),
+    onClick: async () => {
+      if (!activeConfig) return;
 
-        if (activeConfig.id === "import") {
-          if (option.value === "model") onImportModel();
-          if (option.value === "pano") onImportPano();
-          closeMenu();
-          return;
-        }
+      if (activeConfig.id === "project" && option.value === "new") {
+        await onCreateProject();
+        closeMenu();
+        return;
+      }
 
-        if (
-          activeConfig.id === "camera" ||
-          activeConfig.id === "light" ||
-          activeConfig.id === "mesh"
-        ) {
-          setSelectedValues((prev) => ({ ...prev, [activeConfig.id]: option.value }));
-        }
-        if (activeConfig.id === "camera" && app) {
+      if (activeConfig.id === "import") {
+        if (option.value === "model") onImportModel();
+        if (option.value === "pano") onImportPano();
+        closeMenu();
+        return;
+      }
+
+      if (
+        activeConfig.id === "camera" ||
+        activeConfig.id === "light" ||
+        activeConfig.id === "mesh"
+      ) {
+        setSelectedValues((prev) => ({ ...prev, [activeConfig.id]: option.value }));
+      }
+
+      if (activeConfig.id === "camera" && app) {
+        await app.dispatch({
+          type: "camera.patch",
+          patch: {
+            type: option.value === "firstPerson" ? 2 : 1
+          }
+        });
+      }
+
+      if (activeConfig.id === "light" && app) {
+        if (kind === "lightPreset") {
           await app.dispatch({
-            type: "camera.patch",
-            patch: {
-              type: option.value === "firstPerson" ? 2 : 1
-            }
+            type: "lightPreset.create",
+            presetId: option.value as LightPresetId
           });
-        }
-        if (activeConfig.id === "light" && app) {
+        } else {
           await app.dispatch({
             type: "light.create",
             lightType: option.value
           });
         }
-        if (activeConfig.id === "mesh" && app) {
-          await app.dispatch({
-            type: "mesh.create",
-            geometryName: option.value
-          });
-        }
-        closeMenu();
       }
-    })) || [];
+
+      if (activeConfig.id === "mesh" && app) {
+        await app.dispatch({
+          type: "mesh.create",
+          geometryName: option.value
+        });
+      }
+
+      closeMenu();
+    }
+  });
+
+  const activeItems: DropdownMenuItem[] =
+    !activeConfig
+      ? []
+      : activeConfig.id === "light"
+        ? [
+            {
+              type: "section",
+              key: "light-section",
+              label: t("editor.light.section")
+            },
+            ...lightOptions.map((option) => createMenuItem(option)),
+            {
+              type: "divider",
+              key: "light-divider"
+            },
+            {
+              type: "section",
+              key: "light-preset-section",
+              label: t("editor.lightPreset.section")
+            },
+            ...lightPresetOptions.map((option) => createMenuItem(option, "lightPreset"))
+          ]
+        : activeConfig.options.map((option) => createMenuItem(option));
 
   return (
     <>
