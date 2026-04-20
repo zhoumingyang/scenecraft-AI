@@ -91,21 +91,21 @@ export const LIGHT_PRESET_DEFINITIONS: Record<LightPresetId, LightPresetDefiniti
         position: [0, 8, 0],
         color: "#dfeeff",
         groundColor: "#39455c",
-        intensity: 0.85
+        intensity: 0.55
       }),
       createLightDefinition("Sun Key", {
         type: "directional",
         position: [6, 8, 5],
         target: [0, 1, 0],
         color: "#fff1d6",
-        intensity: 1.1
+        intensity: 0.8
       }),
       createLightDefinition("Window Fill", {
         type: "rectArea",
         position: [-3, 3, 2],
         target: [0, 1.2, 0],
         color: "#fff8ee",
-        intensity: 5,
+        intensity: 2.8,
         width: 3,
         height: 4.5
       })
@@ -120,14 +120,14 @@ export const LIGHT_PRESET_DEFINITIONS: Record<LightPresetId, LightPresetDefiniti
         position: [0, 6, 0],
         color: "#ffe8c4",
         groundColor: "#4a362c",
-        intensity: 0.45
+        intensity: 0.28
       }),
       createLightDefinition("Ceiling Lamp", {
         type: "rectArea",
         position: [2.5, 2.8, 2.5],
         target: [0, 1, 0],
         color: "#ffd3a1",
-        intensity: 6,
+        intensity: 3.2,
         width: 2,
         height: 2
       }),
@@ -135,7 +135,7 @@ export const LIGHT_PRESET_DEFINITIONS: Record<LightPresetId, LightPresetDefiniti
         type: "point",
         position: [-2, 1.8, -1.5],
         color: "#ffb76a",
-        intensity: 70,
+        intensity: 26,
         distance: 9,
         decay: 2
       })
@@ -150,8 +150,8 @@ export const LIGHT_PRESET_DEFINITIONS: Record<LightPresetId, LightPresetDefiniti
         position: [3, 4, 3],
         target: [0, 1.2, 0],
         color: "#fff8f0",
-        intensity: 180,
-        distance: 16,
+        intensity: 70,
+        distance: 14,
         decay: 2,
         angle: 0.72,
         penumbra: 0.35
@@ -161,7 +161,7 @@ export const LIGHT_PRESET_DEFINITIONS: Record<LightPresetId, LightPresetDefiniti
         position: [-3, 2.6, 2],
         target: [0, 1.1, 0],
         color: "#f5fbff",
-        intensity: 3,
+        intensity: 2,
         width: 2.5,
         height: 2
       }),
@@ -170,8 +170,8 @@ export const LIGHT_PRESET_DEFINITIONS: Record<LightPresetId, LightPresetDefiniti
         position: [0, 4, -3],
         target: [0, 1.4, 0],
         color: "#d7ebff",
-        intensity: 90,
-        distance: 14,
+        intensity: 28,
+        distance: 12,
         decay: 2,
         angle: 0.55,
         penumbra: 0.3
@@ -187,7 +187,7 @@ export const LIGHT_PRESET_DEFINITIONS: Record<LightPresetId, LightPresetDefiniti
         position: [3, 3, 2],
         target: [0, 1, 0],
         color: "#fffaf2",
-        intensity: 8,
+        intensity: 4.5,
         width: 3,
         height: 2
       }),
@@ -196,7 +196,7 @@ export const LIGHT_PRESET_DEFINITIONS: Record<LightPresetId, LightPresetDefiniti
         position: [-3, 2.5, 1.5],
         target: [0, 1, 0],
         color: "#edf6ff",
-        intensity: 4,
+        intensity: 2,
         width: 2.5,
         height: 2
       }),
@@ -205,7 +205,7 @@ export const LIGHT_PRESET_DEFINITIONS: Record<LightPresetId, LightPresetDefiniti
         position: [0, 5, -4],
         target: [0, 1, 0],
         color: "#dceaff",
-        intensity: 0.7
+        intensity: 0.45
       })
     ]
   },
@@ -218,15 +218,15 @@ export const LIGHT_PRESET_DEFINITIONS: Record<LightPresetId, LightPresetDefiniti
         position: [0, 7, 0],
         color: "#89a8ff",
         groundColor: "#141b2c",
-        intensity: 0.25
+        intensity: 0.16
       }),
       createLightDefinition("Overhead Spot", {
         type: "spot",
         position: [0, 5, 0],
         target: [0, 0.8, 0],
         color: "#b9d1ff",
-        intensity: 160,
-        distance: 18,
+        intensity: 60,
+        distance: 16,
         decay: 2,
         angle: 0.7,
         penumbra: 0.45
@@ -235,16 +235,16 @@ export const LIGHT_PRESET_DEFINITIONS: Record<LightPresetId, LightPresetDefiniti
         type: "point",
         position: [-3, 2, 1],
         color: "#ffbf66",
-        intensity: 95,
-        distance: 12,
+        intensity: 34,
+        distance: 11,
         decay: 2
       }),
       createLightDefinition("Neon Right", {
         type: "point",
         position: [3, 2, -1],
         color: "#ffcf7d",
-        intensity: 80,
-        distance: 10,
+        intensity: 28,
+        distance: 9,
         decay: 2
       })
     ]
@@ -258,22 +258,22 @@ export const LIGHT_PRESET_DEFINITIONS: Record<LightPresetId, LightPresetDefiniti
         position: [-6, 8, 4],
         target: [0, 1, 0],
         color: "#adc8ff",
-        intensity: 0.8
+        intensity: 0.55
       }),
       createLightDefinition("Night Hemisphere", {
         type: "hemisphere",
         position: [0, 8, 0],
         color: "#7e9ee8",
         groundColor: "#132034",
-        intensity: 0.35
+        intensity: 0.22
       }),
       createLightDefinition("Rim Accent", {
         type: "spot",
         position: [0, 3.5, -4],
         target: [0, 1.1, 0],
         color: "#bdd2ff",
-        intensity: 70,
-        distance: 14,
+        intensity: 20,
+        distance: 12,
         decay: 2,
         angle: 0.62,
         penumbra: 0.3
