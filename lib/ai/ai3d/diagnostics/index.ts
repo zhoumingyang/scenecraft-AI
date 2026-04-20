@@ -112,3 +112,15 @@ export function shouldAcceptAi3DPlanCandidate({
 
   return candidate.warnings.length <= baseline.warnings.length;
 }
+
+export function getAi3DDiagnosticPromptSummary(diagnostics: Ai3DPlanDiagnostics, limit = 3) {
+  const topProblemCodes = diagnostics.problemCodes.slice(0, limit);
+  const topWarnings = diagnostics.warnings.slice(0, limit);
+
+  return [
+    `Evaluator: ${diagnostics.evaluator}`,
+    `Structural score: ${diagnostics.structuralScore.toFixed(1)}`,
+    topProblemCodes.length > 0 ? `Top problem codes: ${topProblemCodes.join(", ")}` : "Top problem codes: none",
+    topWarnings.length > 0 ? `Top warnings: ${topWarnings.join(" | ")}` : "Top warnings: none"
+  ].join("\n");
+}

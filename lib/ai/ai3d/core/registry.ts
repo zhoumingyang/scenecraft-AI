@@ -1,11 +1,19 @@
 import type { Ai3DIntent } from "@/lib/ai/ai3d/intent";
 import type { Ai3DProvider } from "./types";
 import { getAi3DProviderKeyForIntent } from "./strategy";
-import { openRouterAi3DProvider } from "@/lib/ai/ai3d/providers/openrouter";
+import {
+  openRouterAi3DProvider,
+  openRouterHumanoidTemplateProvider,
+  openRouterTreeRuleProvider
+} from "@/lib/ai/ai3d/providers/openrouter";
 
 const DEFAULT_PROVIDER_KEY = "openrouter-freeform";
 
-const providerRegistry = new Map<string, Ai3DProvider>([[openRouterAi3DProvider.key, openRouterAi3DProvider]]);
+const providerRegistry = new Map<string, Ai3DProvider>([
+  [openRouterAi3DProvider.key, openRouterAi3DProvider],
+  [openRouterHumanoidTemplateProvider.key, openRouterHumanoidTemplateProvider],
+  [openRouterTreeRuleProvider.key, openRouterTreeRuleProvider]
+]);
 
 export function getAi3DProvider(key = DEFAULT_PROVIDER_KEY) {
   const provider = providerRegistry.get(key);

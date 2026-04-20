@@ -1,7 +1,9 @@
 import axios from "axios";
 import { getResponseHeader } from "@/lib/http/axios";
 import type { Ai3DProvider } from "@/lib/ai/ai3d/core/types";
+import { openRouterTreeRuleProvider } from "./treeRule";
 import type { OpenRouterTextResponse } from "./types";
+import { openRouterHumanoidTemplateProvider } from "./humanoidTemplate";
 import {
   optimizeAi3DPlan,
   requestAi3DPlan,
@@ -37,6 +39,8 @@ export const openRouterAi3DProvider: Ai3DProvider = {
   optimizePlan: optimizeAi3DPlan,
   toErrorMessage: toAi3DErrorMessage
 };
+
+export { openRouterHumanoidTemplateProvider, openRouterTreeRuleProvider };
 
 export async function generateAi3DPlanWithOpenRouter(args: Parameters<typeof resolveAi3DIntent>[0] & {
   referenceImages?: string[];

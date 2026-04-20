@@ -43,7 +43,7 @@ export function extractJsonObject(raw: string) {
   throw new Error("OpenRouter did not return a valid JSON object for the AI 3D pipeline.");
 }
 
-function parseJsonWithValidator<T>(raw: string, validate: (value: unknown) => T) {
+export function parseJsonWithValidator<T>(raw: string, validate: (value: unknown) => T) {
   return validate(JSON.parse(extractJsonObject(raw)));
 }
 

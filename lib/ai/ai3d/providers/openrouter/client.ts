@@ -17,18 +17,20 @@ const openRouterAi3DClient = createHttpClient({
 export async function requestStructuredResponse({
   apiKey,
   model,
-  messages
+  messages,
+  temperature
 }: {
   apiKey: string;
   model?: string;
   messages: OpenRouterRequestMessage[];
+  temperature?: number;
 }) {
   const response = await openRouterAi3DClient.post<OpenRouterTextResponse>(
     getOpenRouterChatCompletionsEndpoint(),
     {
       model: model ?? OPENROUTER_AI3D_MODEL,
       messages,
-      temperature: 0.2,
+      temperature: temperature ?? 0.2,
       stream: false
     },
     {

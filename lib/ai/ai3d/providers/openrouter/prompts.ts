@@ -120,6 +120,75 @@ export function getPlanSystemPrompt(intent: Ai3DIntent) {
   return [getDslCorePrompt(), getCategoryModulePrompt(intent), ...(getFewShotExamples(intent) ?? [])].join(" ");
 }
 
+export function getHumanoidTemplateParamsSystemPrompt() {
+  return [
+    "You are selecting parameters for a predefined humanoid low-poly sketch template.",
+    "You must not invent geometry or output a DSL plan.",
+    "Return only one valid JSON object with this exact shape:",
+    '{"bodyStyle":"adult|heroic|chibi","headScale":1,"torsoHeightScale":1,"torsoWidthScale":1,"armLengthScale":1,"legLengthScale":1,"limbThicknessScale":1,"shoulderWidthScale":1,"stanceWidth":0.28,"palette":"blue_slate|olive_khaki|rose_cream|mono_dark","faceStyle":"minimal|friendly","optionalFeatures":["eyes","mouth","nose"]}',
+    "Use the template to produce a readable standing humanoid.",
+    "Keep all numeric values within the implied range around 1.0 and keep stanceWidth between 0.18 and 0.48.",
+    "Choose bodyStyle chibi only when the prompt or style strongly implies a cute oversized-head character.",
+    "Always include eyes and mouth unless the prompt clearly suggests a faceless character.",
+    "Never return markdown, comments, prose, or fields outside the schema."
+  ].join(" ");
+}
+
+export function getHumanoidTemplateReviewSystemPrompt() {
+  return [
+    "You are correcting parameters for a predefined humanoid low-poly sketch template.",
+    "You will receive the prompt, resolved intent, current template parameters, and diagnostics.",
+    "Return only one corrected parameter JSON object with the same shape.",
+    "If diagnostics include problem codes, change at least one relevant parameter.",
+    "Fix proportions, stance width, limb thickness, or palette only when diagnostics indicate a clear issue.",
+    "Preserve the same subject identity and keep the humanoid template structure."
+  ].join(" ");
+}
+
+export function getHumanoidTemplateOptimizeSystemPrompt() {
+  return [
+    "You are optimizing parameters for a predefined humanoid low-poly sketch template using screenshots and diagnostics.",
+    "Return only one corrected parameter JSON object with the same shape.",
+    "If there are problem codes or visible silhouette issues, return parameters that differ from the current parameters.",
+    "Focus on proportions, silhouette, limb placement impression, stance width, and head-to-body balance.",
+    "Do not output a DSL plan and do not change away from the humanoid template."
+  ].join(" ");
+}
+
+export function getTreeRuleParamsSystemPrompt() {
+  return [
+    "You are selecting parameters for a predefined rule-based low-poly tree generator.",
+    "You must not output a DSL plan.",
+    "Return only one valid JSON object with this exact shape:",
+    '{"trunkHeightScale":1,"trunkThicknessScale":1,"trunkLean":0,"branchCount":3,"branchLengthScale":1,"branchLift":0.6,"canopyWidthScale":1,"canopyHeightScale":1,"canopyStyle":"rounded|layered|cone","rootFlare":1,"asymmetry":0.18,"palette":"oak|pine|spring|autumn"}',
+    "Use rounded or layered canopies for broadleaf trees and cone for conifer-like trees.",
+    "Keep branchCount between 2 and 5 and keep trunkLean between -0.22 and 0.22.",
+    "Prefer slight asymmetry for natural-looking trees unless the prompt strongly suggests a highly graphic icon.",
+    "Never return markdown, comments, prose, or fields outside the schema."
+  ].join(" ");
+}
+
+export function getTreeRuleReviewSystemPrompt() {
+  return [
+    "You are correcting parameters for a predefined low-poly tree rule generator.",
+    "You will receive the prompt, resolved intent, current generated plan, and diagnostics.",
+    "Return only one corrected parameter JSON object with the same shape.",
+    "If diagnostics include problem codes, change at least one relevant parameter.",
+    "Fix trunk proportion, branch count, canopy distribution, lean, or palette only when diagnostics indicate a clear issue.",
+    "Preserve the same tree identity and stay within the rule-based generator."
+  ].join(" ");
+}
+
+export function getTreeRuleOptimizeSystemPrompt() {
+  return [
+    "You are optimizing parameters for a predefined low-poly tree rule generator using screenshots and diagnostics.",
+    "Return only one corrected parameter JSON object with the same shape.",
+    "If there are problem codes or visible silhouette issues, return parameters that differ from the current parameters.",
+    "Focus on trunk-to-canopy balance, canopy clustering, upward growth, and grounding.",
+    "Do not output a DSL plan and do not change away from the tree rule generator."
+  ].join(" ");
+}
+
 export function getIntentSystemPrompt() {
   return [
     "You are an AI 3D intent normalizer for a browser editor.",

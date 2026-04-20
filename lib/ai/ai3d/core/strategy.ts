@@ -20,6 +20,14 @@ export function getDefaultAssemblyStrategyForArchetype(
 }
 
 export function getAi3DProviderKeyForIntent(intent: Ai3DIntent) {
+  if (intent.archetype === "humanoid" && intent.assemblyStrategy === "template_first") {
+    return "openrouter-humanoid-template";
+  }
+
+  if (intent.archetype === "tree" && intent.assemblyStrategy === "rule_first") {
+    return "openrouter-tree-rule";
+  }
+
   switch (intent.assemblyStrategy) {
     case "template_first":
     case "rule_first":

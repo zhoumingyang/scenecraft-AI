@@ -1,4 +1,9 @@
-import type { Ai3DIntent, Ai3DIntentInput, Ai3DPlanDiagnostics } from "@/lib/ai/ai3d/intent";
+import {
+  getAi3DDiagnosticPromptSummary,
+  type Ai3DIntent,
+  type Ai3DIntentInput,
+  type Ai3DPlanDiagnostics
+} from "@/lib/ai/ai3d/intent";
 import { AI3D_TOOL_NAME, type Ai3DPlan } from "@/render/editor/ai3d/plan";
 import type { Ai3DStructuredResult } from "@/lib/ai/ai3d/core/types";
 import { OPENROUTER_AI3D_MODEL, requestStructuredResponse } from "./client";
@@ -169,6 +174,7 @@ export async function reviewAi3DPlan({
     `Resolved intent JSON: ${JSON.stringify(intent)}`,
     `Current plan JSON: ${JSON.stringify({ toolName: AI3D_TOOL_NAME, plan })}`,
     `Current diagnostics JSON: ${JSON.stringify(diagnostics)}`,
+    getAi3DDiagnosticPromptSummary(diagnostics),
     "If the current plan already satisfies the intent, you may return the same plan unchanged.",
     "Otherwise return a stronger complete replacement plan."
   ].join("\n");
@@ -201,6 +207,7 @@ export async function optimizeAi3DPlan({
     `Resolved intent JSON: ${JSON.stringify(intent)}`,
     `Current plan JSON: ${JSON.stringify({ toolName: AI3D_TOOL_NAME, plan })}`,
     `Current diagnostics JSON: ${JSON.stringify(diagnostics)}`,
+    getAi3DDiagnosticPromptSummary(diagnostics),
     "Optimize the result using the screenshots and diagnostics.",
     "Fix only the highest-impact visual issues while preserving subject identity."
   ].join("\n");
