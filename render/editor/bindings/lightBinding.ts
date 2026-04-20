@@ -56,7 +56,7 @@ function createLightParts(model: LightEntityModel): LightBindingParts {
   if (model.lightType === 2) {
     const light = new THREE.DirectionalLight(model.color, model.intensity);
     const target = new THREE.Object3D();
-    target.position.set(0, 0, -1);
+    target.position.set(0, 0, 10);
     light.target = target;
     root.add(light, target);
     const helper = new THREE.DirectionalLightHelper(light, 1.25, model.color);
@@ -81,7 +81,7 @@ function createLightParts(model: LightEntityModel): LightBindingParts {
       model.decay
     );
     const target = new THREE.Object3D();
-    target.position.set(0, 0, -1);
+    target.position.set(0, 0, 10);
     light.target = target;
     root.add(light, target);
     const helper = new THREE.SpotLightHelper(light);
@@ -113,6 +113,7 @@ function createLightParts(model: LightEntityModel): LightBindingParts {
 
 function applyLightModelToObject(model: LightEntityModel, parts: LightBindingUpdateParts) {
   model.applyTransformToObject(parts.root);
+  parts.root.updateMatrixWorld(true);
 
   if (parts.light instanceof THREE.HemisphereLight) {
     parts.light.color.set(model.color);
@@ -141,6 +142,10 @@ function applyLightModelToObject(model: LightEntityModel, parts: LightBindingUpd
     parts.light.intensity = model.intensity;
     parts.light.width = model.width;
     parts.light.height = model.height;
+  }
+
+  if (parts.light instanceof THREE.DirectionalLight || parts.light instanceof THREE.SpotLight) {
+    parts.light.target.updateMatrixWorld();
   }
 
   if (parts.helper instanceof THREE.PointLightHelper) {

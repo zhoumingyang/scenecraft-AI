@@ -248,6 +248,31 @@ function createLightPayload(lightType: EditorLightJSON["type"]): EditorLightJSON
     base.intensity = 1.1;
   }
 
+  if (normalizedType === 3 || normalizedType === "point") {
+    base.position = [4, 4, 4];
+    base.intensity = 90;
+    base.distance = 14;
+    base.decay = 2;
+  }
+
+  if (normalizedType === 4 || normalizedType === "spot") {
+    const helper = new THREE.Object3D();
+    helper.position.set(5, 7, 5);
+    helper.lookAt(0, 0.8, 0);
+    base.position = [helper.position.x, helper.position.y, helper.position.z];
+    base.quaternion = [
+      helper.quaternion.x,
+      helper.quaternion.y,
+      helper.quaternion.z,
+      helper.quaternion.w
+    ];
+    base.intensity = 160;
+    base.distance = 18;
+    base.decay = 2;
+    base.angle = 0.72;
+    base.penumbra = 0.35;
+  }
+
   if (normalizedType === 6 || normalizedType === "hemisphere") {
     base.position = [0, 8, 0];
     base.intensity = 0.9;

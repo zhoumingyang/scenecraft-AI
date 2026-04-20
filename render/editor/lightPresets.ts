@@ -116,8 +116,9 @@ export const LIGHT_PRESET_DEFINITIONS: Record<LightPresetId, LightPresetDefiniti
         type: "point",
         position: [-2, 1.8, -1.5],
         color: "#ffb76a",
-        intensity: 1.8,
-        distance: 10
+        intensity: 70,
+        distance: 9,
+        decay: 2
       })
     ]
   },
@@ -130,8 +131,10 @@ export const LIGHT_PRESET_DEFINITIONS: Record<LightPresetId, LightPresetDefiniti
         position: [3, 4, 3],
         target: [0, 1.2, 0],
         color: "#fff8f0",
-        intensity: 2.4,
-        angle: 0.6,
+        intensity: 180,
+        distance: 16,
+        decay: 2,
+        angle: 0.72,
         penumbra: 0.35
       }),
       createLightDefinition("Fill Panel", {
@@ -148,9 +151,11 @@ export const LIGHT_PRESET_DEFINITIONS: Record<LightPresetId, LightPresetDefiniti
         position: [0, 4, -3],
         target: [0, 1.4, 0],
         color: "#d7ebff",
-        intensity: 1.6,
-        angle: 0.45,
-        penumbra: 0.25
+        intensity: 90,
+        distance: 14,
+        decay: 2,
+        angle: 0.55,
+        penumbra: 0.3
       })
     ]
   },
@@ -201,23 +206,27 @@ export const LIGHT_PRESET_DEFINITIONS: Record<LightPresetId, LightPresetDefiniti
         position: [0, 5, 0],
         target: [0, 0.8, 0],
         color: "#b9d1ff",
-        intensity: 2,
-        angle: 0.55,
+        intensity: 160,
+        distance: 18,
+        decay: 2,
+        angle: 0.7,
         penumbra: 0.45
       }),
       createLightDefinition("Neon Left", {
         type: "point",
         position: [-3, 2, 1],
         color: "#ffbf66",
-        intensity: 2.2,
-        distance: 12
+        intensity: 95,
+        distance: 12,
+        decay: 2
       }),
       createLightDefinition("Neon Right", {
         type: "point",
         position: [3, 2, -1],
         color: "#ffcf7d",
-        intensity: 1.8,
-        distance: 10
+        intensity: 80,
+        distance: 10,
+        decay: 2
       })
     ]
   },
@@ -244,8 +253,10 @@ export const LIGHT_PRESET_DEFINITIONS: Record<LightPresetId, LightPresetDefiniti
         position: [0, 3.5, -4],
         target: [0, 1.1, 0],
         color: "#bdd2ff",
-        intensity: 0.9,
-        angle: 0.5,
+        intensity: 70,
+        distance: 14,
+        decay: 2,
+        angle: 0.62,
         penumbra: 0.3
       })
     ]
