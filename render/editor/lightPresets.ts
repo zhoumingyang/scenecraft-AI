@@ -33,6 +33,25 @@ function createLookAtQuaternion(position: Vec3Tuple, target: Vec3Tuple = [0, 0, 
   ];
 }
 
+function createLightQuaternion(
+  lightType: EditorLightJSON["type"],
+  position: Vec3Tuple,
+  target: Vec3Tuple
+): QuatTuple {
+  const normalizedType = typeof lightType === "string" ? lightType : Number(lightType);
+
+  if (normalizedType === 5 || normalizedType === "rectArea") {
+    // RectAreaLight emits from a single face, so we orient its emitting side toward the subject.
+    return createLookAtQuaternion(position, [
+      position[0] * 2 - target[0],
+      position[1] * 2 - target[1],
+      position[2] * 2 - target[2]
+    ]);
+  }
+
+  return createLookAtQuaternion(position, target);
+}
+
 function createLightDefinition(
   label: string,
   light: Partial<Omit<EditorLightJSON, "id" | "label">> & {
@@ -47,7 +66,7 @@ function createLightDefinition(
     light: {
       type: light.type,
       position,
-      quaternion: light.target ? createLookAtQuaternion(position, light.target) : [0, 0, 0, 1],
+      quaternion: light.target ? createLightQuaternion(light.type, position, light.target) : [0, 0, 0, 1],
       scale: [1, 1, 1],
       color: light.color ?? "#ffffff",
       groundColor: light.groundColor ?? "#2a3548",
