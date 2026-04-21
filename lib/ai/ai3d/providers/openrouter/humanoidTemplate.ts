@@ -8,6 +8,7 @@ import {
 import type { Ai3DPlan } from "@/render/editor/ai3d/plan";
 import {
   buildAi3DTemplatePlan,
+  createHumanoidTemplateVariant,
   inferHumanoidTemplateParamsFromPlan,
   validateHumanoidTemplateParams,
   type HumanoidTemplateParams
@@ -148,13 +149,18 @@ async function requestHumanoidTemplateParams({
     "Select the best humanoid template parameters for this subject."
   ].join("\n");
 
-  return completeStructuredJson({
+  const result = await completeStructuredJson({
     apiKey,
     systemPrompt: getHumanoidTemplateParamsSystemPrompt(),
     userContent: buildTextAndImagesContent(text, referenceImages),
     parser: parseHumanoidTemplateParams,
     temperature: 0.45
   });
+
+  return {
+    ...result,
+    result: createHumanoidTemplateVariant(result.result, variationToken)
+  };
 }
 
 async function reviewHumanoidTemplateParams({

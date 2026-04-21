@@ -7,6 +7,7 @@ import {
 } from "@/lib/ai/ai3d/intent";
 import {
   buildAi3DRulePlan,
+  createTreeRuleVariant,
   inferTreeRuleParamsFromPlan,
   validateTreeRuleParams,
   type TreeRuleParams
@@ -146,13 +147,18 @@ async function requestTreeRuleParams({
     "Select the best rule parameters for this tree subject."
   ].join("\n");
 
-  return completeStructuredJson({
+  const result = await completeStructuredJson({
     apiKey,
     systemPrompt: getTreeRuleParamsSystemPrompt(),
     userContent: buildTextAndImagesContent(text, referenceImages),
     parser: parseTreeRuleParams,
     temperature: 0.45
   });
+
+  return {
+    ...result,
+    result: createTreeRuleVariant(result.result, variationToken)
+  };
 }
 
 async function reviewTreeRuleParams({

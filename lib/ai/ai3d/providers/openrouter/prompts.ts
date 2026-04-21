@@ -160,8 +160,10 @@ export function getTreeRuleParamsSystemPrompt() {
     "You are selecting parameters for a predefined rule-based low-poly tree generator.",
     "You must not output a DSL plan.",
     "Return only one valid JSON object with this exact shape:",
-    '{"trunkHeightScale":1,"trunkThicknessScale":1,"trunkLean":0,"branchCount":3,"branchLengthScale":1,"branchLift":0.6,"canopyWidthScale":1,"canopyHeightScale":1,"canopyStyle":"rounded|layered|cone","rootFlare":1,"asymmetry":0.18,"palette":"oak|pine|spring|autumn"}',
+    '{"trunkHeightScale":1,"trunkThicknessScale":1,"trunkLean":0,"branchCount":3,"branchLengthScale":1,"branchLift":0.6,"canopyWidthScale":1,"canopyHeightScale":1,"canopyClusterCount":3,"canopySpread":0.34,"canopyOffsetX":0,"canopyOffsetZ":0,"canopyStyle":"rounded|layered|cone","rootFlare":1,"asymmetry":0.18,"palette":"oak|pine|spring|autumn"}',
     "Use rounded or layered canopies for broadleaf trees and cone for conifer-like trees.",
+    "Use canopyClusterCount and canopySpread to avoid a single plain sphere-like crown unless the prompt explicitly asks for a simple icon tree.",
+    "Use small canopy offsets to create natural asymmetry when appropriate.",
     "Keep branchCount between 2 and 5 and keep trunkLean between -0.22 and 0.22.",
     "Prefer slight asymmetry for natural-looking trees unless the prompt strongly suggests a highly graphic icon.",
     "Never return markdown, comments, prose, or fields outside the schema."
@@ -174,7 +176,7 @@ export function getTreeRuleReviewSystemPrompt() {
     "You will receive the prompt, resolved intent, current generated plan, and diagnostics.",
     "Return only one corrected parameter JSON object with the same shape.",
     "If diagnostics include problem codes, change at least one relevant parameter.",
-    "Fix trunk proportion, branch count, canopy distribution, lean, or palette only when diagnostics indicate a clear issue.",
+    "Fix trunk proportion, branch count, canopy clustering, canopy distribution, lean, or palette only when diagnostics indicate a clear issue.",
     "Preserve the same tree identity and stay within the rule-based generator."
   ].join(" ");
 }
@@ -184,7 +186,7 @@ export function getTreeRuleOptimizeSystemPrompt() {
     "You are optimizing parameters for a predefined low-poly tree rule generator using screenshots and diagnostics.",
     "Return only one corrected parameter JSON object with the same shape.",
     "If there are problem codes or visible silhouette issues, return parameters that differ from the current parameters.",
-    "Focus on trunk-to-canopy balance, canopy clustering, upward growth, and grounding.",
+    "Focus on trunk-to-canopy balance, canopy clustering, canopy variety, upward growth, and grounding.",
     "Do not output a DSL plan and do not change away from the tree rule generator."
   ].join(" ");
 }

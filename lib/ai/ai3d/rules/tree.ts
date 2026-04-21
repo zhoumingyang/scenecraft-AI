@@ -41,6 +41,10 @@ export const treeRuleParamsSchema = z
     branchLift: z.number().finite().min(0.25).max(0.9),
     canopyWidthScale: z.number().finite().min(0.8).max(1.5),
     canopyHeightScale: z.number().finite().min(0.7).max(1.35),
+    canopyClusterCount: z.number().int().min(2).max(5),
+    canopySpread: z.number().finite().min(0.18).max(0.9),
+    canopyOffsetX: z.number().finite().min(-0.42).max(0.42),
+    canopyOffsetZ: z.number().finite().min(-0.32).max(0.32),
     canopyStyle: z.enum(TREE_CANOPY_STYLES),
     rootFlare: z.number().finite().min(0.8).max(1.3),
     asymmetry: z.number().finite().min(0).max(0.45),
@@ -61,6 +65,47 @@ function quatFromAxisAngle(
   return [axis[0] * sinHalf, axis[1] * sinHalf, axis[2] * sinHalf, Math.cos(half)];
 }
 
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function normalizeVector([x, y, z]: [number, number, number]) {
+  const length = Math.hypot(x, y, z);
+
+  if (length <= 1e-6) {
+    return [0, 1, 0] as [number, number, number];
+  }
+
+  return [x / length, y / length, z / length] as [number, number, number];
+}
+
+function quatFromUnitVectors(
+  from: [number, number, number],
+  to: [number, number, number]
+): [number, number, number, number] {
+  const f = normalizeVector(from);
+  const t = normalizeVector(to);
+  const dot = f[0] * t[0] + f[1] * t[1] + f[2] * t[2];
+
+  if (dot < -0.999999) {
+    return quatFromAxisAngle([1, 0, 0], Math.PI);
+  }
+
+  const cross: [number, number, number] = [
+    f[1] * t[2] - f[2] * t[1],
+    f[2] * t[0] - f[0] * t[2],
+    f[0] * t[1] - f[1] * t[0]
+  ];
+  const w = 1 + dot;
+  const length = Math.hypot(cross[0], cross[1], cross[2], w);
+
+  if (length <= 1e-6) {
+    return [0, 0, 0, 1];
+  }
+
+  return [cross[0] / length, cross[1] / length, cross[2] / length, w / length];
+}
+
 function buildTreePlan({
   intent,
   params
@@ -78,6 +123,8 @@ function buildTreePlan({
   const rootWidth = trunkRadius * 2.6 * params.rootFlare;
   const branchBaseRadius = trunkRadius * 0.52;
   const branchLength = 0.95 * params.branchLengthScale;
+  const canopyCenterX = params.trunkLean * 0.24 + params.canopyOffsetX;
+  const canopyCenterZ = params.canopyOffsetZ;
 
   const operations: Ai3DPlan["operations"] = [
     {
@@ -108,11 +155,28 @@ function buildTreePlan({
   for (let index = 0; index < params.branchCount; index += 1) {
     const progress = params.branchCount === 1 ? 0.5 : index / (params.branchCount - 1);
     const side = index % 2 === 0 ? -1 : 1;
-    const asymmetryOffset = side * params.asymmetry * (0.2 + progress * 0.4);
-    const branchY = trunkHeight * (0.48 + progress * 0.24);
-    const branchX = params.trunkLean * 0.18 + side * (0.34 + progress * 0.12 + asymmetryOffset);
-    const branchZ = index === params.branchCount - 1 && params.branchCount > 3 ? 0.12 : 0;
-    const branchTilt = side * (0.55 + progress * 0.16);
+    const asymmetryOffset = side * params.asymmetry * (0.14 + progress * 0.24);
+    const branchBaseY = trunkHeight * (0.5 + progress * 0.2);
+    const start: [number, number, number] = [params.trunkLean * 0.12, branchBaseY, 0];
+    const lateralReach = side * (0.42 + progress * 0.16 + asymmetryOffset) * params.branchLengthScale;
+    const upwardReach = branchLength * params.branchLift * (0.62 - progress * 0.12);
+    const depthReach =
+      (index % 3 === 0 ? 1 : index % 3 === 1 ? -1 : 0.35) * (0.08 + params.asymmetry * 0.18);
+    const end: [number, number, number] = [
+      start[0] + lateralReach,
+      start[1] + upwardReach,
+      depthReach
+    ];
+    const direction: [number, number, number] = [
+      end[0] - start[0],
+      end[1] - start[1],
+      end[2] - start[2]
+    ];
+    const midpoint: [number, number, number] = [
+      (start[0] + end[0]) / 2,
+      (start[1] + end[1]) / 2,
+      (start[2] + end[2]) / 2
+    ];
     const branchScaleY = branchLength * (1 - progress * 0.12);
     const branchScaleX = branchBaseRadius * (1 - progress * 0.1);
 
@@ -122,64 +186,111 @@ function buildTreePlan({
       primitive: "cylinder",
       label: `Branch ${index + 1}`,
       transform: {
-        position: [branchX, branchY, branchZ],
-        quaternion: quatFromAxisAngle([0, 0, 1], branchTilt * params.branchLift),
+        position: midpoint,
+        quaternion: quatFromUnitVectors([0, 1, 0], direction),
         scale: [branchScaleX, branchScaleY, branchScaleX]
       },
       material: { color: palette.branch, roughness: 1 }
     });
   }
 
+  const canopyClusterCount = params.canopyClusterCount;
+  const canopySpread = params.canopySpread;
+
+  const pushCanopyCluster = ({
+    nodeId,
+    label,
+    position,
+    scale,
+    color
+  }: {
+    nodeId: string;
+    label: string;
+    position: [number, number, number];
+    scale: [number, number, number];
+    color: string;
+  }) => {
+    operations.push({
+      type: "create_primitive",
+      nodeId,
+      primitive: "sphere",
+      label,
+      transform: {
+        position,
+        scale
+      },
+      material: { color, roughness: 1 }
+    });
+  };
+
   if (params.canopyStyle === "rounded") {
-    operations.push(
-      {
-        type: "create_primitive",
-        nodeId: "canopy_main",
-        primitive: "sphere",
-        label: "Canopy Main",
-        transform: {
-          position: [params.trunkLean * 0.26, canopyBaseY + canopyHeight * 0.16, 0],
-          scale: [canopyWidth, canopyHeight, canopyWidth * 0.92]
-        },
-        material: { color: palette.leafPrimary, roughness: 1 }
-      },
-      {
-        type: "create_primitive",
-        nodeId: "canopy_side",
-        primitive: "sphere",
-        label: "Canopy Accent",
-        transform: {
-          position: [params.trunkLean * 0.18 + params.asymmetry * 0.55, canopyBaseY - 0.04, 0.04],
-          scale: [canopyWidth * 0.72, canopyHeight * 0.72, canopyWidth * 0.62]
-        },
-        material: { color: palette.leafSecondary, roughness: 1 }
-      }
-    );
+    pushCanopyCluster({
+      nodeId: "canopy_main",
+      label: "Canopy Main",
+      position: [canopyCenterX, canopyBaseY + canopyHeight * 0.18, canopyCenterZ],
+      scale: [canopyWidth * 0.84, canopyHeight * 0.86, canopyWidth * 0.78],
+      color: palette.leafPrimary
+    });
+
+    for (let index = 0; index < canopyClusterCount - 1; index += 1) {
+      const progress = canopyClusterCount === 2 ? 0.5 : index / Math.max(canopyClusterCount - 2, 1);
+      const side = index % 2 === 0 ? -1 : 1;
+      const ring = Math.floor(index / 2);
+      const xOffset = side * canopySpread * (0.34 + progress * 0.18);
+      const yOffset = canopyHeight * (-0.06 + ring * 0.12 + progress * 0.08);
+      const zOffset = ((index % 3) - 1) * canopySpread * 0.18 + params.asymmetry * side * 0.1;
+
+      pushCanopyCluster({
+        nodeId: `canopy_cluster_${index + 1}`,
+        label: `Canopy Cluster ${index + 1}`,
+        position: [canopyCenterX + xOffset, canopyBaseY + yOffset, canopyCenterZ + zOffset],
+        scale: [
+          canopyWidth * (0.44 + progress * 0.08),
+          canopyHeight * (0.42 + ring * 0.08),
+          canopyWidth * (0.38 + progress * 0.1)
+        ],
+        color: index % 2 === 0 ? palette.leafSecondary : palette.leafPrimary
+      });
+    }
   } else if (params.canopyStyle === "layered") {
-    operations.push(
-      {
-        type: "create_primitive",
-        nodeId: "canopy_lower",
-        primitive: "sphere",
-        label: "Canopy Lower",
-        transform: {
-          position: [params.trunkLean * 0.22, canopyBaseY - 0.1, 0],
-          scale: [canopyWidth, canopyHeight * 0.55, canopyWidth * 0.88]
-        },
-        material: { color: palette.leafPrimary, roughness: 1 }
-      },
-      {
-        type: "create_primitive",
-        nodeId: "canopy_upper",
-        primitive: "sphere",
-        label: "Canopy Upper",
-        transform: {
-          position: [params.trunkLean * 0.3 + params.asymmetry * 0.35, canopyBaseY + canopyHeight * 0.34, 0],
-          scale: [canopyWidth * 0.72, canopyHeight * 0.52, canopyWidth * 0.68]
-        },
-        material: { color: palette.leafSecondary, roughness: 1 }
-      }
-    );
+    pushCanopyCluster({
+      nodeId: "canopy_lower",
+      label: "Canopy Lower",
+      position: [canopyCenterX, canopyBaseY - 0.08, canopyCenterZ],
+      scale: [canopyWidth * 0.96, canopyHeight * 0.52, canopyWidth * 0.84],
+      color: palette.leafPrimary
+    });
+    pushCanopyCluster({
+      nodeId: "canopy_upper",
+      label: "Canopy Upper",
+      position: [
+        canopyCenterX + params.asymmetry * 0.22,
+        canopyBaseY + canopyHeight * 0.34,
+        canopyCenterZ
+      ],
+      scale: [canopyWidth * 0.62, canopyHeight * 0.46, canopyWidth * 0.58],
+      color: palette.leafSecondary
+    });
+
+    for (let index = 0; index < canopyClusterCount - 2; index += 1) {
+      const side = index % 2 === 0 ? -1 : 1;
+      const progress = canopyClusterCount <= 3 ? 0.5 : index / (canopyClusterCount - 3);
+      pushCanopyCluster({
+        nodeId: `canopy_layer_${index + 1}`,
+        label: `Canopy Layer ${index + 1}`,
+        position: [
+          canopyCenterX + side * canopySpread * (0.24 + progress * 0.22),
+          canopyBaseY + canopyHeight * (0.06 + progress * 0.16),
+          canopyCenterZ + side * canopySpread * 0.08
+        ],
+        scale: [
+          canopyWidth * (0.34 + progress * 0.08),
+          canopyHeight * (0.24 + progress * 0.08),
+          canopyWidth * (0.3 + progress * 0.08)
+        ],
+        color: index % 2 === 0 ? palette.leafSecondary : palette.leafPrimary
+      });
+    }
   } else {
     operations.push(
       {
@@ -188,7 +299,7 @@ function buildTreePlan({
         primitive: "cone",
         label: "Canopy Core",
         transform: {
-          position: [params.trunkLean * 0.2, canopyBaseY + canopyHeight * 0.2, 0],
+          position: [canopyCenterX, canopyBaseY + canopyHeight * 0.2, canopyCenterZ],
           scale: [canopyWidth * 0.72, canopyHeight, canopyWidth * 0.72]
         },
         material: { color: palette.leafPrimary, roughness: 1 }
@@ -199,12 +310,31 @@ function buildTreePlan({
         primitive: "sphere",
         label: "Canopy Fill",
         transform: {
-          position: [params.trunkLean * 0.16, canopyBaseY + canopyHeight * 0.02, 0],
+          position: [canopyCenterX, canopyBaseY + canopyHeight * 0.02, canopyCenterZ],
           scale: [canopyWidth * 0.76, canopyHeight * 0.44, canopyWidth * 0.76]
         },
         material: { color: palette.leafSecondary, roughness: 1 }
       }
     );
+
+    for (let index = 0; index < canopyClusterCount - 2; index += 1) {
+      const side = index % 2 === 0 ? -1 : 1;
+      pushCanopyCluster({
+        nodeId: `canopy_flank_${index + 1}`,
+        label: `Canopy Flank ${index + 1}`,
+        position: [
+          canopyCenterX + side * canopySpread * (0.18 + index * 0.08),
+          canopyBaseY + canopyHeight * (0.12 + index * 0.06),
+          canopyCenterZ + side * canopySpread * 0.06
+        ],
+        scale: [
+          canopyWidth * (0.26 + index * 0.04),
+          canopyHeight * (0.18 + index * 0.03),
+          canopyWidth * (0.24 + index * 0.04)
+        ],
+        color: palette.leafSecondary
+      });
+    }
   }
 
   if (intent.styleBias === "chunky") {
@@ -231,6 +361,37 @@ export function validateTreeRuleParams(value: unknown) {
   }
 
   return parsed.data;
+}
+
+export function createTreeRuleVariant(
+  params: TreeRuleParams,
+  variationSeed: string | null | undefined
+) {
+  if (!variationSeed) {
+    return params;
+  }
+
+  const hash = Array.from(variationSeed).reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const jitter = (offset: number) => (((hash * (offset + 3)) % 101) / 100 - 0.5) * 2;
+
+  return validateTreeRuleParams({
+    ...params,
+    trunkLean: clamp(params.trunkLean + jitter(1) * 0.08, -0.22, 0.22),
+    branchCount: clamp(params.branchCount + (jitter(2) > 0.35 ? 1 : jitter(2) < -0.35 ? -1 : 0), 2, 5),
+    branchLengthScale: clamp(params.branchLengthScale + jitter(3) * 0.12, 0.7, 1.3),
+    branchLift: clamp(params.branchLift + jitter(4) * 0.08, 0.25, 0.9),
+    canopyWidthScale: clamp(params.canopyWidthScale + jitter(5) * 0.14, 0.8, 1.5),
+    canopyHeightScale: clamp(params.canopyHeightScale + jitter(6) * 0.12, 0.7, 1.35),
+    canopyClusterCount: clamp(
+      params.canopyClusterCount + (jitter(7) > 0.2 ? 1 : jitter(7) < -0.2 ? -1 : 0),
+      2,
+      5
+    ),
+    canopySpread: clamp(params.canopySpread + Math.abs(jitter(8)) * 0.18, 0.18, 0.9),
+    canopyOffsetX: clamp(params.canopyOffsetX + jitter(9) * 0.16, -0.42, 0.42),
+    canopyOffsetZ: clamp(params.canopyOffsetZ + jitter(10) * 0.12, -0.32, 0.32),
+    asymmetry: clamp(params.asymmetry + Math.abs(jitter(11)) * 0.12, 0, 0.45)
+  });
 }
 
 export function inferTreeRuleParamsFromPlan(plan: Ai3DPlan): TreeRuleParams {
@@ -283,6 +444,35 @@ export function inferTreeRuleParamsFromPlan(plan: Ai3DPlan): TreeRuleParams {
           canopyNodes.length /
           1.1
         : 1,
+    canopyClusterCount: Math.max(2, Math.min(5, canopyNodes.length || 2)),
+    canopySpread:
+      canopyNodes.length > 1
+        ? clamp(
+            canopyNodes.reduce((sum, node) => sum + Math.abs(node.transform.position?.[0] ?? 0), 0) /
+              canopyNodes.length /
+              0.8,
+            0.18,
+            0.9
+          )
+        : 0.32,
+    canopyOffsetX:
+      canopyNodes.length > 0
+        ? clamp(
+            canopyNodes.reduce((sum, node) => sum + (node.transform.position?.[0] ?? 0), 0) /
+              canopyNodes.length,
+            -0.42,
+            0.42
+          )
+        : 0,
+    canopyOffsetZ:
+      canopyNodes.length > 0
+        ? clamp(
+            canopyNodes.reduce((sum, node) => sum + (node.transform.position?.[2] ?? 0), 0) /
+              canopyNodes.length,
+            -0.32,
+            0.32
+          )
+        : 0,
     canopyStyle,
     rootFlare: nodes.has("root_flare")
       ? ((nodes.get("root_flare")?.transform.scale?.[0] ?? 0.22 * 2.6) / (0.22 * 2.6))

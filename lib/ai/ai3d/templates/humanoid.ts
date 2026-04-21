@@ -66,6 +66,10 @@ function quatFromAxisAngle(axis: [number, number, number], radians: number): [nu
   return [axis[0] * sinHalf, axis[1] * sinHalf, axis[2] * sinHalf, Math.cos(half)];
 }
 
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
+}
+
 function buildHumanoidPlan({
   intent,
   params
@@ -358,6 +362,29 @@ export function inferHumanoidTemplateParamsFromPlan(plan: Ai3DPlan): HumanoidTem
     palette,
     faceStyle: nodes.has("mouth") ? "friendly" : "minimal",
     optionalFeatures: ["eyes", "mouth", nodes.has("nose") ? "nose" : null].filter(Boolean)
+  });
+}
+
+export function createHumanoidTemplateVariant(
+  params: HumanoidTemplateParams,
+  variationSeed: string | null | undefined
+) {
+  if (!variationSeed) {
+    return params;
+  }
+
+  const hash = Array.from(variationSeed).reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const jitter = (offset: number) => (((hash * (offset + 5)) % 101) / 100 - 0.5) * 2;
+
+  return validateHumanoidTemplateParams({
+    ...params,
+    headScale: clamp(params.headScale + jitter(1) * 0.08, 0.85, 1.4),
+    torsoHeightScale: clamp(params.torsoHeightScale + jitter(2) * 0.07, 0.8, 1.3),
+    torsoWidthScale: clamp(params.torsoWidthScale + jitter(3) * 0.07, 0.8, 1.25),
+    armLengthScale: clamp(params.armLengthScale + jitter(4) * 0.08, 0.8, 1.25),
+    legLengthScale: clamp(params.legLengthScale + jitter(5) * 0.08, 0.8, 1.35),
+    shoulderWidthScale: clamp(params.shoulderWidthScale + jitter(6) * 0.08, 0.9, 1.3),
+    stanceWidth: clamp(params.stanceWidth + jitter(7) * 0.05, 0.18, 0.48)
   });
 }
 
