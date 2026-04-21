@@ -3,6 +3,8 @@
 import { Box, IconButton, InputBase, Stack, Tooltip, Typography } from "@mui/material";
 import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
+import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
+import KeyboardArrowRightRoundedIcon from "@mui/icons-material/KeyboardArrowRightRounded";
 import LockOpenRoundedIcon from "@mui/icons-material/LockOpenRounded";
 import LockRoundedIcon from "@mui/icons-material/LockRounded";
 import VisibilityOffRoundedIcon from "@mui/icons-material/VisibilityOffRounded";
@@ -17,6 +19,9 @@ type SceneTreePanelRowProps = {
   isEditing: boolean;
   draftLabel: string;
   theme: ReturnType<typeof getEditorThemeTokens>;
+  depth?: number;
+  expanded?: boolean;
+  onToggleExpand?: (nodeId: string) => void;
   onDraftLabelChange: (value: string) => void;
   onSelectEntity: (entityId: string) => void;
   onDeleteEntity: (entityId: string) => void;
@@ -34,6 +39,9 @@ export default function SceneTreePanelRow({
   isEditing,
   draftLabel,
   theme,
+  depth = 0,
+  expanded = true,
+  onToggleExpand,
   onDraftLabelChange,
   onSelectEntity,
   onDeleteEntity,
@@ -51,6 +59,7 @@ export default function SceneTreePanelRow({
   const canDelete = node.type !== "scene" && !node.locked && node.effectivelyVisible;
   const canToggleLock = !lockDisabled;
   const rowColor = node.locked ? theme.mutedText : selected ? theme.pillText : theme.text;
+  const canExpand = node.children.length > 0;
 
   const iconButtonSx = {
     color: rowColor,
@@ -72,6 +81,7 @@ export default function SceneTreePanelRow({
       sx={{
         px: 1.1,
         py: 0.35,
+        ml: depth * 1.5,
         borderRadius: 1.6,
         border: selected ? theme.itemSelectedBorder : "1px solid transparent",
         background: selected ? theme.itemSelectedBg : theme.itemBg,
@@ -94,6 +104,36 @@ export default function SceneTreePanelRow({
           color: rowColor
         }}
       >
+        <Box
+          sx={{
+            width: 18,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0
+          }}
+        >
+          {canExpand ? (
+            <IconButton
+              size="small"
+              onClick={(event) => {
+                event.stopPropagation();
+                onToggleExpand?.(node.id);
+              }}
+              sx={{
+                ...iconButtonSx,
+                p: 0.2
+              }}
+            >
+              {expanded ? (
+                <KeyboardArrowDownRoundedIcon sx={{ fontSize: 16 }} />
+              ) : (
+                <KeyboardArrowRightRoundedIcon sx={{ fontSize: 16 }} />
+              )}
+            </IconButton>
+          ) : null}
+        </Box>
+
         <Box sx={{ display: "flex", alignItems: "center", flexShrink: 0 }}>{getNodeIcon(node.type)}</Box>
 
         {isEditing ? (

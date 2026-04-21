@@ -10,6 +10,7 @@ export type SceneTreeNode = {
   locked: boolean;
   visible: boolean;
   effectivelyVisible: boolean;
+  children: SceneTreeNode[];
 };
 
 export type SceneTreeSectionId = SceneTreeNodeType;

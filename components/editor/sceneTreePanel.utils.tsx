@@ -32,7 +32,8 @@ function getLightLabel(lightType: number, index: number, t: ReturnType<typeof us
 
 function createSceneNode(
   sceneNodeId: string,
-  t: ReturnType<typeof useI18n>["t"]
+  t: ReturnType<typeof useI18n>["t"],
+  children: SceneTreeNode[] = []
 ): SceneTreeNode {
   const label = t("editor.sceneTree.scene");
   return {
@@ -42,8 +43,126 @@ function createSceneNode(
     visible: true,
     effectivelyVisible: true,
     label,
-    fallbackLabel: label
+    fallbackLabel: label,
+    children
   };
+}
+
+function buildEntityNodeMap(
+  project: EditorProjectModel,
+  t: ReturnType<typeof useI18n>["t"]
+) {
+  const entityNodeMap = new Map<string, Omit<SceneTreeNode, "children">>();
+  const entityIdsInOrder: string[] = [];
+  const childIds = new Set<string>();
+
+  Array.from(project.groups.values()).forEach((group, index) => {
+    const fallbackLabel = `${t("editor.sceneTree.group")} ${index + 1}`;
+    entityNodeMap.set(group.id, {
+      id: group.id,
+      type: "group",
+      locked: group.locked,
+      visible: group.visible,
+      effectivelyVisible: project.isEntityEffectivelyVisible(group.id),
+      label: group.label || fallbackLabel,
+      fallbackLabel
+    });
+    entityIdsInOrder.push(group.id);
+    group.children.forEach((childId) => childIds.add(childId));
+  });
+
+  Array.from(project.models.values()).forEach((model, index) => {
+    const fallbackLabel = `${t("editor.sceneTree.model")} ${index + 1}`;
+    entityNodeMap.set(model.id, {
+      id: model.id,
+      type: "model",
+      locked: model.locked,
+      visible: model.visible,
+      effectivelyVisible: project.isEntityEffectivelyVisible(model.id),
+      label: model.label || fallbackLabel,
+      fallbackLabel
+    });
+    entityIdsInOrder.push(model.id);
+  });
+
+  Array.from(project.meshes.values()).forEach((mesh, index) => {
+    const fallbackLabel = `${formatTitleCase(mesh.geometryName)} ${index + 1}`;
+    entityNodeMap.set(mesh.id, {
+      id: mesh.id,
+      type: "mesh",
+      locked: mesh.locked,
+      visible: mesh.visible,
+      effectivelyVisible: project.isEntityEffectivelyVisible(mesh.id),
+      label: mesh.label || fallbackLabel,
+      fallbackLabel
+    });
+    entityIdsInOrder.push(mesh.id);
+  });
+
+  Array.from(project.lights.values()).forEach((light, index) => {
+    const fallbackLabel = getLightLabel(light.lightType, index, t);
+    entityNodeMap.set(light.id, {
+      id: light.id,
+      type: "light",
+      locked: light.locked,
+      visible: true,
+      effectivelyVisible: project.isEntityEffectivelyVisible(light.id),
+      label: light.label || fallbackLabel,
+      fallbackLabel
+    });
+    entityIdsInOrder.push(light.id);
+  });
+
+  return { entityNodeMap, entityIdsInOrder, childIds };
+}
+
+function buildSceneRootChildren(
+  project: EditorProjectModel,
+  t: ReturnType<typeof useI18n>["t"]
+) {
+  const { entityNodeMap, entityIdsInOrder, childIds } = buildEntityNodeMap(project, t);
+  const visited = new Set<string>();
+
+  const buildEntityNode = (entityId: string, ancestry: Set<string>): SceneTreeNode | null => {
+    const baseNode = entityNodeMap.get(entityId);
+    if (!baseNode) return null;
+
+    if (ancestry.has(entityId)) {
+      return {
+        ...baseNode,
+        children: []
+      };
+    }
+
+    visited.add(entityId);
+    const nextAncestry = new Set(ancestry);
+    nextAncestry.add(entityId);
+
+    const record = project.getEntityById(entityId);
+    const children =
+      record?.kind === "group"
+        ? record.item.children
+            .map((childId) => buildEntityNode(childId, nextAncestry))
+            .filter((childNode): childNode is SceneTreeNode => Boolean(childNode))
+        : [];
+
+    return {
+      ...baseNode,
+      children
+    };
+  };
+
+  const rootNodes = entityIdsInOrder
+    .filter((entityId) => !childIds.has(entityId))
+    .map((entityId) => buildEntityNode(entityId, new Set()))
+    .filter((node): node is SceneTreeNode => Boolean(node));
+
+  const orphanNodes = entityIdsInOrder
+    .filter((entityId) => !visited.has(entityId))
+    .map((entityId) => buildEntityNode(entityId, new Set()))
+    .filter((node): node is SceneTreeNode => Boolean(node));
+
+  return [...rootNodes, ...orphanNodes];
 }
 
 export function getNodeIcon(nodeType: SceneTreeNodeType) {
@@ -59,112 +178,12 @@ export function buildSceneTreeSections(
   t: ReturnType<typeof useI18n>["t"],
   sceneNodeId: string
 ): SceneTreeSection[] {
-  const sceneSection: SceneTreeSection = {
-    id: "scene",
-    label: t("editor.sceneTree.sceneGroup"),
-    icon: PublicRoundedIcon,
-    nodes: [createSceneNode(sceneNodeId, t)]
-  };
-
-  if (!project) {
-    return [
-      sceneSection,
-      {
-        id: "group",
-        label: t("editor.sceneTree.groups"),
-        icon: AccountTreeRoundedIcon,
-        nodes: []
-      },
-      {
-        id: "model",
-        label: t("editor.sceneTree.models"),
-        icon: FolderRoundedIcon,
-        nodes: []
-      },
-      {
-        id: "mesh",
-        label: t("editor.sceneTree.meshes"),
-        icon: GridViewRoundedIcon,
-        nodes: []
-      },
-      {
-        id: "light",
-        label: t("editor.sceneTree.lights"),
-        icon: LightModeRoundedIcon,
-        nodes: []
-      }
-    ];
-  }
-
   return [
-    sceneSection,
     {
-      id: "group",
-      label: t("editor.sceneTree.groups"),
-      icon: AccountTreeRoundedIcon,
-      nodes: Array.from(project.groups.values()).map((group, index) => {
-        const fallbackLabel = `${t("editor.sceneTree.group")} ${index + 1}`;
-        return {
-          id: group.id,
-          type: "group",
-          locked: group.locked,
-          visible: group.visible,
-          effectivelyVisible: project.isEntityEffectivelyVisible(group.id),
-          label: group.label || fallbackLabel,
-          fallbackLabel
-        };
-      })
-    },
-    {
-      id: "model",
-      label: t("editor.sceneTree.models"),
-      icon: FolderRoundedIcon,
-      nodes: Array.from(project.models.values()).map((model, index) => {
-        const fallbackLabel = `${t("editor.sceneTree.model")} ${index + 1}`;
-        return {
-          id: model.id,
-          type: "model",
-          locked: model.locked,
-          visible: model.visible,
-          effectivelyVisible: project.isEntityEffectivelyVisible(model.id),
-          label: model.label || fallbackLabel,
-          fallbackLabel
-        };
-      })
-    },
-    {
-      id: "mesh",
-      label: t("editor.sceneTree.meshes"),
-      icon: GridViewRoundedIcon,
-      nodes: Array.from(project.meshes.values()).map((mesh, index) => {
-        const fallbackLabel = `${formatTitleCase(mesh.geometryName)} ${index + 1}`;
-        return {
-          id: mesh.id,
-          type: "mesh",
-          locked: mesh.locked,
-          visible: mesh.visible,
-          effectivelyVisible: project.isEntityEffectivelyVisible(mesh.id),
-          label: mesh.label || fallbackLabel,
-          fallbackLabel
-        };
-      })
-    },
-    {
-      id: "light",
-      label: t("editor.sceneTree.lights"),
-      icon: LightModeRoundedIcon,
-      nodes: Array.from(project.lights.values()).map((light, index) => {
-        const fallbackLabel = getLightLabel(light.lightType, index, t);
-        return {
-          id: light.id,
-          type: "light",
-          locked: light.locked,
-          visible: true,
-          effectivelyVisible: project.isEntityEffectivelyVisible(light.id),
-          label: light.label || fallbackLabel,
-          fallbackLabel
-        };
-      })
+      id: "scene",
+      label: t("editor.sceneTree.sceneGroup"),
+      icon: PublicRoundedIcon,
+      nodes: [createSceneNode(sceneNodeId, t, project ? buildSceneRootChildren(project, t) : [])]
     }
   ];
 }
