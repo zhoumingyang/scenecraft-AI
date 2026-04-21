@@ -38,6 +38,24 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
 
     const app = createEditorSdk(canvasHostRef.current);
     setApp(app);
+    let frameRequestId = 0;
+    let pendingEntityRenderVersion = false;
+    let disposed = false;
+
+    const flushRenderDrivenUpdates = () => {
+      frameRequestId = 0;
+      if (disposed) return;
+
+      if (pendingEntityRenderVersion) {
+        pendingEntityRenderVersion = false;
+        bumpEntityRenderVersion();
+      }
+    };
+
+    const scheduleRenderDrivenUpdates = () => {
+      if (frameRequestId !== 0 || disposed) return;
+      frameRequestId = window.requestAnimationFrame(flushRenderDrivenUpdates);
+    };
 
     const unsubscribe = app.subscribe((event) => {
       if (event.type === "selectionChanged") {
@@ -58,7 +76,8 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
 
       if (event.type === "entityUpdated") {
         if (event.source === "render") {
-          bumpEntityRenderVersion();
+          pendingEntityRenderVersion = true;
+          scheduleRenderDrivenUpdates();
           return;
         }
         bumpProjectVersion();
@@ -90,6 +109,10 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
     });
 
     return () => {
+      disposed = true;
+      if (frameRequestId !== 0) {
+        window.cancelAnimationFrame(frameRequestId);
+      }
       unsubscribe();
       app.dispose();
       setApp(null);
