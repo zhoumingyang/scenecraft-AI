@@ -16,7 +16,7 @@ type ActiveDrag =
       type: "translate-axis";
       axis: "x" | "y" | "z";
       origin: THREE.Vector3;
-      startPosition: THREE.Vector3;
+      startWorldPosition: THREE.Vector3;
       plane: THREE.Plane;
       startOffset: number;
     }
@@ -24,7 +24,7 @@ type ActiveDrag =
       type: "translate-free";
       plane: THREE.Plane;
       startPoint: THREE.Vector3;
-      startPosition: THREE.Vector3;
+      startWorldPosition: THREE.Vector3;
     }
   | {
       type: "rotate-axis";
@@ -32,7 +32,7 @@ type ActiveDrag =
       origin: THREE.Vector3;
       plane: THREE.Plane;
       startVector: THREE.Vector3;
-      startQuaternion: THREE.Quaternion;
+      startWorldQuaternion: THREE.Quaternion;
       currentAngle: number;
     };
 
@@ -114,6 +114,8 @@ export class CustomTransformGizmo {
   private readonly tmpV1 = new THREE.Vector3();
   private readonly tmpV2 = new THREE.Vector3();
   private readonly tmpV3 = new THREE.Vector3();
+  private readonly tmpQ1 = new THREE.Quaternion();
+  private readonly tmpQ2 = new THREE.Quaternion();
   private readonly handleTargets: THREE.Object3D[] = [];
   private readonly visuals = new Map<GizmoHandleKey, HandleVisual>();
   private readonly rotateVisuals = new Map<"x" | "y" | "z", RotateVisual>();
@@ -251,7 +253,7 @@ export class CustomTransformGizmo {
         type: "translate-free",
         plane,
         startPoint: point.clone(),
-        startPosition: this.target.position.clone()
+        startWorldPosition: this.getTargetWorldPosition(this.tmpV2).clone()
       };
       this.dragging = true;
       this.updateVisualState();
@@ -285,7 +287,7 @@ export class CustomTransformGizmo {
         axis,
         origin: origin.clone(),
         plane,
-        startPosition: this.target.position.clone(),
+        startWorldPosition: this.getTargetWorldPosition(this.tmpV3).clone(),
         startOffset: point.sub(origin).dot(axisVector)
       };
       this.dragging = true;
@@ -308,7 +310,7 @@ export class CustomTransformGizmo {
         origin: origin.clone(),
         plane,
         startVector: point.sub(origin).normalize(),
-        startQuaternion: this.target.quaternion.clone(),
+        startWorldQuaternion: this.getTargetWorldQuaternion(this.tmpQ1).clone(),
         currentAngle: 0
       };
       this.dragging = true;
@@ -328,7 +330,7 @@ export class CustomTransformGizmo {
       if (!point) return;
 
       const delta = point.clone().sub(this.activeDrag.startPoint);
-      this.target.position.copy(this.activeDrag.startPosition).add(delta);
+      this.setTargetWorldPosition(this.activeDrag.startWorldPosition.clone().add(delta));
       return;
     }
 
@@ -338,7 +340,9 @@ export class CustomTransformGizmo {
 
       const axisVector = getAxisVector(this.activeDrag.axis);
       const delta = point.clone().sub(this.activeDrag.origin).dot(axisVector) - this.activeDrag.startOffset;
-      this.target.position.copy(this.activeDrag.startPosition).add(axisVector.multiplyScalar(delta));
+      this.setTargetWorldPosition(
+        this.activeDrag.startWorldPosition.clone().add(axisVector.multiplyScalar(delta))
+      );
       return;
     }
 
@@ -355,7 +359,7 @@ export class CustomTransformGizmo {
     this.activeDrag.currentAngle = angle;
 
     const rotation = new THREE.Quaternion().setFromAxisAngle(axisVector, angle);
-    this.target.quaternion.copy(this.activeDrag.startQuaternion).premultiply(rotation);
+    this.setTargetWorldQuaternion(rotation.multiply(this.activeDrag.startWorldQuaternion.clone()));
   }
 
   endPointerInteraction() {
@@ -458,7 +462,46 @@ export class CustomTransformGizmo {
 
   private syncToTarget() {
     if (!this.target) return;
-    this.root.position.copy(this.target.position);
+    this.root.position.copy(this.getTargetWorldPosition(this.tmpV1));
+  }
+
+  private getTargetWorldPosition(target: THREE.Vector3) {
+    this.target?.updateWorldMatrix(true, false);
+    return this.target?.getWorldPosition(target) ?? target.set(0, 0, 0);
+  }
+
+  private setTargetWorldPosition(worldPosition: THREE.Vector3) {
+    if (!this.target) return;
+
+    const parent = this.target.parent;
+    if (!parent) {
+      this.target.position.copy(worldPosition);
+    } else {
+      parent.updateWorldMatrix(true, false);
+      this.target.position.copy(parent.worldToLocal(worldPosition.clone()));
+    }
+
+    this.target.updateMatrixWorld(true);
+  }
+
+  private getTargetWorldQuaternion(target: THREE.Quaternion) {
+    this.target?.updateWorldMatrix(true, false);
+    return this.target?.getWorldQuaternion(target) ?? target.identity();
+  }
+
+  private setTargetWorldQuaternion(worldQuaternion: THREE.Quaternion) {
+    if (!this.target) return;
+
+    const parent = this.target.parent;
+    if (!parent) {
+      this.target.quaternion.copy(worldQuaternion);
+    } else {
+      parent.updateWorldMatrix(true, false);
+      parent.getWorldQuaternion(this.tmpQ2);
+      this.target.quaternion.copy(this.tmpQ2.invert().multiply(worldQuaternion));
+    }
+
+    this.target.updateMatrixWorld(true);
   }
 
   private updateTranslateFacing() {
