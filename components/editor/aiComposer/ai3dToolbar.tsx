@@ -1,6 +1,6 @@
 "use client";
 
-import { CircularProgress, IconButton, Stack, Typography } from "@mui/material";
+import { CircularProgress, IconButton, Stack/*, Typography*/ } from "@mui/material";
 import TranslateRoundedIcon from "@mui/icons-material/TranslateRounded";
 import type { EditorThemeTokens } from "@/components/editor/theme";
 
@@ -23,21 +23,21 @@ export default function Ai3dToolbar({
   isAi3dBusy,
   isPromptActionPending,
   prompt,
-  isGenerating,
-  isOptimizing,
+  // isGenerating,
+  // isOptimizing,
   activePromptAction,
   handlePromptTransform,
   t
 }: Props) {
   return (
     <Stack direction="row" spacing={0.8} alignItems="center">
-      <Typography sx={{ fontSize: 12, color: theme.mutedText }}>
+      {/* <Typography sx={{ fontSize: 12, color: theme.mutedText }}>
         {isGenerating
           ? t("editor.ai3d.generatingLabel")
           : isOptimizing
             ? t("editor.ai3d.optimizingLabel")
             : ""}
-      </Typography>
+      </Typography> */}
       <IconButton
         size="small"
         disabled={isAi3dBusy || isPromptActionPending || !prompt.trim()}
