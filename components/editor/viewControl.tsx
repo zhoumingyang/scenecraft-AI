@@ -6,6 +6,7 @@ import VisibilityRoundedIcon from "@mui/icons-material/VisibilityRounded";
 import GridViewRoundedIcon from "@mui/icons-material/GridViewRounded";
 import OpenWithRoundedIcon from "@mui/icons-material/OpenWithRounded";
 import LightModeRoundedIcon from "@mui/icons-material/LightModeRounded";
+import DarkModeRoundedIcon from "@mui/icons-material/DarkModeRounded";
 import KeyboardArrowUpRoundedIcon from "@mui/icons-material/KeyboardArrowUpRounded";
 import type { EditorApp } from "@/render/editor";
 import { useI18n } from "@/lib/i18n";
@@ -13,7 +14,7 @@ import { useEditorStore } from "@/stores/editorStore";
 import { getEditorThemeTokens } from "@/components/editor/theme";
 import { getViewportPillSx } from "./viewportControlStyles";
 
-type HelperKey = "gridHelper" | "transformGizmo" | "lightHelper";
+type HelperKey = "gridHelper" | "transformGizmo" | "lightHelper" | "shadow";
 
 type ViewControlProps = {
   app: EditorApp | null;
@@ -31,7 +32,8 @@ export default function ViewControl({ app, viewStateVersion }: ViewControlProps)
       app?.getViewHelperVisibility() ?? {
         gridHelper: true,
         transformGizmo: true,
-        lightHelper: true
+        lightHelper: true,
+        shadow: false
       },
     [app, viewStateVersion]
   );
@@ -60,6 +62,12 @@ export default function ViewControl({ app, viewStateVersion }: ViewControlProps)
       icon: LightModeRoundedIcon,
       label: t("editor.view.lightHelper"),
       visible: helperVisibility.lightHelper
+    },
+    {
+      key: "shadow",
+      icon: DarkModeRoundedIcon,
+      label: t("editor.view.shadow"),
+      visible: helperVisibility.shadow
     }
   ];
 

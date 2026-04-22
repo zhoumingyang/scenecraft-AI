@@ -6,6 +6,14 @@ import type { BindingContext, RenderBinding } from "./types";
 
 const STEP_SECONDS = 1 / 30;
 
+function enableShadowForAsset(root: THREE.Object3D) {
+  root.traverse((object) => {
+    if (!(object instanceof THREE.Mesh)) return;
+    object.castShadow = true;
+    object.receiveShadow = true;
+  });
+}
+
 function poseAllSkeletons(root: THREE.Object3D) {
   root.traverse((object) => {
     const skinnedMesh = object as THREE.SkinnedMesh;
@@ -119,6 +127,7 @@ export function createModelBinding(context: BindingContext, model: ModelEntityMo
       currentAssetRoot = asset.object;
       currentAssetUpdate = asset.update ?? null;
       currentAssetDispose = asset.dispose ?? null;
+      enableShadowForAsset(asset.object);
       mixer = new THREE.AnimationMixer(asset.object);
       clipsById = new Map(asset.animations.map((clip, index) => [clip.id, asset.clips[index]]));
       actionsById = new Map(

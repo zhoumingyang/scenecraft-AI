@@ -35,13 +35,17 @@ export class EditorRuntime {
   private rafId = 0;
   private readonly clock = new THREE.Clock();
   private readonly gridHelper: THREE.GridHelper;
+  private readonly shadowGroundBase: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>;
+  private readonly shadowGroundReceiver: THREE.Mesh<THREE.PlaneGeometry, THREE.ShadowMaterial>;
   private readonly defaultBackground = new THREE.Color("#05070f");
   private disposed = false;
   private startOptions: RuntimeStartOptions | null = null;
   private lastCameraSignature = "";
   private currentCameraType = 1;
   private transformDragging = false;
+  private gridHelperVisible = true;
   private lightHelpersVisible = true;
+  private shadowEnabled = false;
   private environmentTexture: THREE.Texture | null = null;
   private environmentMapTexture: THREE.Texture | null = null;
   private readonly pmremGenerator: THREE.PMREMGenerator;
@@ -63,6 +67,8 @@ export class EditorRuntime {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.toneMapping = THREE.NoToneMapping;
     this.renderer.toneMappingExposure = 1;
+    this.renderer.shadowMap.enabled = false;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.composer = new EffectComposer(this.renderer);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
     this.outlinePass = new OutlinePass(new THREE.Vector2(1, 1), this.scene, this.camera);
@@ -88,6 +94,34 @@ export class EditorRuntime {
     this.gridHelper = new THREE.GridHelper(80, 80, 0x5f8fc7, 0x39567f);
     this.gridHelper.position.y = -0.0001;
     this.scene.add(this.gridHelper);
+    this.shadowGroundBase = new THREE.Mesh(
+      new THREE.PlaneGeometry(80, 80),
+      new THREE.MeshBasicMaterial({
+        color: new THREE.Color("#2c3f5a"),
+        transparent: true,
+        opacity: 0.72,
+        side: THREE.DoubleSide
+      })
+    );
+    this.shadowGroundBase.name = "shadow-ground-base";
+    this.shadowGroundBase.rotation.x = -Math.PI / 2;
+    this.shadowGroundBase.position.y = -0.0001;
+    this.shadowGroundBase.visible = false;
+    this.scene.add(this.shadowGroundBase);
+    this.shadowGroundReceiver = new THREE.Mesh(
+      new THREE.PlaneGeometry(80, 80),
+      new THREE.ShadowMaterial({
+        color: new THREE.Color("#000000"),
+        opacity: 0.26
+      })
+    );
+    this.shadowGroundReceiver.name = "shadow-ground-receiver";
+    this.shadowGroundReceiver.rotation.x = -Math.PI / 2;
+    this.shadowGroundReceiver.position.y = 0;
+    this.shadowGroundReceiver.castShadow = false;
+    this.shadowGroundReceiver.receiveShadow = true;
+    this.shadowGroundReceiver.visible = false;
+    this.scene.add(this.shadowGroundReceiver);
     this.scene.add(this.transformGizmo.root);
     this.pmremGenerator = new THREE.PMREMGenerator(this.renderer);
     this.pmremGenerator.compileEquirectangularShader();
@@ -126,6 +160,12 @@ export class EditorRuntime {
     this.clearEnvironment();
     this.transformGizmo.dispose();
     this.scene.remove(this.transformGizmo.root);
+    this.scene.remove(this.shadowGroundBase);
+    this.scene.remove(this.shadowGroundReceiver);
+    this.shadowGroundBase.geometry.dispose();
+    this.shadowGroundBase.material.dispose();
+    this.shadowGroundReceiver.geometry.dispose();
+    this.shadowGroundReceiver.material.dispose();
     this.orbitControls.dispose();
     this.pmremGenerator.dispose();
     this.renderer.dispose();
@@ -224,11 +264,12 @@ export class EditorRuntime {
   }
 
   getGridHelperVisible() {
-    return this.gridHelper.visible;
+    return this.gridHelperVisible;
   }
 
   setGridHelperVisible(visible: boolean) {
-    this.gridHelper.visible = visible;
+    this.gridHelperVisible = visible;
+    this.syncGroundVisibility();
   }
 
   getTransformGizmoVisible() {
@@ -250,6 +291,16 @@ export class EditorRuntime {
   setLightHelpersVisible(visible: boolean) {
     this.lightHelpersVisible = visible;
     this.syncLightHelperVisibility();
+  }
+
+  getShadowEnabled() {
+    return this.shadowEnabled;
+  }
+
+  setShadowEnabled(enabled: boolean) {
+    this.shadowEnabled = enabled;
+    this.renderer.shadowMap.enabled = enabled;
+    this.syncGroundVisibility();
   }
 
   syncLightHelperVisibility() {
@@ -375,6 +426,12 @@ export class EditorRuntime {
         : this.defaultBackground;
     this.renderer.toneMapping = envConfig.toneMapping as THREE.ToneMapping;
     this.renderer.toneMappingExposure = envConfig.toneMappingExposure;
+  }
+
+  private syncGroundVisibility() {
+    this.gridHelper.visible = this.gridHelperVisible && !this.shadowEnabled;
+    this.shadowGroundBase.visible = this.gridHelperVisible && this.shadowEnabled;
+    this.shadowGroundReceiver.visible = this.gridHelperVisible && this.shadowEnabled;
   }
 
   private setTransformDragging(isDragging: boolean) {

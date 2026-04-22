@@ -163,7 +163,8 @@ export class EditorApp {
     return {
       gridHelper: this.runtime.getGridHelperVisible(),
       transformGizmo: this.runtime.getTransformGizmoVisible(),
-      lightHelper: this.runtime.getLightHelpersVisible()
+      lightHelper: this.runtime.getLightHelpersVisible(),
+      shadow: this.runtime.getShadowEnabled()
     };
   }
 
@@ -172,15 +173,17 @@ export class EditorApp {
   }
 
   setViewHelperVisibility(
-    helper: "gridHelper" | "transformGizmo" | "lightHelper",
+    helper: "gridHelper" | "transformGizmo" | "lightHelper" | "shadow",
     visible: boolean
   ) {
     if (helper === "gridHelper") {
       this.runtime.setGridHelperVisible(visible);
     } else if (helper === "transformGizmo") {
       this.runtime.setTransformGizmoVisible(visible);
-    } else {
+    } else if (helper === "lightHelper") {
       this.runtime.setLightHelpersVisible(visible);
+    } else {
+      this.runtime.setShadowEnabled(visible);
     }
     this.emit({ type: "viewStateUpdated" });
   }

@@ -55,6 +55,15 @@ function createLightParts(model: LightEntityModel): LightBindingParts {
 
   if (model.lightType === 2) {
     const light = new THREE.DirectionalLight(model.color, model.intensity);
+    light.castShadow = true;
+    light.shadow.mapSize.set(2048, 2048);
+    light.shadow.camera.near = 0.5;
+    light.shadow.camera.far = 80;
+    light.shadow.camera.left = -20;
+    light.shadow.camera.right = 20;
+    light.shadow.camera.top = 20;
+    light.shadow.camera.bottom = -20;
+    light.shadow.bias = -0.0002;
     const target = new THREE.Object3D();
     target.position.set(0, 0, 10);
     light.target = target;
@@ -80,6 +89,11 @@ function createLightParts(model: LightEntityModel): LightBindingParts {
       model.penumbra,
       model.decay
     );
+    light.castShadow = true;
+    light.shadow.mapSize.set(2048, 2048);
+    light.shadow.camera.near = 0.5;
+    light.shadow.camera.far = Math.max(model.distance || 0, 80);
+    light.shadow.bias = -0.0002;
     const target = new THREE.Object3D();
     target.position.set(0, 0, 10);
     light.target = target;
@@ -137,6 +151,7 @@ function applyLightModelToObject(model: LightEntityModel, parts: LightBindingUpd
     parts.light.decay = model.decay;
     parts.light.angle = model.angle;
     parts.light.penumbra = model.penumbra;
+    parts.light.shadow.camera.far = Math.max(model.distance || 0, 80);
   } else if (parts.light instanceof THREE.RectAreaLight) {
     parts.light.color.set(model.color);
     parts.light.intensity = model.intensity;
