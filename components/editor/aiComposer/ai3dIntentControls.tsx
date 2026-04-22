@@ -71,14 +71,23 @@ function getFieldSx(theme: EditorThemeTokens) {
         borderColor: "rgba(99, 164, 255, 0.72)"
       }
     },
+    "& .MuiInputBase-input": {
+      color: theme.pillText
+    },
+    "& .MuiSelect-select": {
+      color: theme.pillText
+    },
     "& .MuiInputLabel-root": {
-      color: theme.mutedText
+      color: theme.text
+    },
+    "& .MuiInputLabel-root.Mui-focused": {
+      color: theme.titleText
     },
     "& .MuiSvgIcon-root": {
-      color: theme.mutedText
+      color: theme.text
     },
     "& .MuiInputBase-input::placeholder": {
-      color: theme.mutedText,
+      color: theme.text,
       opacity: 1
     }
   } as const;
@@ -97,7 +106,7 @@ export default function Ai3dIntentControls({ theme, value, onChange, t }: Props)
       }}
     >
       <Stack direction="row" justifyContent="space-between" alignItems="center">
-        <Typography sx={{ fontSize: 12, color: theme.mutedText }}>
+        <Typography sx={{ fontSize: 12, color: theme.text }}>
           {t("editor.ai3d.intentHint")}
         </Typography>
         <Button

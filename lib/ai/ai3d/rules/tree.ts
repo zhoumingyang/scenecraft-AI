@@ -196,6 +196,8 @@ function buildTreePlan({
 
   const canopyClusterCount = params.canopyClusterCount;
   const canopySpread = params.canopySpread;
+  const canopyLateralReach = canopyWidth * (0.24 + canopySpread * 0.42);
+  const canopyDepthReach = canopyWidth * (0.08 + canopySpread * 0.18);
 
   const pushCanopyCluster = ({
     nodeId,
@@ -228,7 +230,7 @@ function buildTreePlan({
       nodeId: "canopy_main",
       label: "Canopy Main",
       position: [canopyCenterX, canopyBaseY + canopyHeight * 0.18, canopyCenterZ],
-      scale: [canopyWidth * 0.84, canopyHeight * 0.86, canopyWidth * 0.78],
+      scale: [canopyWidth * 0.6, canopyHeight * 0.68, canopyWidth * 0.56],
       color: palette.leafPrimary
     });
 
@@ -236,18 +238,19 @@ function buildTreePlan({
       const progress = canopyClusterCount === 2 ? 0.5 : index / Math.max(canopyClusterCount - 2, 1);
       const side = index % 2 === 0 ? -1 : 1;
       const ring = Math.floor(index / 2);
-      const xOffset = side * canopySpread * (0.34 + progress * 0.18);
-      const yOffset = canopyHeight * (-0.06 + ring * 0.12 + progress * 0.08);
-      const zOffset = ((index % 3) - 1) * canopySpread * 0.18 + params.asymmetry * side * 0.1;
+      const xOffset = side * canopyLateralReach * (0.86 + progress * 0.18 + ring * 0.1);
+      const yOffset = canopyHeight * (-0.02 + ring * 0.16 + progress * 0.12);
+      const zOffset =
+        ((index % 3) - 1) * canopyDepthReach * 0.7 + params.asymmetry * side * canopyDepthReach * 0.4;
 
       pushCanopyCluster({
         nodeId: `canopy_cluster_${index + 1}`,
         label: `Canopy Cluster ${index + 1}`,
         position: [canopyCenterX + xOffset, canopyBaseY + yOffset, canopyCenterZ + zOffset],
         scale: [
-          canopyWidth * (0.44 + progress * 0.08),
-          canopyHeight * (0.42 + ring * 0.08),
-          canopyWidth * (0.38 + progress * 0.1)
+          canopyWidth * (0.34 + progress * 0.08),
+          canopyHeight * (0.34 + ring * 0.08),
+          canopyWidth * (0.3 + progress * 0.08)
         ],
         color: index % 2 === 0 ? palette.leafSecondary : palette.leafPrimary
       });
@@ -257,7 +260,7 @@ function buildTreePlan({
       nodeId: "canopy_lower",
       label: "Canopy Lower",
       position: [canopyCenterX, canopyBaseY - 0.08, canopyCenterZ],
-      scale: [canopyWidth * 0.96, canopyHeight * 0.52, canopyWidth * 0.84],
+      scale: [canopyWidth * 0.68, canopyHeight * 0.42, canopyWidth * 0.6],
       color: palette.leafPrimary
     });
     pushCanopyCluster({
@@ -268,7 +271,7 @@ function buildTreePlan({
         canopyBaseY + canopyHeight * 0.34,
         canopyCenterZ
       ],
-      scale: [canopyWidth * 0.62, canopyHeight * 0.46, canopyWidth * 0.58],
+      scale: [canopyWidth * 0.46, canopyHeight * 0.34, canopyWidth * 0.42],
       color: palette.leafSecondary
     });
 
@@ -279,14 +282,14 @@ function buildTreePlan({
         nodeId: `canopy_layer_${index + 1}`,
         label: `Canopy Layer ${index + 1}`,
         position: [
-          canopyCenterX + side * canopySpread * (0.24 + progress * 0.22),
+          canopyCenterX + side * canopyLateralReach * (0.78 + progress * 0.18),
           canopyBaseY + canopyHeight * (0.06 + progress * 0.16),
-          canopyCenterZ + side * canopySpread * 0.08
+          canopyCenterZ + side * canopyDepthReach * 0.6
         ],
         scale: [
-          canopyWidth * (0.34 + progress * 0.08),
-          canopyHeight * (0.24 + progress * 0.08),
-          canopyWidth * (0.3 + progress * 0.08)
+          canopyWidth * (0.28 + progress * 0.08),
+          canopyHeight * (0.18 + progress * 0.06),
+          canopyWidth * (0.24 + progress * 0.08)
         ],
         color: index % 2 === 0 ? palette.leafSecondary : palette.leafPrimary
       });
@@ -311,7 +314,7 @@ function buildTreePlan({
         label: "Canopy Fill",
         transform: {
           position: [canopyCenterX, canopyBaseY + canopyHeight * 0.02, canopyCenterZ],
-          scale: [canopyWidth * 0.76, canopyHeight * 0.44, canopyWidth * 0.76]
+          scale: [canopyWidth * 0.52, canopyHeight * 0.3, canopyWidth * 0.52]
         },
         material: { color: palette.leafSecondary, roughness: 1 }
       }
@@ -323,14 +326,14 @@ function buildTreePlan({
         nodeId: `canopy_flank_${index + 1}`,
         label: `Canopy Flank ${index + 1}`,
         position: [
-          canopyCenterX + side * canopySpread * (0.18 + index * 0.08),
+          canopyCenterX + side * canopyLateralReach * (0.76 + index * 0.14),
           canopyBaseY + canopyHeight * (0.12 + index * 0.06),
-          canopyCenterZ + side * canopySpread * 0.06
+          canopyCenterZ + side * canopyDepthReach * 0.55
         ],
         scale: [
-          canopyWidth * (0.26 + index * 0.04),
-          canopyHeight * (0.18 + index * 0.03),
-          canopyWidth * (0.24 + index * 0.04)
+          canopyWidth * (0.22 + index * 0.04),
+          canopyHeight * (0.16 + index * 0.03),
+          canopyWidth * (0.2 + index * 0.04)
         ],
         color: palette.leafSecondary
       });
