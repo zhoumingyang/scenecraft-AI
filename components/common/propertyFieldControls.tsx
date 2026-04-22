@@ -12,49 +12,60 @@ import {
 } from "@mui/material";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import RemoveRoundedIcon from "@mui/icons-material/RemoveRounded";
+import { getEditorThemeTokens } from "@/components/editor/theme";
+import { useEditorStore } from "@/stores/editorStore";
 
 const AXES = ["x", "y", "z"] as const;
 
 export type Axis = (typeof AXES)[number];
 export type AxisTextValues = Record<Axis, string>;
 
-const inputSx = {
-  "& .MuiOutlinedInput-root": {
-    position: "relative",
-    color: "#eef5ff",
-    background: "rgba(10,18,38,0.55)",
-    minHeight: 30,
-    fontSize: 12
-  },
-  "& .MuiOutlinedInput-input": {
-    paddingTop: 6,
-    paddingBottom: 6
-  }
-};
+function getInputSx(theme: ReturnType<typeof getEditorThemeTokens>) {
+  return {
+    "& .MuiOutlinedInput-root": {
+      position: "relative",
+      color: theme.pillText,
+      background: theme.inputBg,
+      minHeight: 30,
+      fontSize: 12
+    },
+    "& .MuiOutlinedInput-input": {
+      paddingTop: 6,
+      paddingBottom: 6
+    }
+  } as const;
+}
 
-const labeledInputSx = {
-  ...inputSx,
-  "& .MuiInputLabel-root": {
-    color: "rgba(176,197,238,0.78)"
-  }
-};
+function getLabeledInputSx(theme: ReturnType<typeof getEditorThemeTokens>) {
+  return {
+    ...getInputSx(theme),
+    "& .MuiInputLabel-root": {
+      color: theme.text
+    },
+    "& .MuiInputLabel-root.Mui-focused": {
+      color: theme.titleText
+    }
+  } as const;
+}
 
-const compactAxisInputSx = {
-  ...inputSx,
-  "&& .MuiOutlinedInput-root": {
-    position: "relative",
-    color: "#eef5ff",
-    background: "rgba(10,18,38,0.55)",
-    minHeight: 30,
-    height: 30,
-    fontSize: 11
-  },
-  "&& .MuiOutlinedInput-input.MuiInputBase-inputSizeSmall": {
-    paddingTop: 2,
-    paddingBottom: 2,
-    lineHeight: 1.2
-  }
-};
+function getCompactAxisInputSx(theme: ReturnType<typeof getEditorThemeTokens>) {
+  return {
+    ...getInputSx(theme),
+    "&& .MuiOutlinedInput-root": {
+      position: "relative",
+      color: theme.pillText,
+      background: theme.inputBg,
+      minHeight: 30,
+      height: 30,
+      fontSize: 11
+    },
+    "&& .MuiOutlinedInput-input.MuiInputBase-inputSizeSmall": {
+      paddingTop: 2,
+      paddingBottom: 2,
+      lineHeight: 1.2
+    }
+  } as const;
+}
 
 type AxisNumberInputsProps = {
   label: string;
@@ -73,9 +84,13 @@ export function AxisNumberInputs({
   onCommit,
   onNudge
 }: AxisNumberInputsProps) {
+  const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
+  const theme = getEditorThemeTokens(editorThemeMode);
+  const compactAxisInputSx = getCompactAxisInputSx(theme);
+
   return (
     <Stack spacing={0.75}>
-      <Typography sx={{ fontSize: 11, color: "rgba(205,220,255,0.78)" }}>{label}</Typography>
+      <Typography sx={{ fontSize: 11, color: theme.text }}>{label}</Typography>
       <Stack direction="row" spacing={0.75}>
         {AXES.map((axis) => (
           <TextField
@@ -125,7 +140,7 @@ export function AxisNumberInputs({
                       size="small"
                       onMouseDown={(event) => event.preventDefault()}
                       onClick={() => onNudge(axis, 0.1)}
-                      sx={{ p: 0, color: "rgba(214,228,255,0.9)" }}
+                      sx={{ p: 0, color: theme.titleText }}
                     >
                       <AddRoundedIcon sx={{ fontSize: 10 }} />
                     </IconButton>
@@ -133,7 +148,7 @@ export function AxisNumberInputs({
                       size="small"
                       onMouseDown={(event) => event.preventDefault()}
                       onClick={() => onNudge(axis, -0.1)}
-                      sx={{ p: 0, color: "rgba(214,228,255,0.9)" }}
+                      sx={{ p: 0, color: theme.titleText }}
                     >
                       <RemoveRoundedIcon sx={{ fontSize: 10 }} />
                     </IconButton>
@@ -154,7 +169,7 @@ export function AxisNumberInputs({
                   <Typography
                     sx={{
                       fontSize: 10,
-                      color: "rgba(150,182,255,0.86)",
+                      color: theme.titleText,
                       textTransform: "uppercase"
                     }}
                   >
@@ -193,16 +208,19 @@ export function AxisSliderGroup({
   onChangeStart,
   onChangeCommit
 }: AxisSliderGroupProps) {
+  const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
+  const theme = getEditorThemeTokens(editorThemeMode);
+
   return (
     <Stack spacing={0.65}>
-      {label ? <Typography sx={{ fontSize: 11, color: "rgba(205,220,255,0.78)" }}>{label}</Typography> : null}
+      {label ? <Typography sx={{ fontSize: 11, color: theme.text }}>{label}</Typography> : null}
       {AXES.map((axis, index) => (
         <Stack key={axis} direction="row" spacing={0.9} alignItems="center">
           <Typography
             sx={{
               width: 14,
               fontSize: 11,
-              color: "rgba(150,182,255,0.86)",
+              color: theme.titleText,
               textTransform: "uppercase"
             }}
           >
@@ -225,7 +243,8 @@ export function AxisSliderGroup({
               minWidth: 36,
               textAlign: "right",
               fontSize: 11,
-              color: "rgba(227,236,255,0.92)"
+              color: theme.titleText,
+              fontWeight: 600
             }}
           >
             {formatter(values[index])}
@@ -257,6 +276,11 @@ export function CommitNumberField({
   nudgeStep = 1,
   compact = false
 }: CommitNumberFieldProps) {
+  const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
+  const theme = getEditorThemeTokens(editorThemeMode);
+  const compactAxisInputSx = getCompactAxisInputSx(theme);
+  const labeledInputSx = getLabeledInputSx(theme);
+
   return (
     <TextField
       size="small"
@@ -299,7 +323,7 @@ export function CommitNumberField({
                       size="small"
                       onMouseDown={(event) => event.preventDefault()}
                       onClick={() => onNudge(nudgeStep)}
-                      sx={{ p: 0.05, color: "rgba(214,228,255,0.9)" }}
+                      sx={{ p: 0.05, color: theme.titleText }}
                     >
                       <AddRoundedIcon sx={{ fontSize: 11 }} />
                     </IconButton>
@@ -307,7 +331,7 @@ export function CommitNumberField({
                       size="small"
                       onMouseDown={(event) => event.preventDefault()}
                       onClick={() => onNudge(-nudgeStep)}
-                      sx={{ p: 0.05, color: "rgba(214,228,255,0.9)" }}
+                      sx={{ p: 0.05, color: theme.titleText }}
                     >
                       <RemoveRoundedIcon sx={{ fontSize: 11 }} />
                     </IconButton>
@@ -337,6 +361,12 @@ type ColorFieldProps = {
 };
 
 export function ColorField({ label, value, onChange, compact = false }: ColorFieldProps) {
+  const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
+  const theme = getEditorThemeTokens(editorThemeMode);
+  const compactAxisInputSx = getCompactAxisInputSx(theme);
+  const labeledInputSx = getLabeledInputSx(theme);
+  const inputSx = getInputSx(theme);
+
   return (
     <TextField
       size="small"

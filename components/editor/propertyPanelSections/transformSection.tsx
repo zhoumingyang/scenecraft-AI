@@ -4,6 +4,7 @@ import * as THREE from "three";
 import { useEffect, useRef, useState } from "react";
 import { Checkbox, FormControlLabel, Stack, Typography } from "@mui/material";
 import PropertyPanelSection from "@/components/common/propertyPanelSection";
+import { getEditorThemeTokens } from "@/components/editor/theme";
 import {
   Axis,
   AxisNumberInputs,
@@ -28,6 +29,8 @@ export function TransformSection({
 }: TransformSectionProps) {
   const { t } = useI18n();
   const app = useEditorStore((state) => state.app);
+  const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
+  const theme = getEditorThemeTokens(editorThemeMode);
   const [isUniformScaleEnabled, setIsUniformScaleEnabled] = useState(false);
   const [activePositionAxis, setActivePositionAxis] = useState<Axis | null>(null);
   const [activeRotationAxis, setActiveRotationAxis] = useState<Axis | null>(null);
@@ -203,7 +206,7 @@ export function TransformSection({
 
       <Stack spacing={0.65}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
-          <Typography sx={{ fontSize: 11, color: "rgba(205,220,255,0.78)" }}>
+          <Typography sx={{ fontSize: 11, color: theme.text }}>
             {t("editor.properties.scale")}
           </Typography>
           <FormControlLabel
@@ -220,11 +223,11 @@ export function TransformSection({
               gap: 0.35,
               "& .MuiFormControlLabel-label": {
                 fontSize: 11,
-                color: "rgba(205,220,255,0.78)"
+                color: theme.text
               },
               "& .MuiCheckbox-root": {
                 p: 0.25,
-                color: "rgba(150,182,255,0.86)"
+                color: theme.titleText
               }
             }}
           />

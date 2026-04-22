@@ -4,6 +4,7 @@ import { ChangeEvent } from "react";
 import { Button, Slider, Stack, Typography } from "@mui/material";
 import PropertyPanelSection from "@/components/common/propertyPanelSection";
 import { ColorField } from "@/components/common/propertyFieldControls";
+import { getEditorThemeTokens } from "@/components/editor/theme";
 import { useI18n } from "@/lib/i18n";
 import type { ResolvedMeshMaterialJSON, ResolvedTextureSchema } from "@/render/editor";
 import { useEditorStore } from "@/stores/editorStore";
@@ -25,11 +26,14 @@ function MaterialSliderRow({
   step?: number;
   onChange: (value: number) => void;
 }) {
+  const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
+  const theme = getEditorThemeTokens(editorThemeMode);
+
   return (
     <Stack spacing={0.45}>
       <Stack direction="row" justifyContent="space-between" alignItems="center">
-        <Typography sx={{ fontSize: 11, color: "rgba(205,220,255,0.78)" }}>{label}</Typography>
-        <Typography sx={{ fontSize: 11, color: "rgba(227,236,255,0.92)" }}>
+        <Typography sx={{ fontSize: 11, color: theme.text }}>{label}</Typography>
+        <Typography sx={{ fontSize: 11, color: theme.titleText, fontWeight: 600 }}>
           {formatNumber(value, 2)}
         </Typography>
       </Stack>
@@ -55,10 +59,12 @@ function TextureConfigRow({
   onOpen: () => void;
 }) {
   const { t } = useI18n();
+  const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
+  const theme = getEditorThemeTokens(editorThemeMode);
 
   return (
     <Stack direction="row" spacing={0.8} alignItems="center">
-      <Typography sx={{ width: 78, fontSize: 11, color: "rgba(205,220,255,0.78)" }}>{label}</Typography>
+      <Typography sx={{ width: 78, fontSize: 11, color: theme.text }}>{label}</Typography>
       <Button
         size="small"
         color="inherit"
@@ -68,9 +74,9 @@ function TextureConfigRow({
           justifyContent: "space-between",
           minHeight: 30,
           borderRadius: 1,
-          border: "1px solid rgba(160,190,255,0.18)",
-          background: "rgba(10,18,38,0.55)",
-          color: "#eef5ff",
+          border: theme.sectionBorder,
+          background: theme.inputBg,
+          color: theme.pillText,
           textTransform: "none"
         }}
       >
@@ -95,6 +101,8 @@ export function MeshAppearanceSection({
 }: MeshAppearanceSectionProps) {
   const { t } = useI18n();
   const app = useEditorStore((state) => state.app);
+  const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
+  const theme = getEditorThemeTokens(editorThemeMode);
 
   const updateColor = (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     app?.updateMeshMaterial(entityId, { color: event.target.value });
@@ -122,14 +130,14 @@ export function MeshAppearanceSection({
     <PropertyPanelSection title={t("editor.properties.appearance")}>
       <Stack spacing={0.8}>
         <Stack direction="row" spacing={0.8} alignItems="center">
-          <Typography sx={{ width: 78, fontSize: 11, color: "rgba(205,220,255,0.78)" }}>
+          <Typography sx={{ width: 78, fontSize: 11, color: theme.text }}>
             {t("editor.properties.color")}
           </Typography>
           <ColorField value={material.color} onChange={updateColor} compact />
         </Stack>
 
         <Stack direction="row" spacing={0.8} alignItems="center">
-          <Typography sx={{ width: 78, fontSize: 11, color: "rgba(205,220,255,0.78)" }}>
+          <Typography sx={{ width: 78, fontSize: 11, color: theme.text }}>
             {t("editor.properties.emissive")}
           </Typography>
           <ColorField value={material.emissive} onChange={updateEmissive} compact />
@@ -163,7 +171,7 @@ export function MeshAppearanceSection({
         />
 
         <Stack spacing={0.45}>
-          <Typography sx={{ fontSize: 11, color: "rgba(205,220,255,0.78)" }}>
+          <Typography sx={{ fontSize: 11, color: theme.text }}>
             {t("editor.properties.normalScale")}
           </Typography>
           {(["x", "y"] as const).map((axis, index) => (
@@ -172,7 +180,7 @@ export function MeshAppearanceSection({
                 sx={{
                   width: 14,
                   fontSize: 11,
-                  color: "rgba(150,182,255,0.86)",
+                  color: theme.titleText,
                   textTransform: "uppercase"
                 }}
               >
@@ -192,7 +200,8 @@ export function MeshAppearanceSection({
                   minWidth: 36,
                   textAlign: "right",
                   fontSize: 11,
-                  color: "rgba(227,236,255,0.92)"
+                  color: theme.titleText,
+                  fontWeight: 600
                 }}
               >
                 {formatNumber(material.normalScale[index], 2)}

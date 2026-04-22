@@ -32,7 +32,17 @@ export default function PromptInput({ value, placeholder, theme, onFocus, onChan
           background: "transparent",
           fontSize: 14
         },
+        "& .MuiInputBase-input": {
+          color: theme.pillText
+        },
+        "& .MuiInputBase-inputMultiline": {
+          color: theme.pillText
+        },
         "& .MuiInputBase-input::placeholder": {
+          color: theme.mutedText,
+          opacity: 1
+        },
+        "& .MuiInputBase-inputMultiline::placeholder": {
           color: theme.mutedText,
           opacity: 1
         },
