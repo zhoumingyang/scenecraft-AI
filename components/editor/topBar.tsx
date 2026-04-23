@@ -116,12 +116,6 @@ const dropdownConfigs: DropdownConfig[] = [
   }
 ];
 
-const defaultSelectedValues: Record<string, string> = {
-  camera: "bird",
-  light: "hemisphere",
-  mesh: "box"
-};
-
 export default function TopBar() {
   const { t } = useI18n();
   const modelImportInputRef = useRef<HTMLInputElement | null>(null);
@@ -131,25 +125,13 @@ export default function TopBar() {
   const projectLoadVersion = useEditorStore((state) => state.projectLoadVersion);
   const [activeMenuId, setActiveMenuId] = useState<DropdownConfig["id"] | null>(null);
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
-  const [selectedValues, setSelectedValues] = useState<Record<string, string>>(defaultSelectedValues);
   const theme = getEditorThemeTokens(editorThemeMode);
 
   const activeConfig = dropdownConfigs.find((item) => item.id === activeMenuId) || null;
 
   useEffect(() => {
-    setSelectedValues({ ...defaultSelectedValues });
     closeMenu();
   }, [projectLoadVersion]);
-
-  useEffect(() => {
-    if (!app) return;
-
-    const cameraType = app.projectModel?.camera.cameraType;
-    setSelectedValues((prev) => ({
-      ...prev,
-      camera: cameraType === 2 ? "firstPerson" : "bird"
-    }));
-  }, [app, projectLoadVersion]);
 
   const openMenu = (id: DropdownConfig["id"], anchor: HTMLElement) => {
     setActiveMenuId(id);
@@ -243,7 +225,6 @@ export default function TopBar() {
     kind: "default" | "lightPreset" = "default"
   ): DropdownMenuItem => ({
     key: `${kind}:${option.value}`,
-    selected: activeConfig ? selectedValues[activeConfig.id] === option.value : false,
     label: t(option.labelKey),
     onClick: async () => {
       if (!activeConfig) return;
@@ -259,14 +240,6 @@ export default function TopBar() {
         if (option.value === "pano") onImportPano();
         closeMenu();
         return;
-      }
-
-      if (
-        activeConfig.id === "camera" ||
-        activeConfig.id === "light" ||
-        activeConfig.id === "mesh"
-      ) {
-        setSelectedValues((prev) => ({ ...prev, [activeConfig.id]: option.value }));
       }
 
       if (activeConfig.id === "camera" && app) {
