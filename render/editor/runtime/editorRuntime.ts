@@ -97,22 +97,26 @@ export class EditorRuntime {
     this.shadowGroundBase = new THREE.Mesh(
       new THREE.PlaneGeometry(80, 80),
       new THREE.MeshBasicMaterial({
-        color: new THREE.Color("#2c3f5a"),
+        color: new THREE.Color("#ffffff"),
         transparent: true,
-        opacity: 0.72,
+        opacity: 0.96,
         side: THREE.DoubleSide
       })
     );
     this.shadowGroundBase.name = "shadow-ground-base";
     this.shadowGroundBase.rotation.x = -Math.PI / 2;
-    this.shadowGroundBase.position.y = -0.0001;
+    this.shadowGroundBase.position.y = -0.001;
     this.shadowGroundBase.visible = false;
     this.scene.add(this.shadowGroundBase);
     this.shadowGroundReceiver = new THREE.Mesh(
       new THREE.PlaneGeometry(80, 80),
       new THREE.ShadowMaterial({
         color: new THREE.Color("#000000"),
-        opacity: 0.26
+        opacity: 0.3,
+        depthWrite: false,
+        polygonOffset: true,
+        polygonOffsetFactor: -1,
+        polygonOffsetUnits: -1
       })
     );
     this.shadowGroundReceiver.name = "shadow-ground-receiver";
@@ -120,6 +124,7 @@ export class EditorRuntime {
     this.shadowGroundReceiver.position.y = 0;
     this.shadowGroundReceiver.castShadow = false;
     this.shadowGroundReceiver.receiveShadow = true;
+    this.shadowGroundReceiver.renderOrder = 1;
     this.shadowGroundReceiver.visible = false;
     this.scene.add(this.shadowGroundReceiver);
     this.scene.add(this.transformGizmo.root);
@@ -300,6 +305,7 @@ export class EditorRuntime {
   setShadowEnabled(enabled: boolean) {
     this.shadowEnabled = enabled;
     this.renderer.shadowMap.enabled = enabled;
+    this.invalidateSceneMaterials();
     this.syncGroundVisibility();
   }
 
@@ -432,6 +438,22 @@ export class EditorRuntime {
     this.gridHelper.visible = this.gridHelperVisible && !this.shadowEnabled;
     this.shadowGroundBase.visible = this.gridHelperVisible && this.shadowEnabled;
     this.shadowGroundReceiver.visible = this.gridHelperVisible && this.shadowEnabled;
+  }
+
+  private invalidateSceneMaterials() {
+    this.scene.traverse((object) => {
+      const material = object instanceof THREE.Mesh ? object.material : null;
+      if (Array.isArray(material)) {
+        material.forEach((entry) => {
+          entry.needsUpdate = true;
+        });
+        return;
+      }
+
+      if (material) {
+        material.needsUpdate = true;
+      }
+    });
   }
 
   private setTransformDragging(isDragging: boolean) {
