@@ -158,12 +158,129 @@ export type EditorCameraJSON = {
   scale?: number[];
 };
 
+export type AfterimagePassParams = {
+  damp?: number;
+};
+
+export type BokehPassParams = {
+  focus?: number;
+  aperture?: number;
+  maxblur?: number;
+};
+
+export type FilmPassParams = {
+  intensity?: number;
+  grayscale?: boolean;
+};
+
+export type DotScreenPassParams = {
+  angle?: number;
+  scale?: number;
+};
+
+export type GtaoPassParams = {
+  blendIntensity?: number;
+  radius?: number;
+  distanceFallOff?: number;
+  thickness?: number;
+};
+
+export type GlitchPassParams = {
+  goWild?: boolean;
+};
+
+export type HalftonePassParams = {
+  shape?: number;
+  radius?: number;
+  scatter?: number;
+  blending?: number;
+  blendingMode?: number;
+  greyscale?: boolean;
+};
+
+export type SsrPassParams = {
+  opacity?: number;
+  maxDistance?: number;
+  thickness?: number;
+  blur?: boolean;
+  distanceAttenuation?: boolean;
+  fresnel?: boolean;
+  infiniteThick?: boolean;
+};
+
+export type UnrealBloomPassParams = {
+  strength?: number;
+  radius?: number;
+  threshold?: number;
+};
+
+export type EditorPostProcessingPassParamsMap = {
+  afterimage: AfterimagePassParams;
+  bokeh: BokehPassParams;
+  film: FilmPassParams;
+  dotScreen: DotScreenPassParams;
+  gtao: GtaoPassParams;
+  glitch: GlitchPassParams;
+  halftone: HalftonePassParams;
+  ssr: SsrPassParams;
+  unrealBloom: UnrealBloomPassParams;
+};
+
+export type EditorPostProcessPassId = keyof EditorPostProcessingPassParamsMap;
+
+export type EditorPostProcessingPassConfig<T> = {
+  enabled?: boolean;
+  params?: T;
+};
+
+export type ResolvedEditorPostProcessingPassConfig<T> = {
+  enabled: boolean;
+  params: Required<T>;
+};
+
+export type EditorPostProcessingPassesJSON = {
+  afterimage?: EditorPostProcessingPassConfig<AfterimagePassParams>;
+  bokeh?: EditorPostProcessingPassConfig<BokehPassParams>;
+  film?: EditorPostProcessingPassConfig<FilmPassParams>;
+  dotScreen?: EditorPostProcessingPassConfig<DotScreenPassParams>;
+  gtao?: EditorPostProcessingPassConfig<GtaoPassParams>;
+  glitch?: EditorPostProcessingPassConfig<GlitchPassParams>;
+  halftone?: EditorPostProcessingPassConfig<HalftonePassParams>;
+  ssr?: EditorPostProcessingPassConfig<SsrPassParams>;
+  unrealBloom?: EditorPostProcessingPassConfig<UnrealBloomPassParams>;
+};
+
+export type ResolvedEditorPostProcessingPasses = {
+  afterimage: ResolvedEditorPostProcessingPassConfig<AfterimagePassParams>;
+  bokeh: ResolvedEditorPostProcessingPassConfig<BokehPassParams>;
+  film: ResolvedEditorPostProcessingPassConfig<FilmPassParams>;
+  dotScreen: ResolvedEditorPostProcessingPassConfig<DotScreenPassParams>;
+  gtao: ResolvedEditorPostProcessingPassConfig<GtaoPassParams>;
+  glitch: ResolvedEditorPostProcessingPassConfig<GlitchPassParams>;
+  halftone: ResolvedEditorPostProcessingPassConfig<HalftonePassParams>;
+  ssr: ResolvedEditorPostProcessingPassConfig<SsrPassParams>;
+  unrealBloom: ResolvedEditorPostProcessingPassConfig<UnrealBloomPassParams>;
+};
+
+export type EditorPostProcessingConfigJSON = {
+  passes?: EditorPostProcessingPassesJSON;
+};
+
+export type ResolvedEditorPostProcessingConfigJSON = {
+  passes: ResolvedEditorPostProcessingPasses;
+};
+
 export type EditorEnvConfigJSON = {
   panoUrl?: string;
   environment?: number;
   backgroundShow?: number;
   toneMapping?: number;
   toneMappingExposure?: number;
+  postProcessing?: EditorPostProcessingConfigJSON;
+};
+
+export type ResolvedEditorEnvConfigJSON = Omit<Required<EditorEnvConfigJSON>, "postProcessing"> & {
+  postProcessing: ResolvedEditorPostProcessingConfigJSON;
 };
 
 export type EditorProjectJSON = {

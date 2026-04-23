@@ -7,6 +7,8 @@ import type {
   EditorCameraJSON,
   EditorEnvConfigJSON,
   EditorLightJSON,
+  EditorPostProcessPassId,
+  EditorPostProcessingPassParamsMap,
   EditorProjectJSON,
   SyncSource,
   TransformPatch
@@ -278,6 +280,44 @@ export class EditorApp {
       patch,
       source
     });
+  }
+
+  updateScenePostProcessEnabled(
+    passId: EditorPostProcessPassId,
+    enabled: boolean,
+    source: SyncSource = "ui"
+  ) {
+    this.updateSceneEnvConfig(
+      {
+        postProcessing: {
+          passes: {
+            [passId]: {
+              enabled
+            }
+          }
+        }
+      },
+      source
+    );
+  }
+
+  updateScenePostProcessParams<T extends EditorPostProcessPassId>(
+    passId: T,
+    patch: Partial<EditorPostProcessingPassParamsMap[T]>,
+    source: SyncSource = "ui"
+  ) {
+    this.updateSceneEnvConfig(
+      {
+        postProcessing: {
+          passes: {
+            [passId]: {
+              params: patch
+            }
+          }
+        }
+      },
+      source
+    );
   }
 
   updateMeshMaterial(

@@ -1,32 +1,38 @@
 import * as THREE from "three";
-import type { EditorEnvConfigJSON, EditorProjectJSON } from "../core/types";
+import type {
+  EditorEnvConfigJSON,
+  EditorProjectJSON,
+  ResolvedEditorEnvConfigJSON
+} from "../core/types";
 import { normalizeString } from "../utils/normalize";
+import { normalizeEditorPostProcessingConfig } from "../postProcessing";
 import { CameraModel } from "./cameraModel";
 import { GroupEntityModel } from "./groupEntityModel";
 import { LightEntityModel } from "./lightEntityModel";
 import { MeshEntityModel } from "./meshEntityModel";
 import { ModelEntityModel } from "./modelEntityModel";
 
-function normalizeEnvConfig(source?: EditorEnvConfigJSON): Required<EditorEnvConfigJSON> {
+function normalizeEnvConfig(source?: EditorEnvConfigJSON): ResolvedEditorEnvConfigJSON {
   return {
     panoUrl: source?.panoUrl ?? "",
     environment: source?.environment ?? 1,
     backgroundShow: source?.backgroundShow ?? 1,
     toneMapping: source?.toneMapping ?? THREE.NoToneMapping,
-    toneMappingExposure: source?.toneMappingExposure ?? 1
+    toneMappingExposure: source?.toneMappingExposure ?? 1,
+    postProcessing: normalizeEditorPostProcessingConfig(source?.postProcessing)
   };
 }
 
 export class EditorProjectModel {
   id: string;
-  envConfig: Required<EditorEnvConfigJSON>;
+  envConfig: ResolvedEditorEnvConfigJSON;
   models: Map<string, ModelEntityModel>;
   meshes: Map<string, MeshEntityModel>;
   lights: Map<string, LightEntityModel>;
   groups: Map<string, GroupEntityModel>;
   camera: CameraModel;
 
-  private constructor(id: string, camera: CameraModel, envConfig: Required<EditorEnvConfigJSON>) {
+  private constructor(id: string, camera: CameraModel, envConfig: ResolvedEditorEnvConfigJSON) {
     this.id = id;
     this.envConfig = envConfig;
     this.camera = camera;
@@ -75,7 +81,65 @@ export class EditorProjectModel {
         environment: this.envConfig.environment,
         backgroundShow: this.envConfig.backgroundShow,
         toneMapping: this.envConfig.toneMapping,
-        toneMappingExposure: this.envConfig.toneMappingExposure
+        toneMappingExposure: this.envConfig.toneMappingExposure,
+        postProcessing: {
+          passes: {
+            afterimage: {
+              enabled: this.envConfig.postProcessing.passes.afterimage.enabled,
+              params: {
+                ...this.envConfig.postProcessing.passes.afterimage.params
+              }
+            },
+            bokeh: {
+              enabled: this.envConfig.postProcessing.passes.bokeh.enabled,
+              params: {
+                ...this.envConfig.postProcessing.passes.bokeh.params
+              }
+            },
+            film: {
+              enabled: this.envConfig.postProcessing.passes.film.enabled,
+              params: {
+                ...this.envConfig.postProcessing.passes.film.params
+              }
+            },
+            dotScreen: {
+              enabled: this.envConfig.postProcessing.passes.dotScreen.enabled,
+              params: {
+                ...this.envConfig.postProcessing.passes.dotScreen.params
+              }
+            },
+            gtao: {
+              enabled: this.envConfig.postProcessing.passes.gtao.enabled,
+              params: {
+                ...this.envConfig.postProcessing.passes.gtao.params
+              }
+            },
+            glitch: {
+              enabled: this.envConfig.postProcessing.passes.glitch.enabled,
+              params: {
+                ...this.envConfig.postProcessing.passes.glitch.params
+              }
+            },
+            halftone: {
+              enabled: this.envConfig.postProcessing.passes.halftone.enabled,
+              params: {
+                ...this.envConfig.postProcessing.passes.halftone.params
+              }
+            },
+            ssr: {
+              enabled: this.envConfig.postProcessing.passes.ssr.enabled,
+              params: {
+                ...this.envConfig.postProcessing.passes.ssr.params
+              }
+            },
+            unrealBloom: {
+              enabled: this.envConfig.postProcessing.passes.unrealBloom.enabled,
+              params: {
+                ...this.envConfig.postProcessing.passes.unrealBloom.params
+              }
+            }
+          }
+        }
       },
       model: Array.from(this.models.values()).map((item) => ({
         id: item.id,

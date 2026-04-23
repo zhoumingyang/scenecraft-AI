@@ -1,5 +1,6 @@
 import type { EditorProjectJSON } from "../core/types";
 import * as THREE from "three";
+import { createDefaultEditorPostProcessingConfigJSON } from "../postProcessing";
 
 function createUuid() {
   if (typeof globalThis.crypto?.randomUUID === "function") {
@@ -21,6 +22,7 @@ function createDefaultEditorCameraJSON() {
 
 export function createDefaultEditorProjectJSON(): EditorProjectJSON {
   const projectId = createUuid();
+  const postProcessing = createDefaultEditorPostProcessingConfigJSON();
 
   return {
     id: projectId,
@@ -29,7 +31,8 @@ export function createDefaultEditorProjectJSON(): EditorProjectJSON {
       environment: 1,
       backgroundShow: 1,
       toneMapping: THREE.NoToneMapping,
-      toneMappingExposure: 1
+      toneMappingExposure: 1,
+      postProcessing
     },
     model: [],
     mesh: [],
@@ -40,6 +43,8 @@ export function createDefaultEditorProjectJSON(): EditorProjectJSON {
 }
 
 export function createEmptyEditorProjectJSON(projectId = createUuid()): EditorProjectJSON {
+  const postProcessing = createDefaultEditorPostProcessingConfigJSON();
+
   return {
     id: projectId,
     envConfig: {
@@ -47,7 +52,8 @@ export function createEmptyEditorProjectJSON(projectId = createUuid()): EditorPr
       environment: 1,
       backgroundShow: 1,
       toneMapping: THREE.NoToneMapping,
-      toneMappingExposure: 1
+      toneMappingExposure: 1,
+      postProcessing
     },
     model: [],
     mesh: [],

@@ -8,6 +8,7 @@ import type {
   EditorEnvConfigJSON,
   EditorLightJSON,
   EditorProjectJSON,
+  ResolvedEditorEnvConfigJSON,
   SyncSource,
   TransformPatch
 } from "../core/types";
@@ -20,6 +21,7 @@ import { getLightPresetDefinition } from "../lightPresets";
 import type { LightPresetId } from "../lightPresets";
 import { EditorProjectModel, MeshEntityModel, ModelEntityModel } from "../models";
 import { createEmptyEditorProjectJSON } from "../factories/projectFactory";
+import { mergeEditorPostProcessingConfig } from "../postProcessing";
 import { EditorRuntime } from "../runtime/editorRuntime";
 import { createMeshGeometry } from "../utils/geometry";
 import { inferModelFileFormat } from "../utils/modelFile";
@@ -587,9 +589,12 @@ export class EditorSession {
   ) {
     if (!this.projectModel) return;
 
-    const nextEnvConfig = {
+    const nextEnvConfig: ResolvedEditorEnvConfigJSON = {
       ...this.projectModel.envConfig,
-      ...patch
+      ...patch,
+      postProcessing: patch.postProcessing
+        ? mergeEditorPostProcessingConfig(this.projectModel.envConfig.postProcessing, patch.postProcessing)
+        : this.projectModel.envConfig.postProcessing
     };
 
     const shouldReloadEnvironment =
