@@ -173,6 +173,14 @@ export function getNodeIcon(nodeType: SceneTreeNodeType) {
   return <LightModeRoundedIcon sx={{ fontSize: 16 }} />;
 }
 
+export function buildSceneTreeNodes(
+  project: EditorProjectModel | null | undefined,
+  t: ReturnType<typeof useI18n>["t"],
+  sceneNodeId: string
+) {
+  return [createSceneNode(sceneNodeId, t, project ? buildSceneRootChildren(project, t) : [])];
+}
+
 export function buildSceneTreeSections(
   project: EditorProjectModel | null | undefined,
   t: ReturnType<typeof useI18n>["t"],
@@ -183,7 +191,7 @@ export function buildSceneTreeSections(
       id: "scene",
       label: t("editor.sceneTree.sceneGroup"),
       icon: PublicRoundedIcon,
-      nodes: [createSceneNode(sceneNodeId, t, project ? buildSceneRootChildren(project, t) : [])]
+      nodes: buildSceneTreeNodes(project, t, sceneNodeId)
     }
   ];
 }

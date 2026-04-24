@@ -228,6 +228,8 @@ export type EditorPostProcessingPassParamsMap = {
 
 export type EditorPostProcessPassId = keyof EditorPostProcessingPassParamsMap;
 
+export type EditorPostProcessMaskMode = "include";
+
 export type EditorPostProcessingPassConfig<T> = {
   enabled?: boolean;
   params?: T;
@@ -262,12 +264,28 @@ export type ResolvedEditorPostProcessingPasses = {
   unrealBloom: ResolvedEditorPostProcessingPassConfig<UnrealBloomPassParams>;
 };
 
+export type EditorPostProcessingMaskConfigJSON = {
+  enabled?: boolean;
+  mode?: EditorPostProcessMaskMode;
+  targetEntityIds?: string[];
+  supportedPasses?: Partial<Record<EditorPostProcessPassId, boolean>>;
+};
+
+export type ResolvedEditorPostProcessingMaskConfigJSON = {
+  enabled: boolean;
+  mode: EditorPostProcessMaskMode;
+  targetEntityIds: string[];
+  supportedPasses: Record<EditorPostProcessPassId, boolean>;
+};
+
 export type EditorPostProcessingConfigJSON = {
   passes?: EditorPostProcessingPassesJSON;
+  mask?: EditorPostProcessingMaskConfigJSON;
 };
 
 export type ResolvedEditorPostProcessingConfigJSON = {
   passes: ResolvedEditorPostProcessingPasses;
+  mask: ResolvedEditorPostProcessingMaskConfigJSON;
 };
 
 export type EditorEnvConfigJSON = {
