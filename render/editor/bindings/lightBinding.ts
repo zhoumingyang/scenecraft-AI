@@ -74,6 +74,11 @@ function createLightParts(model: LightEntityModel): LightBindingParts {
 
   if (model.lightType === 3) {
     const light = new THREE.PointLight(model.color, model.intensity, model.distance, model.decay);
+    light.castShadow = true;
+    light.shadow.mapSize.set(2048, 2048);
+    light.shadow.camera.near = 0.5;
+    light.shadow.camera.far = Math.max(model.distance || 0, 80);
+    light.shadow.bias = -0.0002;
     root.add(light);
     const helper = new THREE.PointLightHelper(light, 0.5, model.color);
     root.add(helper);
@@ -144,6 +149,8 @@ function applyLightModelToObject(model: LightEntityModel, parts: LightBindingUpd
     parts.light.intensity = model.intensity;
     parts.light.distance = model.distance;
     parts.light.decay = model.decay;
+    parts.light.shadow.camera.far = Math.max(model.distance || 0, 80);
+    parts.light.shadow.camera.updateProjectionMatrix();
   } else if (parts.light instanceof THREE.SpotLight) {
     parts.light.color.set(model.color);
     parts.light.intensity = model.intensity;
