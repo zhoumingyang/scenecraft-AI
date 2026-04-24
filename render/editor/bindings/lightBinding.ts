@@ -6,6 +6,12 @@ import type { LightEntityModel } from "../models";
 import { buildTransformSignature, setEntityId } from "../utils/object3d";
 import type { BindingContext, RenderBinding } from "./types";
 
+const SOFT_SHADOW_MAP_SIZE = 1024;
+const SHADOW_CAMERA_NEAR = 0.5;
+const SHADOW_CAMERA_FAR_FALLBACK = 80;
+const SHADOW_BIAS = -0.0002;
+const SHADOW_NORMAL_BIAS = 0.015;
+
 type SupportedLight =
   | THREE.AmbientLight
   | THREE.HemisphereLight
@@ -49,6 +55,20 @@ function markAsEditorLightHelper(helper: THREE.Object3D) {
   helper.userData.editorLightHelper = true;
 }
 
+function getShadowCameraFar(distance: number) {
+  return Math.max(distance || 0, SHADOW_CAMERA_FAR_FALLBACK);
+}
+
+function applySoftShadow(shadow: THREE.LightShadow, cameraFar = SHADOW_CAMERA_FAR_FALLBACK) {
+  const shadowCamera = shadow.camera as THREE.PerspectiveCamera | THREE.OrthographicCamera;
+  shadow.mapSize.set(SOFT_SHADOW_MAP_SIZE, SOFT_SHADOW_MAP_SIZE);
+  shadowCamera.near = SHADOW_CAMERA_NEAR;
+  shadowCamera.far = cameraFar;
+  shadowCamera.updateProjectionMatrix();
+  shadow.bias = SHADOW_BIAS;
+  shadow.normalBias = SHADOW_NORMAL_BIAS;
+}
+
 function createLightParts(model: LightEntityModel): LightBindingParts {
   const root = new THREE.Group();
   root.name = `light:${model.id}`;
@@ -56,14 +76,12 @@ function createLightParts(model: LightEntityModel): LightBindingParts {
   if (model.lightType === 2) {
     const light = new THREE.DirectionalLight(model.color, model.intensity);
     light.castShadow = true;
-    light.shadow.mapSize.set(2048, 2048);
-    light.shadow.camera.near = 0.5;
-    light.shadow.camera.far = 80;
+    applySoftShadow(light.shadow);
     light.shadow.camera.left = -20;
     light.shadow.camera.right = 20;
     light.shadow.camera.top = 20;
     light.shadow.camera.bottom = -20;
-    light.shadow.bias = -0.0002;
+    light.shadow.camera.updateProjectionMatrix();
     const target = new THREE.Object3D();
     target.position.set(0, 0, 10);
     light.target = target;
@@ -75,10 +93,7 @@ function createLightParts(model: LightEntityModel): LightBindingParts {
   if (model.lightType === 3) {
     const light = new THREE.PointLight(model.color, model.intensity, model.distance, model.decay);
     light.castShadow = true;
-    light.shadow.mapSize.set(2048, 2048);
-    light.shadow.camera.near = 0.5;
-    light.shadow.camera.far = Math.max(model.distance || 0, 80);
-    light.shadow.bias = -0.0002;
+    applySoftShadow(light.shadow, getShadowCameraFar(model.distance));
     root.add(light);
     const helper = new THREE.PointLightHelper(light, 0.5, model.color);
     root.add(helper);
@@ -95,10 +110,7 @@ function createLightParts(model: LightEntityModel): LightBindingParts {
       model.decay
     );
     light.castShadow = true;
-    light.shadow.mapSize.set(2048, 2048);
-    light.shadow.camera.near = 0.5;
-    light.shadow.camera.far = Math.max(model.distance || 0, 80);
-    light.shadow.bias = -0.0002;
+    applySoftShadow(light.shadow, getShadowCameraFar(model.distance));
     const target = new THREE.Object3D();
     target.position.set(0, 0, 10);
     light.target = target;
@@ -149,8 +161,9 @@ function applyLightModelToObject(model: LightEntityModel, parts: LightBindingUpd
     parts.light.intensity = model.intensity;
     parts.light.distance = model.distance;
     parts.light.decay = model.decay;
-    parts.light.shadow.camera.far = Math.max(model.distance || 0, 80);
+    parts.light.shadow.camera.far = getShadowCameraFar(model.distance);
     parts.light.shadow.camera.updateProjectionMatrix();
+    parts.light.shadow.needsUpdate = true;
   } else if (parts.light instanceof THREE.SpotLight) {
     parts.light.color.set(model.color);
     parts.light.intensity = model.intensity;
@@ -158,7 +171,9 @@ function applyLightModelToObject(model: LightEntityModel, parts: LightBindingUpd
     parts.light.decay = model.decay;
     parts.light.angle = model.angle;
     parts.light.penumbra = model.penumbra;
-    parts.light.shadow.camera.far = Math.max(model.distance || 0, 80);
+    parts.light.shadow.camera.far = getShadowCameraFar(model.distance);
+    parts.light.shadow.camera.updateProjectionMatrix();
+    parts.light.shadow.needsUpdate = true;
   } else if (parts.light instanceof THREE.RectAreaLight) {
     parts.light.color.set(model.color);
     parts.light.intensity = model.intensity;
