@@ -9,6 +9,7 @@ import { GlitchPass } from "three/examples/jsm/postprocessing/GlitchPass.js";
 import { GTAOPass } from "three/examples/jsm/postprocessing/GTAOPass.js";
 import { HalftonePass } from "three/examples/jsm/postprocessing/HalftonePass.js";
 import { OutlinePass } from "three/examples/jsm/postprocessing/OutlinePass.js";
+import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { SMAAPass } from "three/examples/jsm/postprocessing/SMAAPass.js";
 import { SSRPass } from "three/examples/jsm/postprocessing/SSRPass.js";
@@ -30,6 +31,7 @@ export class EditorRuntimePostProcessing {
   private readonly renderer: THREE.WebGLRenderer;
   private readonly renderPass: RenderPass;
   private readonly outlinePass: OutlinePass;
+  private readonly outputPass: OutputPass;
   private afterimagePass: AfterimagePass | null = null;
   private bokehPass: BokehPass | null = null;
   private dotScreenPass: DotScreenPass | null = null;
@@ -63,6 +65,7 @@ export class EditorRuntimePostProcessing {
     this.outlinePass.pulsePeriod = 0;
     this.outlinePass.visibleEdgeColor.set("#7bc4ff");
     this.outlinePass.hiddenEdgeColor.set("#2a5a88");
+    this.outputPass = new OutputPass();
   }
 
   render(deltaSeconds = 0) {
@@ -222,6 +225,7 @@ export class EditorRuntimePostProcessing {
     this.gtaoPass?.dispose();
     this.halftonePass?.dispose();
     this.outlinePass.dispose();
+    this.outputPass.dispose();
     this.smaaPass?.dispose();
     this.ssrPass?.dispose();
     this.unrealBloomPass?.dispose();
@@ -357,6 +361,7 @@ export class EditorRuntimePostProcessing {
     if (this.smaaPass) {
       this.composer.addPass(this.smaaPass);
     }
+    this.composer.addPass(this.outputPass);
   }
 
   private appendEffectPass(
