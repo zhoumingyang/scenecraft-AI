@@ -16,28 +16,8 @@ export const EDITOR_POST_PROCESS_PASS_ORDER: EditorPostProcessPassId[] = [
   "glitch"
 ];
 
-function createDefaultEditorPostProcessingMaskSupportedPasses() {
-  return {
-    afterimage: true,
-    bokeh: true,
-    film: true,
-    dotScreen: true,
-    gtao: true,
-    glitch: true,
-    halftone: true,
-    ssr: true,
-    unrealBloom: true
-  };
-}
-
 export function createDefaultEditorPostProcessingConfigJSON(): ResolvedEditorPostProcessingConfigJSON {
   return {
-    mask: {
-      enabled: false,
-      mode: "include",
-      targetEntityIds: [],
-      supportedPasses: createDefaultEditorPostProcessingMaskSupportedPasses()
-    },
     passes: {
       afterimage: {
         enabled: false,
@@ -121,14 +101,6 @@ export function cloneEditorPostProcessingConfig(
   config: ResolvedEditorPostProcessingConfigJSON
 ): ResolvedEditorPostProcessingConfigJSON {
   return {
-    mask: {
-      enabled: config.mask.enabled,
-      mode: config.mask.mode,
-      targetEntityIds: [...config.mask.targetEntityIds],
-      supportedPasses: {
-        ...config.mask.supportedPasses
-      }
-    },
     passes: {
       afterimage: {
         enabled: config.passes.afterimage.enabled,
@@ -194,15 +166,6 @@ export function normalizeEditorPostProcessingConfig(
   const defaults = createDefaultEditorPostProcessingConfigJSON();
 
   return {
-    mask: {
-      enabled: source?.mask?.enabled ?? defaults.mask.enabled,
-      mode: source?.mask?.mode ?? defaults.mask.mode,
-      targetEntityIds: [...(source?.mask?.targetEntityIds ?? defaults.mask.targetEntityIds)],
-      supportedPasses: {
-        ...defaults.mask.supportedPasses,
-        ...(source?.mask?.supportedPasses ?? {})
-      }
-    },
     passes: {
       afterimage: {
         enabled: source?.passes?.afterimage?.enabled ?? defaults.passes.afterimage.enabled,
@@ -298,20 +261,6 @@ export function mergeEditorPostProcessingConfig(
       params: {
         ...currentPasses[passId].params,
         ...(patchPass.params ?? {})
-      }
-    };
-  }
-
-  if (patch.mask) {
-    next.mask = {
-      enabled: patch.mask.enabled ?? current.mask.enabled,
-      mode: patch.mask.mode ?? current.mask.mode,
-      targetEntityIds: patch.mask.targetEntityIds
-        ? [...patch.mask.targetEntityIds]
-        : [...current.mask.targetEntityIds],
-      supportedPasses: {
-        ...current.mask.supportedPasses,
-        ...(patch.mask.supportedPasses ?? {})
       }
     };
   }

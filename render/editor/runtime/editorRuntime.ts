@@ -283,10 +283,6 @@ export class EditorRuntime {
     this.postProcessing.setOutlineSelection(objects);
   }
 
-  setPostProcessingMaskSelection(objects: THREE.Object3D[]) {
-    this.postProcessing.setMaskSelection(objects);
-  }
-
   captureAiPreviewImages(objects: THREE.Object3D[]) {
     return captureAiPreviewImages(objects, {
       toneMapping: this.renderer.toneMapping,

@@ -333,7 +333,6 @@ export class EditorSession {
     this.projectModel.lights.forEach((light) => this.registry.create(light));
     this.rebuildGroupHierarchy();
     this.runtime.syncLightHelperVisibility();
-    this.syncPostProcessingMaskTargets();
 
     this.emit({ type: "projectLoaded", projectId: this.projectModel.id });
   }
@@ -613,7 +612,6 @@ export class EditorSession {
     }
 
     this.projectModel.envConfig = nextEnvConfig;
-    this.syncPostProcessingMaskTargets();
     this.runtime.applyEnvConfig(this.projectModel.envConfig);
     this.emit({ type: "sceneUpdated", source });
     this.emit({ type: "viewStateUpdated" });
@@ -907,7 +905,6 @@ export class EditorSession {
     this.registry.remove(entityId);
     this.rebuildGroupHierarchy();
     this.runtime.syncLightHelperVisibility();
-    this.syncPostProcessingMaskTargets();
 
     if (this.selectedEntityId === entityId) {
       this.setSelectedEntity(null, source);
@@ -1285,32 +1282,6 @@ export class EditorSession {
       const parentGroupId = this.projectModel?.getParentGroupId(light.id) ?? null;
       this.registry.attach(light.id, parentGroupId, this.runtime.scene);
     });
-  }
-
-  private syncPostProcessingMaskTargets() {
-    if (!this.projectModel) {
-      this.runtime.setPostProcessingMaskSelection([]);
-      return;
-    }
-
-    const nextTargetIds = this.projectModel.envConfig.postProcessing.mask.targetEntityIds.filter((entityId) => {
-      if (entityId === SCENE_SELECTION_ID) return false;
-      const record = this.projectModel?.getEntityById(entityId);
-      return Boolean(record && record.kind !== "light");
-    });
-
-    if (nextTargetIds.length !== this.projectModel.envConfig.postProcessing.mask.targetEntityIds.length) {
-      this.projectModel.envConfig.postProcessing.mask.targetEntityIds = nextTargetIds;
-    }
-
-    const objects = Array.from(
-      new Set(
-        nextTargetIds
-          .map((entityId) => this.registry.getObject(entityId))
-          .filter((object): object is THREE.Object3D => Boolean(object))
-      )
-    );
-    this.runtime.setPostProcessingMaskSelection(objects);
   }
 
   private revokeOwnedModelUrls() {

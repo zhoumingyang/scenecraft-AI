@@ -320,51 +320,6 @@ export class EditorApp {
     );
   }
 
-  updateScenePostProcessMaskEnabled(enabled: boolean, source: SyncSource = "ui") {
-    this.updateSceneEnvConfig(
-      {
-        postProcessing: {
-          mask: {
-            enabled
-          }
-        }
-      },
-      source
-    );
-  }
-
-  updateScenePostProcessMaskTargets(targetEntityIds: string[], source: SyncSource = "ui") {
-    this.updateSceneEnvConfig(
-      {
-        postProcessing: {
-          mask: {
-            targetEntityIds
-          }
-        }
-      },
-      source
-    );
-  }
-
-  updateScenePostProcessMaskPassEnabled(
-    passId: EditorPostProcessPassId,
-    enabled: boolean,
-    source: SyncSource = "ui"
-  ) {
-    this.updateSceneEnvConfig(
-      {
-        postProcessing: {
-          mask: {
-            supportedPasses: {
-              [passId]: enabled
-            }
-          }
-        }
-      },
-      source
-    );
-  }
-
   updateMeshMaterial(
     entityId: string,
     patch: MeshMaterialPatch,

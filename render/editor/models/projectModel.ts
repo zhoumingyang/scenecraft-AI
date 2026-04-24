@@ -83,14 +83,6 @@ export class EditorProjectModel {
         toneMapping: this.envConfig.toneMapping,
         toneMappingExposure: this.envConfig.toneMappingExposure,
         postProcessing: {
-          mask: {
-            enabled: this.envConfig.postProcessing.mask.enabled,
-            mode: this.envConfig.postProcessing.mask.mode,
-            targetEntityIds: [...this.envConfig.postProcessing.mask.targetEntityIds],
-            supportedPasses: {
-              ...this.envConfig.postProcessing.mask.supportedPasses
-            }
-          },
           passes: {
             afterimage: {
               enabled: this.envConfig.postProcessing.passes.afterimage.enabled,

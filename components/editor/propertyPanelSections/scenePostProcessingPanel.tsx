@@ -1,16 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import EditRoundedIcon from "@mui/icons-material/EditRounded";
-import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
-import { Box, Checkbox, IconButton, Stack, Tooltip, Typography } from "@mui/material";
+import { Box, Checkbox, Stack, Typography } from "@mui/material";
 import { getEditorThemeTokens } from "@/components/editor/theme";
 import type { EditorPostProcessPassId, ResolvedEditorPostProcessingConfigJSON } from "@/render/editor";
-import type { EditorApp } from "@/render/editor/app";
 import { EDITOR_POST_PROCESS_PASS_ORDER } from "@/render/editor";
 import { useEditorStore } from "@/stores/editorStore";
 import { SelectField, SliderField, ToggleField } from "./sceneSettingsFields";
-import { ScenePostProcessMaskDialog } from "./scenePostProcessMaskDialog";
 
 const postProcessLabelKeyMap: Record<EditorPostProcessPassId, string> = {
   afterimage: "editor.post.afterimage",
@@ -42,14 +37,10 @@ const halftoneBlendModeOptions = [
 const performanceHeavyPasses = new Set<EditorPostProcessPassId>(["gtao", "ssr", "bokeh", "unrealBloom"]);
 
 type ScenePostProcessingPanelProps = {
-  app: EditorApp | null;
   config: ResolvedEditorPostProcessingConfigJSON;
   t: (key: string, values?: Record<string, string | number>) => string;
   onTogglePass: (passId: EditorPostProcessPassId, enabled: boolean) => void;
   onPatchPassParams: (passId: EditorPostProcessPassId, patch: Record<string, boolean | number>) => void;
-  onToggleMaskEnabled: (enabled: boolean) => void;
-  onUpdateMaskTargets: (targetEntityIds: string[]) => void;
-  onToggleMaskPassEnabled: (passId: EditorPostProcessPassId, enabled: boolean) => void;
 };
 
 function renderPostProcessingParams(
@@ -322,201 +313,99 @@ function renderPostProcessingParams(
 }
 
 export function ScenePostProcessingPanel({
-  app,
   config,
   t,
   onTogglePass,
-  onPatchPassParams,
-  onToggleMaskEnabled,
-  onUpdateMaskTargets,
-  onToggleMaskPassEnabled
+  onPatchPassParams
 }: ScenePostProcessingPanelProps) {
-  const [maskDialogOpen, setMaskDialogOpen] = useState(false);
   const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
   const theme = getEditorThemeTokens(editorThemeMode);
   const enabledPassIds = EDITOR_POST_PROCESS_PASS_ORDER.filter((passId) => config.passes[passId].enabled);
 
   return (
-    <>
-      <Box
-        sx={{
-          borderRadius: 1,
-          border: theme.sectionBorder,
-          background: theme.sectionBg,
-          p: 1.1
-        }}
-      >
-        <Stack spacing={1}>
-          <Stack spacing={0.3}>
-            <Typography
-              sx={{
-                fontSize: 11,
-                fontWeight: 700,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                color: theme.mutedText
-              }}
-            >
-              {t("editor.post.section")}
-            </Typography>
-          </Stack>
-
-          <Box
+    <Box
+      sx={{
+        borderRadius: 1,
+        border: theme.sectionBorder,
+        background: theme.sectionBg,
+        p: 1.1
+      }}
+    >
+      <Stack spacing={1}>
+        <Stack spacing={0.3}>
+          <Typography
             sx={{
-              borderRadius: 1,
-              border: config.mask.enabled
-                ? "1px solid rgba(96,147,235,0.48)"
-                : theme.sectionBorder,
-              background: config.mask.enabled ? theme.itemSelectedBg : theme.panelBgMuted,
-              p: 1
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: theme.mutedText
             }}
           >
-            <Stack direction="row" spacing={1} alignItems="center">
-              <Stack spacing={0.2} sx={{ minWidth: 0, flex: 1 }}>
-                <Typography
-                  sx={{
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: config.mask.enabled ? theme.titleText : theme.pillText
-                  }}
-                >
-                  Mask
-                </Typography>
-                <Typography
-                  sx={{
-                    fontSize: 11,
-                    color:
-                      config.mask.targetEntityIds.length > 0
-                        ? theme.text
-                        : theme.mutedText
-                  }}
-                >
-                  {t("editor.post.mask.selectedCount", { count: config.mask.targetEntityIds.length })}
-                </Typography>
-              </Stack>
+            {t("editor.post.section")}
+          </Typography>
+        </Stack>
 
-              <Stack direction="row" spacing={0.35} alignItems="center">
-                <Tooltip title={t("editor.post.mask.edit")}>
-                  <span>
-                    <IconButton
-                      size="small"
-                      onClick={() => setMaskDialogOpen(true)}
-                      sx={{
-                        color: theme.titleText,
-                        border: theme.sectionBorder,
-                        background: theme.iconButtonBg
-                      }}
-                    >
-                      <EditRoundedIcon sx={{ fontSize: 16 }} />
-                    </IconButton>
-                  </span>
-                </Tooltip>
-                <Tooltip title={t("editor.post.mask.clear")}>
-                  <span>
-                    <IconButton
-                      size="small"
-                      onClick={() => onUpdateMaskTargets([])}
-                      disabled={config.mask.targetEntityIds.length === 0}
-                      sx={{
-                        color: theme.titleText,
-                        border: theme.sectionBorder,
-                        background: theme.iconButtonBg
-                      }}
-                    >
-                      <DeleteOutlineRoundedIcon sx={{ fontSize: 16 }} />
-                    </IconButton>
-                  </span>
-                </Tooltip>
-                <Checkbox
-                  checked={config.mask.enabled}
-                  onChange={(event) => onToggleMaskEnabled(event.target.checked)}
-                  sx={{
-                    p: 0.35,
-                    color: theme.text
-                  }}
-                />
+        <Stack spacing={0.3}>
+          {EDITOR_POST_PROCESS_PASS_ORDER.map((passId) => (
+            <Stack
+              key={passId}
+              direction="row"
+              justifyContent="space-between"
+              alignItems="center"
+              sx={{
+                px: 0.2,
+                py: 0.2,
+                borderRadius: 0.75,
+                background: config.passes[passId].enabled ? theme.itemSelectedBg : "transparent"
+              }}
+            >
+              <Stack direction="row" spacing={0.75} alignItems="center">
+                <Typography sx={{ fontSize: 12, color: theme.pillText }}>
+                  {t(postProcessLabelKeyMap[passId])}
+                </Typography>
+                {performanceHeavyPasses.has(passId) ? (
+                  <Typography sx={{ fontSize: 10, color: "rgba(255,188,120,0.9)" }}>
+                    {t("editor.post.performance")}
+                  </Typography>
+                ) : null}
               </Stack>
+              <Checkbox
+                checked={config.passes[passId].enabled}
+                onChange={(event) => onTogglePass(passId, event.target.checked)}
+                sx={{ p: 0.25 }}
+              />
             </Stack>
-          </Box>
+          ))}
+        </Stack>
 
-          <Stack spacing={0.3}>
-            {EDITOR_POST_PROCESS_PASS_ORDER.map((passId) => (
-              <Stack
+        {enabledPassIds.length === 0 ? (
+          <Typography sx={{ fontSize: 11, color: theme.mutedText }}>
+            {t("editor.post.noEnabledPasses")}
+          </Typography>
+        ) : (
+          <Stack spacing={0.9}>
+            {enabledPassIds.map((passId) => (
+              <Box
                 key={passId}
-                direction="row"
-                justifyContent="space-between"
-                alignItems="center"
                 sx={{
-                  px: 0.2,
-                  py: 0.2,
-                  borderRadius: 0.75,
-                  background: config.passes[passId].enabled ? theme.itemSelectedBg : "transparent"
+                  borderRadius: 1,
+                  border: theme.sectionBorder,
+                  background: theme.panelBgMuted,
+                  p: 1
                 }}
               >
-                <Stack direction="row" spacing={0.75} alignItems="center">
-                  <Typography sx={{ fontSize: 12, color: theme.pillText }}>
+                <Stack spacing={0.85}>
+                  <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.titleText }}>
                     {t(postProcessLabelKeyMap[passId])}
                   </Typography>
-                  {performanceHeavyPasses.has(passId) ? (
-                    <Typography sx={{ fontSize: 10, color: "rgba(255,188,120,0.9)" }}>
-                      {t("editor.post.performance")}
-                    </Typography>
-                  ) : null}
+                  {renderPostProcessingParams(passId, config, onPatchPassParams, t)}
                 </Stack>
-                <Checkbox
-                  checked={config.passes[passId].enabled}
-                  onChange={(event) => onTogglePass(passId, event.target.checked)}
-                  sx={{ p: 0.25 }}
-                />
-              </Stack>
+              </Box>
             ))}
           </Stack>
-
-          {enabledPassIds.length === 0 ? (
-            <Typography sx={{ fontSize: 11, color: theme.mutedText }}>
-              {t("editor.post.noEnabledPasses")}
-            </Typography>
-          ) : (
-            <Stack spacing={0.9}>
-              {enabledPassIds.map((passId) => (
-                <Box
-                  key={passId}
-                  sx={{
-                    borderRadius: 1,
-                    border: theme.sectionBorder,
-                    background: theme.panelBgMuted,
-                    p: 1
-                  }}
-                >
-                  <Stack spacing={0.85}>
-                    <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.titleText }}>
-                      {t(postProcessLabelKeyMap[passId])}
-                    </Typography>
-                    <ToggleField
-                      label={t("editor.post.mask.applyToPass")}
-                      checked={config.mask.supportedPasses[passId]}
-                      onChange={(checked) => onToggleMaskPassEnabled(passId, checked)}
-                    />
-                    {renderPostProcessingParams(passId, config, onPatchPassParams, t)}
-                  </Stack>
-                </Box>
-              ))}
-            </Stack>
-          )}
-        </Stack>
-      </Box>
-
-      <ScenePostProcessMaskDialog
-        app={app}
-        open={maskDialogOpen}
-        targetEntityIds={config.mask.targetEntityIds}
-        t={t}
-        onClose={() => setMaskDialogOpen(false)}
-        onConfirm={(targetEntityIds) => {
-          onUpdateMaskTargets(targetEntityIds);
-          setMaskDialogOpen(false);
-        }}
-      />
-    </>
+        )}
+      </Stack>
+    </Box>
   );
 }

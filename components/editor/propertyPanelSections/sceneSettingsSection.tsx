@@ -161,16 +161,10 @@ export function SceneSettingsSection({ envConfig }: SceneSettingsSectionProps) {
         />
 
         <ScenePostProcessingPanel
-          app={app}
           config={envConfig.postProcessing}
           t={t}
           onTogglePass={(passId, enabled) => app?.updateScenePostProcessEnabled(passId, enabled)}
           onPatchPassParams={patchPassParams}
-          onToggleMaskEnabled={(enabled) => app?.updateScenePostProcessMaskEnabled(enabled)}
-          onUpdateMaskTargets={(targetEntityIds) => app?.updateScenePostProcessMaskTargets(targetEntityIds)}
-          onToggleMaskPassEnabled={(passId, enabled) =>
-            app?.updateScenePostProcessMaskPassEnabled(passId, enabled)
-          }
         />
       </Stack>
     </PropertyPanelSection>

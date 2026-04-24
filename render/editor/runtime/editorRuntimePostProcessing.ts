@@ -2,7 +2,6 @@ import * as THREE from "three";
 import { Pass } from "three/examples/jsm/postprocessing/Pass.js";
 import { AfterimagePass } from "three/examples/jsm/postprocessing/AfterimagePass.js";
 import { BokehPass } from "three/examples/jsm/postprocessing/BokehPass.js";
-import { ClearMaskPass, MaskPass } from "three/examples/jsm/postprocessing/MaskPass.js";
 import { DotScreenPass } from "three/examples/jsm/postprocessing/DotScreenPass.js";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import { FilmPass } from "three/examples/jsm/postprocessing/FilmPass.js";
@@ -15,68 +14,13 @@ import { SMAAPass } from "three/examples/jsm/postprocessing/SMAAPass.js";
 import { SSRPass } from "three/examples/jsm/postprocessing/SSRPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 
-import type {
-  EditorPostProcessPassId,
-  ResolvedEditorPostProcessingConfigJSON
-} from "../core/types";
+import type { EditorPostProcessPassId, ResolvedEditorPostProcessingConfigJSON } from "../core/types";
 
 type EditorRuntimePostProcessingOptions = {
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
   renderer: THREE.WebGLRenderer;
 };
-
-class LayerMaskPass extends MaskPass {
-  private selectionRoots: THREE.Object3D[] = [];
-
-  constructor(scene: THREE.Scene, camera: THREE.Camera) {
-    super(scene, camera);
-  }
-
-  setSelection(objects: THREE.Object3D[]) {
-    this.selectionRoots = [...objects];
-  }
-
-  override render(
-    renderer: THREE.WebGLRenderer,
-    writeBuffer: THREE.WebGLRenderTarget,
-    readBuffer: THREE.WebGLRenderTarget
-  ) {
-    if (this.selectionRoots.length === 0) {
-      super.render(renderer, writeBuffer, readBuffer, 0, false);
-      return;
-    }
-
-    const allowed = new Set<THREE.Object3D>();
-    this.selectionRoots.forEach((root) => {
-      root.traverse((child) => {
-        allowed.add(child);
-      });
-
-      let current: THREE.Object3D | null = root;
-      while (current) {
-        allowed.add(current);
-        current = current.parent;
-      }
-    });
-
-    const visibilitySnapshot = new Map<THREE.Object3D, boolean>();
-    this.scene.traverse((object) => {
-      visibilitySnapshot.set(object, object.visible);
-      if (!allowed.has(object)) {
-        object.visible = false;
-      }
-    });
-
-    try {
-      super.render(renderer, writeBuffer, readBuffer, 0, false);
-    } finally {
-      visibilitySnapshot.forEach((visible, object) => {
-        object.visible = visible;
-      });
-    }
-  }
-}
 
 export class EditorRuntimePostProcessing {
   readonly composer: EffectComposer;
@@ -85,8 +29,6 @@ export class EditorRuntimePostProcessing {
   private readonly camera: THREE.PerspectiveCamera;
   private readonly renderer: THREE.WebGLRenderer;
   private readonly renderPass: RenderPass;
-  private readonly maskPass: LayerMaskPass;
-  private readonly clearMaskPass: ClearMaskPass;
   private readonly outlinePass: OutlinePass;
   private afterimagePass: AfterimagePass | null = null;
   private bokehPass: BokehPass | null = null;
@@ -98,7 +40,6 @@ export class EditorRuntimePostProcessing {
   private smaaPass: SMAAPass | null = null;
   private ssrPass: SSRPass | null = null;
   private unrealBloomPass: UnrealBloomPass | null = null;
-  private maskSelectionObjects: THREE.Object3D[] = [];
   private initialized = false;
 
   constructor({ scene, camera, renderer }: EditorRuntimePostProcessingOptions) {
@@ -109,15 +50,11 @@ export class EditorRuntimePostProcessing {
     this.composer = new EffectComposer(
       this.renderer,
       new THREE.WebGLRenderTarget(1, 1, {
-        depthBuffer: true,
-        stencilBuffer: true
+        depthBuffer: true
       })
     );
     this.renderPass = new RenderPass(this.scene, this.camera);
     this.composer.addPass(this.renderPass);
-    this.maskPass = new LayerMaskPass(this.scene, this.camera);
-    this.maskPass.enabled = true;
-    this.clearMaskPass = new ClearMaskPass();
 
     this.outlinePass = new OutlinePass(new THREE.Vector2(1, 1), this.scene, this.camera);
     this.outlinePass.edgeStrength = 5.5;
@@ -134,11 +71,6 @@ export class EditorRuntimePostProcessing {
 
   setOutlineSelection(objects: THREE.Object3D[]) {
     this.outlinePass.selectedObjects = objects;
-  }
-
-  setMaskSelection(objects: THREE.Object3D[]) {
-    this.maskSelectionObjects = [...objects];
-    this.maskPass.setSelection(this.maskSelectionObjects);
   }
 
   applyConfig(config: ResolvedEditorPostProcessingConfigJSON) {
@@ -282,7 +214,6 @@ export class EditorRuntimePostProcessing {
   }
 
   dispose() {
-    this.setMaskSelection([]);
     this.afterimagePass?.dispose();
     this.bokehPass?.dispose();
     this.dotScreenPass?.dispose();
@@ -435,20 +366,6 @@ export class EditorRuntimePostProcessing {
   ) {
     if (!pass || !config.passes[passId].enabled) return;
 
-    const shouldMask =
-      config.mask.enabled &&
-      config.mask.targetEntityIds.length > 0 &&
-      config.mask.supportedPasses[passId] !== false &&
-      this.maskSelectionObjects.length > 0;
-
-    if (shouldMask) {
-      this.composer.addPass(this.maskPass);
-    }
-
     this.composer.addPass(pass);
-
-    if (shouldMask) {
-      this.composer.addPass(this.clearMaskPass);
-    }
   }
 }
