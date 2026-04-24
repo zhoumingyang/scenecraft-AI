@@ -214,7 +214,14 @@ export type UnrealBloomPassParams = {
   threshold?: number;
 };
 
+export type PixelatedPassParams = {
+  pixelSize?: number;
+  normalEdgeStrength?: number;
+  depthEdgeStrength?: number;
+};
+
 export type EditorPostProcessingPassParamsMap = {
+  pixelated: PixelatedPassParams;
   afterimage: AfterimagePassParams;
   bokeh: BokehPassParams;
   film: FilmPassParams;
@@ -239,6 +246,7 @@ export type ResolvedEditorPostProcessingPassConfig<T> = {
 };
 
 export type EditorPostProcessingPassesJSON = {
+  pixelated?: EditorPostProcessingPassConfig<PixelatedPassParams>;
   afterimage?: EditorPostProcessingPassConfig<AfterimagePassParams>;
   bokeh?: EditorPostProcessingPassConfig<BokehPassParams>;
   film?: EditorPostProcessingPassConfig<FilmPassParams>;
@@ -251,6 +259,7 @@ export type EditorPostProcessingPassesJSON = {
 };
 
 export type ResolvedEditorPostProcessingPasses = {
+  pixelated: ResolvedEditorPostProcessingPassConfig<PixelatedPassParams>;
   afterimage: ResolvedEditorPostProcessingPassConfig<AfterimagePassParams>;
   bokeh: ResolvedEditorPostProcessingPassConfig<BokehPassParams>;
   film: ResolvedEditorPostProcessingPassConfig<FilmPassParams>;

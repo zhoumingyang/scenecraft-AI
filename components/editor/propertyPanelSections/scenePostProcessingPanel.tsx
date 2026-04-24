@@ -8,6 +8,7 @@ import { useEditorStore } from "@/stores/editorStore";
 import { SelectField, SliderField, ToggleField } from "./sceneSettingsFields";
 
 const postProcessLabelKeyMap: Record<EditorPostProcessPassId, string> = {
+  pixelated: "editor.post.pixelated",
   afterimage: "editor.post.afterimage",
   bokeh: "editor.post.bokeh",
   film: "editor.post.film",
@@ -50,6 +51,36 @@ function renderPostProcessingParams(
   t: (key: string, values?: Record<string, string | number>) => string
 ) {
   switch (passId) {
+    case "pixelated":
+      return (
+        <Stack spacing={0.8}>
+          <SliderField
+            label={t("editor.post.pixelSize")}
+            min={1}
+            max={16}
+            step={1}
+            value={config.passes.pixelated.params.pixelSize}
+            onChange={(value) => onPatch("pixelated", { pixelSize: value })}
+            formatter={(value) => value.toFixed(0)}
+          />
+          <SliderField
+            label={t("editor.post.normalEdgeStrength")}
+            min={0}
+            max={2}
+            step={0.01}
+            value={config.passes.pixelated.params.normalEdgeStrength}
+            onChange={(value) => onPatch("pixelated", { normalEdgeStrength: value })}
+          />
+          <SliderField
+            label={t("editor.post.depthEdgeStrength")}
+            min={0}
+            max={2}
+            step={0.01}
+            value={config.passes.pixelated.params.depthEdgeStrength}
+            onChange={(value) => onPatch("pixelated", { depthEdgeStrength: value })}
+          />
+        </Stack>
+      );
     case "afterimage":
       return (
         <SliderField

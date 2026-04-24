@@ -11,6 +11,7 @@ import { HalftonePass } from "three/examples/jsm/postprocessing/HalftonePass.js"
 import { OutlinePass } from "three/examples/jsm/postprocessing/OutlinePass.js";
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
+import { RenderPixelatedPass } from "three/examples/jsm/postprocessing/RenderPixelatedPass.js";
 import { SMAAPass } from "three/examples/jsm/postprocessing/SMAAPass.js";
 import { SSRPass } from "three/examples/jsm/postprocessing/SSRPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
@@ -32,6 +33,7 @@ export class EditorRuntimePostProcessing {
   private readonly renderPass: RenderPass;
   private readonly outlinePass: OutlinePass;
   private readonly outputPass: OutputPass;
+  private pixelatedPass: RenderPixelatedPass | null = null;
   private afterimagePass: AfterimagePass | null = null;
   private bokehPass: BokehPass | null = null;
   private dotScreenPass: DotScreenPass | null = null;
@@ -80,6 +82,13 @@ export class EditorRuntimePostProcessing {
     this.ensurePasses();
 
     const { passes } = config;
+
+    if (this.pixelatedPass) {
+      this.pixelatedPass.enabled = passes.pixelated.enabled;
+      this.pixelatedPass.setPixelSize(passes.pixelated.params.pixelSize);
+      this.pixelatedPass.normalEdgeStrength = passes.pixelated.params.normalEdgeStrength;
+      this.pixelatedPass.depthEdgeStrength = passes.pixelated.params.depthEdgeStrength;
+    }
 
     if (this.afterimagePass) {
       this.afterimagePass.enabled = passes.afterimage.enabled;
@@ -217,6 +226,7 @@ export class EditorRuntimePostProcessing {
   }
 
   dispose() {
+    this.pixelatedPass?.dispose();
     this.afterimagePass?.dispose();
     this.bokehPass?.dispose();
     this.dotScreenPass?.dispose();
@@ -229,6 +239,7 @@ export class EditorRuntimePostProcessing {
     this.smaaPass?.dispose();
     this.ssrPass?.dispose();
     this.unrealBloomPass?.dispose();
+    this.pixelatedPass = null;
     this.afterimagePass = null;
     this.bokehPass = null;
     this.dotScreenPass = null;
@@ -250,6 +261,12 @@ export class EditorRuntimePostProcessing {
     const width = Math.max(1, size.x);
     const height = Math.max(1, size.y);
     const resolution = new THREE.Vector2(width, height);
+
+    this.pixelatedPass = new RenderPixelatedPass(6, this.scene, this.camera, {
+      normalEdgeStrength: 0.3,
+      depthEdgeStrength: 0.4
+    });
+    this.pixelatedPass.enabled = false;
 
     this.gtaoPass = new GTAOPass(this.scene, this.camera, width, height);
     this.gtaoPass.output = GTAOPass.OUTPUT.Default;
@@ -315,6 +332,8 @@ export class EditorRuntimePostProcessing {
     const effectiveWidth = Math.max(1, Math.round(width * this.renderer.getPixelRatio()));
     const effectiveHeight = Math.max(1, Math.round(height * this.renderer.getPixelRatio()));
 
+    this.pixelatedPass?.setSize(effectiveWidth, effectiveHeight);
+
     if (this.bokehPass) {
       const bokehUniforms = this.bokehPass.materialBokeh.uniforms as Record<
         string,
@@ -347,6 +366,7 @@ export class EditorRuntimePostProcessing {
     composerWithPasses.passes.length = 0;
     this.composer.addPass(this.renderPass);
 
+    this.appendEffectPass("pixelated", this.pixelatedPass, config);
     this.appendEffectPass("gtao", this.gtaoPass, config);
     this.appendEffectPass("ssr", this.ssrPass, config);
     this.appendEffectPass("bokeh", this.bokehPass, config);

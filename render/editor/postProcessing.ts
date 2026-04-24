@@ -5,6 +5,7 @@ import type {
 } from "./core/types";
 
 export const EDITOR_POST_PROCESS_PASS_ORDER: EditorPostProcessPassId[] = [
+  "pixelated",
   "gtao",
   "ssr",
   "bokeh",
@@ -19,6 +20,14 @@ export const EDITOR_POST_PROCESS_PASS_ORDER: EditorPostProcessPassId[] = [
 export function createDefaultEditorPostProcessingConfigJSON(): ResolvedEditorPostProcessingConfigJSON {
   return {
     passes: {
+      pixelated: {
+        enabled: false,
+        params: {
+          pixelSize: 6,
+          normalEdgeStrength: 0.3,
+          depthEdgeStrength: 0.4
+        }
+      },
       afterimage: {
         enabled: false,
         params: {
@@ -102,6 +111,12 @@ export function cloneEditorPostProcessingConfig(
 ): ResolvedEditorPostProcessingConfigJSON {
   return {
     passes: {
+      pixelated: {
+        enabled: config.passes.pixelated.enabled,
+        params: {
+          ...config.passes.pixelated.params
+        }
+      },
       afterimage: {
         enabled: config.passes.afterimage.enabled,
         params: {
@@ -167,6 +182,13 @@ export function normalizeEditorPostProcessingConfig(
 
   return {
     passes: {
+      pixelated: {
+        enabled: source?.passes?.pixelated?.enabled ?? defaults.passes.pixelated.enabled,
+        params: {
+          ...defaults.passes.pixelated.params,
+          ...source?.passes?.pixelated?.params
+        }
+      },
       afterimage: {
         enabled: source?.passes?.afterimage?.enabled ?? defaults.passes.afterimage.enabled,
         params: {

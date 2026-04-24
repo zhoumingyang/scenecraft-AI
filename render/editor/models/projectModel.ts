@@ -84,6 +84,12 @@ export class EditorProjectModel {
         toneMappingExposure: this.envConfig.toneMappingExposure,
         postProcessing: {
           passes: {
+            pixelated: {
+              enabled: this.envConfig.postProcessing.passes.pixelated.enabled,
+              params: {
+                ...this.envConfig.postProcessing.passes.pixelated.params
+              }
+            },
             afterimage: {
               enabled: this.envConfig.postProcessing.passes.afterimage.enabled,
               params: {
