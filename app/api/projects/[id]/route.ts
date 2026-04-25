@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { SaveProjectRequest, SaveProjectResponse } from "@/lib/api/contracts/projects";
 import { projectSaveRequestSchema } from "@/lib/project/schema";
 import { getSession } from "@/lib/server/auth/getSession";
+import { getErrorMessage } from "@/lib/server/http/getErrorMessage";
 import { updateProject } from "@/lib/server/projects/mutations";
 import { getProjectByIdForUser } from "@/lib/server/projects/queries";
 
@@ -36,7 +37,7 @@ export async function GET(_: Request, context: RouteContext) {
       }
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to load project.";
+    const message = getErrorMessage(error, "Failed to load project.");
     return NextResponse.json({ message }, { status: 500 });
   }
 }
@@ -86,7 +87,7 @@ export async function PUT(request: Request, context: RouteContext) {
 
     return NextResponse.json(response);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to update project.";
+    const message = getErrorMessage(error, "Failed to update project.");
     const status = message.includes("DATABASE_URL") ? 500 : 400;
     return NextResponse.json({ message }, { status });
   }

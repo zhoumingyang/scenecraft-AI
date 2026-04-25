@@ -6,6 +6,7 @@ import type {
 } from "@/lib/api/contracts/projects";
 import { projectSaveRequestSchema } from "@/lib/project/schema";
 import { getSession } from "@/lib/server/auth/getSession";
+import { getErrorMessage } from "@/lib/server/http/getErrorMessage";
 import { createProject } from "@/lib/server/projects/mutations";
 import { listProjectsByUser } from "@/lib/server/projects/queries";
 import { serializeProjectSummary } from "@/lib/server/projects/serializers";
@@ -25,7 +26,7 @@ export async function GET() {
 
     return NextResponse.json(response);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to load projects.";
+    const message = getErrorMessage(error, "Failed to load projects.");
     return NextResponse.json({ message }, { status: 500 });
   }
 }
@@ -58,7 +59,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(response, { status: 201 });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to create project.";
+    const message = getErrorMessage(error, "Failed to create project.");
     const status = message.includes("DATABASE_URL") ? 500 : 400;
     return NextResponse.json({ message }, { status });
   }

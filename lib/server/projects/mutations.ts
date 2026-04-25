@@ -11,8 +11,28 @@ type SaveProjectMutationArgs = {
 
 export async function createProject({ projectId, userId, payload }: SaveProjectMutationArgs) {
   const db = requireDatabase();
+  const serializedTags = JSON.stringify(payload.snapshot.meta?.tags ?? []);
+  const serializedSnapshot = JSON.stringify(payload.snapshot);
+  const serializedAiSnapshot = JSON.stringify(payload.aiSnapshot);
 
   return db.transaction(async (tx) => {
+    const [created] = await tx
+      .insert(projects)
+      .values({
+        id: projectId,
+        userId,
+        title: payload.snapshot.meta!.title,
+        description: payload.snapshot.meta?.description ?? null,
+        tags: sql`${serializedTags}::jsonb`,
+        snapshot: sql`${serializedSnapshot}::jsonb`,
+        aiSnapshot: sql`${serializedAiSnapshot}::jsonb`,
+        thumbnailAssetId: payload.snapshot.thumbnail?.assetId ?? null,
+        version: 1,
+        lastOpenedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .returning();
+
     if (payload.uploadedAssets?.length) {
       await tx
         .insert(assets)
@@ -34,29 +54,15 @@ export async function createProject({ projectId, userId, payload }: SaveProjectM
         .onConflictDoNothing();
     }
 
-    const [created] = await tx
-      .insert(projects)
-      .values({
-        id: projectId,
-        userId,
-        title: payload.snapshot.meta!.title,
-        description: payload.snapshot.meta?.description ?? null,
-        tags: payload.snapshot.meta?.tags ?? [],
-        snapshot: payload.snapshot,
-        aiSnapshot: payload.aiSnapshot,
-        thumbnailAssetId: payload.snapshot.thumbnail?.assetId ?? null,
-        version: 1,
-        lastOpenedAt: new Date(),
-        updatedAt: new Date()
-      })
-      .returning();
-
     return created;
   });
 }
 
 export async function updateProject({ projectId, userId, payload }: SaveProjectMutationArgs) {
   const db = requireDatabase();
+  const serializedTags = JSON.stringify(payload.snapshot.meta?.tags ?? []);
+  const serializedSnapshot = JSON.stringify(payload.snapshot);
+  const serializedAiSnapshot = JSON.stringify(payload.aiSnapshot);
 
   return db.transaction(async (tx) => {
     if (payload.uploadedAssets?.length) {
@@ -85,9 +91,9 @@ export async function updateProject({ projectId, userId, payload }: SaveProjectM
       .set({
         title: payload.snapshot.meta!.title,
         description: payload.snapshot.meta?.description ?? null,
-        tags: payload.snapshot.meta?.tags ?? [],
-        snapshot: payload.snapshot,
-        aiSnapshot: payload.aiSnapshot,
+        tags: sql`${serializedTags}::jsonb`,
+        snapshot: sql`${serializedSnapshot}::jsonb`,
+        aiSnapshot: sql`${serializedAiSnapshot}::jsonb`,
         thumbnailAssetId: payload.snapshot.thumbnail?.assetId ?? null,
         version: sql`${projects.version} + 1`,
         lastOpenedAt: new Date(),
