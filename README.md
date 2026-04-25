@@ -4,6 +4,14 @@ Scenecraft AI is an AI-powered 3D editor for scene creation workflows. It combin
 
 The current version is built with `Next.js`, `React 19`, `Three.js`, `Zustand`, `Drizzle ORM`, and `better-auth`. It already includes a browser-based 3D editor shell, a protected editor workspace, an AI image workflow, and an AI 3D preview-and-optimization pipeline focused on stylized low-poly output.
 
+It also now includes a first end-to-end persistence loop for authenticated users:
+
+- manual scene save from the editor
+- project list and project re-open flow
+- project thumbnails captured from the active editor camera
+- persisted model / HDR / texture asset references through `Vercel Blob`
+- project-scoped AI image history
+
 ## What This Project Is
 
 This is not just a text-to-image demo, and it is not a full desktop-grade DCC tool in the browser either. It is a creative tool designed around the following loop:
@@ -42,8 +50,26 @@ This is not just a text-to-image demo, and it is not a full desktop-grade DCC to
 - Reference image upload for editing and style continuation workflows
 - Prompt enhancement and Chinese-to-English prompt translation
 - Generated results can be previewed inside the editor and applied directly to mesh materials
+- Saved projects also retain a project-level AI image library, including prompts, generation params, reference images, and generated outputs
 
-### 4. AI 3D Sketch Generation and Optimization
+### 4. Project Save / Load and Asset Persistence
+
+- The editor `Save` action now creates and updates real user-owned projects
+- First save prompts for base metadata such as:
+  - project name
+  - description
+  - tags
+- Every save captures the current camera view as a project thumbnail
+- `Project > Select` opens a saved-project list with thumbnail and last-updated metadata
+- Saved projects restore:
+  - scene JSON
+  - imported model URLs
+  - environment image URLs
+  - uploaded texture URLs
+  - project AI image history
+- Imported model files, texture images, environment images, and generated thumbnails are stored in `Vercel Blob`
+
+### 5. AI 3D Sketch Generation and Optimization
 
 This is the most distinctive part of the project right now.
 
@@ -83,6 +109,7 @@ This approach makes the result:
 - State management: `Zustand`
 - Authentication: `better-auth`
 - Database: `Postgres` + `Drizzle ORM`
+- Object storage: `Vercel Blob`
 - AI integration: provider-based image generation, prompt transformation, and AI 3D planning APIs
 
 ## Project Structure
@@ -120,7 +147,8 @@ Recommended minimum variables:
 - `BETTER_AUTH_URL`
 - `OPENROUTER_API_KEY`
 - `SILICONFLOW_API_KEY` if you want to enable that provider
-- `DATABASE_URL` recommended; without it, local auth falls back to in-memory mode
+- `DATABASE_URL` required if you want project save/load and persistent auth
+- `BLOB_READ_WRITE_TOKEN` required if you want model / texture / thumbnail uploads and project save to succeed
 - `SMTP_HOST`
 - `SMTP_PORT`
 - `SMTP_USER`
@@ -145,9 +173,19 @@ Default routes:
 - Home: `http://localhost:3000/home`
 - Editor: `http://localhost:3000/editor`
 
+### 4. Initialize database schema
+
+If you just pulled the repository or changed schema files, push the current schema to your database before testing project save:
+
+```bash
+npm run db:push
+```
+
+Without this step, save requests will fail if tables such as `projects` or `assets` do not exist yet.
+
 ## Database Commands
 
-The project already includes `Drizzle` configuration and auth-related schema.
+The project already includes `Drizzle` configuration plus auth, project, and asset schema.
 
 Useful commands:
 
@@ -157,14 +195,50 @@ npm run db:push
 npm run db:studio
 ```
 
+Key persisted tables now include:
+
+- `user`, `session`, `account`, `verification`
+- `projects`
+- `assets`
+
+The editor save flow depends on both `projects` and `assets` existing in the target database.
+
+## Storage Setup
+
+Project save uses `Vercel Blob` for binary asset persistence.
+
+Typical setup:
+
+1. Create a Blob store in your Vercel project
+2. Pull environment variables locally:
+
+```bash
+vercel env pull
+```
+
+3. Confirm `.env.local` includes:
+
+- `BLOB_READ_WRITE_TOKEN`
+
+This token is required for:
+
+- project thumbnails
+- imported models
+- uploaded textures
+- environment images
+- saved AI image resources
+
 ## Current Status
 
-The project already has the core foundation of a usable editor, AI workflows, and authentication, but it is still evolving. A few important boundaries are worth calling out:
+The project now has a usable authenticated persistence path, but it is still evolving. A few important boundaries are worth calling out:
 
-- The database integration is currently focused on authentication; the full project save/load backend loop is still planned work
-- The top `Save` entry in the editor is still a placeholder, so it should not be described as fully implemented
+- Project save/load is implemented for authenticated users, but it is currently manual-save only
+- The current persistence model stores full scene snapshots rather than patch diffs
+- Save depends on both `DATABASE_URL` and `BLOB_READ_WRITE_TOKEN`
+- Existing schema changes require `npm run db:push` or equivalent migration application before testing against a fresh database
 - The current AI 3D flow is aimed at low-poly sketching and structural previews, not production-grade high-resolution mesh generation
 - If `DATABASE_URL` is missing in local development, auth falls back to in-memory mode and will not persist after restart
+- If `BLOB_READ_WRITE_TOKEN` is missing, editor save cannot persist binary assets and will fail clearly
 
 You can find the backend direction in [docs/backend-roadmap.md](/Users/mingyoungzhou/code/self/scenecraft-AI/docs/backend-roadmap.md).
 

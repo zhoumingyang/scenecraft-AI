@@ -10,6 +10,8 @@ Scenecraft AI is an AI-assisted browser-based 3D scene editor built on Next.js. 
 - AI image generation and prompt transformation
 - low-poly AI 3D sketch planning and optimization
 - authentication and database-backed user flows
+- authenticated project save/load with persisted scene snapshots
+- asset persistence for models, textures, environment images, thumbnails, and saved AI image resources
 
 This is not a simple CRUD app. Changes often affect editor runtime behavior, scene data flow, AI request contracts, or auth boundaries.
 
@@ -22,6 +24,7 @@ This is not a simple CRUD app. Changes often affect editor runtime behavior, sce
 - `Zustand`
 - `Drizzle ORM`
 - `better-auth`
+- `Vercel Blob`
 - `Sass`
 - `MUI`
 
@@ -74,6 +77,7 @@ Important variables include:
 - `BETTER_AUTH_SECRET`
 - `BETTER_AUTH_URL`
 - `DATABASE_URL`
+- `BLOB_READ_WRITE_TOKEN`
 - `OPENROUTER_API_KEY`
 - `SILICONFLOW_API_KEY`
 - SMTP settings for email auth flows
@@ -82,6 +86,8 @@ Behavior to remember:
 
 - If `DATABASE_URL` is missing in local development, auth falls back to an in-memory adapter.
 - In production, missing `DATABASE_URL` should be treated as a blocking issue.
+- Project save/load APIs should also be treated as unavailable when `DATABASE_URL` is missing.
+- Asset-backed save flows depend on `BLOB_READ_WRITE_TOKEN`; missing Blob config should fail clearly rather than silently degrade.
 - AI routes depend on provider keys and should fail clearly when keys are missing.
 
 ## Repo Map
@@ -94,6 +100,8 @@ Next.js App Router entrypoints and API routes.
 - `app/editor/` contains the protected editor route
 - `app/api/auth/` contains auth route handlers
 - `app/api/ai/` contains AI API routes for prompt transformation, image generation, and 3D generation
+- `app/api/projects/` contains project list/create/read/update handlers
+- `app/api/assets/` contains asset upload preparation handlers
 
 Use this area when changing route-level behavior, request/response handling, or page composition.
 
@@ -102,6 +110,7 @@ Use this area when changing route-level behavior, request/response handling, or 
 React UI components for auth, home, and editor surfaces.
 
 - `components/editor/` contains most editor-facing UI panels and controls
+- `components/editor/topBar.tsx` now owns the save/select UI flow and project persistence orchestration
 - `components/common/` contains shared UI building blocks
 
 Prefer keeping UI logic here instead of pushing presentation concerns into `render/editor/`.
@@ -120,6 +129,7 @@ It includes:
 - data models and factories
 - bindings between data and Three.js objects
 - session logic and AI 3D plan application
+- scene snapshot serialization used by project persistence
 
 Treat this area as high-risk. Small changes can easily break selection, transforms, preview behavior, imported assets, or runtime synchronization.
 
@@ -137,6 +147,16 @@ Includes:
 
 Keep API contracts, validation, and provider-specific behavior aligned when editing here.
 
+### `lib/project/`
+
+Project persistence schema and validation live here.
+
+Use this area when changing:
+
+- project save request validation
+- project AI library schema
+- project metadata and thumbnail rules
+
 ### `lib/server/` and `lib/auth*.ts`
 
 Authentication and server-only helpers.
@@ -147,6 +167,9 @@ Be careful with:
 - route protection
 - email verification/reset flows
 - local memory-mode fallback behavior
+- project ownership checks
+- asset upload token generation
+- database availability checks for save/load
 
 ### `db/`
 
@@ -156,7 +179,9 @@ If schema changes are made:
 
 - update the relevant schema files
 - generate migrations if appropriate
+- ensure `projects` / `assets` remain aligned with the runtime JSON shape
 - avoid making assumptions that local memory auth mode will persist data
+- remember that save/load work requires the schema to actually exist in the target database; `npm run db:push` may be necessary during local setup
 
 ### `stores/`
 
@@ -193,6 +218,7 @@ When changing request/response shapes, also inspect:
 - shared contracts in `lib/api/contracts/`
 - frontend client calls in `frontend/api/` and UI consumers
 - AI pipeline validation/parsing code in `lib/ai/`
+- project validation in `lib/project/`
 
 ### Keep editor behavior stable
 
@@ -203,12 +229,15 @@ When touching `render/editor/`, think through:
 - entity IDs and bindings
 - runtime disposal and cleanup
 - preview vs apply flows for AI-generated content
+- whether imported asset URLs are temporary `blob:` URLs or persisted asset URLs
+- whether `EditorProjectJSON` serialization still round-trips persisted project metadata and thumbnails
 
 ### Keep auth behavior explicit
 
 - Protected routes should continue to guard editor access.
 - Do not silently weaken auth checks.
 - Preserve clear behavior when config is missing.
+- Project and asset APIs must continue to enforce per-user ownership boundaries.
 
 ## Verification Expectations
 
@@ -242,6 +271,16 @@ If the task is about AI generation:
 - inspect `lib/ai/`
 - inspect `lib/api/contracts/`
 
+If the task is about project save/load or asset persistence:
+
+- inspect `app/api/projects/`
+- inspect `app/api/assets/`
+- inspect `lib/project/`
+- inspect `lib/server/projects/`
+- inspect `lib/server/assets/`
+- inspect `components/editor/topBar.tsx`
+- inspect `stores/editorStore.ts`
+
 If the task is about auth:
 
 - inspect `lib/auth.ts`
@@ -258,10 +297,12 @@ If the task is about scene/project data:
 ## Things To Avoid
 
 - Do not invent commands or workflows that do not exist in the repo.
-- Do not describe the Save flow as fully implemented unless you verify it.
 - Do not assume database persistence exists in local mode without `DATABASE_URL`.
+- Do not assume project persistence exists in a target database until `projects` and `assets` tables are present.
+- Do not assume binary asset persistence works without `BLOB_READ_WRITE_TOKEN`.
 - Do not mix heavy UI concerns into low-level editor runtime files without a good reason.
 - Do not bypass validation for AI request input.
+- Do not store temporary `blob:` URLs in persisted save payloads if the task is meant to preserve assets across reloads.
 
 ## Good Final Handoff
 
@@ -270,4 +311,4 @@ A strong task handoff should include:
 - a short summary of what changed
 - the files or subsystems affected
 - commands run for verification
-- any remaining caveats, especially around env vars, auth, AI providers, or editor runtime behavior
+- any remaining caveats, especially around env vars, auth, AI providers, editor runtime behavior, database schema state, or Blob storage setup
