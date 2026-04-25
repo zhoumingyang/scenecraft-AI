@@ -10,10 +10,13 @@ import {
   TopBar,
   ViewportControls
 } from "@/components/editor";
+import { getProject } from "@/frontend/api/projects";
+import { createEmptyProjectAiLibrary } from "@/lib/project/schema";
 import { createDefaultEditorProjectJSON } from "@/render/editor";
 import { createEditorSdk } from "@/render/editor/sdk";
 import { useEditorStore } from "@/stores/editorStore";
 import { getEditorThemeTokens } from "@/components/editor/theme";
+import { syncEditorProjectSearchParam } from "@/components/editor/projectPersistence";
 
 type EditorCanvasViewProps = {
   userEmail: string | null;
@@ -25,6 +28,13 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
   const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
   const setEditorThemeMode = useEditorStore((state) => state.setEditorThemeMode);
   const setSelectedEntityId = useEditorStore((state) => state.setSelectedEntityId);
+  const setCurrentProject = useEditorStore((state) => state.setCurrentProject);
+  const setProjectMeta = useEditorStore((state) => state.setProjectMeta);
+  const setLoadedAiLibrary = useEditorStore((state) => state.setLoadedAiLibrary);
+  const clearPendingAiGenerations = useEditorStore((state) => state.clearPendingAiGenerations);
+  const clearLocalProjectAssets = useEditorStore((state) => state.clearLocalProjectAssets);
+  const markUnsavedChanges = useEditorStore((state) => state.markUnsavedChanges);
+  const setSaveStatus = useEditorStore((state) => state.setSaveStatus);
   const bumpProjectVersion = useEditorStore((state) => state.bumpProjectVersion);
   const bumpEntityRenderVersion = useEditorStore((state) => state.bumpEntityRenderVersion);
   const bumpProjectLoadVersion = useEditorStore((state) => state.bumpProjectLoadVersion);
@@ -71,6 +81,7 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
         bumpProjectVersion();
         bumpCameraVersion();
         bumpViewStateVersion();
+        markUnsavedChanges(false);
         return;
       }
 
@@ -78,9 +89,9 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
         if (event.source === "render") {
           pendingEntityRenderVersion = true;
           scheduleRenderDrivenUpdates();
-          return;
         }
         bumpProjectVersion();
+        markUnsavedChanges(true);
         return;
       }
 
@@ -88,12 +99,14 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
         if (event.source !== "render") {
           bumpCameraVersion();
         }
+        markUnsavedChanges(true);
         return;
       }
 
       if (event.type === "sceneUpdated") {
         bumpProjectVersion();
         bumpViewStateVersion();
+        markUnsavedChanges(true);
         return;
       }
 
@@ -103,10 +116,45 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
     });
 
     app.start();
-    void app.dispatch({
-      type: "project.load",
-      project: createDefaultEditorProjectJSON()
-    });
+    void (async () => {
+      const initialProjectId = new URL(window.location.href).searchParams.get("projectId");
+
+      if (initialProjectId) {
+        try {
+          const response = await getProject(initialProjectId);
+          await app.dispatch({
+            type: "project.load",
+            project: response.project.snapshot
+          });
+          setCurrentProject(response.project.id);
+          setProjectMeta(response.project.snapshot.meta ?? null);
+          setLoadedAiLibrary(response.project.aiSnapshot);
+          clearPendingAiGenerations();
+          clearLocalProjectAssets();
+          syncEditorProjectSearchParam(response.project.id);
+          setSaveStatus({
+            phase: "idle",
+            message: null,
+            updatedAt: Date.now()
+          });
+          return;
+        } catch (error) {
+          console.error("[editor] Failed to load project from URL", error);
+          syncEditorProjectSearchParam(null);
+        }
+      }
+
+      const defaultProject = createDefaultEditorProjectJSON();
+      await app.dispatch({
+        type: "project.load",
+        project: defaultProject
+      });
+      setCurrentProject(null);
+      setProjectMeta(defaultProject.meta ?? null);
+      setLoadedAiLibrary(createEmptyProjectAiLibrary());
+      clearPendingAiGenerations();
+      clearLocalProjectAssets();
+    })();
 
     return () => {
       disposed = true;
@@ -119,12 +167,19 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
       setSelectedEntityId(null);
     };
   }, [
+    clearLocalProjectAssets,
+    clearPendingAiGenerations,
     bumpProjectLoadVersion,
     bumpProjectVersion,
     bumpEntityRenderVersion,
     bumpCameraVersion,
     bumpViewStateVersion,
+    markUnsavedChanges,
     setApp,
+    setCurrentProject,
+    setLoadedAiLibrary,
+    setProjectMeta,
+    setSaveStatus,
     setSelectedEntityId,
     setAiInspectorMode
   ]);

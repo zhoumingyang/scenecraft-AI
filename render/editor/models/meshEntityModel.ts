@@ -22,6 +22,7 @@ function normalizeVec2(value: unknown, fallback: [number, number]): [number, num
 
 function normalizeTexture(source?: TextureSchema | null): ResolvedTextureSchema {
   return {
+    assetId: normalizeString(source?.assetId),
     url: normalizeString(source?.url),
     offset: normalizeVec2(source?.offset, [0, 0]),
     repeat: normalizeVec2(source?.repeat, [1, 1]),

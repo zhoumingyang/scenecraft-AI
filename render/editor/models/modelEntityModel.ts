@@ -22,6 +22,7 @@ import { BaseEntityModel } from "./baseEntity";
 
 export class ModelEntityModel extends BaseEntityModel {
   source: string;
+  sourceAssetId: string;
   format: ModelFileFormat;
   assetUnit: AssetUnit;
   assetImportScale: number;
@@ -34,6 +35,7 @@ export class ModelEntityModel extends BaseEntityModel {
   constructor(index: number, source: EditorModelJSON) {
     super(normalizeId("model", source.id, index), source);
     this.source = normalizeString(source.source);
+    this.sourceAssetId = normalizeString(source.sourceAssetId);
     this.format = normalizeModelFormat(source.format, "glb");
     this.assetUnit = normalizeAssetUnit(source.assetUnit, "unknown");
     this.assetImportScale = normalizePositiveNumber(source.assetImportScale, 1);

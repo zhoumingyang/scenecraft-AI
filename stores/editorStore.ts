@@ -1,4 +1,6 @@
 import { create } from "zustand";
+import type { ProjectAssetKind } from "@/lib/api/contracts/assets";
+import { createEmptyProjectAiLibrary } from "@/lib/project/schema";
 import type { Ai3DIntentInput, Ai3DPlanDiagnostics } from "@/lib/ai/ai3d/intent";
 import {
   DEFAULT_IMAGE_GENERATION_MODEL_ID,
@@ -7,12 +9,18 @@ import {
   type ImageGenerationImageSize,
   type ImageGenerationModelId
 } from "@/lib/ai/image-generation/models";
-import type { Ai3DPlan, EditorApp } from "@/render/editor";
+import type {
+  Ai3DPlan,
+  EditorApp,
+  EditorProjectMetaJSON,
+  ProjectAiLibraryJSON
+} from "@/render/editor";
 
 export type AiImageProviderId = "siliconflow" | "openrouter";
 export type AiImageModelId = ImageGenerationModelId;
 export type EditorThemeMode = "dark" | "light";
 export type AiImageSize = ImageGenerationImageSize;
+export type ProjectSavePhase = "idle" | "saving" | "success" | "error";
 
 export type AiImageResult = {
   url: string;
@@ -23,6 +31,48 @@ export type AiMode = "image" | "3d";
 export type AiReferenceImageSlot = {
   dataUrl: string | null;
   fileName: string | null;
+};
+
+export type LocalProjectAssetEntry = {
+  sourceUrl: string;
+  file: File;
+  kind: ProjectAssetKind;
+  targetPath: string;
+  entityId?: string;
+};
+
+export type PendingAiLibraryImage = {
+  id: string;
+  sourceUrl: string;
+  fileName: string;
+  mimeType: string;
+  appliedMeshIds: string[];
+};
+
+export type PendingAiReferenceImage = {
+  dataUrl: string;
+  fileName: string;
+  mimeType: string;
+};
+
+export type PendingAiImageGeneration = {
+  id: string;
+  createdAt: string;
+  prompt: string;
+  model: string;
+  seed: number | null;
+  imageSize?: string;
+  cfg: number;
+  inferenceSteps: number;
+  traceId: string | null;
+  referenceImages: PendingAiReferenceImage[];
+  results: PendingAiLibraryImage[];
+};
+
+export type ProjectSaveStatus = {
+  phase: ProjectSavePhase;
+  message: string | null;
+  updatedAt: number | null;
 };
 
 type AiImageSettings = {
@@ -60,6 +110,15 @@ type EditorStoreState = {
   app: EditorApp | null;
   editorThemeMode: EditorThemeMode;
   selectedEntityId: string | null;
+  currentProjectId: string | null;
+  currentProjectMeta: EditorProjectMetaJSON | null;
+  loadedAiLibrary: ProjectAiLibraryJSON;
+  pendingAiImageGenerations: PendingAiImageGeneration[];
+  localProjectAssets: LocalProjectAssetEntry[];
+  saveStatus: ProjectSaveStatus;
+  hasUnsavedChanges: boolean;
+  projectListDialogOpen: boolean;
+  projectSaveDialogOpen: boolean;
   projectVersion: number;
   entityRenderVersion: number;
   projectLoadVersion: number;
@@ -71,6 +130,18 @@ type EditorStoreState = {
   setApp: (app: EditorApp | null) => void;
   setEditorThemeMode: (mode: EditorThemeMode) => void;
   setSelectedEntityId: (selectedEntityId: string | null) => void;
+  setCurrentProject: (projectId: string | null) => void;
+  setProjectMeta: (meta: EditorProjectMetaJSON | null) => void;
+  setLoadedAiLibrary: (library: ProjectAiLibraryJSON) => void;
+  appendPendingAiGeneration: (generation: PendingAiImageGeneration) => void;
+  clearPendingAiGenerations: () => void;
+  recordAiResultAppliedToMesh: (imageUrl: string, meshId: string) => void;
+  registerLocalProjectAsset: (asset: LocalProjectAssetEntry) => void;
+  clearLocalProjectAssets: () => void;
+  markUnsavedChanges: (dirty: boolean) => void;
+  setSaveStatus: (status: ProjectSaveStatus) => void;
+  setProjectListDialogOpen: (open: boolean) => void;
+  setProjectSaveDialogOpen: (open: boolean) => void;
   bumpProjectVersion: () => void;
   bumpEntityRenderVersion: () => void;
   bumpProjectLoadVersion: () => void;
@@ -98,17 +169,8 @@ type EditorStoreState = {
   }) => void;
 };
 
-export const useEditorStore = create<EditorStoreState>((set) => ({
-  app: null,
-  editorThemeMode: "dark",
-  selectedEntityId: null,
-  projectVersion: 0,
-  entityRenderVersion: 0,
-  projectLoadVersion: 0,
-  cameraVersion: 0,
-  viewStateVersion: 0,
-  aiMode: "image",
-  aiImage: {
+function createInitialAiImageSettings(): AiImageSettings {
+  return {
     providerId: getImageGenerationModelConfig(DEFAULT_IMAGE_GENERATION_MODEL_ID).providerId,
     model: DEFAULT_IMAGE_GENERATION_MODEL_ID,
     prompt: "",
@@ -126,7 +188,37 @@ export const useEditorStore = create<EditorStoreState>((set) => ({
     errorMessage: null,
     results: [],
     lastSeed: null
-  },
+  };
+}
+
+function createInitialSaveStatus(): ProjectSaveStatus {
+  return {
+    phase: "idle",
+    message: null,
+    updatedAt: null
+  };
+}
+
+export const useEditorStore = create<EditorStoreState>((set) => ({
+  app: null,
+  editorThemeMode: "dark",
+  selectedEntityId: null,
+  currentProjectId: null,
+  currentProjectMeta: null,
+  loadedAiLibrary: createEmptyProjectAiLibrary(),
+  pendingAiImageGenerations: [],
+  localProjectAssets: [],
+  saveStatus: createInitialSaveStatus(),
+  hasUnsavedChanges: false,
+  projectListDialogOpen: false,
+  projectSaveDialogOpen: false,
+  projectVersion: 0,
+  entityRenderVersion: 0,
+  projectLoadVersion: 0,
+  cameraVersion: 0,
+  viewStateVersion: 0,
+  aiMode: "image",
+  aiImage: createInitialAiImageSettings(),
   ai3d: {
     prompt: "",
     intentDraft: {},
@@ -143,6 +235,52 @@ export const useEditorStore = create<EditorStoreState>((set) => ({
   setApp: (app) => set({ app }),
   setEditorThemeMode: (editorThemeMode) => set({ editorThemeMode }),
   setSelectedEntityId: (selectedEntityId) => set({ selectedEntityId }),
+  setCurrentProject: (currentProjectId) => set({ currentProjectId }),
+  setProjectMeta: (currentProjectMeta) => set({ currentProjectMeta }),
+  setLoadedAiLibrary: (loadedAiLibrary) => set({ loadedAiLibrary }),
+  appendPendingAiGeneration: (generation) =>
+    set((state) => ({
+      pendingAiImageGenerations: [...state.pendingAiImageGenerations, generation]
+    })),
+  clearPendingAiGenerations: () => set({ pendingAiImageGenerations: [] }),
+  recordAiResultAppliedToMesh: (imageUrl, meshId) =>
+    set((state) => ({
+      pendingAiImageGenerations: state.pendingAiImageGenerations.map((generation) => ({
+        ...generation,
+        results: generation.results.map((result) =>
+          result.sourceUrl === imageUrl && !result.appliedMeshIds.includes(meshId)
+            ? {
+                ...result,
+                appliedMeshIds: [...result.appliedMeshIds, meshId]
+              }
+            : result
+        )
+      })),
+      loadedAiLibrary: {
+        ...state.loadedAiLibrary,
+        imageGenerations: state.loadedAiLibrary.imageGenerations.map((generation) => ({
+          ...generation,
+          results: generation.results.map((result) =>
+            result.url === imageUrl &&
+            !(result.appliedMeshIds ?? []).includes(meshId)
+              ? {
+                  ...result,
+                  appliedMeshIds: [...(result.appliedMeshIds ?? []), meshId]
+                }
+              : result
+          )
+        }))
+      }
+    })),
+  registerLocalProjectAsset: (asset) =>
+    set((state) => ({
+      localProjectAssets: [...state.localProjectAssets, asset]
+    })),
+  clearLocalProjectAssets: () => set({ localProjectAssets: [] }),
+  markUnsavedChanges: (hasUnsavedChanges) => set({ hasUnsavedChanges }),
+  setSaveStatus: (saveStatus) => set({ saveStatus }),
+  setProjectListDialogOpen: (projectListDialogOpen) => set({ projectListDialogOpen }),
+  setProjectSaveDialogOpen: (projectSaveDialogOpen) => set({ projectSaveDialogOpen }),
   bumpProjectVersion: () => set((state) => ({ projectVersion: state.projectVersion + 1 })),
   bumpEntityRenderVersion: () =>
     set((state) => ({

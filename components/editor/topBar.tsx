@@ -1,7 +1,7 @@
 "use client";
 
-import { ChangeEvent, ComponentType, useEffect, useRef, useState } from "react";
-import { Button, Stack, SvgIconProps } from "@mui/material";
+import { ChangeEvent, ComponentType, useEffect, useMemo, useRef, useState } from "react";
+import { Button, SvgIconProps, Stack } from "@mui/material";
 import FolderRoundedIcon from "@mui/icons-material/FolderRounded";
 import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
 import SaveRoundedIcon from "@mui/icons-material/SaveRounded";
@@ -11,9 +11,34 @@ import LightModeRoundedIcon from "@mui/icons-material/LightModeRounded";
 import GridViewRoundedIcon from "@mui/icons-material/GridViewRounded";
 import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
 import DropdownMenu, { DropdownMenuItem } from "@/components/common/dropdownMenu";
+import ProjectSaveDialog from "@/components/editor/projectSaveDialog";
+import ProjectSaveProgressToast from "@/components/editor/projectSaveProgressToast";
+import ProjectSelectDialog from "@/components/editor/projectSelectDialog";
+import {
+  applyUploadedAssetToProjectSnapshot,
+  createClientUuid,
+  dataUrlToFile,
+  projectSnapshotUsesSourceUrl,
+  readImageDimensions,
+  syncEditorProjectSearchParam
+} from "@/components/editor/projectPersistence";
 import { getEditorThemeTokens } from "@/components/editor/theme";
+import { uploadPreparedAsset } from "@/frontend/api/assets";
+import { createProject, getProject, listProjects, updateProject } from "@/frontend/api/projects";
+import { createEmptyProjectAiLibrary } from "@/lib/project/schema";
 import { useI18n, TranslationKey } from "@/lib/i18n";
-import type { LightPresetId } from "@/render/editor";
+import type {
+  PrepareAssetUploadRequest,
+  UploadedProjectAsset
+} from "@/lib/api/contracts/assets";
+import type { ProjectSummary } from "@/lib/api/contracts/projects";
+import type {
+  EditorProjectJSON,
+  EditorProjectMetaJSON,
+  LightPresetId,
+  ProjectAiImageGenerationJSON,
+  ProjectAiLibraryJSON
+} from "@/render/editor";
 import { createDefaultEditorProjectJSON, inferModelFileFormat } from "@/render/editor";
 import { useEditorStore } from "@/stores/editorStore";
 
@@ -116,6 +141,22 @@ const dropdownConfigs: DropdownConfig[] = [
   }
 ];
 
+function cloneProjectSnapshot(snapshot: EditorProjectJSON) {
+  if (typeof structuredClone === "function") {
+    return structuredClone(snapshot);
+  }
+
+  return JSON.parse(JSON.stringify(snapshot)) as EditorProjectJSON;
+}
+
+async function sourceUrlToFile(sourceUrl: string, fileName: string, fallbackMimeType: string) {
+  const response = await fetch(sourceUrl);
+  const blob = await response.blob();
+  return new File([blob], fileName, {
+    type: blob.type || fallbackMimeType
+  });
+}
+
 export default function TopBar() {
   const { t } = useI18n();
   const modelImportInputRef = useRef<HTMLInputElement | null>(null);
@@ -123,11 +164,34 @@ export default function TopBar() {
   const app = useEditorStore((state) => state.app);
   const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
   const projectLoadVersion = useEditorStore((state) => state.projectLoadVersion);
+  const currentProjectId = useEditorStore((state) => state.currentProjectId);
+  const currentProjectMeta = useEditorStore((state) => state.currentProjectMeta);
+  const loadedAiLibrary = useEditorStore((state) => state.loadedAiLibrary);
+  const pendingAiImageGenerations = useEditorStore((state) => state.pendingAiImageGenerations);
+  const localProjectAssets = useEditorStore((state) => state.localProjectAssets);
+  const saveStatus = useEditorStore((state) => state.saveStatus);
+  const hasUnsavedChanges = useEditorStore((state) => state.hasUnsavedChanges);
+  const projectListDialogOpen = useEditorStore((state) => state.projectListDialogOpen);
+  const projectSaveDialogOpen = useEditorStore((state) => state.projectSaveDialogOpen);
+  const registerLocalProjectAsset = useEditorStore((state) => state.registerLocalProjectAsset);
+  const clearLocalProjectAssets = useEditorStore((state) => state.clearLocalProjectAssets);
+  const clearPendingAiGenerations = useEditorStore((state) => state.clearPendingAiGenerations);
+  const setCurrentProject = useEditorStore((state) => state.setCurrentProject);
+  const setProjectMeta = useEditorStore((state) => state.setProjectMeta);
+  const setLoadedAiLibrary = useEditorStore((state) => state.setLoadedAiLibrary);
+  const markUnsavedChanges = useEditorStore((state) => state.markUnsavedChanges);
+  const setSaveStatus = useEditorStore((state) => state.setSaveStatus);
+  const setProjectListDialogOpen = useEditorStore((state) => state.setProjectListDialogOpen);
+  const setProjectSaveDialogOpen = useEditorStore((state) => state.setProjectSaveDialogOpen);
   const [activeMenuId, setActiveMenuId] = useState<DropdownConfig["id"] | null>(null);
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
+  const [projects, setProjects] = useState<ProjectSummary[]>([]);
+  const [isProjectListLoading, setIsProjectListLoading] = useState(false);
+  const [projectListError, setProjectListError] = useState<string | null>(null);
   const theme = getEditorThemeTokens(editorThemeMode);
 
   const activeConfig = dropdownConfigs.find((item) => item.id === activeMenuId) || null;
+  const isSaving = saveStatus.phase === "saving";
 
   useEffect(() => {
     closeMenu();
@@ -141,6 +205,21 @@ export default function TopBar() {
   const closeMenu = () => {
     setActiveMenuId(null);
     setAnchorEl(null);
+  };
+
+  const loadProjectsForDialog = async () => {
+    setProjectListError(null);
+    setIsProjectListLoading(true);
+
+    try {
+      const response = await listProjects();
+      setProjects(response.projects);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : t("editor.project.loadListFailed");
+      setProjectListError(message);
+    } finally {
+      setIsProjectListLoading(false);
+    }
   };
 
   const onImportModel = () => {
@@ -157,9 +236,17 @@ export default function TopBar() {
     if (!app || !file) return;
     if (!inferModelFileFormat(file.name)) return;
 
-    await app.dispatch({
-      type: "model.import",
-      file
+    const imported = await app.importModel(file);
+    if (!imported) {
+      return;
+    }
+
+    registerLocalProjectAsset({
+      sourceUrl: imported.sourceUrl,
+      file,
+      kind: "model_source",
+      targetPath: `model:${imported.entityId}`,
+      entityId: imported.entityId
     });
   };
 
@@ -170,7 +257,15 @@ export default function TopBar() {
 
     if (file.name.toLowerCase().endsWith(".hdr")) {
       try {
-        await app.importPanorama(file);
+        const imported = await app.importPanorama(file);
+        if (imported?.sourceUrl) {
+          registerLocalProjectAsset({
+            sourceUrl: imported.sourceUrl,
+            file,
+            kind: "environment_image",
+            targetPath: "env:pano"
+          });
+        }
       } catch {
         window.alert(t("editor.import.panoLoadError"));
       }
@@ -197,27 +292,336 @@ export default function TopBar() {
         return;
       }
 
-      await app.importPanorama(file);
+      const imported = await app.importPanorama(file);
+      if (imported?.sourceUrl) {
+        registerLocalProjectAsset({
+          sourceUrl: imported.sourceUrl,
+          file,
+          kind: "environment_image",
+          targetPath: "env:pano"
+        });
+      }
     } catch {
       window.alert(t("editor.import.panoLoadError"));
     }
   };
 
+  const uploadSceneLocalAssets = async (
+    snapshot: EditorProjectJSON,
+    projectId: string
+  ): Promise<UploadedProjectAsset[]> => {
+    const usedAssets = localProjectAssets.filter((asset) =>
+      projectSnapshotUsesSourceUrl(snapshot, asset.sourceUrl)
+    );
+
+    const uploadedAssets = await Promise.all(
+      usedAssets.map(async (asset) => {
+        const request: PrepareAssetUploadRequest = {
+          assetId: createClientUuid("asset"),
+          projectId,
+          kind: asset.kind,
+          fileName: asset.file.name,
+          contentType: asset.file.type || "application/octet-stream",
+          sizeBytes: asset.file.size,
+          metadata: {
+            targetPath: asset.targetPath,
+            entityId: asset.entityId ?? null
+          }
+        };
+        const uploaded = await uploadPreparedAsset(request, asset.file);
+        applyUploadedAssetToProjectSnapshot(snapshot, asset.sourceUrl, uploaded);
+        return uploaded;
+      })
+    );
+
+    return uploadedAssets;
+  };
+
+  const uploadPendingAiGenerations = async (
+    snapshot: EditorProjectJSON,
+    projectId: string
+  ): Promise<{ aiSnapshot: ProjectAiLibraryJSON; uploadedAssets: UploadedProjectAsset[] }> => {
+    if (pendingAiImageGenerations.length === 0) {
+      return {
+        aiSnapshot: loadedAiLibrary,
+        uploadedAssets: []
+      };
+    }
+
+    const uploadedAssets: UploadedProjectAsset[] = [];
+    const savedGenerations: ProjectAiImageGenerationJSON[] = [];
+
+    for (const generation of pendingAiImageGenerations) {
+      const uploadedReferenceImages = [];
+      for (let index = 0; index < generation.referenceImages.length; index += 1) {
+        const image = generation.referenceImages[index];
+        const file = await dataUrlToFile(image.dataUrl, image.fileName, image.mimeType);
+        const uploaded = await uploadPreparedAsset(
+          {
+            assetId: createClientUuid("asset"),
+            projectId,
+            kind: "ai_reference_image",
+            fileName: file.name,
+            contentType: file.type || image.mimeType,
+            sizeBytes: file.size,
+            metadata: {
+              generationId: generation.id,
+              slot: index
+            }
+          },
+          file
+        );
+        uploadedAssets.push(uploaded);
+        uploadedReferenceImages.push({
+          assetId: uploaded.assetId,
+          url: uploaded.url,
+          mimeType: uploaded.mimeType,
+          originalName: uploaded.originalName,
+          sizeBytes: uploaded.sizeBytes
+        });
+      }
+
+      const uploadedResults = [];
+      for (let index = 0; index < generation.results.length; index += 1) {
+        const result = generation.results[index];
+        const file = await sourceUrlToFile(result.sourceUrl, result.fileName, result.mimeType);
+        const uploaded = await uploadPreparedAsset(
+          {
+            assetId: createClientUuid("asset"),
+            projectId,
+            kind: "ai_generated_image",
+            fileName: file.name,
+            contentType: file.type || result.mimeType,
+            sizeBytes: file.size,
+            metadata: {
+              generationId: generation.id,
+              resultId: result.id,
+              index
+            }
+          },
+          file
+        );
+        uploadedAssets.push(uploaded);
+        applyUploadedAssetToProjectSnapshot(snapshot, result.sourceUrl, uploaded);
+        uploadedResults.push({
+          id: result.id,
+          assetId: uploaded.assetId,
+          url: uploaded.url,
+          mimeType: uploaded.mimeType,
+          originalName: uploaded.originalName,
+          sizeBytes: uploaded.sizeBytes,
+          appliedMeshIds: result.appliedMeshIds
+        });
+      }
+
+      savedGenerations.push({
+        id: generation.id,
+        createdAt: generation.createdAt,
+        prompt: generation.prompt,
+        model: generation.model,
+        seed: generation.seed,
+        imageSize: generation.imageSize,
+        cfg: generation.cfg,
+        inferenceSteps: generation.inferenceSteps,
+        traceId: generation.traceId,
+        referenceImages: uploadedReferenceImages,
+        results: uploadedResults
+      });
+    }
+
+    return {
+      aiSnapshot: {
+        version: 1,
+        imageGenerations: [...loadedAiLibrary.imageGenerations, ...savedGenerations]
+      },
+      uploadedAssets
+    };
+  };
+
+  const uploadProjectThumbnail = async (
+    snapshot: EditorProjectJSON,
+    projectId: string
+  ): Promise<UploadedProjectAsset> => {
+    if (!app) {
+      throw new Error("Editor is not ready.");
+    }
+
+    const thumbnailDataUrl = app.captureViewportImage();
+    const dimensions = await readImageDimensions(thumbnailDataUrl);
+    const file = await dataUrlToFile(thumbnailDataUrl, `thumbnail-${projectId}.png`);
+    const uploaded = await uploadPreparedAsset(
+      {
+        assetId: createClientUuid("asset"),
+        projectId,
+        kind: "project_thumbnail",
+        fileName: file.name,
+        contentType: file.type || "image/png",
+        sizeBytes: file.size,
+        metadata: {
+          width: dimensions.width,
+          height: dimensions.height
+        }
+      },
+      file
+    );
+
+    snapshot.thumbnail = {
+      assetId: uploaded.assetId,
+      url: uploaded.url,
+      mimeType: uploaded.mimeType,
+      originalName: uploaded.originalName,
+      sizeBytes: uploaded.sizeBytes,
+      width: dimensions.width,
+      height: dimensions.height,
+      capturedAt: new Date().toISOString(),
+      camera: snapshot.camera ?? {}
+    };
+
+    return uploaded;
+  };
+
+  const executeSave = async (meta: EditorProjectMetaJSON) => {
+    if (!app) {
+      return;
+    }
+
+    const currentSnapshot = app.getProjectJSON();
+    if (!currentSnapshot) {
+      return;
+    }
+
+    const snapshot = cloneProjectSnapshot(currentSnapshot);
+    const projectId = snapshot.id;
+    snapshot.meta = meta;
+    setSaveStatus({
+      phase: "saving",
+      message: t("editor.project.saving"),
+      updatedAt: Date.now()
+    });
+    setProjectSaveDialogOpen(false);
+
+    try {
+      const uploadedSceneAssets = await uploadSceneLocalAssets(snapshot, projectId);
+      const thumbnailAsset = await uploadProjectThumbnail(snapshot, projectId);
+      const uploadedAi = await uploadPendingAiGenerations(snapshot, projectId);
+      const uploadedAssets = [...uploadedSceneAssets, thumbnailAsset, ...uploadedAi.uploadedAssets];
+      const payload = {
+        snapshot,
+        aiSnapshot: uploadedAi.aiSnapshot,
+        uploadedAssets
+      };
+
+      const response = currentProjectId
+        ? await updateProject(currentProjectId, payload)
+        : await createProject(payload);
+
+      await app.dispatch({
+        type: "project.load",
+        project: response.project.snapshot
+      });
+      setCurrentProject(response.project.id);
+      setProjectMeta(response.project.snapshot.meta ?? meta);
+      setLoadedAiLibrary(response.project.aiSnapshot);
+      clearPendingAiGenerations();
+      clearLocalProjectAssets();
+      markUnsavedChanges(false);
+      setSaveStatus({
+        phase: "success",
+        message: t("editor.project.saveSuccess"),
+        updatedAt: Date.now()
+      });
+      syncEditorProjectSearchParam(response.project.id);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : t("editor.project.saveFailed");
+      setSaveStatus({
+        phase: "error",
+        message,
+        updatedAt: Date.now()
+      });
+    }
+  };
+
   const onSaveScene = () => {
-    // Placeholder: save scene action.
+    if (isSaving) {
+      return;
+    }
+
+    if (!currentProjectId) {
+      setProjectSaveDialogOpen(true);
+      return;
+    }
+
+    void executeSave(
+      currentProjectMeta ?? {
+        title: t("editor.project.untitled")
+      }
+    );
   };
 
   const onCreateProject = async () => {
     if (!app) return;
+    const project = createDefaultEditorProjectJSON();
     await app.dispatch({
       type: "project.load",
-      project: createDefaultEditorProjectJSON()
+      project
+    });
+    setCurrentProject(null);
+    setProjectMeta(project.meta ?? null);
+    setLoadedAiLibrary(createEmptyProjectAiLibrary());
+    clearPendingAiGenerations();
+    clearLocalProjectAssets();
+    syncEditorProjectSearchParam(null);
+    setSaveStatus({
+      phase: "idle",
+      message: null,
+      updatedAt: Date.now()
     });
   };
 
   const onClearProject = async () => {
     if (!app) return;
     await app.dispatch({ type: "project.clear" });
+    markUnsavedChanges(true);
+  };
+
+  const openProjectSelectDialog = async () => {
+    closeMenu();
+    setProjectListDialogOpen(true);
+    await loadProjectsForDialog();
+  };
+
+  const onSelectProject = async (projectId: string) => {
+    if (!app) {
+      return;
+    }
+
+    if (hasUnsavedChanges && !window.confirm(t("editor.project.confirmDiscardChanges"))) {
+      return;
+    }
+
+    try {
+      const response = await getProject(projectId);
+      await app.dispatch({
+        type: "project.load",
+        project: response.project.snapshot
+      });
+      setCurrentProject(response.project.id);
+      setProjectMeta(response.project.snapshot.meta ?? null);
+      setLoadedAiLibrary(response.project.aiSnapshot);
+      clearPendingAiGenerations();
+      clearLocalProjectAssets();
+      markUnsavedChanges(false);
+      syncEditorProjectSearchParam(response.project.id);
+      setProjectListDialogOpen(false);
+      setSaveStatus({
+        phase: "idle",
+        message: null,
+        updatedAt: Date.now()
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : t("editor.project.loadFailed");
+      setProjectListError(message);
+    }
   };
 
   const createMenuItem = (
@@ -232,6 +636,11 @@ export default function TopBar() {
       if (activeConfig.id === "project" && option.value === "new") {
         await onCreateProject();
         closeMenu();
+        return;
+      }
+
+      if (activeConfig.id === "project" && option.value === "select") {
+        await openProjectSelectDialog();
         return;
       }
 
@@ -276,29 +685,32 @@ export default function TopBar() {
     }
   });
 
-  const activeItems: DropdownMenuItem[] =
-    !activeConfig
-      ? []
-      : activeConfig.id === "light"
-        ? [
-            {
-              type: "section",
-              key: "light-section",
-              label: t("editor.light.section")
-            },
-            ...lightOptions.map((option) => createMenuItem(option)),
-            {
-              type: "divider",
-              key: "light-divider"
-            },
-            {
-              type: "section",
-              key: "light-preset-section",
-              label: t("editor.lightPreset.section")
-            },
-            ...lightPresetOptions.map((option) => createMenuItem(option, "lightPreset"))
-          ]
-        : activeConfig.options.map((option) => createMenuItem(option));
+  const activeItems: DropdownMenuItem[] = useMemo(
+    () =>
+      !activeConfig
+        ? []
+        : activeConfig.id === "light"
+          ? [
+              {
+                type: "section",
+                key: "light-section",
+                label: t("editor.light.section")
+              },
+              ...lightOptions.map((option) => createMenuItem(option)),
+              {
+                type: "divider",
+                key: "light-divider"
+              },
+              {
+                type: "section",
+                key: "light-preset-section",
+                label: t("editor.lightPreset.section")
+              },
+              ...lightPresetOptions.map((option) => createMenuItem(option, "lightPreset"))
+            ]
+          : activeConfig.options.map((option) => createMenuItem(option)),
+    [activeConfig, app, t]
+  );
 
   return (
     <>
@@ -383,6 +795,40 @@ export default function TopBar() {
         transformOrigin={{ vertical: "top", horizontal: "left" }}
         items={activeItems}
         themeMode={editorThemeMode}
+      />
+
+      <ProjectSaveDialog
+        open={projectSaveDialogOpen}
+        initialMeta={currentProjectMeta}
+        theme={theme}
+        isSaving={isSaving}
+        onClose={() => setProjectSaveDialogOpen(false)}
+        onConfirm={(meta) => {
+          void executeSave(meta);
+        }}
+      />
+
+      <ProjectSelectDialog
+        open={projectListDialogOpen}
+        projects={projects}
+        isLoading={isProjectListLoading}
+        errorMessage={projectListError}
+        theme={theme}
+        onClose={() => setProjectListDialogOpen(false)}
+        onSelectProject={(projectId) => {
+          void onSelectProject(projectId);
+        }}
+      />
+
+      <ProjectSaveProgressToast
+        status={saveStatus}
+        onClose={() =>
+          setSaveStatus({
+            phase: "idle",
+            message: null,
+            updatedAt: Date.now()
+          })
+        }
       />
     </>
   );

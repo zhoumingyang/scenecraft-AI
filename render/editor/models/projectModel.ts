@@ -1,7 +1,9 @@
 import * as THREE from "three";
 import type {
   EditorEnvConfigJSON,
+  EditorProjectMetaJSON,
   EditorProjectJSON,
+  EditorProjectThumbnailJSON,
   ResolvedEditorEnvConfigJSON
 } from "../core/types";
 import { normalizeString } from "../utils/normalize";
@@ -14,6 +16,7 @@ import { ModelEntityModel } from "./modelEntityModel";
 
 function normalizeEnvConfig(source?: EditorEnvConfigJSON): ResolvedEditorEnvConfigJSON {
   return {
+    panoAssetId: source?.panoAssetId ?? "",
     panoUrl: source?.panoUrl ?? "",
     environment: source?.environment ?? 1,
     backgroundShow: source?.backgroundShow ?? 1,
@@ -23,8 +26,54 @@ function normalizeEnvConfig(source?: EditorEnvConfigJSON): ResolvedEditorEnvConf
   };
 }
 
+function normalizeProjectMeta(source?: EditorProjectMetaJSON): EditorProjectMetaJSON | null {
+  const title = normalizeString(source?.title);
+  if (!title) {
+    return null;
+  }
+
+  const description = normalizeString(source?.description);
+  const tags = Array.isArray(source?.tags)
+    ? source.tags
+        .map((tag) => normalizeString(tag))
+        .filter(Boolean)
+        .slice(0, 10)
+    : [];
+
+  return {
+    title,
+    ...(description ? { description } : {}),
+    ...(tags.length > 0 ? { tags } : {})
+  };
+}
+
+function normalizeProjectThumbnail(source?: EditorProjectThumbnailJSON): EditorProjectThumbnailJSON | null {
+  const assetId = normalizeString(source?.assetId);
+  const url = normalizeString(source?.url);
+  const mimeType = normalizeString(source?.mimeType, "image/png");
+  const capturedAt = normalizeString(source?.capturedAt);
+
+  if (!assetId || !url || !capturedAt) {
+    return null;
+  }
+
+  return {
+    assetId,
+    url,
+    mimeType,
+    originalName: normalizeString(source?.originalName),
+    sizeBytes: typeof source?.sizeBytes === "number" ? source.sizeBytes : null,
+    width: typeof source?.width === "number" ? source.width : 0,
+    height: typeof source?.height === "number" ? source.height : 0,
+    capturedAt,
+    camera: source?.camera ?? {}
+  };
+}
+
 export class EditorProjectModel {
   id: string;
+  meta: EditorProjectMetaJSON | null;
+  thumbnail: EditorProjectThumbnailJSON | null;
   envConfig: ResolvedEditorEnvConfigJSON;
   models: Map<string, ModelEntityModel>;
   meshes: Map<string, MeshEntityModel>;
@@ -32,8 +81,16 @@ export class EditorProjectModel {
   groups: Map<string, GroupEntityModel>;
   camera: CameraModel;
 
-  private constructor(id: string, camera: CameraModel, envConfig: ResolvedEditorEnvConfigJSON) {
+  private constructor(
+    id: string,
+    camera: CameraModel,
+    envConfig: ResolvedEditorEnvConfigJSON,
+    meta: EditorProjectMetaJSON | null,
+    thumbnail: EditorProjectThumbnailJSON | null
+  ) {
     this.id = id;
+    this.meta = meta;
+    this.thumbnail = thumbnail;
     this.envConfig = envConfig;
     this.camera = camera;
     this.models = new Map();
@@ -47,7 +104,9 @@ export class EditorProjectModel {
     const project = new EditorProjectModel(
       id,
       new CameraModel(source.camera),
-      normalizeEnvConfig(source.envConfig)
+      normalizeEnvConfig(source.envConfig),
+      normalizeProjectMeta(source.meta),
+      normalizeProjectThumbnail(source.thumbnail)
     );
 
     ((source.groups || []) as NonNullable<EditorProjectJSON["groups"]>).forEach((item, index) => {
@@ -76,7 +135,22 @@ export class EditorProjectModel {
   toJSON(): EditorProjectJSON {
     return {
       id: this.id,
+      ...(this.meta ? { meta: { ...this.meta, tags: this.meta.tags ? [...this.meta.tags] : undefined } } : {}),
+      ...(this.thumbnail
+        ? {
+            thumbnail: {
+              ...this.thumbnail,
+              camera: {
+                ...this.thumbnail.camera,
+                position: this.thumbnail.camera.position ? [...this.thumbnail.camera.position] : undefined,
+                quaternion: this.thumbnail.camera.quaternion ? [...this.thumbnail.camera.quaternion] : undefined,
+                scale: this.thumbnail.camera.scale ? [...this.thumbnail.camera.scale] : undefined
+              }
+            }
+          }
+        : {}),
       envConfig: {
+        panoAssetId: this.envConfig.panoAssetId,
         panoUrl: this.envConfig.panoUrl,
         environment: this.envConfig.environment,
         backgroundShow: this.envConfig.backgroundShow,
@@ -151,6 +225,7 @@ export class EditorProjectModel {
         id: item.id,
         label: item.label,
         source: item.source,
+        sourceAssetId: item.sourceAssetId,
         format: item.format,
         assetUnit: item.assetUnit,
         assetImportScale: item.assetImportScale,
@@ -177,6 +252,7 @@ export class EditorProjectModel {
           color: item.material.color,
           opacity: item.material.opacity,
           diffuseMap: {
+            assetId: item.material.diffuseMap.assetId,
             url: item.material.diffuseMap.url,
             offset: [...item.material.diffuseMap.offset],
             repeat: [...item.material.diffuseMap.repeat],
@@ -184,6 +260,7 @@ export class EditorProjectModel {
           },
           metalness: item.material.metalness,
           metalnessMap: {
+            assetId: item.material.metalnessMap.assetId,
             url: item.material.metalnessMap.url,
             offset: [...item.material.metalnessMap.offset],
             repeat: [...item.material.metalnessMap.repeat],
@@ -191,12 +268,14 @@ export class EditorProjectModel {
           },
           roughness: item.material.roughness,
           roughnessMap: {
+            assetId: item.material.roughnessMap.assetId,
             url: item.material.roughnessMap.url,
             offset: [...item.material.roughnessMap.offset],
             repeat: [...item.material.roughnessMap.repeat],
             rotation: item.material.roughnessMap.rotation
           },
           normalMap: {
+            assetId: item.material.normalMap.assetId,
             url: item.material.normalMap.url,
             offset: [...item.material.normalMap.offset],
             repeat: [...item.material.normalMap.repeat],
@@ -204,6 +283,7 @@ export class EditorProjectModel {
           },
           normalScale: [...item.material.normalScale],
           aoMap: {
+            assetId: item.material.aoMap.assetId,
             url: item.material.aoMap.url,
             offset: [...item.material.aoMap.offset],
             repeat: [...item.material.aoMap.repeat],
@@ -213,6 +293,7 @@ export class EditorProjectModel {
           emissive: item.material.emissive,
           emissiveIntensity: item.material.emissiveIntensity,
           emissiveMap: {
+            assetId: item.material.emissiveMap.assetId,
             url: item.material.emissiveMap.url,
             offset: [...item.material.emissiveMap.offset],
             repeat: [...item.material.emissiveMap.repeat],

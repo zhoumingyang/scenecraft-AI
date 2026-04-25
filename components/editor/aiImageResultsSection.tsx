@@ -34,6 +34,7 @@ export default function AiImageResultsSection({
   const app = useEditorStore((state) => state.app);
   const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
   const projectVersion = useEditorStore((state) => state.projectVersion);
+  const recordAiResultAppliedToMesh = useEditorStore((state) => state.recordAiResultAppliedToMesh);
   const theme = getEditorThemeTokens(editorThemeMode);
   const [applyPanel, setApplyPanel] = useState<{
     index: number;
@@ -76,6 +77,9 @@ export default function AiImageResultsSection({
         url: applyPanel?.imageUrl ?? ""
       }
     });
+    if (applyPanel?.imageUrl) {
+      recordAiResultAppliedToMesh(applyPanel.imageUrl, meshId);
+    }
     handleApplyPanelClose();
   };
 

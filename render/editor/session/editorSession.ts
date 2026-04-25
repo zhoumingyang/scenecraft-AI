@@ -502,12 +502,12 @@ export class EditorSession {
 
   async importModel(file: File, source: SyncSource = "ui") {
     const format = inferModelFileFormat(file.name);
-    if (!format) return;
+    if (!format) return null;
 
     if (!this.projectModel) {
       await this.loadProject(createEmptyEditorProjectJSON());
     }
-    if (!this.projectModel) return;
+    if (!this.projectModel) return null;
 
     const objectUrl = URL.createObjectURL(file);
     this.ownedModelUrls.add(objectUrl);
@@ -542,6 +542,10 @@ export class EditorSession {
       source
     });
     this.setSelectedEntity(model.id, source);
+    return {
+      entityId: model.id,
+      sourceUrl: objectUrl
+    };
   }
 
   updateEntityTransform(entityId: string, patch: TransformPatch, source: SyncSource = "ui") {

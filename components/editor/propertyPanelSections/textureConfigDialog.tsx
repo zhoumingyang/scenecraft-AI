@@ -72,6 +72,7 @@ export function TextureConfigDialog({
 }: TextureConfigDialogProps) {
   const { t } = useI18n();
   const app = useEditorStore((state) => state.app);
+  const registerLocalProjectAsset = useEditorStore((state) => state.registerLocalProjectAsset);
   const [inputKey, setInputKey] = useState(0);
   const hasTexture = Boolean(texture.url);
 
@@ -102,6 +103,13 @@ export function TextureConfigDialog({
     if (!app || !file) return;
 
     const textureUrl = URL.createObjectURL(file);
+    registerLocalProjectAsset({
+      sourceUrl: textureUrl,
+      file,
+      kind: "texture_image",
+      targetPath: `mesh:${entityId}:${textureField}`,
+      entityId
+    });
     app.updateMeshMaterial(entityId, {
       [textureField]: {
         ...texture,

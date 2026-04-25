@@ -4,6 +4,7 @@ import { ChangeEvent, useState } from "react";
 import { Stack, Typography } from "@mui/material";
 import AiImageParametersSection from "@/components/editor/aiImageParametersSection";
 import AiImagePreviewDialog from "@/components/editor/aiImagePreviewDialog";
+import ProjectAiLibrarySection from "@/components/editor/projectAiLibrarySection";
 import AiImageReferenceImagesSection from "@/components/editor/aiImageReferenceImagesSection";
 import AiImageResultsSection from "@/components/editor/aiImageResultsSection";
 import { getEditorThemeTokens } from "@/components/editor/theme";
@@ -37,6 +38,7 @@ export default function AiImagePropertyPanel() {
     isGenerating,
     lastSeed
   } = useEditorStore((state) => state.aiImage);
+  const loadedAiLibrary = useEditorStore((state) => state.loadedAiLibrary);
   const setAiSeed = useEditorStore((state) => state.setAiSeed);
   const setAiImageSize = useEditorStore((state) => state.setAiImageSize);
   const setAiCfg = useEditorStore((state) => state.setAiCfg);
@@ -111,6 +113,12 @@ export default function AiImagePropertyPanel() {
         isGenerating={isGenerating}
         lastSeed={lastSeed}
         onDownloadImage={handleDownloadImage}
+        onViewImage={setPreviewImageUrl}
+      />
+
+      <ProjectAiLibrarySection
+        library={loadedAiLibrary}
+        theme={theme}
         onViewImage={setPreviewImageUrl}
       />
 

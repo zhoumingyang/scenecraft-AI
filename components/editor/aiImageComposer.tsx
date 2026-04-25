@@ -44,6 +44,7 @@ export default function AiImageComposer() {
   const setAi3dIntentDraft = useEditorStore((state) => state.setAi3dIntentDraft);
   const setAi3dState = useEditorStore((state) => state.setAi3dState);
   const setAiGeneratingState = useEditorStore((state) => state.setAiGeneratingState);
+  const appendPendingAiGeneration = useEditorStore((state) => state.appendPendingAiGeneration);
   const theme = getEditorThemeTokens(editorThemeMode);
 
   useEffect(() => {
@@ -106,6 +107,7 @@ export default function AiImageComposer() {
     referenceImages: aiImage.referenceImages,
     isGenerating: aiImage.isGenerating,
     isPromptActionPending,
+    appendPendingAiGeneration,
     setAiGeneratingState,
     t
   });

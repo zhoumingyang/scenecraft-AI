@@ -204,10 +204,17 @@ export class EditorApp {
       this.revokeEnvironmentUrl();
       this.environmentUrl = nextUrl;
       this.setSelectedEntity(SCENE_SELECTION_ID, "ui");
+      return {
+        sourceUrl: nextUrl
+      };
     } catch (error) {
       URL.revokeObjectURL(nextUrl);
       throw error;
     }
+  }
+
+  async importModel(file: File, source: SyncSource = "ui") {
+    return this.session.importModel(file, source);
   }
 
   updateEntityTransform(entityId: string, patch: TransformPatch, source: SyncSource = "ui") {

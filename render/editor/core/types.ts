@@ -28,6 +28,7 @@ export type EditorModelJSON = {
   id: string;
   label?: string;
   source: string;
+  sourceAssetId?: string;
   format?: ModelFileFormat;
   assetUnit?: AssetUnit;
   assetImportScale?: number;
@@ -54,6 +55,7 @@ export type EditorMeshUvJSON = {
 };
 
 export type TextureSchema = {
+  assetId?: string;
   url?: string;
   offset?: number[];
   repeat?: number[];
@@ -61,6 +63,7 @@ export type TextureSchema = {
 };
 
 export type ResolvedTextureSchema = {
+  assetId: string;
   url: string;
   offset: [number, number];
   repeat: [number, number];
@@ -280,6 +283,7 @@ export type ResolvedEditorPostProcessingConfigJSON = {
 };
 
 export type EditorEnvConfigJSON = {
+  panoAssetId?: string;
   panoUrl?: string;
   environment?: number;
   backgroundShow?: number;
@@ -292,8 +296,55 @@ export type ResolvedEditorEnvConfigJSON = Omit<Required<EditorEnvConfigJSON>, "p
   postProcessing: ResolvedEditorPostProcessingConfigJSON;
 };
 
+export type EditorProjectMetaJSON = {
+  title: string;
+  description?: string;
+  tags?: string[];
+};
+
+export type ProjectAssetRefJSON = {
+  assetId: string;
+  url: string;
+  mimeType?: string;
+  originalName?: string;
+  sizeBytes?: number | null;
+};
+
+export type EditorProjectThumbnailJSON = ProjectAssetRefJSON & {
+  width: number;
+  height: number;
+  capturedAt: string;
+  camera: EditorCameraJSON;
+};
+
+export type ProjectAiImageResultJSON = ProjectAssetRefJSON & {
+  id: string;
+  appliedMeshIds?: string[];
+};
+
+export type ProjectAiImageGenerationJSON = {
+  id: string;
+  createdAt: string;
+  prompt: string;
+  model: string;
+  seed?: number | null;
+  imageSize?: string;
+  cfg: number;
+  inferenceSteps: number;
+  traceId?: string | null;
+  referenceImages?: ProjectAssetRefJSON[];
+  results: ProjectAiImageResultJSON[];
+};
+
+export type ProjectAiLibraryJSON = {
+  version: 1;
+  imageGenerations: ProjectAiImageGenerationJSON[];
+};
+
 export type EditorProjectJSON = {
   id: string;
+  meta?: EditorProjectMetaJSON;
+  thumbnail?: EditorProjectThumbnailJSON;
   envConfig?: EditorEnvConfigJSON;
   model?: EditorModelJSON[];
   mesh?: EditorMeshJSON[];
