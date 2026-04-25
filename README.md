@@ -78,7 +78,7 @@ This approach makes the result:
 ## Tech Stack
 
 - App framework: `Next.js 16` + `React 19`
-- 3D rendering: `Three.js`, `@react-three/fiber`, `@react-three/drei`
+- 3D rendering: `Three.js`
 - UI: `MUI` + `Sass`
 - State management: `Zustand`
 - Authentication: `better-auth`
