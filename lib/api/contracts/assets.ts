@@ -1,14 +1,7 @@
-export const PROJECT_ASSET_KINDS = [
-  "project_thumbnail",
-  "ai_generated_image",
-  "ai_reference_image",
-  "model_source",
-  "texture_image",
-  "environment_image",
-  "video_clip"
-] as const;
+import type { ProjectAssetKind } from "./constants/assets";
 
-export type ProjectAssetKind = (typeof PROJECT_ASSET_KINDS)[number];
+export { PROJECT_ASSET_KINDS } from "./constants/assets";
+export type { ProjectAssetKind } from "./constants/assets";
 
 export type PrepareAssetUploadRequest = {
   assetId: string;

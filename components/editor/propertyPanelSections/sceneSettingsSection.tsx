@@ -7,6 +7,7 @@ import { getEditorThemeTokens } from "@/components/editor/theme";
 import PropertyPanelSection from "@/components/common/propertyPanelSection";
 import { useI18n } from "@/lib/i18n";
 import type { EditorPostProcessPassId, ResolvedEditorEnvConfigJSON } from "@/render/editor";
+import { DEFAULT_EDITOR_TONE_MAPPING } from "@/render/editor/runtime/colorManagement";
 import { useEditorStore } from "@/stores/editorStore";
 import { ScenePostProcessingPanel } from "./scenePostProcessingPanel";
 import { SliderField } from "./sceneSettingsFields";
@@ -43,6 +44,18 @@ export function SceneSettingsSection({ envConfig }: SceneSettingsSectionProps) {
       passId,
       patch as never
     );
+  };
+
+  const getToneMappingLabel = (label: string, value: number) => {
+    if (value === DEFAULT_EDITOR_TONE_MAPPING) {
+      return `${label} • ${t("editor.properties.recommended")}`;
+    }
+
+    if (value === THREE.CustomToneMapping) {
+      return `${label} • ${t("editor.properties.experimental")}`;
+    }
+
+    return label;
   };
 
   return (
@@ -142,10 +155,16 @@ export function SceneSettingsSection({ envConfig }: SceneSettingsSectionProps) {
         >
           {toneMappingOptions.map((option) => (
             <MenuItem key={option.label} value={option.value}>
-              {option.label}
+              {getToneMappingLabel(option.label, option.value)}
             </MenuItem>
           ))}
         </TextField>
+
+        <Typography sx={{ mt: -0.3, fontSize: 11, color: theme.mutedText }}>
+          {t("editor.properties.toneMappingRecommended", {
+            value: toneMappingOptions.find((option) => option.value === DEFAULT_EDITOR_TONE_MAPPING)?.label ?? "ACESFilmicToneMapping"
+          })}
+        </Typography>
 
         <SliderField
           label={t("editor.properties.toneMappingExposure")}

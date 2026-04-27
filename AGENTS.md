@@ -210,6 +210,13 @@ Project notes and roadmap documents. Read these when a task touches product inte
 - Preserve current naming and file organization patterns.
 - Do not concentrate multiple new features into a single file just because it is the fastest place to patch.
 
+### Organize shared constants by domain
+
+- When constants, literal option sets, or enum-like value groups are shared across files, prefer a nearby `constants/` directory scoped to that domain.
+- Do not collect unrelated constants into one repo-wide catch-all file.
+- Keep single-component tuning values local unless they are reused, part of a contract, or define a domain-level option set.
+- When a schema, contract, and runtime all depend on the same literal values, define the source values once in the relevant domain `constants/` module and reuse them from there.
+
 ### Respect data contracts
 
 When changing request/response shapes, also inspect:

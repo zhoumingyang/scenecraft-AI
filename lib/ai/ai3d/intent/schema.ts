@@ -1,44 +1,18 @@
 import { z } from "zod";
-
-export const AI3D_INTENT_SUBJECT_TYPES = [
-  "auto",
-  "character",
-  "animal",
-  "prop",
-  "icon",
-  "abstract"
-] as const;
-export const AI3D_INTENT_DETAIL_LEVELS = ["low", "medium", "high"] as const;
-export const AI3D_INTENT_POSES = ["auto", "standing", "sitting", "flying", "coiled", "static"] as const;
-export const AI3D_INTENT_SYMMETRIES = ["auto", "symmetric", "asymmetric"] as const;
-export const AI3D_INTENT_STYLE_BIASES = ["stylized", "cute", "clean", "chunky"] as const;
-export const AI3D_GEOMETRY_BIASES = ["primitive", "tube", "extrude", "shape"] as const;
-export const AI3D_ARCHETYPES = [
-  "humanoid",
-  "quadruped",
-  "fish",
-  "bird",
-  "tree",
-  "plant",
-  "rock",
-  "abstract_curve",
-  "freeform_object"
-] as const;
-export const AI3D_ASSEMBLY_STRATEGIES = [
-  "template_first",
-  "rule_first",
-  "freeform_first"
-] as const;
-
-const AI3D_RESOLVED_SUBJECT_TYPES = AI3D_INTENT_SUBJECT_TYPES.filter(
-  (value): value is Exclude<(typeof AI3D_INTENT_SUBJECT_TYPES)[number], "auto"> => value !== "auto"
-);
-const AI3D_RESOLVED_POSES = AI3D_INTENT_POSES.filter(
-  (value): value is Exclude<(typeof AI3D_INTENT_POSES)[number], "auto"> => value !== "auto"
-);
-const AI3D_RESOLVED_SYMMETRIES = AI3D_INTENT_SYMMETRIES.filter(
-  (value): value is Exclude<(typeof AI3D_INTENT_SYMMETRIES)[number], "auto"> => value !== "auto"
-);
+import {
+  AI3D_ARCHETYPES,
+  AI3D_ASSEMBLY_STRATEGIES,
+  AI3D_DIAGNOSTIC_EVALUATORS,
+  AI3D_GEOMETRY_BIASES,
+  AI3D_INTENT_DETAIL_LEVELS,
+  AI3D_INTENT_POSES,
+  AI3D_INTENT_STYLE_BIASES,
+  AI3D_INTENT_SUBJECT_TYPES,
+  AI3D_INTENT_SYMMETRIES,
+  AI3D_RESOLVED_POSES,
+  AI3D_RESOLVED_SUBJECT_TYPES,
+  AI3D_RESOLVED_SYMMETRIES
+} from "../constants/intent";
 
 const shortTextSchema = z.string().trim().min(1).max(120);
 const stringListSchema = z.array(shortTextSchema).max(8);
@@ -91,7 +65,7 @@ export const ai3dPlanDiagnosticsSchema = z
     hasExtrude: z.boolean(),
     missingKeyParts: stringListSchema,
     warnings: z.array(shortTextSchema).max(12),
-    evaluator: z.enum(["template", "rule", "freeform"]),
+    evaluator: z.enum(AI3D_DIAGNOSTIC_EVALUATORS),
     structuralScore: z.number().finite().min(0).max(100),
     scoreBreakdown: z
       .object({
@@ -114,6 +88,17 @@ export type Ai3DAssemblyStrategy = z.infer<typeof ai3dIntentSchema>["assemblyStr
 export type Ai3DIntentInput = z.infer<typeof ai3dIntentInputSchema>;
 export type Ai3DIntent = z.infer<typeof ai3dIntentSchema>;
 export type Ai3DPlanDiagnostics = z.infer<typeof ai3dPlanDiagnosticsSchema>;
+
+export {
+  AI3D_ARCHETYPES,
+  AI3D_ASSEMBLY_STRATEGIES,
+  AI3D_GEOMETRY_BIASES,
+  AI3D_INTENT_DETAIL_LEVELS,
+  AI3D_INTENT_POSES,
+  AI3D_INTENT_STYLE_BIASES,
+  AI3D_INTENT_SUBJECT_TYPES,
+  AI3D_INTENT_SYMMETRIES
+} from "../constants/intent";
 
 function compactUnique(values: string[]) {
   const seen = new Set<string>();

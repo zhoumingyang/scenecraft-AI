@@ -389,14 +389,36 @@ export class EditorSession {
     });
   }
 
-  captureAi3DPreviewImages(plan: Ai3DPlan) {
-    const drafts = buildAi3DMeshDrafts(plan);
-    const records = drafts.map(createPreviewMeshRecord);
+  captureAi3DPreviewImages() {
+    if (this.aiPreviewRecords.size === 0) {
+      return [this.runtime.captureViewportImage("clean")];
+    }
+
+    const bindingVisibilitySnapshot = this.registry.list().map((binding) => ({
+      binding,
+      visible: binding.object.visible
+    }));
+    const previewVisibilitySnapshot = Array.from(this.aiPreviewRecords.values()).map((record) => ({
+      record,
+      visible: record.mesh.visible
+    }));
+
+    bindingVisibilitySnapshot.forEach(({ binding }) => {
+      binding.object.visible = false;
+    });
+    previewVisibilitySnapshot.forEach(({ record }) => {
+      record.mesh.visible = true;
+    });
 
     try {
-      return this.runtime.captureAiPreviewImages(records.map((record) => record.mesh));
+      return [this.runtime.captureViewportImage("clean")];
     } finally {
-      records.forEach(disposePreviewMeshRecord);
+      bindingVisibilitySnapshot.forEach(({ binding, visible }) => {
+        binding.object.visible = visible;
+      });
+      previewVisibilitySnapshot.forEach(({ record, visible }) => {
+        record.mesh.visible = visible;
+      });
     }
   }
 

@@ -2,6 +2,7 @@ import type {
   ModelAnimationClipJSON,
   ModelAnimationPlaybackState
 } from "../core/types";
+import { MODEL_ANIMATION_PLAYBACK_STATES } from "../constants/model";
 
 export function buildModelAnimationId(name: string, index: number) {
   const normalizedName = name
@@ -16,8 +17,8 @@ export function normalizeModelAnimationPlaybackState(
   value: unknown,
   fallback: ModelAnimationPlaybackState = "stopped"
 ): ModelAnimationPlaybackState {
-  if (value === "playing" || value === "paused" || value === "stopped") {
-    return value;
+  if ((MODEL_ANIMATION_PLAYBACK_STATES as readonly unknown[]).includes(value)) {
+    return value as ModelAnimationPlaybackState;
   }
   return fallback;
 }

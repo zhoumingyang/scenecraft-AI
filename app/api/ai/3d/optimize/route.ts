@@ -25,8 +25,8 @@ function validateRequestBody(body: unknown) {
     throw new Error("Prompt is required.");
   }
 
-  if (images.length < 3) {
-    throw new Error("At least 3 isolated preview images are required.");
+  if (images.length < 1) {
+    throw new Error("At least 1 preview image is required.");
   }
 
   return {

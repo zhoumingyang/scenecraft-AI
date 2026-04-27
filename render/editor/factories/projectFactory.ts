@@ -1,6 +1,9 @@
 import type { EditorProjectJSON } from "../core/types";
-import * as THREE from "three";
 import { createDefaultEditorPostProcessingConfigJSON } from "../postProcessing";
+import {
+  DEFAULT_EDITOR_TONE_MAPPING,
+  DEFAULT_EDITOR_TONE_MAPPING_EXPOSURE
+} from "../runtime/colorManagement";
 
 function createUuid() {
   if (typeof globalThis.crypto?.randomUUID === "function") {
@@ -30,8 +33,8 @@ export function createDefaultEditorProjectJSON(): EditorProjectJSON {
       panoUrl: "",
       environment: 1,
       backgroundShow: 1,
-      toneMapping: THREE.NoToneMapping,
-      toneMappingExposure: 1,
+      toneMapping: DEFAULT_EDITOR_TONE_MAPPING,
+      toneMappingExposure: DEFAULT_EDITOR_TONE_MAPPING_EXPOSURE,
       postProcessing
     },
     model: [],
@@ -51,8 +54,8 @@ export function createEmptyEditorProjectJSON(projectId = createUuid()): EditorPr
       panoUrl: "",
       environment: 1,
       backgroundShow: 1,
-      toneMapping: THREE.NoToneMapping,
-      toneMappingExposure: 1,
+      toneMapping: DEFAULT_EDITOR_TONE_MAPPING,
+      toneMappingExposure: DEFAULT_EDITOR_TONE_MAPPING_EXPOSURE,
       postProcessing
     },
     model: [],

@@ -1,5 +1,10 @@
 import { z } from "zod";
 import { PROJECT_ASSET_KINDS } from "@/lib/api/contracts/assets";
+import {
+  ASSET_UNITS,
+  MODEL_ANIMATION_PLAYBACK_STATES,
+  MODEL_FILE_FORMATS
+} from "@/render/editor/constants/model";
 
 const trimmedString = (max: number) => z.string().trim().min(1).max(max);
 const optionalTrimmedString = (max: number) => z.string().trim().max(max).optional();
@@ -39,8 +44,8 @@ const editorModelSchema = z
     label: optionalTrimmedString(120),
     source: trimmedString(2048),
     sourceAssetId: z.string().trim().max(120).optional(),
-    format: z.enum(["gltf", "glb", "fbx", "obj", "vrm"]).optional(),
-    assetUnit: z.enum(["m", "cm", "mm", "unknown"]).optional(),
+    format: z.enum(MODEL_FILE_FORMATS).optional(),
+    assetUnit: z.enum(ASSET_UNITS).optional(),
     assetImportScale: z.number().finite().positive().optional(),
     animations: z
       .array(
@@ -55,7 +60,7 @@ const editorModelSchema = z
       .optional(),
     activeAnimationId: z.string().trim().max(120).nullable().optional(),
     animationTimeScale: z.number().finite().positive().optional(),
-    animationPlaybackState: z.enum(["playing", "paused", "stopped"]).optional(),
+    animationPlaybackState: z.enum(MODEL_ANIMATION_PLAYBACK_STATES).optional(),
     locked: z.boolean().optional(),
     visible: z.boolean().optional(),
     position: numericArraySchema.optional(),

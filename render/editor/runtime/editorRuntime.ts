@@ -4,10 +4,10 @@ import { HDRLoader } from "three/examples/jsm/loaders/HDRLoader.js";
 import { RectAreaLightUniformsLib } from "three/examples/jsm/lights/RectAreaLightUniformsLib.js";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import { CameraModel } from "../models";
-import type { ResolvedEditorEnvConfigJSON } from "../core/types";
+import type { EditorViewportCaptureMode, ResolvedEditorEnvConfigJSON } from "../core/types";
 import { buildTransformSignature } from "../utils/object3d";
 import { CustomTransformGizmo } from "./customTransformGizmo";
-import { captureAiPreviewImages } from "./editorPreviewCapture";
+import { configureRendererColorManagement } from "./colorManagement";
 import { EditorRuntimeEnvironment } from "./editorRuntimeEnvironment";
 import { EditorRuntimePostProcessing } from "./editorRuntimePostProcessing";
 import { FirstPersonController } from "./firstPersonController";
@@ -60,8 +60,7 @@ export class EditorRuntime {
       stencil: true
     });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    this.renderer.toneMapping = THREE.NoToneMapping;
-    this.renderer.toneMappingExposure = 1;
+    configureRendererColorManagement(this.renderer);
     this.renderer.shadowMap.enabled = false;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
@@ -283,11 +282,32 @@ export class EditorRuntime {
     this.postProcessing.setOutlineSelection(objects);
   }
 
-  captureAiPreviewImages(objects: THREE.Object3D[]) {
-    return captureAiPreviewImages(objects, {
-      toneMapping: this.renderer.toneMapping,
-      toneMappingExposure: this.renderer.toneMappingExposure
-    });
+  captureViewportImage(mode: EditorViewportCaptureMode = "clean") {
+    if (mode === "viewport") {
+      this.renderFrame();
+      return this.renderer.domElement.toDataURL("image/png");
+    }
+
+    const previousGridHelperVisible = this.getGridHelperVisible();
+    const previousTransformGizmoVisible = this.getTransformGizmoVisible();
+    const previousLightHelpersVisible = this.getLightHelpersVisible();
+    const previousOutlineEnabled = this.postProcessing.getOutlineEnabled();
+
+    this.environment.setGridHelperVisible(false);
+    this.transformGizmo.setVisible(false);
+    this.environment.setLightHelpersVisible(false);
+    this.postProcessing.setOutlineEnabled(false);
+
+    try {
+      this.renderFrame();
+      return this.renderer.domElement.toDataURL("image/png");
+    } finally {
+      this.environment.setGridHelperVisible(previousGridHelperVisible);
+      this.transformGizmo.setVisible(previousTransformGizmoVisible);
+      this.environment.setLightHelpersVisible(previousLightHelpersVisible);
+      this.postProcessing.setOutlineEnabled(previousOutlineEnabled);
+      this.renderFrame();
+    }
   }
 
   applyEnvConfig(envConfig: ResolvedEditorEnvConfigJSON) {

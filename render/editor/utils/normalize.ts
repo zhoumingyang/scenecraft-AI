@@ -1,6 +1,12 @@
 import * as THREE from "three";
 
-import type { AssetUnit, ModelFileFormat, QuatTuple, Vec3Tuple } from "../core/types";
+import type { QuatTuple, Vec3Tuple } from "../core/types";
+import {
+  ASSET_UNITS,
+  MODEL_FILE_FORMATS,
+  type AssetUnit,
+  type ModelFileFormat
+} from "../constants/model";
 
 export const DEFAULT_POSITION: Vec3Tuple = [0, 0, 0];
 export const DEFAULT_QUATERNION: QuatTuple = [0, 0, 0, 1];
@@ -91,14 +97,8 @@ export function normalizeModelFormat(
 ): ModelFileFormat {
   if (typeof value !== "string") return fallback;
   const normalized = value.trim().toLowerCase();
-  if (
-    normalized === "gltf" ||
-    normalized === "glb" ||
-    normalized === "fbx" ||
-    normalized === "obj" ||
-    normalized === "vrm"
-  ) {
-    return normalized;
+  if ((MODEL_FILE_FORMATS as readonly string[]).includes(normalized)) {
+    return normalized as ModelFileFormat;
   }
   return fallback;
 }
@@ -106,8 +106,8 @@ export function normalizeModelFormat(
 export function normalizeAssetUnit(value: unknown, fallback: AssetUnit = "unknown"): AssetUnit {
   if (typeof value !== "string") return fallback;
   const normalized = value.trim().toLowerCase();
-  if (normalized === "m" || normalized === "cm" || normalized === "mm" || normalized === "unknown") {
-    return normalized;
+  if ((ASSET_UNITS as readonly string[]).includes(normalized)) {
+    return normalized as AssetUnit;
   }
   return fallback;
 }

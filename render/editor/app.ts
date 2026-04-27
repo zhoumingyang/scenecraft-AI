@@ -10,14 +10,14 @@ import type {
   EditorPostProcessPassId,
   EditorPostProcessingPassParamsMap,
   EditorProjectJSON,
+  EditorViewportCaptureMode,
   SyncSource,
   TransformPatch
 } from "./core/types";
 import { EditorRuntime } from "./runtime/editorRuntime";
 import { EditorSession } from "./session/editorSession";
-import { SCENE_NODE_ID as SCENE_SELECTION_ID } from "./core/types";
-
-const PICK_POINTER_MOVE_THRESHOLD_PX = 6;
+import { PICK_POINTER_MOVE_THRESHOLD_PX } from "./constants/input";
+import { SCENE_NODE_ID as SCENE_SELECTION_ID } from "./constants/scene";
 
 export type EditorMeshListItem = {
   id: string;
@@ -105,8 +105,8 @@ export class EditorApp {
     this.session.clearAi3DPreview();
   }
 
-  captureAi3DPreviewImages(plan: Ai3DPlan) {
-    return this.session.captureAi3DPreviewImages(plan);
+  captureAi3DPreviewImages() {
+    return this.session.captureAi3DPreviewImages();
   }
 
   async applyAi3DPlan(plan: Ai3DPlan, source: SyncSource = "ui") {
@@ -388,9 +388,8 @@ export class EditorApp {
     return this.session.pick(clientX, clientY);
   }
 
-  captureViewportImage() {
-    this.runtime.renderFrame();
-    return this.runtime.renderer.domElement.toDataURL("image/png");
+  captureViewportImage(mode: EditorViewportCaptureMode = "clean") {
+    return this.runtime.captureViewportImage(mode);
   }
 
   setOutlineEntity(entityId: string | null) {

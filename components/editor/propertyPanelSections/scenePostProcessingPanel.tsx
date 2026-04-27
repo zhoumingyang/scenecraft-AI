@@ -412,7 +412,7 @@ export function ScenePostProcessingPanel({
 
         {enabledPassIds.length === 0 ? (
           <Typography sx={{ fontSize: 11, color: theme.mutedText }}>
-            {t("editor.post.noEnabledPasses")}
+            {/* {t("editor.post.noEnabledPasses")} */}
           </Typography>
         ) : (
           <Stack spacing={0.9}>

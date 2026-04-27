@@ -8,6 +8,7 @@ import type {
   Ai3DPlanDiagnostics
 } from "@/lib/ai/ai3d/intent";
 import type { ImageGenerationResult } from "@/lib/ai/image-generation/types";
+import { AI3D_TOOL_NAME } from "@/render/editor/ai3d/constants/plan";
 import type { Ai3DPlan } from "@/render/editor";
 import type { PromptTransformMode } from "@/lib/ai/prompt-transform/openrouter";
 
@@ -40,7 +41,7 @@ export type GenerateAi3DRequest = {
 };
 
 export type GenerateAi3DResponse = {
-  toolName: "generate_stylized_ai3d_model";
+  toolName: typeof AI3D_TOOL_NAME;
   plan: Ai3DPlan;
   intent: Ai3DIntent;
   diagnostics: Ai3DPlanDiagnostics;

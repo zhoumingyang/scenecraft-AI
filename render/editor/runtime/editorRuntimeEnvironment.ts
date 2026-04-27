@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { HDRLoader } from "three/examples/jsm/loaders/HDRLoader.js";
 
 import type { ResolvedEditorEnvConfigJSON } from "../core/types";
+import { applyTextureColorSpace } from "./colorManagement";
 
 type EditorRuntimeEnvironmentOptions = {
   scene: THREE.Scene;
@@ -127,12 +128,13 @@ export class EditorRuntimeEnvironment {
     if (lowerUrl.endsWith(".hdr")) {
       const texture = await this.hdrLoader.loadAsync(url);
       texture.mapping = THREE.EquirectangularReflectionMapping;
+      applyTextureColorSpace(texture, "environmentHdr");
       return texture;
     }
 
     const texture = await this.textureLoader.loadAsync(url);
     texture.mapping = THREE.EquirectangularReflectionMapping;
-    texture.colorSpace = THREE.SRGBColorSpace;
+    applyTextureColorSpace(texture, "environmentLdr");
     return texture;
   }
 

@@ -1,37 +1,13 @@
 import { generateClientTokenFromReadWriteToken } from "@vercel/blob/client";
 import type { PrepareAssetUploadRequest } from "@/lib/api/contracts/assets";
-import { PROJECT_ASSET_KINDS } from "@/lib/api/contracts/assets";
-
-const FILE_NAME_SAFE_RE = /[^a-zA-Z0-9._-]+/g;
-const MULTI_DASH_RE = /-+/g;
-
-const DEFAULT_MAX_SIZE = 50 * 1024 * 1024;
-const MAX_SIZE_BY_KIND: Record<(typeof PROJECT_ASSET_KINDS)[number], number> = {
-  project_thumbnail: 10 * 1024 * 1024,
-  ai_generated_image: 20 * 1024 * 1024,
-  ai_reference_image: 20 * 1024 * 1024,
-  model_source: 500 * 1024 * 1024,
-  texture_image: 50 * 1024 * 1024,
-  environment_image: 100 * 1024 * 1024,
-  video_clip: 500 * 1024 * 1024
-};
-
-const CONTENT_TYPES_BY_KIND: Record<(typeof PROJECT_ASSET_KINDS)[number], string[]> = {
-  project_thumbnail: ["image/png", "image/jpeg", "image/webp"],
-  ai_generated_image: ["image/png", "image/jpeg", "image/webp"],
-  ai_reference_image: ["image/png", "image/jpeg", "image/webp"],
-  model_source: [
-    "model/gltf-binary",
-    "model/gltf+json",
-    "application/octet-stream",
-    "application/json",
-    "application/x-fbx",
-    "model/vrm"
-  ],
-  texture_image: ["image/png", "image/jpeg", "image/webp"],
-  environment_image: ["image/png", "image/jpeg", "image/webp", "image/vnd.radiance", "application/octet-stream"],
-  video_clip: ["video/mp4", "video/webm", "video/quicktime"]
-};
+import {
+  CONTENT_TYPES_BY_KIND,
+  DEFAULT_MAX_SIZE,
+  FALLBACK_CONTENT_TYPES,
+  FILE_NAME_SAFE_RE,
+  MAX_SIZE_BY_KIND,
+  MULTI_DASH_RE
+} from "./constants/upload";
 
 export function sanitizeAssetFileName(fileName: string) {
   const trimmed = fileName.trim().toLowerCase();
@@ -45,7 +21,7 @@ export function buildProjectAssetObjectKey(userId: string, payload: PrepareAsset
 }
 
 export function getAllowedContentTypes(kind: PrepareAssetUploadRequest["kind"]) {
-  return CONTENT_TYPES_BY_KIND[kind] ?? ["application/octet-stream"];
+  return CONTENT_TYPES_BY_KIND[kind] ?? FALLBACK_CONTENT_TYPES;
 }
 
 export function getMaximumUploadSize(kind: PrepareAssetUploadRequest["kind"]) {

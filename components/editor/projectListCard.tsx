@@ -1,6 +1,6 @@
 "use client";
 
-import { Box, Button, Card, CardActionArea, CardContent, Stack, Typography } from "@mui/material";
+import { Box, Button, Card, CardActionArea, CardActions, CardContent, Stack, Typography } from "@mui/material";
 import type { ProjectSummary } from "@/lib/api/contracts/projects";
 import type { EditorThemeTokens } from "@/components/editor/theme";
 import { useI18n } from "@/lib/i18n";
@@ -56,12 +56,14 @@ export default function ProjectListCard({ project, theme, onSelect }: ProjectLis
             <Typography sx={{ color: theme.mutedText, fontSize: 11 }}>
               {new Date(project.updatedAt).toLocaleString()}
             </Typography>
-            <Button size="small" variant="outlined" onClick={onSelect}>
-              {t("editor.project.select")}
-            </Button>
           </Stack>
         </CardContent>
       </CardActionArea>
+      <CardActions sx={{ px: 2, pb: 2, pt: 0, justifyContent: "flex-end" }}>
+        <Button size="small" variant="outlined" onClick={onSelect}>
+          {t("editor.project.select")}
+        </Button>
+      </CardActions>
     </Card>
   );
 }

@@ -3,6 +3,7 @@
 import { generateAi3D, optimizeAi3D } from "@/frontend/api/ai";
 import type { Ai3DIntentInput, Ai3DPlanDiagnostics } from "@/lib/ai/ai3d/intent";
 import { getApiErrorMessage } from "@/lib/http/axios";
+import { AI3D_TOOL_NAME } from "@/render/editor/ai3d/constants/plan";
 import type { EditorApp } from "@/render/editor";
 import type { Ai3DPlan } from "@/render/editor/ai3d/plan";
 
@@ -54,7 +55,7 @@ export function useAi3dComposer({ app, ai3d, setAi3dState, setAiInspectorMode, t
         intent: ai3d.intentDraft
       });
 
-      if (payload.toolName !== "generate_stylized_ai3d_model") {
+      if (payload.toolName !== AI3D_TOOL_NAME) {
         throw new Error(t("editor.ai3d.generateFailed"));
       }
 
@@ -87,7 +88,7 @@ export function useAi3dComposer({ app, ai3d, setAi3dState, setAiInspectorMode, t
     });
 
     try {
-      const images = app.captureAi3DPreviewImages(ai3d.plan);
+      const images = app.captureAi3DPreviewImages();
       const payload = await optimizeAi3D({
         prompt: trimmedPrompt,
         plan: ai3d.plan,
@@ -96,7 +97,7 @@ export function useAi3dComposer({ app, ai3d, setAi3dState, setAiInspectorMode, t
         diagnostics: ai3d.lastDiagnostics ?? undefined
       });
 
-      if (payload.toolName !== "generate_stylized_ai3d_model") {
+      if (payload.toolName !== AI3D_TOOL_NAME) {
         throw new Error(t("editor.ai3d.optimizeFailed"));
       }
 

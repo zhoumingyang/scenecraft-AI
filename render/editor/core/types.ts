@@ -1,3 +1,12 @@
+import type {
+  AssetUnit,
+  ModelAnimationPlaybackState,
+  ModelFileFormat
+} from "../constants/model";
+
+export type { AssetUnit, ModelAnimationPlaybackState, ModelFileFormat } from "../constants/model";
+export { SCENE_NODE_ID } from "../constants/scene";
+
 export type Vec3Tuple = [number, number, number];
 export type QuatTuple = [number, number, number, number];
 export type Vector2Tuple = [number, number];
@@ -13,10 +22,6 @@ export type TransformPatch = {
   quaternion?: number[];
   scale?: number[];
 };
-
-export type ModelFileFormat = "gltf" | "glb" | "fbx" | "obj" | "vrm";
-export type AssetUnit = "m" | "cm" | "mm" | "unknown";
-export type ModelAnimationPlaybackState = "playing" | "paused" | "stopped";
 
 export type ModelAnimationClipJSON = {
   id: string;
@@ -282,6 +287,8 @@ export type ResolvedEditorPostProcessingConfigJSON = {
   passes: ResolvedEditorPostProcessingPasses;
 };
 
+export type EditorViewportCaptureMode = "viewport" | "clean";
+
 export type EditorEnvConfigJSON = {
   panoAssetId?: string;
   panoUrl?: string;
@@ -355,5 +362,3 @@ export type EditorProjectJSON = {
 
 export type EntityKind = "model" | "mesh" | "light" | "group";
 export type SyncSource = "load" | "ui" | "render";
-
-export const SCENE_NODE_ID = "scene";

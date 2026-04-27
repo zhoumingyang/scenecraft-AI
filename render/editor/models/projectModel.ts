@@ -1,4 +1,3 @@
-import * as THREE from "three";
 import type {
   EditorEnvConfigJSON,
   EditorProjectMetaJSON,
@@ -8,6 +7,10 @@ import type {
 } from "../core/types";
 import { normalizeString } from "../utils/normalize";
 import { normalizeEditorPostProcessingConfig } from "../postProcessing";
+import {
+  DEFAULT_EDITOR_TONE_MAPPING,
+  DEFAULT_EDITOR_TONE_MAPPING_EXPOSURE
+} from "../runtime/colorManagement";
 import { CameraModel } from "./cameraModel";
 import { GroupEntityModel } from "./groupEntityModel";
 import { LightEntityModel } from "./lightEntityModel";
@@ -20,8 +23,8 @@ function normalizeEnvConfig(source?: EditorEnvConfigJSON): ResolvedEditorEnvConf
     panoUrl: source?.panoUrl ?? "",
     environment: source?.environment ?? 1,
     backgroundShow: source?.backgroundShow ?? 1,
-    toneMapping: source?.toneMapping ?? THREE.NoToneMapping,
-    toneMappingExposure: source?.toneMappingExposure ?? 1,
+    toneMapping: source?.toneMapping ?? DEFAULT_EDITOR_TONE_MAPPING,
+    toneMappingExposure: source?.toneMappingExposure ?? DEFAULT_EDITOR_TONE_MAPPING_EXPOSURE,
     postProcessing: normalizeEditorPostProcessingConfig(source?.postProcessing)
   };
 }

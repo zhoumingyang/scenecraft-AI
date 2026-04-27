@@ -6,17 +6,21 @@ import type {
   ResolvedTextureSchema
 } from "../core/types";
 import type { MeshEntityModel } from "../models";
+import {
+  applyTextureColorSpace,
+  ensureSecondaryUvAttribute,
+  normalizeMaterialColorSpaces
+} from "../runtime/colorManagement";
 import { createMeshGeometry } from "../utils/geometry";
 import { buildTransformSignature, setEntityId } from "../utils/object3d";
 import type { BindingContext, RenderBinding } from "./types";
 
-function configureTexture(texture: THREE.Texture, schema: ResolvedTextureSchema, srgb = false) {
+function configureTexture(texture: THREE.Texture, schema: ResolvedTextureSchema) {
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
   texture.offset.set(schema.offset[0], schema.offset[1]);
   texture.repeat.set(schema.repeat[0], schema.repeat[1]);
   texture.rotation = schema.rotation;
-  texture.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
   texture.needsUpdate = true;
 }
 
@@ -24,7 +28,7 @@ function applyTexture(
   loader: THREE.TextureLoader,
   schema: ResolvedTextureSchema,
   assign: (texture: THREE.Texture | null) => void,
-  srgb = false
+  role: "color" | "emissive" | "normal" | "roughness" | "metalness" | "ao"
 ) {
   if (!schema.url) {
     assign(null);
@@ -32,16 +36,10 @@ function applyTexture(
   }
 
   loader.load(schema.url, (texture) => {
-    configureTexture(texture, schema, srgb);
+    configureTexture(texture, schema);
+    applyTextureColorSpace(texture, role);
     assign(texture);
   });
-}
-
-function ensureAoUv(geometry: THREE.BufferGeometry) {
-  if (geometry.getAttribute("uv2")) return;
-  const uv = geometry.getAttribute("uv");
-  if (!uv) return;
-  geometry.setAttribute("uv2", uv.clone());
 }
 
 function applyMeshMaterial(
@@ -62,27 +60,29 @@ function applyMeshMaterial(
   applyTexture(loader, source.diffuseMap, (texture) => {
     material.map = texture;
     material.needsUpdate = true;
-  }, true);
+  }, "color");
   applyTexture(loader, source.metalnessMap, (texture) => {
     material.metalnessMap = texture;
     material.needsUpdate = true;
-  });
+  }, "metalness");
   applyTexture(loader, source.roughnessMap, (texture) => {
     material.roughnessMap = texture;
     material.needsUpdate = true;
-  });
+  }, "roughness");
   applyTexture(loader, source.normalMap, (texture) => {
     material.normalMap = texture;
     material.needsUpdate = true;
-  });
+  }, "normal");
   applyTexture(loader, source.aoMap, (texture) => {
     material.aoMap = texture;
     material.needsUpdate = true;
-  });
+  }, "ao");
   applyTexture(loader, source.emissiveMap, (texture) => {
     material.emissiveMap = texture;
     material.needsUpdate = true;
-  }, true);
+  }, "emissive");
+
+  normalizeMaterialColorSpaces(material);
 }
 
 function disposeTexture(texture: THREE.Texture | null) {
@@ -101,7 +101,7 @@ function disposeMaterialTextures(material: THREE.MeshStandardMaterial) {
 export function createMeshBinding(context: BindingContext, model: MeshEntityModel): RenderBinding {
   const { scene, textureLoader } = context;
   const geometry = createMeshGeometry(model);
-  ensureAoUv(geometry);
+  ensureSecondaryUvAttribute(geometry);
   const material = new THREE.MeshStandardMaterial();
   applyMeshMaterial(material, model.material, textureLoader);
 

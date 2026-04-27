@@ -1,0 +1,1 @@
+export const PICK_POINTER_MOVE_THRESHOLD_PX = 6;

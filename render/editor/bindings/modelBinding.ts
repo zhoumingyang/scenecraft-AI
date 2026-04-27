@@ -1,6 +1,7 @@
 import * as THREE from "three";
 
 import type { ModelEntityModel } from "../models";
+import { normalizeObject3DMaterials } from "../runtime/colorManagement";
 import { disposeObject3D, setEntityId, buildTransformSignature } from "../utils/object3d";
 import type { BindingContext, RenderBinding } from "./types";
 
@@ -128,6 +129,7 @@ export function createModelBinding(context: BindingContext, model: ModelEntityMo
       currentAssetUpdate = asset.update ?? null;
       currentAssetDispose = asset.dispose ?? null;
       enableShadowForAsset(asset.object);
+      normalizeObject3DMaterials(asset.object);
       mixer = new THREE.AnimationMixer(asset.object);
       clipsById = new Map(asset.animations.map((clip, index) => [clip.id, asset.clips[index]]));
       actionsById = new Map(
