@@ -86,3 +86,13 @@ export async function postJson<TResponse, TBody>(
   const response = await client.post<TResponse>(url, body, config);
   return response.data;
 }
+
+export async function putJson<TResponse, TBody>(
+  client: AxiosInstance,
+  url: string,
+  body: TBody,
+  config?: AxiosRequestConfig<TBody>
+) {
+  const response = await client.put<TResponse>(url, body, config);
+  return response.data;
+}

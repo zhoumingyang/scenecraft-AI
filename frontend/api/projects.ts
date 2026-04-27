@@ -6,7 +6,7 @@ import type {
   SaveProjectRequest,
   SaveProjectResponse
 } from "@/lib/api/contracts/projects";
-import { postJson } from "@/lib/http/axios";
+import { postJson, putJson } from "@/lib/http/axios";
 import { appApiClient } from "@/frontend/api/client";
 
 export async function listProjects() {
@@ -24,7 +24,7 @@ export async function createProject(payload: SaveProjectRequest) {
 }
 
 export async function updateProject(projectId: string, payload: SaveProjectRequest) {
-  return postJson<SaveProjectResponse, SaveProjectRequest>(
+  return putJson<SaveProjectResponse, SaveProjectRequest>(
     appApiClient,
     `/projects/${projectId}`,
     payload
