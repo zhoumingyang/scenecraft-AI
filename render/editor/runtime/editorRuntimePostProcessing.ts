@@ -74,6 +74,14 @@ export class EditorRuntimePostProcessing {
     this.composer.render(deltaSeconds);
   }
 
+  getOutlineEnabled() {
+    return this.outlinePass.enabled;
+  }
+
+  setOutlineEnabled(enabled: boolean) {
+    this.outlinePass.enabled = enabled;
+  }
+
   setOutlineSelection(objects: THREE.Object3D[]) {
     this.outlinePass.selectedObjects = objects;
   }
@@ -226,19 +234,19 @@ export class EditorRuntimePostProcessing {
   }
 
   dispose() {
-    this.pixelatedPass?.dispose();
-    this.afterimagePass?.dispose();
-    this.bokehPass?.dispose();
-    this.dotScreenPass?.dispose();
-    this.filmPass?.dispose();
-    this.glitchPass?.dispose();
-    this.gtaoPass?.dispose();
-    this.halftonePass?.dispose();
-    this.outlinePass.dispose();
-    this.outputPass.dispose();
-    this.smaaPass?.dispose();
-    this.ssrPass?.dispose();
-    this.unrealBloomPass?.dispose();
+    this.disposePass(this.pixelatedPass);
+    this.disposePass(this.afterimagePass);
+    this.disposePass(this.bokehPass);
+    this.disposePass(this.dotScreenPass);
+    this.disposePass(this.filmPass);
+    this.disposePass(this.glitchPass);
+    this.disposePass(this.gtaoPass);
+    this.disposePass(this.halftonePass);
+    this.disposePass(this.outlinePass);
+    this.disposePass(this.outputPass);
+    this.disposePass(this.smaaPass);
+    this.disposePass(this.ssrPass);
+    this.disposePass(this.unrealBloomPass);
     this.pixelatedPass = null;
     this.afterimagePass = null;
     this.bokehPass = null;
@@ -392,5 +400,11 @@ export class EditorRuntimePostProcessing {
     if (!pass || !config.passes[passId].enabled) return;
 
     this.composer.addPass(pass);
+  }
+
+  private disposePass(pass: { dispose?: (() => void) | undefined } | null | undefined) {
+    if (!pass || typeof pass.dispose !== "function") return;
+
+    pass.dispose();
   }
 }
