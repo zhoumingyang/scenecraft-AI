@@ -1,6 +1,19 @@
 "use client";
 
-import { Box, Button, Card, CardActionArea, CardActions, CardContent, Stack, Typography } from "@mui/material";
+import OpenInFullRoundedIcon from "@mui/icons-material/OpenInFullRounded";
+import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
+import {
+  Box,
+  Card,
+  CardActionArea,
+  CardActions,
+  CardContent,
+  CircularProgress,
+  IconButton,
+  Stack,
+  Tooltip,
+  Typography
+} from "@mui/material";
 import type { ProjectSummary } from "@/lib/api/contracts/projects";
 import type { EditorThemeTokens } from "@/components/editor/theme";
 import { useI18n } from "@/lib/i18n";
@@ -8,11 +21,20 @@ import { useI18n } from "@/lib/i18n";
 type ProjectListCardProps = {
   project: ProjectSummary;
   theme: EditorThemeTokens;
+  isDeleting?: boolean;
   onSelect: () => void;
+  onDelete: () => void;
 };
 
-export default function ProjectListCard({ project, theme, onSelect }: ProjectListCardProps) {
+export default function ProjectListCard({
+  project,
+  theme,
+  isDeleting = false,
+  onSelect,
+  onDelete
+}: ProjectListCardProps) {
   const { t } = useI18n();
+  const hasTags = project.tags.length > 0;
 
   return (
     <Card
@@ -20,18 +42,38 @@ export default function ProjectListCard({ project, theme, onSelect }: ProjectLis
       sx={{
         border: theme.sectionBorder,
         background: theme.sectionBg,
-        overflow: "hidden"
+        overflow: "hidden",
+        borderRadius: "22px",
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        boxShadow: "0 18px 36px rgba(0,0,0,0.12)",
+        transition: "transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease",
+        "&:hover": {
+          transform: "translateY(-2px)",
+          boxShadow: theme.panelShadow
+        }
       }}
     >
-      <CardActionArea onClick={onSelect}>
+      <CardActionArea
+        disabled={isDeleting}
+        onClick={onSelect}
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "stretch",
+          flex: 1
+        }}
+      >
         <Box
           sx={{
-            height: 150,
-            background: theme.panelBgMuted,
+            height: { xs: 160, md: 148, lg: 136 },
+            background: `linear-gradient(180deg, transparent, rgba(0,0,0,0.08)), ${theme.panelBgMuted}`,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            overflow: "hidden"
+            overflow: "hidden",
+            position: "relative"
           }}
         >
           {project.thumbnailUrl ? (
@@ -39,30 +81,141 @@ export default function ProjectListCard({ project, theme, onSelect }: ProjectLis
               component="img"
               src={project.thumbnailUrl}
               alt={project.title}
-              sx={{ width: "100%", height: "100%", objectFit: "cover" }}
+              sx={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                transition: "transform 240ms ease",
+                ".MuiCardActionArea-root:hover &": {
+                  transform: "scale(1.03)"
+                }
+              }}
             />
           ) : (
-            <Typography sx={{ color: theme.mutedText, fontSize: 12 }}>
-              {t("editor.project.empty")}
-            </Typography>
+            <Stack spacing={0.6} sx={{ alignItems: "center", px: 2 }}>
+              <Typography sx={{ color: theme.titleText, fontSize: 13, fontWeight: 700 }}>
+                {project.title}
+              </Typography>
+              <Typography sx={{ color: theme.mutedText, fontSize: 11.5 }}>
+                {t("editor.project.empty")}
+              </Typography>
+            </Stack>
           )}
+          <Box
+            sx={{
+              position: "absolute",
+              inset: "auto 12px 12px auto",
+              px: 1,
+              py: 0.45,
+              borderRadius: "999px",
+              background: theme.pillBg,
+              border: theme.pillBorder,
+              color: theme.pillText,
+              fontSize: 10.5,
+              lineHeight: 1,
+              backdropFilter: "blur(10px)"
+            }}
+          >
+            v{project.version}
+          </Box>
         </Box>
-        <CardContent>
-          <Stack spacing={0.75}>
-            <Typography sx={{ color: theme.titleText, fontWeight: 700 }}>{project.title}</Typography>
+        <CardContent sx={{ px: 1.5, pt: 1.15, pb: 0.9, width: "100%" }}>
+          <Stack spacing={0.55}>
+            <Typography
+              sx={{
+                color: theme.titleText,
+                fontWeight: 700,
+                fontSize: 13.5,
+                lineHeight: 1.25,
+                minHeight: "2.5em",
+                display: "-webkit-box",
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: "vertical",
+                overflow: "hidden"
+              }}
+            >
+              {project.title}
+            </Typography>
             {project.description ? (
-              <Typography sx={{ color: theme.text, fontSize: 12 }}>{project.description}</Typography>
+              <Typography
+                sx={{
+                  color: theme.text,
+                  fontSize: 11.5,
+                  lineHeight: 1.35,
+                  minHeight: "2.7em",
+                  display: "-webkit-box",
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: "vertical",
+                  overflow: "hidden"
+                }}
+              >
+                {project.description}
+              </Typography>
             ) : null}
-            <Typography sx={{ color: theme.mutedText, fontSize: 11 }}>
+            {hasTags ? (
+              <Typography
+                sx={{
+                  color: theme.mutedText,
+                  fontSize: 10.5,
+                  lineHeight: 1.2,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis"
+                }}
+              >
+                #{project.tags.join("  #")}
+              </Typography>
+            ) : null}
+            <Typography sx={{ color: theme.mutedText, fontSize: 10.5, lineHeight: 1.2 }}>
               {new Date(project.updatedAt).toLocaleString()}
             </Typography>
           </Stack>
         </CardContent>
       </CardActionArea>
-      <CardActions sx={{ px: 2, pb: 2, pt: 0, justifyContent: "flex-end" }}>
-        <Button size="small" variant="outlined" onClick={onSelect}>
-          {t("editor.project.select")}
-        </Button>
+      <CardActions sx={{ px: 1.35, pb: 1.2, pt: 0, justifyContent: "flex-end", gap: 0.35 }}>
+        <Tooltip title={t("editor.project.delete")}>
+          <span>
+            <IconButton
+              size="small"
+              disabled={isDeleting}
+              onClick={onDelete}
+              sx={{
+                color: theme.mutedText,
+                border: theme.sectionBorder,
+                background: theme.itemBg,
+                "&:hover": {
+                  color: theme.titleText,
+                  background: theme.itemHoverBg
+                }
+              }}
+            >
+              <DeleteOutlineRoundedIcon sx={{ fontSize: 17 }} />
+            </IconButton>
+          </span>
+        </Tooltip>
+        <Tooltip title={t("editor.project.select")}>
+          <span>
+            <IconButton
+              size="small"
+              disabled={isDeleting}
+              onClick={onSelect}
+              sx={{
+                color: theme.titleText,
+                border: theme.pillBorder,
+                background: theme.pillBg,
+                "&:hover": {
+                  background: theme.itemHoverBg
+                }
+              }}
+            >
+              {isDeleting ? (
+                <CircularProgress size={15} thickness={5} sx={{ color: "inherit" }} />
+              ) : (
+                <OpenInFullRoundedIcon sx={{ fontSize: 17 }} />
+              )}
+            </IconButton>
+          </span>
+        </Tooltip>
       </CardActions>
     </Card>
   );

@@ -24,6 +24,13 @@ export type EditorMeshListItem = {
   label: string;
 };
 
+export type EditorViewHelperVisibility = {
+  gridHelper: boolean;
+  transformGizmo: boolean;
+  lightHelper: boolean;
+  shadow: boolean;
+};
+
 function formatTitleCase(value: string) {
   if (!value) return "Mesh";
   return value.charAt(0).toUpperCase() + value.slice(1);
@@ -167,7 +174,7 @@ export class EditorApp {
       transformGizmo: this.runtime.getTransformGizmoVisible(),
       lightHelper: this.runtime.getLightHelpersVisible(),
       shadow: this.runtime.getShadowEnabled()
-    };
+    } satisfies EditorViewHelperVisibility;
   }
 
   getActiveTransformRotationDrag() {
@@ -187,6 +194,14 @@ export class EditorApp {
     } else {
       this.runtime.setShadowEnabled(visible);
     }
+    this.emit({ type: "viewStateUpdated" });
+  }
+
+  setViewHelperVisibilityState(visibility: EditorViewHelperVisibility) {
+    this.runtime.setGridHelperVisible(visibility.gridHelper);
+    this.runtime.setTransformGizmoVisible(visibility.transformGizmo);
+    this.runtime.setLightHelpersVisible(visibility.lightHelper);
+    this.runtime.setShadowEnabled(visibility.shadow);
     this.emit({ type: "viewStateUpdated" });
   }
 

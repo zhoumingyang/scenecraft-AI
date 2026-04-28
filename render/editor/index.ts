@@ -1,5 +1,5 @@
 export { createEditorApp, EditorApp } from "./app";
-export type { EditorMeshListItem } from "./app";
+export type { EditorMeshListItem, EditorViewHelperVisibility } from "./app";
 export type { Ai3DOperation, Ai3DPlan, Ai3DPrimitiveType, Ai3DToolCall } from "./ai3d/plan";
 export {
   AI3D_PRIMITIVE_TYPES,

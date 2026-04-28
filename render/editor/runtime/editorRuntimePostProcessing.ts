@@ -405,6 +405,19 @@ export class EditorRuntimePostProcessing {
   private disposePass(pass: { dispose?: (() => void) | undefined } | null | undefined) {
     if (!pass || typeof pass.dispose !== "function") return;
 
-    pass.dispose();
+    try {
+      pass.dispose();
+    } catch (error) {
+      const passName =
+        typeof pass === "object" &&
+        pass !== null &&
+        "constructor" in pass &&
+        pass.constructor &&
+        typeof pass.constructor === "function" &&
+        pass.constructor.name
+          ? pass.constructor.name
+          : "UnknownPass";
+      console.warn(`[editor] Failed to dispose post-processing pass: ${passName}`, error);
+    }
   }
 }

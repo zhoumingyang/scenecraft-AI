@@ -22,9 +22,20 @@ import {
   readImageDimensions,
   syncEditorProjectSearchParam
 } from "@/components/editor/projectPersistence";
+import {
+  hasStoredViewHelperVisibility,
+  persistViewHelperVisibility,
+  restoreViewHelperVisibility
+} from "@/components/editor/viewHelperPreferences";
 import { getEditorThemeTokens } from "@/components/editor/theme";
 import { uploadPreparedAsset } from "@/frontend/api/assets";
-import { createProject, getProject, listProjects, updateProject } from "@/frontend/api/projects";
+import {
+  createProject,
+  deleteProject,
+  getProject,
+  listProjects,
+  updateProject
+} from "@/frontend/api/projects";
 import { createEmptyProjectAiLibrary } from "@/lib/project/schema";
 import { useI18n, TranslationKey } from "@/lib/i18n";
 import type {
@@ -181,17 +192,34 @@ export default function TopBar() {
   const setLoadedAiLibrary = useEditorStore((state) => state.setLoadedAiLibrary);
   const markUnsavedChanges = useEditorStore((state) => state.markUnsavedChanges);
   const setSaveStatus = useEditorStore((state) => state.setSaveStatus);
+  const beginSceneLoading = useEditorStore((state) => state.beginSceneLoading);
+  const endSceneLoading = useEditorStore((state) => state.endSceneLoading);
   const setProjectListDialogOpen = useEditorStore((state) => state.setProjectListDialogOpen);
   const setProjectSaveDialogOpen = useEditorStore((state) => state.setProjectSaveDialogOpen);
   const [activeMenuId, setActiveMenuId] = useState<DropdownConfig["id"] | null>(null);
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [isProjectListLoading, setIsProjectListLoading] = useState(false);
+  const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
   const [projectListError, setProjectListError] = useState<string | null>(null);
   const theme = getEditorThemeTokens(editorThemeMode);
 
   const activeConfig = dropdownConfigs.find((item) => item.id === activeMenuId) || null;
   const isSaving = saveStatus.phase === "saving";
+
+  const runWithSceneLoading = async <T,>(task: () => Promise<T>) => {
+    beginSceneLoading(t("editor.scene.loadingTitle"));
+    try {
+      return await task();
+    } finally {
+      endSceneLoading();
+    }
+  };
+
+  const restoreProjectViewHelpers = (projectId: string | null) => {
+    if (!app) return;
+    restoreViewHelperVisibility(app, projectId);
+  };
 
   useEffect(() => {
     closeMenu();
@@ -515,10 +543,17 @@ export default function TopBar() {
         ? await updateProject(currentProjectId, payload)
         : await createProject(payload);
 
-      await app.dispatch({
-        type: "project.load",
-        project: response.project.snapshot
-      });
+      if (!currentProjectId && !hasStoredViewHelperVisibility(response.project.id)) {
+        persistViewHelperVisibility(response.project.id, app.getViewHelperVisibility());
+      }
+
+      await runWithSceneLoading(() =>
+        app.dispatch({
+          type: "project.load",
+          project: response.project.snapshot
+        })
+      );
+      restoreProjectViewHelpers(response.project.id);
       setCurrentProject(response.project.id);
       setProjectMeta(response.project.snapshot.meta ?? meta);
       setLoadedAiLibrary(response.project.aiSnapshot);
@@ -558,24 +593,32 @@ export default function TopBar() {
     );
   };
 
-  const onCreateProject = async () => {
+  const loadDefaultProject = async () => {
     if (!app) return;
     const project = createDefaultEditorProjectJSON();
-    await app.dispatch({
-      type: "project.load",
-      project
-    });
+    await runWithSceneLoading(() =>
+      app.dispatch({
+        type: "project.load",
+        project
+      })
+    );
+    restoreProjectViewHelpers(null);
     setCurrentProject(null);
     setProjectMeta(project.meta ?? null);
     setLoadedAiLibrary(createEmptyProjectAiLibrary());
     clearPendingAiGenerations();
     clearLocalProjectAssets();
+    markUnsavedChanges(false);
     syncEditorProjectSearchParam(null);
     setSaveStatus({
       phase: "idle",
       message: null,
       updatedAt: Date.now()
     });
+  };
+
+  const onCreateProject = async () => {
+    await loadDefaultProject();
   };
 
   const onClearProject = async () => {
@@ -599,12 +642,19 @@ export default function TopBar() {
       return;
     }
 
+    setProjectListError(null);
+    setProjectListDialogOpen(false);
+
     try {
-      const response = await getProject(projectId);
-      await app.dispatch({
-        type: "project.load",
-        project: response.project.snapshot
+      const response = await runWithSceneLoading(async () => {
+        const projectResponse = await getProject(projectId);
+        await app.dispatch({
+          type: "project.load",
+          project: projectResponse.project.snapshot
+        });
+        return projectResponse;
       });
+      restoreProjectViewHelpers(response.project.id);
       setCurrentProject(response.project.id);
       setProjectMeta(response.project.snapshot.meta ?? null);
       setLoadedAiLibrary(response.project.aiSnapshot);
@@ -612,7 +662,6 @@ export default function TopBar() {
       clearLocalProjectAssets();
       markUnsavedChanges(false);
       syncEditorProjectSearchParam(response.project.id);
-      setProjectListDialogOpen(false);
       setSaveStatus({
         phase: "idle",
         message: null,
@@ -620,7 +669,40 @@ export default function TopBar() {
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : t("editor.project.loadFailed");
+      setProjectListDialogOpen(true);
       setProjectListError(message);
+    }
+  };
+
+  const onDeleteProject = async (projectId: string) => {
+    const project = projects.find((item) => item.id === projectId) ?? null;
+    const projectTitle = project?.title ?? t("editor.project.untitled");
+
+    if (currentProjectId === projectId && hasUnsavedChanges) {
+      if (!window.confirm(t("editor.project.confirmDiscardChanges"))) {
+        return;
+      }
+    }
+
+    if (!window.confirm(t("editor.project.deleteConfirm", { title: projectTitle }))) {
+      return;
+    }
+
+    setProjectListError(null);
+    setDeletingProjectId(projectId);
+
+    try {
+      await deleteProject(projectId);
+      setProjects((current) => current.filter((item) => item.id !== projectId));
+
+      if (currentProjectId === projectId) {
+        await loadDefaultProject();
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : t("editor.project.deleteFailed");
+      setProjectListError(message);
+    } finally {
+      setDeletingProjectId(null);
     }
   };
 
@@ -812,11 +894,15 @@ export default function TopBar() {
         open={projectListDialogOpen}
         projects={projects}
         isLoading={isProjectListLoading}
+        deletingProjectId={deletingProjectId}
         errorMessage={projectListError}
         theme={theme}
         onClose={() => setProjectListDialogOpen(false)}
         onSelectProject={(projectId) => {
           void onSelectProject(projectId);
+        }}
+        onDeleteProject={(projectId) => {
+          void onDeleteProject(projectId);
         }}
       />
 

@@ -3,7 +3,7 @@ import type { SaveProjectRequest, SaveProjectResponse } from "@/lib/api/contract
 import { projectSaveRequestSchema } from "@/lib/project/schema";
 import { getSession } from "@/lib/server/auth/getSession";
 import { getErrorMessage } from "@/lib/server/http/getErrorMessage";
-import { updateProject } from "@/lib/server/projects/mutations";
+import { deleteProject, updateProject } from "@/lib/server/projects/mutations";
 import { getProjectByIdForUser } from "@/lib/server/projects/queries";
 
 type RouteContext = {
@@ -88,6 +88,33 @@ export async function PUT(request: Request, context: RouteContext) {
     return NextResponse.json(response);
   } catch (error) {
     const message = getErrorMessage(error, "Failed to update project.");
+    const status = message.includes("DATABASE_URL") ? 500 : 400;
+    return NextResponse.json({ message }, { status });
+  }
+}
+
+export async function DELETE(_: Request, context: RouteContext) {
+  const session = await getSession();
+
+  if (!session) {
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const { id } = await context.params;
+    const existing = await getProjectByIdForUser(id, session.user.id);
+    if (!existing) {
+      return NextResponse.json({ message: "Project not found." }, { status: 404 });
+    }
+
+    const deleted = await deleteProject(id, session.user.id);
+    if (!deleted) {
+      return NextResponse.json({ message: "Project not found." }, { status: 404 });
+    }
+
+    return new NextResponse(null, { status: 204 });
+  } catch (error) {
+    const message = getErrorMessage(error, "Failed to delete project.");
     const status = message.includes("DATABASE_URL") ? 500 : 400;
     return NextResponse.json({ message }, { status });
   }

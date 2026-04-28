@@ -8,6 +8,7 @@ export type RenderBinding = {
   kind: EntityKind;
   model: EntityModel;
   object: THREE.Object3D;
+  ready?: Promise<void>;
   pickTargets?: THREE.Object3D[];
   applyState?: () => void;
   modelAnimation?: {

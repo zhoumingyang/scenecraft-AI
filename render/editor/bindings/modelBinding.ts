@@ -118,7 +118,7 @@ export function createModelBinding(context: BindingContext, model: ModelEntityMo
     return true;
   };
 
-  void modelLoaderFactory
+  const ready = modelLoaderFactory
     .load(model.source, model.format)
     .then((asset) => {
       if (disposed) {
@@ -149,6 +149,7 @@ export function createModelBinding(context: BindingContext, model: ModelEntityMo
     kind: "model",
     model,
     object: group,
+    ready,
     applyState,
     modelAnimation: {
       applyState: applyAnimationState,

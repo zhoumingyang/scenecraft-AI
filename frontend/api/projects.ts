@@ -30,3 +30,7 @@ export async function updateProject(projectId: string, payload: SaveProjectReque
     payload
   );
 }
+
+export async function deleteProject(projectId: string) {
+  await appApiClient.delete(`/projects/${projectId}`);
+}

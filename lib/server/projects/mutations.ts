@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { assets, projects } from "@/db/schema";
 import type { SaveProjectRequest } from "@/lib/api/contracts/projects";
 import { requireDatabase } from "@/lib/server/db/requireDatabase";
@@ -104,4 +104,19 @@ export async function updateProject({ projectId, userId, payload }: SaveProjectM
 
     return updated ?? null;
   });
+}
+
+export async function deleteProject(projectId: string, userId: string) {
+  const db = requireDatabase();
+
+  const [deleted] = await db
+    .update(projects)
+    .set({
+      deletedAt: new Date(),
+      updatedAt: new Date()
+    })
+    .where(and(eq(projects.id, projectId), eq(projects.userId, userId), isNull(projects.deletedAt)))
+    .returning();
+
+  return deleted ?? null;
 }

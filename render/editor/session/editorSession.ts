@@ -327,12 +327,23 @@ export class EditorSession {
     this.runtime.applyEnvConfig(this.projectModel.envConfig);
     this.runtime.applyCameraModel(this.projectModel.camera);
 
-    this.projectModel.groups.forEach((group) => this.registry.create(group));
-    this.projectModel.models.forEach((model) => this.registry.create(model));
-    this.projectModel.meshes.forEach((mesh) => this.registry.create(mesh));
-    this.projectModel.lights.forEach((light) => this.registry.create(light));
+    const pendingBindingReady: Promise<void>[] = [];
+    const registerBinding = (binding: { ready?: Promise<void> }) => {
+      if (binding.ready) {
+        pendingBindingReady.push(binding.ready);
+      }
+    };
+
+    this.projectModel.groups.forEach((group) => registerBinding(this.registry.create(group)));
+    this.projectModel.models.forEach((model) => registerBinding(this.registry.create(model)));
+    this.projectModel.meshes.forEach((mesh) => registerBinding(this.registry.create(mesh)));
+    this.projectModel.lights.forEach((light) => registerBinding(this.registry.create(light)));
     this.rebuildGroupHierarchy();
     this.runtime.syncLightHelperVisibility();
+
+    if (pendingBindingReady.length > 0) {
+      await Promise.allSettled(pendingBindingReady);
+    }
 
     this.emit({ type: "projectLoaded", projectId: this.projectModel.id });
   }
