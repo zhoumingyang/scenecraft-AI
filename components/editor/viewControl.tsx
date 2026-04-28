@@ -12,6 +12,7 @@ import type { EditorApp } from "@/render/editor";
 import { useI18n } from "@/lib/i18n";
 import { useEditorStore } from "@/stores/editorStore";
 import { getEditorThemeTokens } from "@/components/editor/theme";
+import { persistViewHelperVisibility } from "@/components/editor/viewHelperPreferences";
 import { getViewportPillSx } from "./viewportControlStyles";
 
 type HelperKey = "gridHelper" | "transformGizmo" | "lightHelper" | "shadow";
@@ -24,6 +25,7 @@ type ViewControlProps = {
 export default function ViewControl({ app, viewStateVersion }: ViewControlProps) {
   const { t } = useI18n();
   const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
+  const currentProjectId = useEditorStore((state) => state.currentProjectId);
   const [open, setOpen] = useState(false);
   const theme = getEditorThemeTokens(editorThemeMode);
 
@@ -113,7 +115,11 @@ export default function ViewControl({ app, viewStateVersion }: ViewControlProps)
                   key={item.key}
                   color="inherit"
                   disabled={item.disabled}
-                  onClick={() => app?.setViewHelperVisibility(item.key, !item.visible)}
+                  onClick={() => {
+                    if (!app) return;
+                    app.setViewHelperVisibility(item.key, !item.visible);
+                    persistViewHelperVisibility(currentProjectId, app.getViewHelperVisibility());
+                  }}
                   sx={{
                     justifyContent: "flex-start",
                     px: 1.1,

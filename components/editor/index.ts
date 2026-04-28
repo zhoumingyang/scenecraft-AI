@@ -6,3 +6,4 @@ export { default as FirstPersonHeightControl } from "./firstPersonHeightControl"
 export { default as ViewControl } from "./viewControl";
 export { default as ViewportControls } from "./viewportControls";
 export { default as AiImageComposer } from "./aiImageComposer";
+export { default as SceneLoadingOverlay } from "./sceneLoadingOverlay";

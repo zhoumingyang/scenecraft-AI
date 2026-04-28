@@ -75,6 +75,11 @@ export type ProjectSaveStatus = {
   updatedAt: number | null;
 };
 
+export type SceneLoadingStatus = {
+  activeRequests: number;
+  message: string | null;
+};
+
 type AiImageSettings = {
   providerId: AiImageProviderId;
   model: AiImageModelId;
@@ -116,6 +121,7 @@ type EditorStoreState = {
   pendingAiImageGenerations: PendingAiImageGeneration[];
   localProjectAssets: LocalProjectAssetEntry[];
   saveStatus: ProjectSaveStatus;
+  sceneLoadingStatus: SceneLoadingStatus;
   hasUnsavedChanges: boolean;
   projectListDialogOpen: boolean;
   projectSaveDialogOpen: boolean;
@@ -140,6 +146,8 @@ type EditorStoreState = {
   clearLocalProjectAssets: () => void;
   markUnsavedChanges: (dirty: boolean) => void;
   setSaveStatus: (status: ProjectSaveStatus) => void;
+  beginSceneLoading: (message?: string | null) => void;
+  endSceneLoading: () => void;
   setProjectListDialogOpen: (open: boolean) => void;
   setProjectSaveDialogOpen: (open: boolean) => void;
   bumpProjectVersion: () => void;
@@ -199,6 +207,13 @@ function createInitialSaveStatus(): ProjectSaveStatus {
   };
 }
 
+function createInitialSceneLoadingStatus(): SceneLoadingStatus {
+  return {
+    activeRequests: 0,
+    message: null
+  };
+}
+
 export const useEditorStore = create<EditorStoreState>((set) => ({
   app: null,
   editorThemeMode: "dark",
@@ -209,6 +224,7 @@ export const useEditorStore = create<EditorStoreState>((set) => ({
   pendingAiImageGenerations: [],
   localProjectAssets: [],
   saveStatus: createInitialSaveStatus(),
+  sceneLoadingStatus: createInitialSceneLoadingStatus(),
   hasUnsavedChanges: false,
   projectListDialogOpen: false,
   projectSaveDialogOpen: false,
@@ -279,6 +295,23 @@ export const useEditorStore = create<EditorStoreState>((set) => ({
   clearLocalProjectAssets: () => set({ localProjectAssets: [] }),
   markUnsavedChanges: (hasUnsavedChanges) => set({ hasUnsavedChanges }),
   setSaveStatus: (saveStatus) => set({ saveStatus }),
+  beginSceneLoading: (message = null) =>
+    set((state) => ({
+      sceneLoadingStatus: {
+        activeRequests: state.sceneLoadingStatus.activeRequests + 1,
+        message: message ?? state.sceneLoadingStatus.message
+      }
+    })),
+  endSceneLoading: () =>
+    set((state) => {
+      const nextActiveRequests = Math.max(0, state.sceneLoadingStatus.activeRequests - 1);
+      return {
+        sceneLoadingStatus: {
+          activeRequests: nextActiveRequests,
+          message: nextActiveRequests === 0 ? null : state.sceneLoadingStatus.message
+        }
+      };
+    }),
   setProjectListDialogOpen: (projectListDialogOpen) => set({ projectListDialogOpen }),
   setProjectSaveDialogOpen: (projectSaveDialogOpen) => set({ projectSaveDialogOpen }),
   bumpProjectVersion: () => set((state) => ({ projectVersion: state.projectVersion + 1 })),

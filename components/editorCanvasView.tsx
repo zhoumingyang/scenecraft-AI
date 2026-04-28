@@ -6,6 +6,7 @@ import {
   AiImageComposer,
   AvatarMenu,
   PropertyPanel,
+  SceneLoadingOverlay,
   SceneTreePanel,
   TopBar,
   ViewportControls
@@ -17,6 +18,7 @@ import { createEditorSdk } from "@/render/editor/sdk";
 import { useEditorStore } from "@/stores/editorStore";
 import { getEditorThemeTokens } from "@/components/editor/theme";
 import { syncEditorProjectSearchParam } from "@/components/editor/projectPersistence";
+import { restoreViewHelperVisibility } from "@/components/editor/viewHelperPreferences";
 
 type EditorCanvasViewProps = {
   userEmail: string | null;
@@ -35,6 +37,8 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
   const clearLocalProjectAssets = useEditorStore((state) => state.clearLocalProjectAssets);
   const markUnsavedChanges = useEditorStore((state) => state.markUnsavedChanges);
   const setSaveStatus = useEditorStore((state) => state.setSaveStatus);
+  const beginSceneLoading = useEditorStore((state) => state.beginSceneLoading);
+  const endSceneLoading = useEditorStore((state) => state.endSceneLoading);
   const bumpProjectVersion = useEditorStore((state) => state.bumpProjectVersion);
   const bumpEntityRenderVersion = useEditorStore((state) => state.bumpEntityRenderVersion);
   const bumpProjectLoadVersion = useEditorStore((state) => state.bumpProjectLoadVersion);
@@ -117,43 +121,50 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
 
     app.start();
     void (async () => {
-      const initialProjectId = new URL(window.location.href).searchParams.get("projectId");
+      beginSceneLoading();
+      try {
+        const initialProjectId = new URL(window.location.href).searchParams.get("projectId");
 
-      if (initialProjectId) {
-        try {
-          const response = await getProject(initialProjectId);
-          await app.dispatch({
-            type: "project.load",
-            project: response.project.snapshot
-          });
-          setCurrentProject(response.project.id);
-          setProjectMeta(response.project.snapshot.meta ?? null);
-          setLoadedAiLibrary(response.project.aiSnapshot);
-          clearPendingAiGenerations();
-          clearLocalProjectAssets();
-          syncEditorProjectSearchParam(response.project.id);
-          setSaveStatus({
-            phase: "idle",
-            message: null,
-            updatedAt: Date.now()
-          });
-          return;
-        } catch (error) {
-          console.error("[editor] Failed to load project from URL", error);
-          syncEditorProjectSearchParam(null);
+        if (initialProjectId) {
+          try {
+            const response = await getProject(initialProjectId);
+            await app.dispatch({
+              type: "project.load",
+              project: response.project.snapshot
+            });
+            restoreViewHelperVisibility(app, response.project.id);
+            setCurrentProject(response.project.id);
+            setProjectMeta(response.project.snapshot.meta ?? null);
+            setLoadedAiLibrary(response.project.aiSnapshot);
+            clearPendingAiGenerations();
+            clearLocalProjectAssets();
+            syncEditorProjectSearchParam(response.project.id);
+            setSaveStatus({
+              phase: "idle",
+              message: null,
+              updatedAt: Date.now()
+            });
+            return;
+          } catch (error) {
+            console.error("[editor] Failed to load project from URL", error);
+            syncEditorProjectSearchParam(null);
+          }
         }
-      }
 
-      const defaultProject = createDefaultEditorProjectJSON();
-      await app.dispatch({
-        type: "project.load",
-        project: defaultProject
-      });
-      setCurrentProject(null);
-      setProjectMeta(defaultProject.meta ?? null);
-      setLoadedAiLibrary(createEmptyProjectAiLibrary());
-      clearPendingAiGenerations();
-      clearLocalProjectAssets();
+        const defaultProject = createDefaultEditorProjectJSON();
+        await app.dispatch({
+          type: "project.load",
+          project: defaultProject
+        });
+        restoreViewHelperVisibility(app, null);
+        setCurrentProject(null);
+        setProjectMeta(defaultProject.meta ?? null);
+        setLoadedAiLibrary(createEmptyProjectAiLibrary());
+        clearPendingAiGenerations();
+        clearLocalProjectAssets();
+      } finally {
+        endSceneLoading();
+      }
     })();
 
     return () => {
@@ -181,7 +192,9 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
     setProjectMeta,
     setSaveStatus,
     setSelectedEntityId,
-    setAiInspectorMode
+    setAiInspectorMode,
+    beginSceneLoading,
+    endSceneLoading
   ]);
 
   useEffect(() => {
@@ -229,6 +242,7 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
       <ViewportControls />
       <PropertyPanel />
       <AiImageComposer />
+      <SceneLoadingOverlay />
     </Box>
   );
 }
