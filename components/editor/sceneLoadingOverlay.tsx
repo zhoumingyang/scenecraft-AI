@@ -35,11 +35,11 @@ export default function SceneLoadingOverlay() {
       <Box
         sx={{
           minWidth: 240,
-          maxWidth: 320,
+          maxWidth: 380,
           px: 3,
           py: 2.5,
           border: theme.panelBorder,
-          borderRadius: "22px",
+          borderRadius: "13px",
           background: theme.menuBg,
           boxShadow: theme.panelShadow,
           display: "grid",

@@ -120,6 +120,10 @@ export class EditorApp {
     await this.session.applyAi3DPlan(plan, source);
   }
 
+  flushRuntimeStateToProjectModel(deltaSeconds = 0) {
+    this.session.flushRuntimeStateToProjectModel(deltaSeconds);
+  }
+
   getProjectJSON(): EditorProjectJSON | null {
     return this.session.getProjectJSON();
   }

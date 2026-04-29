@@ -474,7 +474,7 @@ export default function TopBar() {
       throw new Error("Editor is not ready.");
     }
 
-    const thumbnailDataUrl = app.captureViewportImage();
+    const thumbnailDataUrl = app.captureViewportImage("viewport");
     const dimensions = await readImageDimensions(thumbnailDataUrl);
     const file = await dataUrlToFile(thumbnailDataUrl, `thumbnail-${projectId}.png`);
     const uploaded = await uploadPreparedAsset(
@@ -513,6 +513,7 @@ export default function TopBar() {
       return;
     }
 
+    app.flushRuntimeStateToProjectModel();
     const currentSnapshot = app.getProjectJSON();
     if (!currentSnapshot) {
       return;
@@ -908,6 +909,7 @@ export default function TopBar() {
 
       <ProjectSaveProgressToast
         status={saveStatus}
+        theme={theme}
         onClose={() =>
           setSaveStatus({
             phase: "idle",

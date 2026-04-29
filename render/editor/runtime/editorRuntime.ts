@@ -283,6 +283,8 @@ export class EditorRuntime {
   }
 
   captureViewportImage(mode: EditorViewportCaptureMode = "clean") {
+    this.update(0);
+
     if (mode === "viewport") {
       this.renderFrame();
       return this.renderer.domElement.toDataURL("image/png");

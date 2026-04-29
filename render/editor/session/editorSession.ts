@@ -353,6 +353,14 @@ export class EditorSession {
     await this.loadProject(createEmptyEditorProjectJSON(projectId));
   }
 
+  flushRuntimeStateToProjectModel(deltaSeconds = 0) {
+    if (!this.projectModel) return;
+
+    this.runtime.syncCameraModel(this.projectModel.camera);
+    this.registry.refresh(deltaSeconds);
+    this.registry.syncAllObjectTransformsToModel();
+  }
+
   getProjectJSON(): EditorProjectJSON | null {
     if (!this.projectModel) return null;
 

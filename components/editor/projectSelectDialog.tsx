@@ -47,7 +47,7 @@ export default function ProjectSelectDialog({
           color: theme.text,
           boxShadow: theme.panelShadow,
           backdropFilter: "blur(16px)",
-          borderRadius: "26px",
+          borderRadius: "13px",
           overflow: "hidden"
         }
       }}
