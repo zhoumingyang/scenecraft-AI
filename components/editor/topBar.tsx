@@ -1,7 +1,7 @@
 "use client";
 
 import { ChangeEvent, ComponentType, useEffect, useMemo, useRef, useState } from "react";
-import { Button, SvgIconProps, Stack } from "@mui/material";
+import { Button, SvgIconProps, Stack, Tooltip } from "@mui/material";
 import FolderRoundedIcon from "@mui/icons-material/FolderRounded";
 import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
 import SaveRoundedIcon from "@mui/icons-material/SaveRounded";
@@ -10,7 +10,10 @@ import VideocamRoundedIcon from "@mui/icons-material/VideocamRounded";
 import LightModeRoundedIcon from "@mui/icons-material/LightModeRounded";
 import GridViewRoundedIcon from "@mui/icons-material/GridViewRounded";
 import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
+import CollectionsRoundedIcon from "@mui/icons-material/CollectionsRounded";
 import DropdownMenu, { DropdownMenuItem } from "@/components/common/dropdownMenu";
+import LightingConflictToast from "@/components/editor/lightingConflictToast";
+import ProjectAiLibraryDialog from "@/components/editor/projectAiLibraryDialog";
 import ProjectSaveDialog from "@/components/editor/projectSaveDialog";
 import ProjectSaveProgressToast from "@/components/editor/projectSaveProgressToast";
 import ProjectSelectDialog from "@/components/editor/projectSelectDialog";
@@ -181,6 +184,7 @@ export default function TopBar() {
   const pendingAiImageGenerations = useEditorStore((state) => state.pendingAiImageGenerations);
   const localProjectAssets = useEditorStore((state) => state.localProjectAssets);
   const saveStatus = useEditorStore((state) => state.saveStatus);
+  const lightingConflictNotice = useEditorStore((state) => state.lightingConflictNotice);
   const hasUnsavedChanges = useEditorStore((state) => state.hasUnsavedChanges);
   const projectListDialogOpen = useEditorStore((state) => state.projectListDialogOpen);
   const projectSaveDialogOpen = useEditorStore((state) => state.projectSaveDialogOpen);
@@ -192,12 +196,15 @@ export default function TopBar() {
   const setLoadedAiLibrary = useEditorStore((state) => state.setLoadedAiLibrary);
   const markUnsavedChanges = useEditorStore((state) => state.markUnsavedChanges);
   const setSaveStatus = useEditorStore((state) => state.setSaveStatus);
+  const dismissLightingConflictNotice = useEditorStore((state) => state.dismissLightingConflictNotice);
   const beginSceneLoading = useEditorStore((state) => state.beginSceneLoading);
   const endSceneLoading = useEditorStore((state) => state.endSceneLoading);
   const setProjectListDialogOpen = useEditorStore((state) => state.setProjectListDialogOpen);
   const setProjectSaveDialogOpen = useEditorStore((state) => state.setProjectSaveDialogOpen);
+  const removeAiLibraryResult = useEditorStore((state) => state.removeAiLibraryResult);
   const [activeMenuId, setActiveMenuId] = useState<DropdownConfig["id"] | null>(null);
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
+  const [aiLibraryDialogOpen, setAiLibraryDialogOpen] = useState(false);
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [isProjectListLoading, setIsProjectListLoading] = useState(false);
   const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
@@ -206,6 +213,10 @@ export default function TopBar() {
 
   const activeConfig = dropdownConfigs.find((item) => item.id === activeMenuId) || null;
   const isSaving = saveStatus.phase === "saving";
+  const aiLibraryAssetCount = loadedAiLibrary.imageGenerations.reduce(
+    (count, generation) => count + generation.results.length,
+    0
+  ) + pendingAiImageGenerations.reduce((count, generation) => count + generation.results.length, 0);
 
   const runWithSceneLoading = async <T,>(task: () => Promise<T>) => {
     beginSceneLoading(t("editor.scene.loadingTitle"));
@@ -628,6 +639,15 @@ export default function TopBar() {
     markUnsavedChanges(true);
   };
 
+  const onDeleteAiLibraryAsset = (payload: {
+    source: "loaded" | "pending";
+    generationId: string;
+    resultId: string;
+  }) => {
+    removeAiLibraryResult(payload);
+    markUnsavedChanges(true);
+  };
+
   const openProjectSelectDialog = async () => {
     closeMenu();
     setProjectListDialogOpen(true);
@@ -854,6 +874,41 @@ export default function TopBar() {
           {t("editor.top.clear")}
         </Button>
 
+        <Tooltip title={t("editor.project.aiLibraryTitle")}>
+          <Button
+            size="small"
+            color="inherit"
+            startIcon={<CollectionsRoundedIcon />}
+            onClick={() => setAiLibraryDialogOpen(true)}
+            sx={{
+              minWidth: "auto"
+            }}
+          >
+            {t("editor.project.aiLibraryTitle")}
+            {aiLibraryAssetCount > 0 ? (
+              <Stack
+                component="span"
+                sx={{
+                  ml: 0.55,
+                  minWidth: 18,
+                  height: 18,
+                  px: 0.45,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: 999,
+                  background: theme.itemSelectedBg,
+                  color: theme.titleText,
+                  fontSize: 10,
+                  fontWeight: 700,
+                  lineHeight: 1
+                }}
+              >
+                {aiLibraryAssetCount}
+              </Stack>
+            ) : null}
+          </Button>
+        </Tooltip>
+
         {dropdownConfigs
           .filter((config) => config.id !== "project")
           .map((config) => (
@@ -907,6 +962,15 @@ export default function TopBar() {
         }}
       />
 
+      <ProjectAiLibraryDialog
+        open={aiLibraryDialogOpen}
+        theme={theme}
+        loadedLibrary={loadedAiLibrary}
+        pendingGenerations={pendingAiImageGenerations}
+        onClose={() => setAiLibraryDialogOpen(false)}
+        onDeleteAsset={onDeleteAiLibraryAsset}
+      />
+
       <ProjectSaveProgressToast
         status={saveStatus}
         theme={theme}
@@ -917,6 +981,12 @@ export default function TopBar() {
             updatedAt: Date.now()
           })
         }
+      />
+
+      <LightingConflictToast
+        notice={lightingConflictNotice}
+        theme={theme}
+        onClose={dismissLightingConflictNotice}
       />
     </>
   );

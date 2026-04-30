@@ -7,6 +7,12 @@ import { getEditorThemeTokens } from "@/components/editor/theme";
 import PropertyPanelSection from "@/components/common/propertyPanelSection";
 import { useI18n } from "@/lib/i18n";
 import type { EditorPostProcessPassId, ResolvedEditorEnvConfigJSON } from "@/render/editor";
+import {
+  DEFAULT_EDITOR_BACKGROUND_BLURRINESS,
+  DEFAULT_EDITOR_BACKGROUND_INTENSITY,
+  DEFAULT_EDITOR_ENVIRONMENT_INTENSITY,
+  DEFAULT_EDITOR_ENVIRONMENT_ROTATION_Y
+} from "@/render/editor";
 import { DEFAULT_EDITOR_TONE_MAPPING } from "@/render/editor/runtime/colorManagement";
 import { useEditorStore } from "@/stores/editorStore";
 import { ScenePostProcessingPanel } from "./scenePostProcessingPanel";
@@ -167,6 +173,54 @@ export function SceneSettingsSection({ envConfig }: SceneSettingsSectionProps) {
         </Typography>
 
         <SliderField
+          label={t("editor.properties.environmentIntensity")}
+          min={0}
+          max={5}
+          step={0.01}
+          value={envConfig.environmentIntensity}
+          onChange={(value) =>
+            app?.updateSceneEnvConfig({
+              environmentIntensity: value
+            })
+          }
+          formatter={(value) =>
+            value === DEFAULT_EDITOR_ENVIRONMENT_INTENSITY ? `${value.toFixed(2)} • ${t("editor.properties.recommended")}` : value.toFixed(2)
+          }
+        />
+
+        <SliderField
+          label={t("editor.properties.backgroundIntensity")}
+          min={0}
+          max={5}
+          step={0.01}
+          value={envConfig.backgroundIntensity}
+          onChange={(value) =>
+            app?.updateSceneEnvConfig({
+              backgroundIntensity: value
+            })
+          }
+          formatter={(value) =>
+            value === DEFAULT_EDITOR_BACKGROUND_INTENSITY ? `${value.toFixed(2)} • ${t("editor.properties.recommended")}` : value.toFixed(2)
+          }
+        />
+
+        <SliderField
+          label={t("editor.properties.backgroundBlurriness")}
+          min={0}
+          max={1}
+          step={0.01}
+          value={envConfig.backgroundBlurriness}
+          onChange={(value) =>
+            app?.updateSceneEnvConfig({
+              backgroundBlurriness: value
+            })
+          }
+          formatter={(value) =>
+            value === DEFAULT_EDITOR_BACKGROUND_BLURRINESS ? `${value.toFixed(2)} • ${t("editor.properties.recommended")}` : value.toFixed(2)
+          }
+        />
+
+        <SliderField
           label={t("editor.properties.toneMappingExposure")}
           min={0}
           max={5}
@@ -176,6 +230,24 @@ export function SceneSettingsSection({ envConfig }: SceneSettingsSectionProps) {
             app?.updateSceneEnvConfig({
               toneMappingExposure: value
             })
+          }
+        />
+
+        <SliderField
+          label={t("editor.properties.environmentRotation")}
+          min={-180}
+          max={180}
+          step={1}
+          value={THREE.MathUtils.radToDeg(envConfig.environmentRotationY)}
+          onChange={(value) =>
+            app?.updateSceneEnvConfig({
+              environmentRotationY: THREE.MathUtils.degToRad(value)
+            })
+          }
+          formatter={(value) =>
+            envConfig.environmentRotationY === DEFAULT_EDITOR_ENVIRONMENT_ROTATION_Y
+              ? `${Math.round(value)}° • ${t("editor.properties.recommended")}`
+              : `${Math.round(value)}°`
           }
         />
 

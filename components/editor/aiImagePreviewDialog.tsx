@@ -1,6 +1,6 @@
 "use client";
 
-import { Box, Dialog, IconButton } from "@mui/material";
+import { Box, Dialog, IconButton, Typography } from "@mui/material";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import { getEditorThemeTokens } from "@/components/editor/theme";
 import { useI18n } from "@/lib/i18n";
@@ -8,10 +8,15 @@ import { useEditorStore } from "@/stores/editorStore";
 
 type AiImagePreviewDialogProps = {
   imageUrl: string | null;
+  prompt?: string | null;
   onClose: () => void;
 };
 
-export default function AiImagePreviewDialog({ imageUrl, onClose }: AiImagePreviewDialogProps) {
+export default function AiImagePreviewDialog({
+  imageUrl,
+  prompt = null,
+  onClose
+}: AiImagePreviewDialogProps) {
   const { t } = useI18n();
   const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
   const theme = getEditorThemeTokens(editorThemeMode);
@@ -61,18 +66,37 @@ export default function AiImagePreviewDialog({ imageUrl, onClose }: AiImagePrevi
         </IconButton>
 
         {imageUrl ? (
-          <Box
-            component="img"
-            src={imageUrl}
-            alt={t("editor.ai.previewTitle")}
-            sx={{
-              width: "100%",
-              maxHeight: "80vh",
-              display: "block",
-              objectFit: "contain",
-              borderRadius: 1
-            }}
-          />
+          <Box sx={{ display: "grid", gap: 1.25 }}>
+            <Box
+              component="img"
+              src={imageUrl}
+              alt={t("editor.ai.previewTitle")}
+              sx={{
+                width: "100%",
+                maxHeight: "80vh",
+                display: "block",
+                objectFit: "contain",
+                borderRadius: 1
+              }}
+            />
+            {prompt ? (
+              <Box
+                sx={{
+                  p: 1.1,
+                  borderRadius: 1,
+                  border: theme.sectionBorder,
+                  background: theme.sectionBg
+                }}
+              >
+                <Typography sx={{ mb: 0.5, fontSize: 11, fontWeight: 700, color: theme.mutedText }}>
+                  {t("editor.ai.promptLabel")}
+                </Typography>
+                <Typography sx={{ fontSize: 12, color: theme.text, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                  {prompt}
+                </Typography>
+              </Box>
+            ) : null}
+          </Box>
         ) : null}
       </Box>
     </Dialog>

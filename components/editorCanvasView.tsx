@@ -37,6 +37,8 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
   const clearLocalProjectAssets = useEditorStore((state) => state.clearLocalProjectAssets);
   const markUnsavedChanges = useEditorStore((state) => state.markUnsavedChanges);
   const setSaveStatus = useEditorStore((state) => state.setSaveStatus);
+  const syncLightingConflictNotice = useEditorStore((state) => state.syncLightingConflictNotice);
+  const resetLightingConflictNotice = useEditorStore((state) => state.resetLightingConflictNotice);
   const beginSceneLoading = useEditorStore((state) => state.beginSceneLoading);
   const endSceneLoading = useEditorStore((state) => state.endSceneLoading);
   const bumpProjectVersion = useEditorStore((state) => state.bumpProjectVersion);
@@ -55,6 +57,13 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
     let frameRequestId = 0;
     let pendingEntityRenderVersion = false;
     let disposed = false;
+
+    const syncLightingConflictState = (reset = false) => {
+      if (reset) {
+        resetLightingConflictNotice();
+      }
+      syncLightingConflictNotice(app.getLightingConflictState());
+    };
 
     const flushRenderDrivenUpdates = () => {
       frameRequestId = 0;
@@ -86,6 +95,7 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
         bumpCameraVersion();
         bumpViewStateVersion();
         markUnsavedChanges(false);
+        syncLightingConflictState(true);
         return;
       }
 
@@ -96,6 +106,9 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
         }
         bumpProjectVersion();
         markUnsavedChanges(true);
+        if (event.entityKind === "light") {
+          syncLightingConflictState();
+        }
         return;
       }
 
@@ -111,6 +124,7 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
         bumpProjectVersion();
         bumpViewStateVersion();
         markUnsavedChanges(true);
+        syncLightingConflictState();
         return;
       }
 
@@ -186,6 +200,8 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
     bumpCameraVersion,
     bumpViewStateVersion,
     markUnsavedChanges,
+    syncLightingConflictNotice,
+    resetLightingConflictNotice,
     setApp,
     setCurrentProject,
     setLoadedAiLibrary,

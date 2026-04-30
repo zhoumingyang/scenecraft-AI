@@ -1,4 +1,10 @@
 import type { EditorProjectJSON } from "../core/types";
+import {
+  DEFAULT_EDITOR_BACKGROUND_BLURRINESS,
+  DEFAULT_EDITOR_BACKGROUND_INTENSITY,
+  DEFAULT_EDITOR_ENVIRONMENT_INTENSITY,
+  DEFAULT_EDITOR_ENVIRONMENT_ROTATION_Y
+} from "../constants/environment";
 import { createDefaultEditorPostProcessingConfigJSON } from "../postProcessing";
 import {
   DEFAULT_EDITOR_TONE_MAPPING,
@@ -32,7 +38,11 @@ export function createDefaultEditorProjectJSON(): EditorProjectJSON {
     envConfig: {
       panoUrl: "",
       environment: 1,
+      environmentIntensity: DEFAULT_EDITOR_ENVIRONMENT_INTENSITY,
       backgroundShow: 1,
+      backgroundIntensity: DEFAULT_EDITOR_BACKGROUND_INTENSITY,
+      backgroundBlurriness: DEFAULT_EDITOR_BACKGROUND_BLURRINESS,
+      environmentRotationY: DEFAULT_EDITOR_ENVIRONMENT_ROTATION_Y,
       toneMapping: DEFAULT_EDITOR_TONE_MAPPING,
       toneMappingExposure: DEFAULT_EDITOR_TONE_MAPPING_EXPOSURE,
       postProcessing
@@ -53,7 +63,11 @@ export function createEmptyEditorProjectJSON(projectId = createUuid()): EditorPr
     envConfig: {
       panoUrl: "",
       environment: 1,
+      environmentIntensity: DEFAULT_EDITOR_ENVIRONMENT_INTENSITY,
       backgroundShow: 1,
+      backgroundIntensity: DEFAULT_EDITOR_BACKGROUND_INTENSITY,
+      backgroundBlurriness: DEFAULT_EDITOR_BACKGROUND_BLURRINESS,
+      environmentRotationY: DEFAULT_EDITOR_ENVIRONMENT_ROTATION_Y,
       toneMapping: DEFAULT_EDITOR_TONE_MAPPING,
       toneMappingExposure: DEFAULT_EDITOR_TONE_MAPPING_EXPOSURE,
       postProcessing

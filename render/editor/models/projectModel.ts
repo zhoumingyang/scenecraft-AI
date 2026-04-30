@@ -5,6 +5,12 @@ import type {
   EditorProjectThumbnailJSON,
   ResolvedEditorEnvConfigJSON
 } from "../core/types";
+import {
+  DEFAULT_EDITOR_BACKGROUND_BLURRINESS,
+  DEFAULT_EDITOR_BACKGROUND_INTENSITY,
+  DEFAULT_EDITOR_ENVIRONMENT_INTENSITY,
+  DEFAULT_EDITOR_ENVIRONMENT_ROTATION_Y
+} from "../constants/environment";
 import { normalizeString } from "../utils/normalize";
 import { normalizeEditorPostProcessingConfig } from "../postProcessing";
 import {
@@ -22,7 +28,11 @@ function normalizeEnvConfig(source?: EditorEnvConfigJSON): ResolvedEditorEnvConf
     panoAssetId: source?.panoAssetId ?? "",
     panoUrl: source?.panoUrl ?? "",
     environment: source?.environment ?? 1,
+    environmentIntensity: source?.environmentIntensity ?? DEFAULT_EDITOR_ENVIRONMENT_INTENSITY,
     backgroundShow: source?.backgroundShow ?? 1,
+    backgroundIntensity: source?.backgroundIntensity ?? DEFAULT_EDITOR_BACKGROUND_INTENSITY,
+    backgroundBlurriness: source?.backgroundBlurriness ?? DEFAULT_EDITOR_BACKGROUND_BLURRINESS,
+    environmentRotationY: source?.environmentRotationY ?? DEFAULT_EDITOR_ENVIRONMENT_ROTATION_Y,
     toneMapping: source?.toneMapping ?? DEFAULT_EDITOR_TONE_MAPPING,
     toneMappingExposure: source?.toneMappingExposure ?? DEFAULT_EDITOR_TONE_MAPPING_EXPOSURE,
     postProcessing: normalizeEditorPostProcessingConfig(source?.postProcessing)
@@ -156,7 +166,11 @@ export class EditorProjectModel {
         panoAssetId: this.envConfig.panoAssetId,
         panoUrl: this.envConfig.panoUrl,
         environment: this.envConfig.environment,
+        environmentIntensity: this.envConfig.environmentIntensity,
         backgroundShow: this.envConfig.backgroundShow,
+        backgroundIntensity: this.envConfig.backgroundIntensity,
+        backgroundBlurriness: this.envConfig.backgroundBlurriness,
+        environmentRotationY: this.envConfig.environmentRotationY,
         toneMapping: this.envConfig.toneMapping,
         toneMappingExposure: this.envConfig.toneMappingExposure,
         postProcessing: {

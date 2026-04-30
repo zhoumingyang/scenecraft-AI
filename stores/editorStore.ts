@@ -12,6 +12,7 @@ import {
 import type {
   Ai3DPlan,
   EditorApp,
+  LightingConflictState,
   EditorProjectMetaJSON,
   ProjectAiLibraryJSON
 } from "@/render/editor";
@@ -80,6 +81,14 @@ export type SceneLoadingStatus = {
   message: string | null;
 };
 
+export type LightingConflictNotice = {
+  open: boolean;
+  dismissed: boolean;
+  hasAmbientLight: boolean;
+  hasHemisphereLight: boolean;
+  conflictKey: string | null;
+};
+
 type AiImageSettings = {
   providerId: AiImageProviderId;
   model: AiImageModelId;
@@ -122,6 +131,7 @@ type EditorStoreState = {
   localProjectAssets: LocalProjectAssetEntry[];
   saveStatus: ProjectSaveStatus;
   sceneLoadingStatus: SceneLoadingStatus;
+  lightingConflictNotice: LightingConflictNotice;
   hasUnsavedChanges: boolean;
   projectListDialogOpen: boolean;
   projectSaveDialogOpen: boolean;
@@ -141,11 +151,19 @@ type EditorStoreState = {
   setLoadedAiLibrary: (library: ProjectAiLibraryJSON) => void;
   appendPendingAiGeneration: (generation: PendingAiImageGeneration) => void;
   clearPendingAiGenerations: () => void;
+  removeAiLibraryResult: (payload: {
+    source: "loaded" | "pending";
+    generationId: string;
+    resultId: string;
+  }) => void;
   recordAiResultAppliedToMesh: (imageUrl: string, meshId: string) => void;
   registerLocalProjectAsset: (asset: LocalProjectAssetEntry) => void;
   clearLocalProjectAssets: () => void;
   markUnsavedChanges: (dirty: boolean) => void;
   setSaveStatus: (status: ProjectSaveStatus) => void;
+  syncLightingConflictNotice: (state: LightingConflictState) => void;
+  dismissLightingConflictNotice: () => void;
+  resetLightingConflictNotice: () => void;
   beginSceneLoading: (message?: string | null) => void;
   endSceneLoading: () => void;
   setProjectListDialogOpen: (open: boolean) => void;
@@ -214,6 +232,39 @@ function createInitialSceneLoadingStatus(): SceneLoadingStatus {
   };
 }
 
+function createInitialLightingConflictNotice(): LightingConflictNotice {
+  return {
+    open: false,
+    dismissed: false,
+    hasAmbientLight: false,
+    hasHemisphereLight: false,
+    conflictKey: null
+  };
+}
+
+function removeResultFromGenerations<
+  TGeneration extends { id: string; results: TResult[] },
+  TResult extends { id: string }
+>(generations: TGeneration[], generationId: string, resultId: string) {
+  return generations.flatMap((generation) => {
+    if (generation.id !== generationId) {
+      return [generation];
+    }
+
+    const results = generation.results.filter((result) => result.id !== resultId);
+    if (results.length === 0) {
+      return [];
+    }
+
+    return [
+      {
+        ...generation,
+        results
+      }
+    ];
+  });
+}
+
 export const useEditorStore = create<EditorStoreState>((set) => ({
   app: null,
   editorThemeMode: "dark",
@@ -225,6 +276,7 @@ export const useEditorStore = create<EditorStoreState>((set) => ({
   localProjectAssets: [],
   saveStatus: createInitialSaveStatus(),
   sceneLoadingStatus: createInitialSceneLoadingStatus(),
+  lightingConflictNotice: createInitialLightingConflictNotice(),
   hasUnsavedChanges: false,
   projectListDialogOpen: false,
   projectSaveDialogOpen: false,
@@ -259,6 +311,24 @@ export const useEditorStore = create<EditorStoreState>((set) => ({
       pendingAiImageGenerations: [...state.pendingAiImageGenerations, generation]
     })),
   clearPendingAiGenerations: () => set({ pendingAiImageGenerations: [] }),
+  removeAiLibraryResult: ({ source, generationId, resultId }) =>
+    set((state) => ({
+      loadedAiLibrary:
+        source === "loaded"
+          ? {
+              ...state.loadedAiLibrary,
+              imageGenerations: removeResultFromGenerations(
+                state.loadedAiLibrary.imageGenerations,
+                generationId,
+                resultId
+              )
+            }
+          : state.loadedAiLibrary,
+      pendingAiImageGenerations:
+        source === "pending"
+          ? removeResultFromGenerations(state.pendingAiImageGenerations, generationId, resultId)
+          : state.pendingAiImageGenerations
+    })),
   recordAiResultAppliedToMesh: (imageUrl, meshId) =>
     set((state) => ({
       pendingAiImageGenerations: state.pendingAiImageGenerations.map((generation) => ({
@@ -295,6 +365,45 @@ export const useEditorStore = create<EditorStoreState>((set) => ({
   clearLocalProjectAssets: () => set({ localProjectAssets: [] }),
   markUnsavedChanges: (hasUnsavedChanges) => set({ hasUnsavedChanges }),
   setSaveStatus: (saveStatus) => set({ saveStatus }),
+  syncLightingConflictNotice: ({ hasAmbientLight, hasHemisphereLight, hasConflict }) =>
+    set((state) => {
+      if (!hasConflict) {
+        return {
+          lightingConflictNotice: createInitialLightingConflictNotice()
+        };
+      }
+
+      const conflictKey = [
+        hasAmbientLight ? "ambient" : null,
+        hasHemisphereLight ? "hemisphere" : null
+      ]
+        .filter(Boolean)
+        .join("|");
+      const conflictChanged = state.lightingConflictNotice.conflictKey !== conflictKey;
+      const dismissed = conflictChanged ? false : state.lightingConflictNotice.dismissed;
+
+      return {
+        lightingConflictNotice: {
+          open: !dismissed,
+          dismissed,
+          hasAmbientLight,
+          hasHemisphereLight,
+          conflictKey
+        }
+      };
+    }),
+  dismissLightingConflictNotice: () =>
+    set((state) => ({
+      lightingConflictNotice: {
+        ...state.lightingConflictNotice,
+        open: false,
+        dismissed: true
+      }
+    })),
+  resetLightingConflictNotice: () =>
+    set({
+      lightingConflictNotice: createInitialLightingConflictNotice()
+    }),
   beginSceneLoading: (message = null) =>
     set((state) => ({
       sceneLoadingStatus: {

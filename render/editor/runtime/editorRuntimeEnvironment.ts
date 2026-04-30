@@ -4,6 +4,8 @@ import { HDRLoader } from "three/examples/jsm/loaders/HDRLoader.js";
 import type { ResolvedEditorEnvConfigJSON } from "../core/types";
 import { applyTextureColorSpace } from "./colorManagement";
 
+const DEFAULT_SCENE_ROTATION = new THREE.Euler();
+
 type EditorRuntimeEnvironmentOptions = {
   scene: THREE.Scene;
   renderer: THREE.WebGLRenderer;
@@ -148,26 +150,41 @@ export class EditorRuntimeEnvironment {
     this.environmentMapTexture = environmentMapTexture;
     previousTexture?.dispose();
     previousEnvironmentMapTexture?.dispose();
+    this.invalidateSceneMaterials();
   }
 
   clearEnvironment() {
     this.scene.environment = null;
     this.scene.background = this.defaultBackground;
+    this.scene.environmentIntensity = 1;
+    this.scene.backgroundIntensity = 1;
+    this.scene.backgroundBlurriness = 0;
+    this.scene.environmentRotation.copy(DEFAULT_SCENE_ROTATION);
+    this.scene.backgroundRotation.copy(DEFAULT_SCENE_ROTATION);
     this.environmentTexture?.dispose();
     this.environmentMapTexture?.dispose();
     this.environmentTexture = null;
     this.environmentMapTexture = null;
+    this.invalidateSceneMaterials();
   }
 
   applyEnvConfig(envConfig: ResolvedEditorEnvConfigJSON) {
+    const rotationY = envConfig.environmentRotationY;
     this.scene.environment =
       envConfig.environment === 1 && this.environmentMapTexture ? this.environmentMapTexture : null;
+    this.scene.environmentIntensity = envConfig.environmentIntensity;
     this.scene.background =
       envConfig.backgroundShow === 1 && this.environmentTexture
         ? this.environmentTexture
         : this.defaultBackground;
+    this.scene.backgroundIntensity = envConfig.backgroundIntensity;
+    this.scene.backgroundBlurriness =
+      envConfig.backgroundShow === 1 && this.environmentTexture ? envConfig.backgroundBlurriness : 0;
+    this.scene.environmentRotation.set(0, rotationY, 0);
+    this.scene.backgroundRotation.set(0, rotationY, 0);
     this.renderer.toneMapping = envConfig.toneMapping as THREE.ToneMapping;
     this.renderer.toneMappingExposure = envConfig.toneMappingExposure;
+    this.invalidateSceneMaterials();
   }
 
   dispose() {

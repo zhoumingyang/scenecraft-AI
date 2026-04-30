@@ -293,7 +293,11 @@ export type EditorEnvConfigJSON = {
   panoAssetId?: string;
   panoUrl?: string;
   environment?: number;
+  environmentIntensity?: number;
   backgroundShow?: number;
+  backgroundIntensity?: number;
+  backgroundBlurriness?: number;
+  environmentRotationY?: number;
   toneMapping?: number;
   toneMappingExposure?: number;
   postProcessing?: EditorPostProcessingConfigJSON;
@@ -362,3 +366,9 @@ export type EditorProjectJSON = {
 
 export type EntityKind = "model" | "mesh" | "light" | "group";
 export type SyncSource = "load" | "ui" | "render";
+
+export type LightingConflictState = {
+  hasConflict: boolean;
+  hasAmbientLight: boolean;
+  hasHemisphereLight: boolean;
+};

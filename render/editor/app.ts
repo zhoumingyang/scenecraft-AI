@@ -7,6 +7,7 @@ import type {
   EditorCameraJSON,
   EditorEnvConfigJSON,
   EditorLightJSON,
+  LightingConflictState,
   EditorPostProcessPassId,
   EditorPostProcessingPassParamsMap,
   EditorProjectJSON,
@@ -30,6 +31,8 @@ export type EditorViewHelperVisibility = {
   lightHelper: boolean;
   shadow: boolean;
 };
+
+export type { LightingConflictState };
 
 function formatTitleCase(value: string) {
   if (!value) return "Mesh";
@@ -147,6 +150,10 @@ export class EditorApp {
       id: mesh.id,
       label: mesh.label || `${formatTitleCase(mesh.geometryName)} ${index + 1}`
     }));
+  }
+
+  getLightingConflictState(): LightingConflictState {
+    return this.session.getLightingConflictState();
   }
 
   isFirstPersonCamera() {

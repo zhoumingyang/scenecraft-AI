@@ -139,7 +139,11 @@ const editorEnvConfigSchema = z
     panoAssetId: z.string().trim().max(120).optional(),
     panoUrl: z.string().trim().optional(),
     environment: z.number().finite().optional(),
+    environmentIntensity: z.number().finite().optional(),
     backgroundShow: z.number().finite().optional(),
+    backgroundIntensity: z.number().finite().optional(),
+    backgroundBlurriness: z.number().finite().optional(),
+    environmentRotationY: z.number().finite().optional(),
     toneMapping: z.number().finite().optional(),
     toneMappingExposure: z.number().finite().optional(),
     postProcessing: z

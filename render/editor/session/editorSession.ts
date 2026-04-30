@@ -7,6 +7,7 @@ import type {
   EditorCameraJSON,
   EditorEnvConfigJSON,
   EditorLightJSON,
+  LightingConflictState,
   EditorProjectJSON,
   ResolvedEditorEnvConfigJSON,
   SyncSource,
@@ -387,6 +388,42 @@ export class EditorSession {
 
   getSelectedEntityId(): string | null {
     return this.selectedEntityId;
+  }
+
+  getLightingConflictState(): LightingConflictState {
+    if (!this.projectModel) {
+      return {
+        hasConflict: false,
+        hasAmbientLight: false,
+        hasHemisphereLight: false
+      };
+    }
+
+    const hasActiveEnvironmentMap =
+      this.projectModel.envConfig.environment === 1 && this.runtime.hasEnvironmentTexture();
+    if (!hasActiveEnvironmentMap) {
+      return {
+        hasConflict: false,
+        hasAmbientLight: false,
+        hasHemisphereLight: false
+      };
+    }
+
+    let hasAmbientLight = false;
+    let hasHemisphereLight = false;
+    this.projectModel.lights.forEach((light) => {
+      if (light.lightType === 1) {
+        hasAmbientLight = true;
+      } else if (light.lightType === 6) {
+        hasHemisphereLight = true;
+      }
+    });
+
+    return {
+      hasConflict: hasAmbientLight || hasHemisphereLight,
+      hasAmbientLight,
+      hasHemisphereLight
+    };
   }
 
   getIsolatedEntityId(): string | null {
