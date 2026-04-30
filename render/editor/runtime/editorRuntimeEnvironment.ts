@@ -1,7 +1,9 @@
 import * as THREE from "three";
+import { EXRLoader } from "three/examples/jsm/loaders/EXRLoader.js";
 import { HDRLoader } from "three/examples/jsm/loaders/HDRLoader.js";
 
 import type { ResolvedEditorEnvConfigJSON } from "../core/types";
+import { isHighDynamicRangeEnvironmentAssetName } from "../constants/environment";
 import { applyTextureColorSpace } from "./colorManagement";
 
 const DEFAULT_SCENE_ROTATION = new THREE.Euler();
@@ -16,6 +18,7 @@ type EditorRuntimeEnvironmentOptions = {
 export class EditorRuntimeEnvironment {
   readonly textureLoader = new THREE.TextureLoader();
   readonly hdrLoader = new HDRLoader();
+  readonly exrLoader = new EXRLoader();
 
   private readonly scene: THREE.Scene;
   private readonly renderer: THREE.WebGLRenderer;
@@ -126,8 +129,14 @@ export class EditorRuntimeEnvironment {
   }
 
   async loadEnvironmentTexture(url: string, assetName = url) {
-    const lowerUrl = assetName.toLowerCase();
-    if (lowerUrl.endsWith(".hdr")) {
+    if (isHighDynamicRangeEnvironmentAssetName(assetName)) {
+      if (assetName.toLowerCase().endsWith(".exr")) {
+        const texture = await this.exrLoader.loadAsync(url);
+        texture.mapping = THREE.EquirectangularReflectionMapping;
+        applyTextureColorSpace(texture, "environmentHdr");
+        return texture;
+      }
+
       const texture = await this.hdrLoader.loadAsync(url);
       texture.mapping = THREE.EquirectangularReflectionMapping;
       applyTextureColorSpace(texture, "environmentHdr");

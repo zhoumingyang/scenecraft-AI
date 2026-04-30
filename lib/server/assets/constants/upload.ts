@@ -29,6 +29,16 @@ export const CONTENT_TYPES_BY_KIND: Record<ProjectAssetKind, string[]> = {
     "model/vrm"
   ],
   texture_image: ["image/png", "image/jpeg", "image/webp"],
-  environment_image: ["image/png", "image/jpeg", "image/webp", "image/vnd.radiance", "application/octet-stream"],
+  environment_image: [
+    "image/png",
+    "image/jpeg",
+    "image/webp",
+    "image/vnd.radiance",
+    "image/exr",
+    "image/x-exr",
+    "application/exr",
+    "application/x-exr",
+    "application/octet-stream"
+  ],
   video_clip: ["video/mp4", "video/webm", "video/quicktime"]
 };

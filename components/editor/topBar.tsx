@@ -53,7 +53,11 @@ import type {
   ProjectAiImageGenerationJSON,
   ProjectAiLibraryJSON
 } from "@/render/editor";
-import { createDefaultEditorProjectJSON, inferModelFileFormat } from "@/render/editor";
+import {
+  createDefaultEditorProjectJSON,
+  inferModelFileFormat,
+  isHighDynamicRangeEnvironmentAssetName
+} from "@/render/editor";
 import { useEditorStore } from "@/stores/editorStore";
 
 type IconComponent = ComponentType<SvgIconProps>;
@@ -294,7 +298,7 @@ export default function TopBar() {
     event.target.value = "";
     if (!app || !file) return;
 
-    if (file.name.toLowerCase().endsWith(".hdr")) {
+    if (isHighDynamicRangeEnvironmentAssetName(file.name)) {
       try {
         const imported = await app.importPanorama(file);
         if (imported?.sourceUrl) {
@@ -827,7 +831,7 @@ export default function TopBar() {
       <input
         ref={panoImportInputRef}
         type="file"
-        accept="image/*,.hdr"
+        accept="image/*,.hdr,.exr"
         onChange={onImportPanoFile}
         style={{ display: "none" }}
       />

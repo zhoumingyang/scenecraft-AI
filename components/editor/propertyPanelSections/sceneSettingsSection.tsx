@@ -11,7 +11,8 @@ import {
   DEFAULT_EDITOR_BACKGROUND_BLURRINESS,
   DEFAULT_EDITOR_BACKGROUND_INTENSITY,
   DEFAULT_EDITOR_ENVIRONMENT_INTENSITY,
-  DEFAULT_EDITOR_ENVIRONMENT_ROTATION_Y
+  DEFAULT_EDITOR_ENVIRONMENT_ROTATION_Y,
+  isHighDynamicRangeEnvironmentAssetName
 } from "@/render/editor";
 import { DEFAULT_EDITOR_TONE_MAPPING } from "@/render/editor/runtime/colorManagement";
 import { useEditorStore } from "@/stores/editorStore";
@@ -41,8 +42,7 @@ export function SceneSettingsSection({ envConfig }: SceneSettingsSectionProps) {
 
   const panoPreviewUrl = useMemo(() => {
     if (!envConfig.panoUrl) return "";
-    const lowerUrl = envConfig.panoUrl.toLowerCase();
-    return lowerUrl.endsWith(".hdr") ? "" : envConfig.panoUrl;
+    return isHighDynamicRangeEnvironmentAssetName(envConfig.panoUrl) ? "" : envConfig.panoUrl;
   }, [envConfig.panoUrl]);
 
   const patchPassParams = (passId: EditorPostProcessPassId, patch: Record<string, boolean | number>) => {
