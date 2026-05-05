@@ -222,6 +222,7 @@ export class EditorApp {
     try {
       await this.session.updateSceneEnvConfig(
         {
+          panoAssetName: file.name,
           panoUrl: nextUrl
         },
         "ui",

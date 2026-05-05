@@ -63,6 +63,7 @@ export function applyUploadedAssetToProjectSnapshot(
   if (snapshot.envConfig?.panoUrl === sourceUrl) {
     snapshot.envConfig = {
       ...snapshot.envConfig,
+      panoAssetName: uploadedAsset.originalName,
       panoUrl: uploadedAsset.url,
       panoAssetId: uploadedAsset.assetId
     };

@@ -26,6 +26,7 @@ import { ModelEntityModel } from "./modelEntityModel";
 function normalizeEnvConfig(source?: EditorEnvConfigJSON): ResolvedEditorEnvConfigJSON {
   return {
     panoAssetId: source?.panoAssetId ?? "",
+    panoAssetName: source?.panoAssetName ?? "",
     panoUrl: source?.panoUrl ?? "",
     environment: source?.environment ?? 1,
     environmentIntensity: source?.environmentIntensity ?? DEFAULT_EDITOR_ENVIRONMENT_INTENSITY,
@@ -164,6 +165,7 @@ export class EditorProjectModel {
         : {}),
       envConfig: {
         panoAssetId: this.envConfig.panoAssetId,
+        panoAssetName: this.envConfig.panoAssetName,
         panoUrl: this.envConfig.panoUrl,
         environment: this.envConfig.environment,
         environmentIntensity: this.envConfig.environmentIntensity,

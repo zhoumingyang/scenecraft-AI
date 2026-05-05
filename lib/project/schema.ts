@@ -137,6 +137,7 @@ const editorCameraSchema = z
 const editorEnvConfigSchema = z
   .object({
     panoAssetId: z.string().trim().max(120).optional(),
+    panoAssetName: z.string().trim().max(255).optional(),
     panoUrl: z.string().trim().optional(),
     environment: z.number().finite().optional(),
     environmentIntensity: z.number().finite().optional(),

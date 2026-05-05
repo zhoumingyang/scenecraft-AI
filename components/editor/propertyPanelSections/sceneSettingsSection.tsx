@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import * as THREE from "three";
 import { Box, Checkbox, FormControlLabel, MenuItem, Stack, TextField, Typography } from "@mui/material";
 import { getEditorThemeTokens } from "@/components/editor/theme";
@@ -39,11 +39,18 @@ export function SceneSettingsSection({ envConfig }: SceneSettingsSectionProps) {
   const app = useEditorStore((state) => state.app);
   const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
   const theme = getEditorThemeTokens(editorThemeMode);
+  const [panoPreviewFailed, setPanoPreviewFailed] = useState(false);
+  const panoAssetDisplayName = envConfig.panoAssetName || envConfig.panoUrl;
+  const isHdrPanorama = isHighDynamicRangeEnvironmentAssetName(panoAssetDisplayName);
+
+  useEffect(() => {
+    setPanoPreviewFailed(false);
+  }, [envConfig.panoUrl]);
 
   const panoPreviewUrl = useMemo(() => {
     if (!envConfig.panoUrl) return "";
-    return isHighDynamicRangeEnvironmentAssetName(envConfig.panoUrl) ? "" : envConfig.panoUrl;
-  }, [envConfig.panoUrl]);
+    return isHdrPanorama || panoPreviewFailed ? "" : envConfig.panoUrl;
+  }, [envConfig.panoUrl, isHdrPanorama, panoPreviewFailed]);
 
   const patchPassParams = (passId: EditorPostProcessPassId, patch: Record<string, boolean | number>) => {
     app?.updateScenePostProcessParams(
@@ -77,6 +84,7 @@ export function SceneSettingsSection({ envConfig }: SceneSettingsSectionProps) {
                 component="img"
                 src={panoPreviewUrl}
                 alt="scene pano"
+                onError={() => setPanoPreviewFailed(true)}
                 sx={{
                   width: "100%",
                   height: 92,
@@ -97,7 +105,7 @@ export function SceneSettingsSection({ envConfig }: SceneSettingsSectionProps) {
                 }}
               >
                 <Typography sx={{ fontSize: 11, color: theme.text }}>
-                  {envConfig.panoUrl}
+                  {panoAssetDisplayName}
                 </Typography>
               </Box>
             )}

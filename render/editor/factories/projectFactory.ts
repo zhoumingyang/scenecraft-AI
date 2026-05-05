@@ -36,6 +36,7 @@ export function createDefaultEditorProjectJSON(): EditorProjectJSON {
   return {
     id: projectId,
     envConfig: {
+      panoAssetName: "",
       panoUrl: "",
       environment: 1,
       environmentIntensity: DEFAULT_EDITOR_ENVIRONMENT_INTENSITY,
@@ -61,6 +62,7 @@ export function createEmptyEditorProjectJSON(projectId = createUuid()): EditorPr
   return {
     id: projectId,
     envConfig: {
+      panoAssetName: "",
       panoUrl: "",
       environment: 1,
       environmentIntensity: DEFAULT_EDITOR_ENVIRONMENT_INTENSITY,

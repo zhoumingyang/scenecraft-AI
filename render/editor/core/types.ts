@@ -291,6 +291,7 @@ export type EditorViewportCaptureMode = "viewport" | "clean";
 
 export type EditorEnvConfigJSON = {
   panoAssetId?: string;
+  panoAssetName?: string;
   panoUrl?: string;
   environment?: number;
   environmentIntensity?: number;
