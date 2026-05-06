@@ -24,6 +24,7 @@ function normalizeTexture(source?: TextureSchema | null): ResolvedTextureSchema 
   return {
     assetId: normalizeString(source?.assetId),
     url: normalizeString(source?.url),
+    externalSource: source?.externalSource ?? null,
     offset: normalizeVec2(source?.offset, [0, 0]),
     repeat: normalizeVec2(source?.repeat, [1, 1]),
     rotation: normalizeNumber(source?.rotation, 0)

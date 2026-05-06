@@ -9,10 +9,32 @@ import {
 const trimmedString = (max: number) => z.string().trim().min(1).max(max);
 const optionalTrimmedString = (max: number) => z.string().trim().max(max).optional();
 const numericArraySchema = z.array(z.number().finite()).max(16);
+const externalAssetSourceSchema = z
+  .object({
+    provider: z.literal("polyhaven"),
+    assetId: trimmedString(120),
+    assetType: z.enum(["hdri", "texture"]),
+    displayName: trimmedString(255),
+    pageUrl: trimmedString(2048),
+    licenseLabel: trimmedString(120),
+    authorLabel: trimmedString(255),
+    selectedFile: z
+      .object({
+        url: trimmedString(2048),
+        fileName: trimmedString(255),
+        sizeBytes: z.number().int().nonnegative().nullable().optional(),
+        md5: z.string().trim().max(255).nullable().optional()
+      })
+      .strict(),
+    resolution: trimmedString(40),
+    format: trimmedString(40)
+  })
+  .strict();
 const textureSchema = z
   .object({
     assetId: z.string().trim().max(120).optional(),
     url: z.string().trim().optional(),
+    externalSource: externalAssetSourceSchema.optional(),
     offset: numericArraySchema.optional(),
     repeat: numericArraySchema.optional(),
     rotation: z.number().finite().optional()
@@ -139,6 +161,7 @@ const editorEnvConfigSchema = z
     panoAssetId: z.string().trim().max(120).optional(),
     panoAssetName: z.string().trim().max(255).optional(),
     panoUrl: z.string().trim().optional(),
+    externalSource: externalAssetSourceSchema.optional(),
     environment: z.number().finite().optional(),
     environmentIntensity: z.number().finite().optional(),
     backgroundShow: z.number().finite().optional(),

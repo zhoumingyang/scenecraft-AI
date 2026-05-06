@@ -4,7 +4,13 @@ import { useMemo, useState } from "react";
 import { Box, IconButton, Stack, Tooltip, Typography } from "@mui/material";
 import CenterFocusStrongRoundedIcon from "@mui/icons-material/CenterFocusStrongRounded";
 import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
+import {
+  ExternalAssetBrowserDialog,
+  type ExternalTextureApplyPayload
+} from "@/components/editor/externalAssetBrowserDialog";
+import { isPolyhavenProviderEnabled } from "@/lib/externalAssets/config";
 import { useI18n } from "@/lib/i18n";
+import { createExternalAssetSource } from "@/lib/externalAssets/source";
 import { SCENE_NODE_ID } from "@/render/editor";
 import { useEditorStore } from "@/stores/editorStore";
 import {
@@ -34,7 +40,9 @@ export default function PropertyPanel() {
   const inspectorMode = useEditorStore((state) => state.aiImage.inspectorMode);
   const [open, setOpen] = useState(true);
   const [activeTextureField, setActiveTextureField] = useState<TextureFieldKey | null>(null);
+  const [materialLibraryOpen, setMaterialLibraryOpen] = useState(false);
   const theme = getEditorThemeTokens(editorThemeMode);
+  const isPolyhavenEnabled = isPolyhavenProviderEnabled();
 
   const entityRecord = useMemo(() => {
     const project = app?.projectModel;
@@ -86,6 +94,24 @@ export default function PropertyPanel() {
   const isCurrentEntityIsolated = Boolean(
     canIsolateCurrentEntity && currentIsolatableEntityId && isolatedEntityId === currentIsolatableEntityId
   );
+
+  const handleApplyTextureSet = ({ asset, selections }: ExternalTextureApplyPayload) => {
+    if (!app || entityRecord?.kind !== "mesh") {
+      return;
+    }
+
+    const materialPatch = selections.reduce<Record<string, unknown>>((patch, selection) => {
+      patch[selection.materialField] = {
+        ...entityRecord.item.material[selection.materialField],
+        assetId: "",
+        url: selection.file.url,
+        externalSource: createExternalAssetSource(asset, selection.file)
+      };
+      return patch;
+    }, {});
+
+    app.updateMeshMaterial(entityRecord.item.id, materialPatch);
+  };
 
   return (
     <Box
@@ -233,6 +259,8 @@ export default function PropertyPanel() {
                         entityId={entityRecord.item.id}
                         material={entityRecord.item.material}
                         onTextureConfigOpen={setActiveTextureField}
+                        onMaterialLibraryOpen={() => setMaterialLibraryOpen(true)}
+                        materialLibraryEnabled={isPolyhavenEnabled}
                       />
                     ) : null}
 
@@ -276,6 +304,16 @@ export default function PropertyPanel() {
             title={getTextureDialogTitle(activeTextureField, t)}
             texture={entityRecord.item.material[activeTextureField]}
             onClose={() => setActiveTextureField(null)}
+          />
+        ) : null}
+
+        {entityRecord?.kind === "mesh" && isPolyhavenEnabled ? (
+          <ExternalAssetBrowserDialog
+            open={materialLibraryOpen}
+            theme={theme}
+            assetType="texture"
+            onClose={() => setMaterialLibraryOpen(false)}
+            onApplyTexture={handleApplyTextureSet}
           />
         ) : null}
       </Box>

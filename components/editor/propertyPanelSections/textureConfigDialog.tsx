@@ -121,6 +121,8 @@ export function TextureConfigDialog({
     app.updateMeshMaterial(entityId, {
       [textureField]: {
         ...texture,
+        assetId: "",
+        externalSource: null,
         url: textureUrl
       } as ResolvedTextureSchema
     });
@@ -131,6 +133,8 @@ export function TextureConfigDialog({
     app.updateMeshMaterial(entityId, {
       [textureField]: {
         ...texture,
+        assetId: "",
+        externalSource: null,
         url: imageUrl
       } as ResolvedTextureSchema
     });
@@ -251,6 +255,30 @@ export function TextureConfigDialog({
                   </Stack>
                 )}
               </Box>
+
+              {texture.externalSource ? (
+                <Stack spacing={0.35}>
+                  <Typography sx={{ fontSize: 11, color: "rgba(176,193,228,0.72)" }}>
+                    {t("editor.assets.sourceLine", {
+                      provider: "Poly Haven",
+                      license: texture.externalSource.licenseLabel
+                    })}
+                  </Typography>
+                  <Box
+                    component="a"
+                    href={texture.externalSource.pageUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    sx={{
+                      fontSize: 11,
+                      color: "#dce7ff",
+                      textDecoration: "underline"
+                    }}
+                  >
+                    {t("editor.assets.viewSource")}
+                  </Box>
+                </Stack>
+              ) : null}
 
               <Typography sx={{ fontSize: 12, fontWeight: 600, color: "#dce7ff" }}>
                 {t("editor.properties.uvTransform")}

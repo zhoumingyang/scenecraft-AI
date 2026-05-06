@@ -3,6 +3,7 @@ import type {
   ModelAnimationPlaybackState,
   ModelFileFormat
 } from "../constants/model";
+import type { ExternalAssetSourceJSON } from "@/lib/externalAssets/types";
 
 export type { AssetUnit, ModelAnimationPlaybackState, ModelFileFormat } from "../constants/model";
 export { SCENE_NODE_ID } from "../constants/scene";
@@ -62,6 +63,7 @@ export type EditorMeshUvJSON = {
 export type TextureSchema = {
   assetId?: string;
   url?: string;
+  externalSource?: ExternalAssetSourceJSON | null;
   offset?: number[];
   repeat?: number[];
   rotation?: number;
@@ -70,6 +72,7 @@ export type TextureSchema = {
 export type ResolvedTextureSchema = {
   assetId: string;
   url: string;
+  externalSource: ExternalAssetSourceJSON | null;
   offset: [number, number];
   repeat: [number, number];
   rotation: number;
@@ -293,6 +296,7 @@ export type EditorEnvConfigJSON = {
   panoAssetId?: string;
   panoAssetName?: string;
   panoUrl?: string;
+  externalSource?: ExternalAssetSourceJSON | null;
   environment?: number;
   environmentIntensity?: number;
   backgroundShow?: number;
@@ -304,7 +308,11 @@ export type EditorEnvConfigJSON = {
   postProcessing?: EditorPostProcessingConfigJSON;
 };
 
-export type ResolvedEditorEnvConfigJSON = Omit<Required<EditorEnvConfigJSON>, "postProcessing"> & {
+export type ResolvedEditorEnvConfigJSON = Omit<
+  Required<EditorEnvConfigJSON>,
+  "postProcessing" | "externalSource"
+> & {
+  externalSource: ExternalAssetSourceJSON | null;
   postProcessing: ResolvedEditorPostProcessingConfigJSON;
 };
 

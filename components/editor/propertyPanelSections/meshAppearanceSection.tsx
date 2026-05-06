@@ -92,12 +92,16 @@ type MeshAppearanceSectionProps = {
   entityId: string;
   material: ResolvedMeshMaterialJSON;
   onTextureConfigOpen: (key: TextureFieldKey) => void;
+  onMaterialLibraryOpen: () => void;
+  materialLibraryEnabled: boolean;
 };
 
 export function MeshAppearanceSection({
   entityId,
   material,
-  onTextureConfigOpen
+  onTextureConfigOpen,
+  onMaterialLibraryOpen,
+  materialLibraryEnabled
 }: MeshAppearanceSectionProps) {
   const { t } = useI18n();
   const app = useEditorStore((state) => state.app);
@@ -129,6 +133,25 @@ export function MeshAppearanceSection({
   return (
     <PropertyPanelSection title={t("editor.properties.appearance")}>
       <Stack spacing={0.8}>
+        {materialLibraryEnabled ? (
+          <Button
+            size="small"
+            color="inherit"
+            onClick={onMaterialLibraryOpen}
+            sx={{
+              justifyContent: "center",
+              minHeight: 32,
+              borderRadius: 1,
+              border: theme.sectionBorder,
+              background: theme.inputBg,
+              color: theme.pillText,
+              textTransform: "none"
+            }}
+          >
+            {t("editor.properties.materialLibrary")}
+          </Button>
+        ) : null}
+
         <Stack direction="row" spacing={0.8} alignItems="center">
           <Typography sx={{ width: 78, fontSize: 11, color: theme.text }}>
             {t("editor.properties.color")}

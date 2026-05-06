@@ -23,11 +23,25 @@ import { LightEntityModel } from "./lightEntityModel";
 import { MeshEntityModel } from "./meshEntityModel";
 import { ModelEntityModel } from "./modelEntityModel";
 
+function cloneExternalSource(source: ResolvedEditorEnvConfigJSON["externalSource"]) {
+  if (!source) {
+    return null;
+  }
+
+  return {
+    ...source,
+    selectedFile: {
+      ...source.selectedFile
+    }
+  };
+}
+
 function normalizeEnvConfig(source?: EditorEnvConfigJSON): ResolvedEditorEnvConfigJSON {
   return {
     panoAssetId: source?.panoAssetId ?? "",
     panoAssetName: source?.panoAssetName ?? "",
     panoUrl: source?.panoUrl ?? "",
+    externalSource: source?.externalSource ?? null,
     environment: source?.environment ?? 1,
     environmentIntensity: source?.environmentIntensity ?? DEFAULT_EDITOR_ENVIRONMENT_INTENSITY,
     backgroundShow: source?.backgroundShow ?? 1,
@@ -167,6 +181,7 @@ export class EditorProjectModel {
         panoAssetId: this.envConfig.panoAssetId,
         panoAssetName: this.envConfig.panoAssetName,
         panoUrl: this.envConfig.panoUrl,
+        externalSource: cloneExternalSource(this.envConfig.externalSource) ?? undefined,
         environment: this.envConfig.environment,
         environmentIntensity: this.envConfig.environmentIntensity,
         backgroundShow: this.envConfig.backgroundShow,
@@ -273,6 +288,7 @@ export class EditorProjectModel {
           diffuseMap: {
             assetId: item.material.diffuseMap.assetId,
             url: item.material.diffuseMap.url,
+            externalSource: cloneExternalSource(item.material.diffuseMap.externalSource) ?? undefined,
             offset: [...item.material.diffuseMap.offset],
             repeat: [...item.material.diffuseMap.repeat],
             rotation: item.material.diffuseMap.rotation
@@ -281,6 +297,7 @@ export class EditorProjectModel {
           metalnessMap: {
             assetId: item.material.metalnessMap.assetId,
             url: item.material.metalnessMap.url,
+            externalSource: cloneExternalSource(item.material.metalnessMap.externalSource) ?? undefined,
             offset: [...item.material.metalnessMap.offset],
             repeat: [...item.material.metalnessMap.repeat],
             rotation: item.material.metalnessMap.rotation
@@ -289,6 +306,7 @@ export class EditorProjectModel {
           roughnessMap: {
             assetId: item.material.roughnessMap.assetId,
             url: item.material.roughnessMap.url,
+            externalSource: cloneExternalSource(item.material.roughnessMap.externalSource) ?? undefined,
             offset: [...item.material.roughnessMap.offset],
             repeat: [...item.material.roughnessMap.repeat],
             rotation: item.material.roughnessMap.rotation
@@ -296,6 +314,7 @@ export class EditorProjectModel {
           normalMap: {
             assetId: item.material.normalMap.assetId,
             url: item.material.normalMap.url,
+            externalSource: cloneExternalSource(item.material.normalMap.externalSource) ?? undefined,
             offset: [...item.material.normalMap.offset],
             repeat: [...item.material.normalMap.repeat],
             rotation: item.material.normalMap.rotation
@@ -304,6 +323,7 @@ export class EditorProjectModel {
           aoMap: {
             assetId: item.material.aoMap.assetId,
             url: item.material.aoMap.url,
+            externalSource: cloneExternalSource(item.material.aoMap.externalSource) ?? undefined,
             offset: [...item.material.aoMap.offset],
             repeat: [...item.material.aoMap.repeat],
             rotation: item.material.aoMap.rotation
@@ -314,6 +334,7 @@ export class EditorProjectModel {
           emissiveMap: {
             assetId: item.material.emissiveMap.assetId,
             url: item.material.emissiveMap.url,
+            externalSource: cloneExternalSource(item.material.emissiveMap.externalSource) ?? undefined,
             offset: [...item.material.emissiveMap.offset],
             repeat: [...item.material.emissiveMap.repeat],
             rotation: item.material.emissiveMap.rotation

@@ -109,6 +109,29 @@ export function SceneSettingsSection({ envConfig }: SceneSettingsSectionProps) {
                 </Typography>
               </Box>
             )}
+            {envConfig.externalSource ? (
+              <Stack spacing={0.35}>
+                <Typography sx={{ fontSize: 11, color: theme.mutedText }}>
+                  {t("editor.assets.sourceLine", {
+                    provider: "Poly Haven",
+                    license: envConfig.externalSource.licenseLabel
+                  })}
+                </Typography>
+                <Box
+                  component="a"
+                  href={envConfig.externalSource.pageUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  sx={{
+                    fontSize: 11,
+                    color: theme.titleText,
+                    textDecoration: "underline"
+                  }}
+                >
+                  {t("editor.assets.viewSource")}
+                </Box>
+              </Stack>
+            ) : null}
           </Stack>
         ) : null}
 

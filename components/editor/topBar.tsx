@@ -13,6 +13,10 @@ import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownR
 import CollectionsRoundedIcon from "@mui/icons-material/CollectionsRounded";
 import DropdownMenu, { DropdownMenuItem } from "@/components/common/dropdownMenu";
 import LightingConflictToast from "@/components/editor/lightingConflictToast";
+import {
+  ExternalAssetBrowserDialog,
+  type ExternalHdriApplyPayload
+} from "@/components/editor/externalAssetBrowserDialog";
 import ProjectAiLibraryDialog from "@/components/editor/projectAiLibraryDialog";
 import ProjectSaveDialog from "@/components/editor/projectSaveDialog";
 import ProjectSaveProgressToast from "@/components/editor/projectSaveProgressToast";
@@ -39,6 +43,8 @@ import {
   listProjects,
   updateProject
 } from "@/frontend/api/projects";
+import { isPolyhavenProviderEnabled } from "@/lib/externalAssets/config";
+import { createExternalAssetSource } from "@/lib/externalAssets/source";
 import { createEmptyProjectAiLibrary } from "@/lib/project/schema";
 import { useI18n, TranslationKey } from "@/lib/i18n";
 import type {
@@ -54,6 +60,7 @@ import type {
   ProjectAiLibraryJSON
 } from "@/render/editor";
 import {
+  SCENE_NODE_ID,
   createDefaultEditorProjectJSON,
   inferModelFileFormat,
   isHighDynamicRangeEnvironmentAssetName
@@ -74,7 +81,8 @@ const projectOptions: SelectOption[] = [
 
 const importOptions: SelectOption[] = [
   { value: "model", labelKey: "editor.import.model" },
-  { value: "pano", labelKey: "editor.import.pano" }
+  { value: "pano", labelKey: "editor.import.pano" },
+  { value: "libraryHdri", labelKey: "editor.import.libraryHdri" }
 ];
 
 const cameraOptions: SelectOption[] = [
@@ -213,7 +221,9 @@ export default function TopBar() {
   const [isProjectListLoading, setIsProjectListLoading] = useState(false);
   const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
   const [projectListError, setProjectListError] = useState<string | null>(null);
+  const [polyhavenHdriDialogOpen, setPolyhavenHdriDialogOpen] = useState(false);
   const theme = getEditorThemeTokens(editorThemeMode);
+  const isPolyhavenEnabled = isPolyhavenProviderEnabled();
 
   const activeConfig = dropdownConfigs.find((item) => item.id === activeMenuId) || null;
   const isSaving = saveStatus.phase === "saving";
@@ -271,6 +281,14 @@ export default function TopBar() {
 
   const onImportPano = () => {
     panoImportInputRef.current?.click();
+  };
+
+  const onImportLibraryHdri = () => {
+    if (!isPolyhavenEnabled) {
+      return;
+    }
+
+    setPolyhavenHdriDialogOpen(true);
   };
 
   const onImportModelFile = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -733,10 +751,14 @@ export default function TopBar() {
 
   const createMenuItem = (
     option: SelectOption | { value: LightPresetId; labelKey: TranslationKey },
-    kind: "default" | "lightPreset" = "default"
+    kind: "default" | "lightPreset" = "default",
+    options?: {
+      disabled?: boolean;
+    }
   ): DropdownMenuItem => ({
     key: `${kind}:${option.value}`,
     label: t(option.labelKey),
+    disabled: options?.disabled,
     onClick: async () => {
       if (!activeConfig) return;
 
@@ -754,6 +776,7 @@ export default function TopBar() {
       if (activeConfig.id === "import") {
         if (option.value === "model") onImportModel();
         if (option.value === "pano") onImportPano();
+        if (option.value === "libraryHdri") onImportLibraryHdri();
         closeMenu();
         return;
       }
@@ -815,9 +838,27 @@ export default function TopBar() {
               },
               ...lightPresetOptions.map((option) => createMenuItem(option, "lightPreset"))
             ]
-          : activeConfig.options.map((option) => createMenuItem(option)),
-    [activeConfig, app, t]
+          : activeConfig.options.map((option) =>
+              createMenuItem(option, "default", {
+                disabled: option.value === "libraryHdri" && !isPolyhavenEnabled
+              })
+            ),
+    [activeConfig, app, isPolyhavenEnabled, t]
   );
+
+  const onApplyExternalHdri = ({ asset, file }: ExternalHdriApplyPayload) => {
+    if (!app) {
+      return;
+    }
+
+    app.updateSceneEnvConfig({
+      panoAssetId: "",
+      panoAssetName: file.fileName,
+      panoUrl: file.url,
+      externalSource: createExternalAssetSource(asset, file)
+    });
+    app.setSelectedEntity(SCENE_NODE_ID);
+  };
 
   return (
     <>
@@ -834,6 +875,14 @@ export default function TopBar() {
         accept="image/*,.hdr,.exr"
         onChange={onImportPanoFile}
         style={{ display: "none" }}
+      />
+
+      <ExternalAssetBrowserDialog
+        open={polyhavenHdriDialogOpen}
+        theme={theme}
+        assetType="hdri"
+        onClose={() => setPolyhavenHdriDialogOpen(false)}
+        onApplyHdri={onApplyExternalHdri}
       />
 
       <Stack
