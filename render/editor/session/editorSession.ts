@@ -1,5 +1,6 @@
 import * as THREE from "three";
 
+import type { ExternalAssetSourceJSON } from "@/lib/externalAssets/types";
 import type { Ai3DPlan, Ai3DMeshDraft } from "../ai3d/plan";
 import { buildAi3DMeshDrafts } from "../ai3d/plan";
 import type { EditorCommand, MeshMaterialPatch } from "../core/commands";
@@ -604,6 +605,7 @@ export class EditorSession {
       label: getFileBaseName(file.name) || createDefaultModelLabel(this.projectModel.models.size),
       source: objectUrl,
       format,
+      externalSource: null,
       assetUnit: "m",
       assetImportScale: 1,
       animations: asset.animations,
@@ -623,6 +625,50 @@ export class EditorSession {
     return {
       entityId: model.id,
       sourceUrl: objectUrl
+    };
+  }
+
+  async importModelFromSource(
+    input: {
+      sourceUrl: string;
+      format: "gltf" | "fbx";
+      label: string;
+      externalSource: ExternalAssetSourceJSON;
+    },
+    source: SyncSource = "ui"
+  ) {
+    if (!this.projectModel) {
+      await this.loadProject(createEmptyEditorProjectJSON());
+    }
+    if (!this.projectModel) return null;
+
+    const asset = await this.runtime.modelLoaderFactory.load(input.sourceUrl, input.format);
+    const model = this.projectModel.addModel({
+      id: createEntityId("model"),
+      label: input.label.trim() || createDefaultModelLabel(this.projectModel.models.size),
+      source: input.sourceUrl,
+      sourceAssetId: "",
+      externalSource: input.externalSource,
+      format: input.format,
+      assetUnit: "m",
+      assetImportScale: 1,
+      animations: asset.animations,
+      activeAnimationId: asset.animations[0]?.id ?? null,
+      animationTimeScale: 1,
+      animationPlaybackState: asset.animations.length > 0 ? "playing" : "stopped"
+    });
+
+    this.registry.create(model);
+    this.emit({
+      type: "entityUpdated",
+      entityId: model.id,
+      entityKind: "model",
+      source
+    });
+    this.setSelectedEntity(model.id, source);
+    return {
+      entityId: model.id,
+      sourceUrl: input.sourceUrl
     };
   }
 
@@ -1051,6 +1097,8 @@ export class EditorSession {
         id: createEntityId("model"),
         label: record.item.label,
         source: record.item.source,
+        sourceAssetId: record.item.sourceAssetId,
+        externalSource: record.item.externalSource ?? undefined,
         format: record.item.format,
         assetUnit: record.item.assetUnit,
         assetImportScale: record.item.assetImportScale,

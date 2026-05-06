@@ -3,7 +3,8 @@ import type {
   EditorModelJSON,
   ModelAnimationClipJSON,
   ModelAnimationPlaybackState,
-  ModelFileFormat
+  ModelFileFormat,
+  ResolvedEditorEnvConfigJSON
 } from "../core/types";
 import {
   assetUnitToMeters,
@@ -23,6 +24,7 @@ import { BaseEntityModel } from "./baseEntity";
 export class ModelEntityModel extends BaseEntityModel {
   source: string;
   sourceAssetId: string;
+  externalSource: ResolvedEditorEnvConfigJSON["externalSource"];
   format: ModelFileFormat;
   assetUnit: AssetUnit;
   assetImportScale: number;
@@ -36,6 +38,7 @@ export class ModelEntityModel extends BaseEntityModel {
     super(normalizeId("model", source.id, index), source);
     this.source = normalizeString(source.source);
     this.sourceAssetId = normalizeString(source.sourceAssetId);
+    this.externalSource = source.externalSource ?? null;
     this.format = normalizeModelFormat(source.format, "glb");
     this.assetUnit = normalizeAssetUnit(source.assetUnit, "unknown");
     this.assetImportScale = normalizePositiveNumber(source.assetImportScale, 1);

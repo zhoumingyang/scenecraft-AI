@@ -28,7 +28,10 @@ import {
   readImageDimensions,
   syncEditorProjectSearchParam
 } from "@/components/editor/projectPersistence";
-import type { ExternalHdriApplyPayload } from "@/components/editor/externalAssetBrowserDialog";
+import type {
+  ExternalHdriApplyPayload,
+  ExternalModelApplyPayload
+} from "@/components/editor/externalAssetBrowserDialog";
 import { deleteProject, getProject, listProjects, createProject, updateProject } from "@/frontend/api/projects";
 import { isPolyhavenProviderEnabled } from "@/lib/externalAssets/config";
 import type { TopBarTranslate } from "./types";
@@ -81,6 +84,7 @@ export function useTopBarProjectActions(t: TopBarTranslate) {
   const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
   const [projectListError, setProjectListError] = useState<string | null>(null);
   const [polyhavenHdriDialogOpen, setPolyhavenHdriDialogOpen] = useState(false);
+  const [polyhavenModelDialogOpen, setPolyhavenModelDialogOpen] = useState(false);
   const isPolyhavenEnabled = isPolyhavenProviderEnabled();
   const isSaving = saveStatus.phase === "saving";
   const aiLibraryAssetCount =
@@ -156,6 +160,14 @@ export function useTopBarProjectActions(t: TopBarTranslate) {
     }
 
     setPolyhavenHdriDialogOpen(true);
+  };
+
+  const onImportLibraryModel = () => {
+    if (!isPolyhavenEnabled) {
+      return;
+    }
+
+    setPolyhavenModelDialogOpen(true);
   };
 
   const onImportModelFile = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -422,12 +434,26 @@ export function useTopBarProjectActions(t: TopBarTranslate) {
     app.setSelectedEntity(SCENE_NODE_ID);
   };
 
+  const onApplyExternalModel = async ({ asset, file }: ExternalModelApplyPayload) => {
+    if (!app) {
+      return;
+    }
+
+    await app.importModelFromSource({
+      sourceUrl: file.url,
+      format: file.format,
+      label: asset.displayName,
+      externalSource: createExternalAssetSource(asset, file)
+    });
+  };
+
   return {
     aiLibraryAssetCount,
     aiLibraryDialogOpen,
     app,
     closeAiLibraryDialog: () => setAiLibraryDialogOpen(false),
     closePolyhavenHdriDialog: () => setPolyhavenHdriDialogOpen(false),
+    closePolyhavenModelDialog: () => setPolyhavenModelDialogOpen(false),
     closeProjectListDialog: () => setProjectListDialogOpen(false),
     closeProjectSaveDialog: () => setProjectSaveDialogOpen(false),
     currentProjectMeta,
@@ -439,11 +465,13 @@ export function useTopBarProjectActions(t: TopBarTranslate) {
     loadedAiLibrary,
     modelImportInputRef,
     onApplyExternalHdri,
+    onApplyExternalModel,
     onClearProject,
     onCreateProject,
     onDeleteAiLibraryAsset,
     onDeleteProject,
     onImportLibraryHdri,
+    onImportLibraryModel,
     onImportModel,
     onImportModelFile,
     onImportPano,
@@ -455,6 +483,7 @@ export function useTopBarProjectActions(t: TopBarTranslate) {
     panoImportInputRef,
     pendingAiImageGenerations,
     polyhavenHdriDialogOpen,
+    polyhavenModelDialogOpen,
     projectListDialogOpen,
     projectListError,
     projectSaveDialogOpen,

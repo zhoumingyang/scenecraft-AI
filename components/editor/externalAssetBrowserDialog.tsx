@@ -18,6 +18,7 @@ import {
 import { useI18n } from "@/lib/i18n";
 import {
   selectHdriFile,
+  selectModelFile,
   selectTextureImportFiles
 } from "@/lib/externalAssets/source";
 import type {
@@ -27,13 +28,19 @@ import { useEditorStore } from "@/stores/editorStore";
 import type { EditorThemeTokens } from "./theme";
 import type {
   ExternalHdriApplyPayload,
+  ExternalModelApplyPayload,
   ExternalTextureApplyPayload
 } from "./externalAssets/types";
 import { HdriAssetDetailPanel } from "./externalAssets/hdriAssetDetailPanel";
+import { ModelAssetDetailPanel } from "./externalAssets/modelAssetDetailPanel";
 import { TextureAssetDetailPanel } from "./externalAssets/textureAssetDetailPanel";
 import { useExternalAssetBrowser } from "./externalAssets/useExternalAssetBrowser";
 
-export type { ExternalHdriApplyPayload, ExternalTextureApplyPayload } from "./externalAssets/types";
+export type {
+  ExternalHdriApplyPayload,
+  ExternalModelApplyPayload,
+  ExternalTextureApplyPayload
+} from "./externalAssets/types";
 
 type ExternalAssetBrowserDialogProps = {
   open: boolean;
@@ -42,6 +49,7 @@ type ExternalAssetBrowserDialogProps = {
   onClose: () => void;
   onApplyHdri?: (payload: ExternalHdriApplyPayload) => void;
   onApplyTexture?: (payload: ExternalTextureApplyPayload) => void;
+  onApplyModel?: (payload: ExternalModelApplyPayload) => Promise<void> | void;
 };
 
 export function ExternalAssetBrowserDialog({
@@ -50,7 +58,8 @@ export function ExternalAssetBrowserDialog({
   assetType,
   onClose,
   onApplyHdri,
-  onApplyTexture
+  onApplyTexture,
+  onApplyModel
 }: ExternalAssetBrowserDialogProps) {
   const { t } = useI18n();
   const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
@@ -77,13 +86,14 @@ export function ExternalAssetBrowserDialog({
     setSelectedFormat,
     submitSearch,
     hdriDetail,
-    textureDetail
+    textureDetail,
+    modelDetail
   } = useExternalAssetBrowser({
     open,
     assetType
   });
 
-  const handleApply = () => {
+  const handleApply = async () => {
     if (!selectedAssetDetail) {
       return;
     }
@@ -103,6 +113,27 @@ export function ExternalAssetBrowserDialog({
       return;
     }
 
+    if (selectedAssetDetail.assetType === "model") {
+      const file = selectModelFile(selectedAssetDetail.modelFiles, selectedResolution, selectedFormat);
+      if (!file) {
+        setErrorMessage(t("editor.assets.noCompatibleFile"));
+        return;
+      }
+
+      try {
+        await onApplyModel?.({
+          asset: selectedAssetDetail,
+          file
+        });
+        onClose();
+      } catch (error) {
+        setErrorMessage(
+          error instanceof Error ? error.message : t("editor.import.modelLoadError")
+        );
+      }
+      return;
+    }
+
     const selections = selectTextureImportFiles(selectedAssetDetail, selectedResolution);
     if (selections.length === 0) {
       setErrorMessage(t("editor.assets.noCompatibleMaps"));
@@ -117,7 +148,11 @@ export function ExternalAssetBrowserDialog({
   };
 
   const dialogTitle =
-    assetType === "hdri" ? t("editor.assets.hdriLibraryTitle") : t("editor.assets.textureLibraryTitle");
+    assetType === "hdri"
+      ? t("editor.assets.hdriLibraryTitle")
+      : assetType === "texture"
+        ? t("editor.assets.textureLibraryTitle")
+        : t("editor.assets.modelLibraryTitle");
 
   return (
     <Dialog
@@ -383,6 +418,16 @@ export function ExternalAssetBrowserDialog({
                 hdriDetail ? (
                   <HdriAssetDetailPanel
                     asset={hdriDetail}
+                    theme={theme}
+                    selectedResolution={selectedResolution}
+                    selectedFormat={selectedFormat}
+                    onResolutionChange={setSelectedResolution}
+                    onFormatChange={setSelectedFormat}
+                    onApply={handleApply}
+                  />
+                ) : modelDetail ? (
+                  <ModelAssetDetailPanel
+                    asset={modelDetail}
                     theme={theme}
                     selectedResolution={selectedResolution}
                     selectedFormat={selectedFormat}

@@ -1,5 +1,6 @@
 import type * as THREE from "three";
 
+import type { ExternalAssetSourceJSON } from "@/lib/externalAssets/types";
 import type { Ai3DPlan } from "./ai3d/plan";
 import type { EditorCommand, MeshMaterialPatch } from "./core/commands";
 import type { EditorAppEvent, EditorAppListener } from "./core/events";
@@ -244,6 +245,18 @@ export class EditorApp {
 
   async importModel(file: File, source: SyncSource = "ui") {
     return this.session.importModel(file, source);
+  }
+
+  async importModelFromSource(
+    input: {
+      sourceUrl: string;
+      format: "gltf" | "fbx";
+      label: string;
+      externalSource: ExternalAssetSourceJSON;
+    },
+    source: SyncSource = "ui"
+  ) {
+    return this.session.importModelFromSource(input, source);
   }
 
   updateEntityTransform(entityId: string, patch: TransformPatch, source: SyncSource = "ui") {

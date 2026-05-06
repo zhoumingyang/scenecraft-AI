@@ -14,7 +14,8 @@ const projectOptions: SelectOption[] = [
 const importOptions: SelectOption[] = [
   { value: "model", labelKey: "editor.import.model" },
   { value: "pano", labelKey: "editor.import.pano" },
-  { value: "libraryHdri", labelKey: "editor.import.libraryHdri" }
+  { value: "libraryHdri", labelKey: "editor.import.libraryHdri" },
+  { value: "libraryModel", labelKey: "editor.import.libraryModel" }
 ];
 
 const cameraOptions: SelectOption[] = [

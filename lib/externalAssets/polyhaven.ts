@@ -1,11 +1,14 @@
 import type {
   ExternalAssetDetail,
   ExternalAssetFileOption,
+  ExternalAssetIncludedFile,
   ExternalAssetListItem,
   ExternalAssetListResult,
+  ExternalModelFileOption,
   ExternalAssetProvider,
   ExternalAssetTextureMap,
   ExternalAssetType,
+  SupportedExternalModelFormat,
   SupportedMaterialTextureField
 } from "./types";
 import { getPolyhavenRequestIdentity } from "./config";
@@ -30,12 +33,17 @@ type PolyhavenAssetSummary = {
 
 type PolyhavenInfoResponse = PolyhavenAssetSummary & {
   whitebalance?: number | null;
+  lods?: number[];
 };
 
 type PolyhavenFileLeaf = {
   url?: string;
   size?: number;
   md5?: string;
+};
+
+type PolyhavenFileWithIncludesLeaf = PolyhavenFileLeaf & {
+  include?: Record<string, PolyhavenFileLeaf>;
 };
 
 type PolyhavenHdriFilesResponse = {
@@ -47,6 +55,13 @@ type PolyhavenTextureFilesResponse = Record<
   string,
   Record<string, Record<string, PolyhavenFileLeaf>> | PolyhavenFileLeaf | undefined
 >;
+
+type PolyhavenModelFilesResponse = {
+  blend?: Record<string, Record<string, PolyhavenFileWithIncludesLeaf>>;
+  gltf?: Record<string, Record<string, PolyhavenFileWithIncludesLeaf>>;
+  fbx?: Record<string, Record<string, PolyhavenFileWithIncludesLeaf>>;
+  usd?: Record<string, Record<string, PolyhavenFileWithIncludesLeaf>>;
+};
 
 type PolyhavenListAssetsResponse = Record<string, PolyhavenAssetSummary>;
 type PolyhavenCategoriesResponse = Record<string, number>;
@@ -82,7 +97,15 @@ const TEXTURE_MAP_PRIORITY: Array<{
 ];
 
 function normalizeAssetTypeForApi(assetType: ExternalAssetType) {
-  return assetType === "hdri" ? "hdris" : "textures";
+  if (assetType === "hdri") {
+    return "hdris";
+  }
+
+  if (assetType === "texture") {
+    return "textures";
+  }
+
+  return "models";
 }
 
 function buildPolyhavenPageUrl(assetId: string) {
@@ -259,6 +282,64 @@ function extractFileOptions(tree: Record<string, Record<string, PolyhavenFileLea
   return options.sort(compareFileOptions);
 }
 
+function toIncludedFile(path: string, value: PolyhavenFileLeaf): ExternalAssetIncludedFile | null {
+  if (typeof value.url !== "string" || !value.url.trim()) {
+    return null;
+  }
+
+  return {
+    path,
+    url: value.url,
+    sizeBytes: typeof value.size === "number" ? value.size : null,
+    md5: typeof value.md5 === "string" ? value.md5 : null
+  };
+}
+
+function normalizeModelFormat(value: string): SupportedExternalModelFormat | null {
+  if (value === "gltf" || value === "fbx") {
+    return value;
+  }
+
+  return null;
+}
+
+function extractModelFileOptions(files: PolyhavenModelFilesResponse): ExternalModelFileOption[] {
+  const options: ExternalModelFileOption[] = [];
+
+  Object.entries(files).forEach(([rawFormat, tree]) => {
+    const format = normalizeModelFormat(rawFormat);
+    if (!format || !tree || typeof tree !== "object") {
+      return;
+    }
+
+    Object.entries(tree).forEach(([resolution, formats]) => {
+      if (!formats || typeof formats !== "object") {
+        return;
+      }
+
+      Object.values(formats).forEach((file) => {
+        if (!file || typeof file.url !== "string" || !file.url.trim()) {
+          return;
+        }
+
+        const includes = file.include && typeof file.include === "object"
+          ? Object.entries(file.include)
+              .map(([path, dependency]) => toIncludedFile(path, dependency))
+              .filter((dependency): dependency is ExternalAssetIncludedFile => dependency !== null)
+          : [];
+
+        options.push({
+          ...toFileOption(file.url, resolution, format, file),
+          format,
+          includes
+        });
+      });
+    });
+  });
+
+  return options.sort(compareFileOptions);
+}
+
 function normalizeTextureMapKey(value: string) {
   return value.trim().toLowerCase().replace(/[\s-]+/g, "_");
 }
@@ -332,6 +413,24 @@ function listTextureResolutions(textureMaps: ExternalAssetTextureMap[]) {
   return Array.from(resolutions).sort((left, right) => normalizeResolutionRank(left) - normalizeResolutionRank(right));
 }
 
+function listModelResolutions(modelFiles: ExternalModelFileOption[]) {
+  return Array.from(new Set(modelFiles.map((file) => file.resolution))).sort(
+    (left, right) => normalizeResolutionRank(left) - normalizeResolutionRank(right)
+  );
+}
+
+function listModelFormats(modelFiles: ExternalModelFileOption[]): SupportedExternalModelFormat[] {
+  const winners = new Set<SupportedExternalModelFormat>();
+  modelFiles.forEach((file) => {
+    winners.add(file.format);
+  });
+  return Array.from(winners.values()).sort((left, right) => {
+    if (left === right) return 0;
+    if (left === "gltf") return -1;
+    return 1;
+  });
+}
+
 export const polyhavenProvider: ExternalAssetProvider = {
   async listAssets(input) {
     const assetType = input.assetType;
@@ -381,7 +480,7 @@ export const polyhavenProvider: ExternalAssetProvider = {
   async getAssetDetail(input) {
     const [info, files] = await Promise.all([
       fetchPolyhavenJson<PolyhavenInfoResponse>(`/info/${encodePathSegment(input.assetId)}`),
-      fetchPolyhavenJson<PolyhavenHdriFilesResponse | PolyhavenTextureFilesResponse>(
+      fetchPolyhavenJson<PolyhavenHdriFilesResponse | PolyhavenTextureFilesResponse | PolyhavenModelFilesResponse>(
         `/files/${encodePathSegment(input.assetId)}`
       )
     ]);
@@ -400,6 +499,21 @@ export const polyhavenProvider: ExternalAssetProvider = {
             ? hdriFiles.tonemapped.url
             : null,
         fileOptions
+      } satisfies ExternalAssetDetail;
+    }
+
+    if (input.assetType === "model") {
+      const modelFiles = extractModelFileOptions(files as PolyhavenModelFilesResponse);
+
+      return {
+        ...baseItem,
+        assetType: "model",
+        lods: Array.isArray(info.lods)
+          ? info.lods.filter((lod): lod is number => typeof lod === "number" && Number.isFinite(lod))
+          : undefined,
+        modelFiles,
+        availableResolutions: listModelResolutions(modelFiles),
+        availableFormats: listModelFormats(modelFiles)
       } satisfies ExternalAssetDetail;
     }
 

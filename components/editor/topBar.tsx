@@ -31,6 +31,7 @@ export default function TopBar() {
     isPolyhavenEnabled: actions.isPolyhavenEnabled,
     onCreateProject: actions.onCreateProject,
     onImportLibraryHdri: actions.onImportLibraryHdri,
+    onImportLibraryModel: actions.onImportLibraryModel,
     onImportModel: actions.onImportModel,
     onImportPano: actions.onImportPano,
     onOpenProjectSelectDialog: actions.openProjectSelectDialog,
@@ -61,6 +62,14 @@ export default function TopBar() {
         assetType="hdri"
         onClose={actions.closePolyhavenHdriDialog}
         onApplyHdri={actions.onApplyExternalHdri}
+      />
+
+      <ExternalAssetBrowserDialog
+        open={actions.polyhavenModelDialogOpen}
+        theme={theme}
+        assetType="model"
+        onClose={actions.closePolyhavenModelDialog}
+        onApplyModel={actions.onApplyExternalModel}
       />
 
       <TopBarActionBar

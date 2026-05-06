@@ -9,6 +9,7 @@ type UseTopBarMenuOptions = {
   isPolyhavenEnabled: boolean;
   onCreateProject: () => Promise<void>;
   onImportLibraryHdri: () => void;
+  onImportLibraryModel: () => void;
   onImportModel: () => void;
   onImportPano: () => void;
   onOpenProjectSelectDialog: () => Promise<void>;
@@ -23,6 +24,7 @@ export function useTopBarMenu({
   isPolyhavenEnabled,
   onCreateProject,
   onImportLibraryHdri,
+  onImportLibraryModel,
   onImportModel,
   onImportPano,
   onOpenProjectSelectDialog,
@@ -80,6 +82,8 @@ export function useTopBarMenu({
           onImportPano();
         } else if (option.value === "libraryHdri") {
           onImportLibraryHdri();
+        } else if (option.value === "libraryModel") {
+          onImportLibraryModel();
         }
         closeMenu();
         return;
@@ -147,7 +151,8 @@ export function useTopBarMenu({
 
     return activeConfig.options.map((option) =>
       createMenuItem(option, "default", {
-        disabled: option.value === "libraryHdri" && !isPolyhavenEnabled
+        disabled:
+          (option.value === "libraryHdri" || option.value === "libraryModel") && !isPolyhavenEnabled
       })
     );
   }, [activeConfig, app, isPolyhavenEnabled, t]);

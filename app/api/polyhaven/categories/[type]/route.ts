@@ -7,7 +7,7 @@ import { getSession } from "@/lib/server/auth/getSession";
 import { getErrorMessage } from "@/lib/server/http/getErrorMessage";
 
 function parseAssetType(value: string): ExternalAssetType {
-  if (value === "hdri" || value === "texture") {
+  if (value === "hdri" || value === "texture" || value === "model") {
     return value;
   }
 

@@ -35,6 +35,7 @@ export type EditorModelJSON = {
   label?: string;
   source: string;
   sourceAssetId?: string;
+  externalSource?: ExternalAssetSourceJSON | null;
   format?: ModelFileFormat;
   assetUnit?: AssetUnit;
   assetImportScale?: number;

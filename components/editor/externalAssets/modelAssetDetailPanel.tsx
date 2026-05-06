@@ -1,13 +1,13 @@
 "use client";
 
-import { Button, MenuItem, Stack, TextField } from "@mui/material";
+import { Button, MenuItem, Stack, TextField, Typography } from "@mui/material";
 import type { EditorThemeTokens } from "@/components/editor/theme";
 import { useI18n } from "@/lib/i18n";
-import type { ExternalHdriAssetDetail } from "@/lib/externalAssets/types";
+import type { ExternalModelAssetDetail } from "@/lib/externalAssets/types";
 import { ExternalAssetDetailHeader } from "./externalAssetDetailHeader";
 
-type HdriAssetDetailPanelProps = {
-  asset: ExternalHdriAssetDetail;
+type ModelAssetDetailPanelProps = {
+  asset: ExternalModelAssetDetail;
   theme: EditorThemeTokens;
   selectedResolution: string;
   selectedFormat: string;
@@ -16,7 +16,7 @@ type HdriAssetDetailPanelProps = {
   onApply: () => void | Promise<void>;
 };
 
-export function HdriAssetDetailPanel({
+export function ModelAssetDetailPanel({
   asset,
   theme,
   selectedResolution,
@@ -24,26 +24,41 @@ export function HdriAssetDetailPanel({
   onResolutionChange,
   onFormatChange,
   onApply
-}: HdriAssetDetailPanelProps) {
+}: ModelAssetDetailPanelProps) {
   const { t } = useI18n();
-  const availableResolutions = Array.from(new Set(asset.fileOptions.map((file) => file.resolution)));
-  const availableFormats = Array.from(
-    new Set(
-      asset.fileOptions
-        .filter((file) => file.resolution === selectedResolution)
-        .map((file) => file.format)
-    )
-  );
+  const availableFormats = Array.from(new Set(
+    asset.modelFiles
+      .filter((file) => file.resolution === selectedResolution)
+      .map((file) => file.format)
+  ));
 
   return (
     <>
-      <ExternalAssetDetailHeader
-        asset={asset}
-        theme={theme}
-        previewUrl={asset.tonemappedUrl || asset.thumbnailUrl}
-      />
+      <ExternalAssetDetailHeader asset={asset} theme={theme} previewUrl={asset.thumbnailUrl} />
 
       <Stack spacing={1}>
+        {asset.categories.length > 0 ? (
+          <Stack spacing={0.35}>
+            <Typography sx={{ fontSize: 12, fontWeight: 700, color: theme.titleText }}>
+              {t("editor.assets.categories")}
+            </Typography>
+            <Typography sx={{ fontSize: 12, color: theme.text }}>
+              {asset.categories.join(", ")}
+            </Typography>
+          </Stack>
+        ) : null}
+
+        {asset.tags.length > 0 ? (
+          <Stack spacing={0.35}>
+            <Typography sx={{ fontSize: 12, fontWeight: 700, color: theme.titleText }}>
+              {t("editor.assets.tags")}
+            </Typography>
+            <Typography sx={{ fontSize: 12, color: theme.text }}>
+              {asset.tags.join(", ")}
+            </Typography>
+          </Stack>
+        ) : null}
+
         <TextField
           select
           size="small"
@@ -57,7 +72,7 @@ export function HdriAssetDetailPanel({
             }
           }}
         >
-          {availableResolutions.map((resolution) => (
+          {asset.availableResolutions.map((resolution) => (
             <MenuItem key={resolution} value={resolution}>
               {resolution.toUpperCase()}
             </MenuItem>
@@ -83,11 +98,24 @@ export function HdriAssetDetailPanel({
             </MenuItem>
           ))}
         </TextField>
+
+        {asset.lods && asset.lods.length > 0 ? (
+          <Stack spacing={0.55}>
+            <Typography sx={{ fontSize: 12, fontWeight: 700, color: theme.titleText }}>
+              {t("editor.assets.modelLods")}
+            </Typography>
+            <Typography sx={{ fontSize: 12, color: theme.text }}>
+              {asset.lods.join(" / ")}
+            </Typography>
+          </Stack>
+        ) : null}
       </Stack>
 
       <Button
         color="inherit"
-        onClick={onApply}
+        onClick={() => {
+          void onApply();
+        }}
         sx={{
           mt: "auto",
           minHeight: 40,
@@ -98,7 +126,7 @@ export function HdriAssetDetailPanel({
           textTransform: "none"
         }}
       >
-        {t("editor.assets.applyHdri")}
+        {t("editor.assets.importModel")}
       </Button>
     </>
   );

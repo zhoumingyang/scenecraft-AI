@@ -13,7 +13,7 @@ const externalAssetSourceSchema = z
   .object({
     provider: z.literal("polyhaven"),
     assetId: trimmedString(120),
-    assetType: z.enum(["hdri", "texture"]),
+    assetType: z.enum(["hdri", "texture", "model"]),
     displayName: trimmedString(255),
     pageUrl: trimmedString(2048),
     licenseLabel: trimmedString(120),
@@ -66,6 +66,7 @@ const editorModelSchema = z
     label: optionalTrimmedString(120),
     source: trimmedString(2048),
     sourceAssetId: z.string().trim().max(120).optional(),
+    externalSource: externalAssetSourceSchema.nullable().optional(),
     format: z.enum(MODEL_FILE_FORMATS).optional(),
     assetUnit: z.enum(ASSET_UNITS).optional(),
     assetImportScale: z.number().finite().positive().optional(),

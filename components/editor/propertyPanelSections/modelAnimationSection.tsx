@@ -17,6 +17,7 @@ import SkipNextRoundedIcon from "@mui/icons-material/SkipNextRounded";
 import StopRoundedIcon from "@mui/icons-material/StopRounded";
 import PropertyPanelSection from "@/components/common/propertyPanelSection";
 import { useI18n } from "@/lib/i18n";
+import type { ExternalAssetSourceJSON } from "@/lib/externalAssets/types";
 import type { ModelAnimationClipJSON, ModelAnimationPlaybackState } from "@/render/editor";
 import { useEditorStore } from "@/stores/editorStore";
 
@@ -26,6 +27,7 @@ type ModelAnimationSectionProps = {
   activeAnimationId: string | null;
   timeScale: number;
   playbackState: ModelAnimationPlaybackState;
+  externalSource?: ExternalAssetSourceJSON | null;
 };
 
 function formatDuration(seconds: number) {
@@ -49,7 +51,8 @@ export function ModelAnimationSection({
   animations,
   activeAnimationId,
   timeScale,
-  playbackState
+  playbackState,
+  externalSource
 }: ModelAnimationSectionProps) {
   const { t } = useI18n();
   const app = useEditorStore((state) => state.app);
@@ -83,9 +86,35 @@ export function ModelAnimationSection({
   if (animations.length === 0) {
     return (
       <PropertyPanelSection title={t("editor.properties.animation")}>
-        <Typography sx={{ fontSize: 12, color: "rgba(176,193,228,0.72)" }}>
-          {t("editor.properties.animationEmpty")}
-        </Typography>
+        <Stack spacing={0.8}>
+          {externalSource ? (
+            <Stack spacing={0.35}>
+              <Typography sx={{ fontSize: 11, color: "rgba(176,193,228,0.72)" }}>
+                {t("editor.assets.sourceLine", {
+                  provider: "Poly Haven",
+                  license: externalSource.licenseLabel
+                })}
+              </Typography>
+              <Box
+                component="a"
+                href={externalSource.pageUrl}
+                target="_blank"
+                rel="noreferrer"
+                sx={{
+                  fontSize: 11,
+                  color: "#dce7ff",
+                  textDecoration: "underline"
+                }}
+              >
+                {t("editor.assets.viewSource")}
+              </Box>
+            </Stack>
+          ) : null}
+
+          <Typography sx={{ fontSize: 12, color: "rgba(176,193,228,0.72)" }}>
+            {t("editor.properties.animationEmpty")}
+          </Typography>
+        </Stack>
       </PropertyPanelSection>
     );
   }
@@ -93,6 +122,30 @@ export function ModelAnimationSection({
   return (
     <PropertyPanelSection title={t("editor.properties.animation")}>
       <Stack spacing={1.05}>
+        {externalSource ? (
+          <Stack spacing={0.35}>
+            <Typography sx={{ fontSize: 11, color: "rgba(176,193,228,0.72)" }}>
+              {t("editor.assets.sourceLine", {
+                provider: "Poly Haven",
+                license: externalSource.licenseLabel
+              })}
+            </Typography>
+            <Box
+              component="a"
+              href={externalSource.pageUrl}
+              target="_blank"
+              rel="noreferrer"
+              sx={{
+                fontSize: 11,
+                color: "#dce7ff",
+                textDecoration: "underline"
+              }}
+            >
+              {t("editor.assets.viewSource")}
+            </Box>
+          </Stack>
+        ) : null}
+
         <Stack direction="row" spacing={0.7}>
           {controls.map((item) => (
             <Tooltip key={item.key} title={t(`editor.properties.animation.${item.key}`)}>

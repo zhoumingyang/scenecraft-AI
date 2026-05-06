@@ -11,7 +11,7 @@ type TextureAssetDetailPanelProps = {
   theme: EditorThemeTokens;
   selectedResolution: string;
   onResolutionChange: (value: string) => void;
-  onApply: () => void;
+  onApply: () => void | Promise<void>;
 };
 
 export function TextureAssetDetailPanel({

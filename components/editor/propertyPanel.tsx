@@ -271,6 +271,7 @@ export default function PropertyPanel() {
                         activeAnimationId={entityRecord.item.activeAnimationId}
                         timeScale={entityRecord.item.animationTimeScale}
                         playbackState={entityRecord.item.animationPlaybackState}
+                        externalSource={entityRecord.item.externalSource}
                       />
                     ) : null}
 

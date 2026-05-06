@@ -260,6 +260,7 @@ export class EditorProjectModel {
         label: item.label,
         source: item.source,
         sourceAssetId: item.sourceAssetId,
+        externalSource: cloneExternalSource(item.externalSource) ?? undefined,
         format: item.format,
         assetUnit: item.assetUnit,
         assetImportScale: item.assetImportScale,

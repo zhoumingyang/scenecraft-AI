@@ -5,12 +5,15 @@ import { getPolyhavenAssetDetail, listPolyhavenAssets, listPolyhavenCategories }
 import {
   getPreferredHdriFormat,
   getPreferredHdriResolution,
+  getPreferredModelFormat,
+  getPreferredModelResolution,
   getPreferredTextureResolution
 } from "@/lib/externalAssets/source";
 import type {
   ExternalAssetCategoryOption,
   ExternalAssetDetail,
   ExternalAssetListItem,
+  ExternalModelAssetDetail,
   ExternalAssetType,
   ExternalHdriAssetDetail,
   ExternalTextureAssetDetail
@@ -186,22 +189,35 @@ export function useExternalAssetBrowser({ open, assetType }: UseExternalAssetBro
       return;
     }
 
+    if (selectedAssetDetail.assetType === "model") {
+      const nextResolution = getPreferredModelResolution(selectedAssetDetail);
+      const nextFormat = getPreferredModelFormat(selectedAssetDetail.modelFiles, nextResolution);
+      setSelectedResolution(nextResolution);
+      setSelectedFormat(nextFormat);
+      return;
+    }
+
     setSelectedResolution(getPreferredTextureResolution(selectedAssetDetail));
     setSelectedFormat("");
   }, [selectedAssetDetail]);
 
   useEffect(() => {
-    if (!selectedAssetDetail || selectedAssetDetail.assetType !== "hdri" || !selectedResolution) {
+    if (!selectedAssetDetail || !selectedResolution) {
       return;
     }
 
-    const availableFormats = Array.from(
-      new Set(
-        selectedAssetDetail.fileOptions
-          .filter((file) => file.resolution === selectedResolution)
-          .map((file) => file.format)
+    if (selectedAssetDetail.assetType === "texture") {
+      return;
+    }
+
+    const availableFormats = Array.from(new Set(
+      (selectedAssetDetail.assetType === "hdri"
+        ? selectedAssetDetail.fileOptions
+        : selectedAssetDetail.modelFiles
       )
-    );
+        .filter((file) => file.resolution === selectedResolution)
+        .map((file) => file.format)
+    ));
 
     if (availableFormats.length === 0) {
       setSelectedFormat("");
@@ -212,7 +228,11 @@ export function useExternalAssetBrowser({ open, assetType }: UseExternalAssetBro
       return;
     }
 
-    setSelectedFormat(getPreferredHdriFormat(selectedAssetDetail.fileOptions, selectedResolution));
+    setSelectedFormat(
+      selectedAssetDetail.assetType === "hdri"
+        ? getPreferredHdriFormat(selectedAssetDetail.fileOptions, selectedResolution)
+        : getPreferredModelFormat(selectedAssetDetail.modelFiles, selectedResolution)
+    );
   }, [selectedAssetDetail, selectedFormat, selectedResolution]);
 
   const submitSearch = () => {
@@ -227,6 +247,10 @@ export function useExternalAssetBrowser({ open, assetType }: UseExternalAssetBro
   );
   const textureDetail = useMemo<ExternalTextureAssetDetail | null>(
     () => (selectedAssetDetail?.assetType === "texture" ? selectedAssetDetail : null),
+    [selectedAssetDetail]
+  );
+  const modelDetail = useMemo<ExternalModelAssetDetail | null>(
+    () => (selectedAssetDetail?.assetType === "model" ? selectedAssetDetail : null),
     [selectedAssetDetail]
   );
 
@@ -253,6 +277,7 @@ export function useExternalAssetBrowser({ open, assetType }: UseExternalAssetBro
     setSelectedFormat,
     submitSearch,
     hdriDetail,
-    textureDetail
+    textureDetail,
+    modelDetail
   };
 }

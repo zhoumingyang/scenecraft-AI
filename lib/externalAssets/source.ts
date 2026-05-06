@@ -1,9 +1,12 @@
 import type {
   ExternalAssetFileOption,
+  ExternalModelAssetDetail,
+  ExternalModelFileOption,
   ExternalAssetSourceJSON,
   ExternalHdriAssetDetail,
   ExternalTextureAssetDetail,
   ExternalAssetTextureMap,
+  SupportedExternalModelFormat,
   SupportedMaterialTextureField
 } from "./types";
 
@@ -14,6 +17,7 @@ type TextureImportSelection = {
 
 const PREFERRED_HDRI_RESOLUTIONS = ["2k", "1k", "4k", "8k", "16k"];
 const PREFERRED_TEXTURE_RESOLUTIONS = ["2k", "4k", "1k", "8k", "16k"];
+const PREFERRED_MODEL_RESOLUTIONS = ["2k", "4k", "1k", "8k", "16k"];
 
 function normalizeValue(value: string) {
   return value.trim().toLowerCase();
@@ -85,6 +89,36 @@ export function getPreferredTextureResolution(detail: ExternalTextureAssetDetail
   return selectFirstMatchingValue(detail.availableResolutions, PREFERRED_TEXTURE_RESOLUTIONS);
 }
 
+export function getPreferredModelResolution(detail: ExternalModelAssetDetail) {
+  return selectFirstMatchingValue(detail.availableResolutions, PREFERRED_MODEL_RESOLUTIONS);
+}
+
+export function getPreferredModelFormat(
+  fileOptions: ExternalModelFileOption[],
+  resolution: string
+): SupportedExternalModelFormat | "" {
+  const match = selectPreferredFormat(fileOptions, ["gltf", "fbx"], resolution);
+  return (match?.format as SupportedExternalModelFormat | undefined) ?? "";
+}
+
+export function selectModelFile(
+  fileOptions: ExternalModelFileOption[],
+  resolution: string,
+  format: SupportedExternalModelFormat | string
+) {
+  const exactMatch = fileOptions.find(
+    (file) =>
+      normalizeValue(file.resolution) === normalizeValue(resolution) &&
+      normalizeValue(file.format) === normalizeValue(format)
+  );
+
+  if (exactMatch) {
+    return exactMatch;
+  }
+
+  return selectPreferredFormat(fileOptions, [format, "gltf", "fbx"], resolution) as ExternalModelFileOption | null;
+}
+
 function getPreferredTextureFormats(materialField: SupportedMaterialTextureField) {
   if (materialField === "diffuseMap" || materialField === "emissiveMap") {
     return ["jpg", "png", "webp", "exr"];
@@ -119,8 +153,8 @@ export function selectTextureImportFiles(
 }
 
 export function createExternalAssetSource(
-  detail: ExternalHdriAssetDetail | ExternalTextureAssetDetail,
-  file: ExternalAssetFileOption
+  detail: ExternalHdriAssetDetail | ExternalTextureAssetDetail | ExternalModelAssetDetail,
+  file: ExternalAssetFileOption | ExternalModelFileOption
 ): ExternalAssetSourceJSON {
   return {
     provider: detail.provider,

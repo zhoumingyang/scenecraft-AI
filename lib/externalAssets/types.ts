@@ -1,5 +1,5 @@
 export const EXTERNAL_ASSET_PROVIDER_IDS = ["polyhaven"] as const;
-export const EXTERNAL_ASSET_TYPES = ["hdri", "texture"] as const;
+export const EXTERNAL_ASSET_TYPES = ["hdri", "texture", "model"] as const;
 
 export type ExternalAssetProviderId = (typeof EXTERNAL_ASSET_PROVIDER_IDS)[number];
 export type ExternalAssetType = (typeof EXTERNAL_ASSET_TYPES)[number];
@@ -19,6 +19,20 @@ export type ExternalAssetFileOption = {
   sizeBytes: number | null;
   md5: string | null;
   label: string;
+};
+
+export type ExternalAssetIncludedFile = {
+  path: string;
+  url: string;
+  sizeBytes: number | null;
+  md5: string | null;
+};
+
+export type SupportedExternalModelFormat = "gltf" | "fbx";
+
+export type ExternalModelFileOption = ExternalAssetFileOption & {
+  format: SupportedExternalModelFormat;
+  includes: ExternalAssetIncludedFile[];
 };
 
 export type ExternalAssetSourceJSON = {
@@ -79,7 +93,18 @@ export type ExternalTextureAssetDetail = ExternalAssetListItem & {
   availableResolutions: string[];
 };
 
-export type ExternalAssetDetail = ExternalHdriAssetDetail | ExternalTextureAssetDetail;
+export type ExternalModelAssetDetail = ExternalAssetListItem & {
+  assetType: "model";
+  lods?: number[];
+  modelFiles: ExternalModelFileOption[];
+  availableResolutions: string[];
+  availableFormats: SupportedExternalModelFormat[];
+};
+
+export type ExternalAssetDetail =
+  | ExternalHdriAssetDetail
+  | ExternalTextureAssetDetail
+  | ExternalModelAssetDetail;
 
 export type ExternalAssetListResult = {
   provider: ExternalAssetProviderId;
