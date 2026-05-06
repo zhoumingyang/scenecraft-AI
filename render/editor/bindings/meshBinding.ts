@@ -12,7 +12,7 @@ import {
   normalizeMaterialColorSpaces
 } from "../runtime/colorManagement";
 import { createMeshGeometry } from "../utils/geometry";
-import { buildTransformSignature, setEntityId } from "../utils/object3d";
+import { buildTransformSignature, removeObjectFromParent, setEntityId } from "../utils/object3d";
 import type { BindingContext, RenderBinding } from "./types";
 
 function configureTexture(texture: THREE.Texture, schema: ResolvedTextureSchema) {
@@ -125,7 +125,7 @@ export function createMeshBinding(context: BindingContext, model: MeshEntityMode
     applyState,
     lastTransformSignature: buildTransformSignature(mesh),
     dispose: () => {
-      scene.remove(mesh);
+      removeObjectFromParent(mesh);
       geometry.dispose();
       disposeMaterialTextures(material);
       material.dispose();

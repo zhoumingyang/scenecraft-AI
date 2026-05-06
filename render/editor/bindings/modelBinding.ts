@@ -2,7 +2,12 @@ import * as THREE from "three";
 
 import type { ModelEntityModel } from "../models";
 import { normalizeObject3DMaterials } from "../runtime/colorManagement";
-import { disposeObject3D, setEntityId, buildTransformSignature } from "../utils/object3d";
+import {
+  buildTransformSignature,
+  disposeObject3D,
+  removeObjectFromParent,
+  setEntityId
+} from "../utils/object3d";
 import type { BindingContext, RenderBinding } from "./types";
 
 const STEP_SECONDS = 1 / 30;
@@ -172,7 +177,7 @@ export function createModelBinding(context: BindingContext, model: ModelEntityMo
       currentActionId = null;
       clipsById.clear();
       actionsById.clear();
-      scene.remove(group);
+      removeObjectFromParent(group);
       if (currentAssetRoot) {
         currentAssetDispose?.(currentAssetRoot);
         currentAssetRoot = null;

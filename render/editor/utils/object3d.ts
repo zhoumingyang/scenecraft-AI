@@ -14,6 +14,10 @@ export function setEntityId(object: THREE.Object3D, id: string) {
   });
 }
 
+export function removeObjectFromParent(object: THREE.Object3D) {
+  object.parent?.remove(object);
+}
+
 export function disposeObject3D(root: THREE.Object3D) {
   root.traverse((child) => {
     if (child instanceof THREE.Mesh) {

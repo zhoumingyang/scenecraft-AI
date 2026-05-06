@@ -1,7 +1,7 @@
 import * as THREE from "three";
 
 import type { GroupEntityModel } from "../models";
-import { buildTransformSignature, setEntityId } from "../utils/object3d";
+import { buildTransformSignature, removeObjectFromParent, setEntityId } from "../utils/object3d";
 import type { BindingContext, RenderBinding } from "./types";
 
 export function createGroupBinding(context: BindingContext, model: GroupEntityModel): RenderBinding {
@@ -25,11 +25,7 @@ export function createGroupBinding(context: BindingContext, model: GroupEntityMo
     pickTargets: [],
     lastTransformSignature: buildTransformSignature(group),
     dispose: () => {
-      if (group.parent) {
-        group.parent.remove(group);
-      } else {
-        scene.remove(group);
-      }
+      removeObjectFromParent(group);
     }
   };
 }
