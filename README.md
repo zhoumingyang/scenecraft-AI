@@ -126,7 +126,6 @@ lib/externalAssets/     Poly Haven provider integration, contracts, and source m
 lib/server/             Auth/session, DB guards, asset config, and project persistence services
 stores/                 Zustand state stores
 db/                     Drizzle schema, database setup, migrations
-docs/                   Design notes and backend roadmap
 public/draco/           GLTF Draco decoder assets
 ```
 
@@ -270,8 +269,6 @@ The project now has a usable authenticated persistence path, but it is still evo
 - The current AI 3D flow is aimed at low-poly sketching and structural previews, not production-grade high-resolution mesh generation
 - If `DATABASE_URL` is missing in local development, auth falls back to in-memory mode and will not persist after restart
 - If `BLOB_READ_WRITE_TOKEN` is missing, editor save cannot persist binary assets and will fail clearly
-
-You can find the backend direction in [docs/backend-roadmap.md](/Users/mingyoungzhou/code/self/scenecraft-AI/docs/backend-roadmap.md).
 
 ## Good Fit For
 

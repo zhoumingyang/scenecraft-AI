@@ -216,10 +216,6 @@ Zustand state stores for application/editor state.
 
 Keep store shape changes coordinated with the components or editor logic that consume them.
 
-### `docs/`
-
-Project notes and roadmap documents. Read these when a task touches product intent or backend direction.
-
 ## Working Style Expectations
 
 ### Design before editing
