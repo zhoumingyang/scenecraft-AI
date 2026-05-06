@@ -102,6 +102,7 @@ Next.js App Router entrypoints and API routes.
 - `app/api/ai/` contains AI API routes for prompt transformation, image generation, and 3D generation
 - `app/api/projects/` contains project list/create/read/update handlers
 - `app/api/assets/` contains asset upload preparation handlers
+- `app/api/polyhaven/` contains authenticated external asset browsing routes for HDRIs and textures
 
 Use this area when changing route-level behavior, request/response handling, or page composition.
 
@@ -110,10 +111,23 @@ Use this area when changing route-level behavior, request/response handling, or 
 React UI components for auth, home, and editor surfaces.
 
 - `components/editor/` contains most editor-facing UI panels and controls
-- `components/editor/topBar.tsx` now owns the save/select UI flow and project persistence orchestration
+- `components/editor/topBar.tsx` is now a thin composition layer for the top bar UI
+- `components/editor/topBar/` contains top bar hooks, configuration, and save/load orchestration helpers
+- `components/editor/externalAssets/` contains the external asset browser detail panels and browser hook
 - `components/common/` contains shared UI building blocks
 
 Prefer keeping UI logic here instead of pushing presentation concerns into `render/editor/`.
+
+### `frontend/`
+
+Browser-side API clients and request helpers.
+
+- `frontend/api/projects.ts` wraps project list/load/save/delete calls
+- `frontend/api/assets.ts` wraps prepared asset upload flows
+- `frontend/api/ai.ts` wraps AI image / prompt / 3D generation requests
+- `frontend/api/externalAssets.ts` wraps Poly Haven list/detail/category lookups
+
+Use this area when changing browser request behavior or updating how UI code talks to backend routes.
 
 ### `render/editor/`
 
@@ -146,6 +160,19 @@ Includes:
 - validation, parsing, diagnostics, rules, templates, and workflow code
 
 Keep API contracts, validation, and provider-specific behavior aligned when editing here.
+
+### `lib/externalAssets/`
+
+External asset provider integration and metadata helpers.
+
+Includes:
+
+- provider feature flags
+- Poly Haven API integration
+- external asset request/response contracts
+- persisted `externalSource` metadata used by HDRI and texture references
+
+Keep this area aligned with `app/api/polyhaven/`, `frontend/api/externalAssets.ts`, and the project persistence schema.
 
 ### `lib/project/`
 
@@ -286,7 +313,17 @@ If the task is about project save/load or asset persistence:
 - inspect `lib/server/projects/`
 - inspect `lib/server/assets/`
 - inspect `components/editor/topBar.tsx`
+- inspect `components/editor/topBar/`
 - inspect `stores/editorStore.ts`
+
+If the task is about external HDRIs, texture libraries, or Poly Haven integration:
+
+- inspect `app/api/polyhaven/`
+- inspect `frontend/api/externalAssets.ts`
+- inspect `lib/externalAssets/`
+- inspect `components/editor/externalAssets/`
+- inspect `components/editor/topBar/` for HDRI import flow
+- inspect `components/editor/propertyPanel.tsx` for texture import flow
 
 If the task is about auth:
 
@@ -310,6 +347,7 @@ If the task is about scene/project data:
 - Do not mix heavy UI concerns into low-level editor runtime files without a good reason.
 - Do not bypass validation for AI request input.
 - Do not store temporary `blob:` URLs in persisted save payloads if the task is meant to preserve assets across reloads.
+- Do not strip persisted `externalSource` metadata from HDRI or texture references if the task touches external asset flows.
 
 ## Good Final Handoff
 

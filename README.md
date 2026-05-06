@@ -38,6 +38,8 @@ This is not just a text-to-image demo, and it is not a full desktop-grade DCC to
 ### 2. Scene and Visual Controls
 
 - Panorama and HDR environment import
+- Poly Haven HDRI browsing from the editor top bar for authenticated users
+- Poly Haven texture browsing from the mesh material panel for authenticated users
 - Tone mapping and exposure controls
 - Light creation and editing for ambient, hemisphere, directional, point, spot, and rect area lights
 - Built-in lighting presets for faster scene setup
@@ -117,8 +119,11 @@ This approach makes the result:
 ```text
 app/                    Next.js App Router pages and API routes
 components/             Home, auth, and editor UI components
+frontend/api/           Browser-side API wrappers for projects, AI, assets, and external assets
 render/editor/          Editor core: runtime, session, models, commands
 lib/ai/                 AI modules for images, 3D planning, prompt transforms, providers
+lib/externalAssets/     Poly Haven provider integration, contracts, and source metadata helpers
+lib/server/             Auth/session, DB guards, asset config, and project persistence services
 stores/                 Zustand state stores
 db/                     Drizzle schema, database setup, migrations
 docs/                   Design notes and backend roadmap
@@ -154,6 +159,13 @@ Recommended minimum variables:
 - `SMTP_USER`
 - `SMTP_PASS`
 - `SMTP_FROM`
+
+Optional external asset settings:
+
+- `ASSET_PROVIDER_POLYHAVEN_ENABLED`
+- `NEXT_PUBLIC_ASSET_PROVIDER_POLYHAVEN_ENABLED`
+- `POLYHAVEN_ATTRIBUTION_ENABLED`
+- `POLYHAVEN_REQUEST_IDENTITY`
 
 For social login support:
 
@@ -227,6 +239,25 @@ This token is required for:
 - uploaded textures
 - environment images
 - saved AI image resources
+
+## External Asset Integration
+
+The editor can browse Poly Haven assets through authenticated API routes:
+
+- HDRIs from the top bar import flow
+- texture sets from the mesh material panel
+
+The provider is enabled by default. You can override that behavior with:
+
+- `ASSET_PROVIDER_POLYHAVEN_ENABLED`
+- `NEXT_PUBLIC_ASSET_PROVIDER_POLYHAVEN_ENABLED`
+
+Relevant code paths:
+
+- `app/api/polyhaven/`
+- `frontend/api/externalAssets.ts`
+- `lib/externalAssets/`
+- `components/editor/externalAssets/`
 
 ## Current Status
 
