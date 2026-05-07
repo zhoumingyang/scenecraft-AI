@@ -31,7 +31,17 @@ function cloneExternalSource(source: ResolvedEditorEnvConfigJSON["externalSource
   return {
     ...source,
     selectedFile: {
-      ...source.selectedFile
+      ...source.selectedFile,
+      ...(source.selectedFile.includes
+        ? {
+            includes: source.selectedFile.includes.map((include) => ({
+              path: include.path,
+              url: include.url,
+              sizeBytes: include.sizeBytes,
+              md5: include.md5
+            }))
+          }
+        : {})
     }
   };
 }

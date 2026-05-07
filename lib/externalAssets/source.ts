@@ -1,5 +1,6 @@
 import type {
   ExternalAssetFileOption,
+  ExternalAssetIncludedFile,
   ExternalModelAssetDetail,
   ExternalModelFileOption,
   ExternalAssetSourceJSON,
@@ -156,6 +157,15 @@ export function createExternalAssetSource(
   detail: ExternalHdriAssetDetail | ExternalTextureAssetDetail | ExternalModelAssetDetail,
   file: ExternalAssetFileOption | ExternalModelFileOption
 ): ExternalAssetSourceJSON {
+  const includes = "includes" in file && Array.isArray(file.includes)
+    ? file.includes.map((include) => ({
+        path: include.path,
+        url: include.url,
+        sizeBytes: include.sizeBytes,
+        md5: include.md5
+      }))
+    : undefined;
+
   return {
     provider: detail.provider,
     assetId: detail.assetId,
@@ -168,9 +178,34 @@ export function createExternalAssetSource(
       url: file.url,
       fileName: file.fileName,
       sizeBytes: file.sizeBytes,
-      md5: file.md5
+      md5: file.md5,
+      ...(includes && includes.length > 0 ? { includes } : {})
     },
     resolution: file.resolution,
     format: file.format
   };
+}
+
+export function getExternalAssetIncludedFiles(
+  source: ExternalAssetSourceJSON | null | undefined
+): ExternalAssetIncludedFile[] {
+  const includes = source?.selectedFile.includes;
+  if (!Array.isArray(includes) || includes.length === 0) {
+    return [];
+  }
+
+  return includes
+    .filter(
+      (include): include is ExternalAssetIncludedFile =>
+        typeof include?.path === "string" &&
+        include.path.trim().length > 0 &&
+        typeof include.url === "string" &&
+        include.url.trim().length > 0
+    )
+    .map((include) => ({
+      path: include.path,
+      url: include.url,
+      sizeBytes: include.sizeBytes,
+      md5: include.md5
+    }));
 }

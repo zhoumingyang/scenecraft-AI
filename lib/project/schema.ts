@@ -23,7 +23,20 @@ const externalAssetSourceSchema = z
         url: trimmedString(2048),
         fileName: trimmedString(255),
         sizeBytes: z.number().int().nonnegative().nullable().optional(),
-        md5: z.string().trim().max(255).nullable().optional()
+        md5: z.string().trim().max(255).nullable().optional(),
+        includes: z
+          .array(
+            z
+              .object({
+                path: trimmedString(2048),
+                url: trimmedString(2048),
+                sizeBytes: z.number().int().nonnegative().nullable().optional(),
+                md5: z.string().trim().max(255).nullable().optional()
+              })
+              .strict()
+          )
+          .max(128)
+          .optional()
       })
       .strict(),
     resolution: trimmedString(40),

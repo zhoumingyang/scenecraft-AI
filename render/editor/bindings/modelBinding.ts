@@ -1,5 +1,6 @@
 import * as THREE from "three";
 
+import { getExternalAssetIncludedFiles } from "@/lib/externalAssets/source";
 import type { ModelEntityModel } from "../models";
 import { normalizeObject3DMaterials } from "../runtime/colorManagement";
 import {
@@ -124,7 +125,9 @@ export function createModelBinding(context: BindingContext, model: ModelEntityMo
   };
 
   const ready = modelLoaderFactory
-    .load(model.source, model.format)
+    .load(model.source, model.format, {
+      includedFiles: getExternalAssetIncludedFiles(model.externalSource)
+    })
     .then((asset) => {
       if (disposed) {
         asset.dispose?.(asset.object) ?? disposeObject3D(asset.object);

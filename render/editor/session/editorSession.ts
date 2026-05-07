@@ -1,5 +1,6 @@
 import * as THREE from "three";
 
+import { getExternalAssetIncludedFiles } from "@/lib/externalAssets/source";
 import type { ExternalAssetSourceJSON } from "@/lib/externalAssets/types";
 import type { Ai3DPlan, Ai3DMeshDraft } from "../ai3d/plan";
 import { buildAi3DMeshDrafts } from "../ai3d/plan";
@@ -642,7 +643,9 @@ export class EditorSession {
     }
     if (!this.projectModel) return null;
 
-    const asset = await this.runtime.modelLoaderFactory.load(input.sourceUrl, input.format);
+    const asset = await this.runtime.modelLoaderFactory.load(input.sourceUrl, input.format, {
+      includedFiles: getExternalAssetIncludedFiles(input.externalSource)
+    });
     const model = this.projectModel.addModel({
       id: createEntityId("model"),
       label: input.label.trim() || createDefaultModelLabel(this.projectModel.models.size),

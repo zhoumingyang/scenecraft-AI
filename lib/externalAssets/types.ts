@@ -24,8 +24,8 @@ export type ExternalAssetFileOption = {
 export type ExternalAssetIncludedFile = {
   path: string;
   url: string;
-  sizeBytes: number | null;
-  md5: string | null;
+  sizeBytes?: number | null;
+  md5?: string | null;
 };
 
 export type SupportedExternalModelFormat = "gltf" | "fbx";
@@ -48,6 +48,7 @@ export type ExternalAssetSourceJSON = {
     fileName: string;
     sizeBytes?: number | null;
     md5?: string | null;
+    includes?: ExternalAssetIncludedFile[];
   };
   resolution: string;
   format: string;
