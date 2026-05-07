@@ -1,11 +1,13 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import {
   Alert,
   Box,
   Button,
+  CircularProgress,
   Dialog,
   DialogContent,
   DialogTitle,
@@ -63,6 +65,7 @@ export function ExternalAssetBrowserDialog({
 }: ExternalAssetBrowserDialogProps) {
   const { t } = useI18n();
   const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
+  const [isApplying, setIsApplying] = useState(false);
   const {
     assets,
     categories,
@@ -93,58 +96,76 @@ export function ExternalAssetBrowserDialog({
     assetType
   });
 
+  useEffect(() => {
+    if (!open) {
+      setIsApplying(false);
+    }
+  }, [open]);
+
+  const handleDialogClose = () => {
+    if (isApplying) {
+      return;
+    }
+
+    onClose();
+  };
+
   const handleApply = async () => {
-    if (!selectedAssetDetail) {
+    if (!selectedAssetDetail || isApplying) {
       return;
     }
 
-    if (selectedAssetDetail.assetType === "hdri") {
-      const file = selectHdriFile(selectedAssetDetail.fileOptions, selectedResolution, selectedFormat);
-      if (!file) {
-        setErrorMessage(t("editor.assets.noCompatibleFile"));
+    setIsApplying(true);
+
+    try {
+      if (selectedAssetDetail.assetType === "hdri") {
+        const file = selectHdriFile(selectedAssetDetail.fileOptions, selectedResolution, selectedFormat);
+        if (!file) {
+          setErrorMessage(t("editor.assets.noCompatibleFile"));
+          return;
+        }
+
+        await onApplyHdri?.({
+          asset: selectedAssetDetail,
+          file
+        });
+        onClose();
         return;
       }
 
-      onApplyHdri?.({
-        asset: selectedAssetDetail,
-        file
-      });
-      onClose();
-      return;
-    }
+      if (selectedAssetDetail.assetType === "model") {
+        const file = selectModelFile(selectedAssetDetail.modelFiles, selectedResolution, selectedFormat);
+        if (!file) {
+          setErrorMessage(t("editor.assets.noCompatibleFile"));
+          return;
+        }
 
-    if (selectedAssetDetail.assetType === "model") {
-      const file = selectModelFile(selectedAssetDetail.modelFiles, selectedResolution, selectedFormat);
-      if (!file) {
-        setErrorMessage(t("editor.assets.noCompatibleFile"));
-        return;
-      }
-
-      try {
         await onApplyModel?.({
           asset: selectedAssetDetail,
           file
         });
         onClose();
-      } catch (error) {
-        setErrorMessage(
-          error instanceof Error ? error.message : t("editor.import.modelLoadError")
-        );
+        return;
       }
-      return;
-    }
 
-    const selections = selectTextureImportFiles(selectedAssetDetail, selectedResolution);
-    if (selections.length === 0) {
-      setErrorMessage(t("editor.assets.noCompatibleMaps"));
-      return;
-    }
+      const selections = selectTextureImportFiles(selectedAssetDetail, selectedResolution);
+      if (selections.length === 0) {
+        setErrorMessage(t("editor.assets.noCompatibleMaps"));
+        return;
+      }
 
-    onApplyTexture?.({
-      asset: selectedAssetDetail,
-      selections
-    });
-    onClose();
+      await onApplyTexture?.({
+        asset: selectedAssetDetail,
+        selections
+      });
+      onClose();
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : t("editor.import.modelLoadError")
+      );
+    } finally {
+      setIsApplying(false);
+    }
   };
 
   const dialogTitle =
@@ -157,7 +178,8 @@ export function ExternalAssetBrowserDialog({
   return (
     <Dialog
       open={open}
-      onClose={onClose}
+      onClose={handleDialogClose}
+      disableEscapeKeyDown={isApplying}
       fullWidth
       maxWidth="xl"
       slotProps={{
@@ -195,8 +217,9 @@ export function ExternalAssetBrowserDialog({
         </Typography>
         <IconButton
           size="small"
-          onClick={onClose}
+          onClick={handleDialogClose}
           aria-label={t("dialog.close")}
+          disabled={isApplying}
           sx={{
             color: theme.pillText,
             border: theme.sectionBorder,
@@ -217,6 +240,7 @@ export function ExternalAssetBrowserDialog({
                 value={queryInput}
                 onChange={(event) => setQueryInput(event.target.value)}
                 placeholder={t("editor.assets.searchPlaceholder")}
+                disabled={isApplying}
                 sx={{
                   "& .MuiOutlinedInput-root": {
                     color: theme.pillText,
@@ -227,6 +251,7 @@ export function ExternalAssetBrowserDialog({
               <Button
                 color="inherit"
                 onClick={submitSearch}
+                disabled={isApplying}
                 startIcon={<SearchRoundedIcon sx={{ fontSize: 18 }} />}
                 sx={{
                   minWidth: 110,
@@ -249,6 +274,7 @@ export function ExternalAssetBrowserDialog({
                 setCategory(event.target.value);
                 setPage(1);
               }}
+              disabled={isApplying}
               sx={{
                 minWidth: { xs: "100%", md: 220 },
                 "& .MuiOutlinedInput-root": {
@@ -304,9 +330,13 @@ export function ExternalAssetBrowserDialog({
                   return (
                     <Box
                       key={item.assetId}
-                      onClick={() => setSelectedAssetId(item.assetId)}
+                      onClick={() => {
+                        if (!isApplying) {
+                          setSelectedAssetId(item.assetId);
+                        }
+                      }}
                       sx={{
-                        cursor: "pointer",
+                        cursor: isApplying ? "default" : "pointer",
                         overflow: "hidden",
                         borderRadius: 1.2,
                         border: selected ? theme.itemSelectedBorder : theme.sectionBorder,
@@ -360,7 +390,7 @@ export function ExternalAssetBrowserDialog({
                 <Stack direction="row" spacing={1}>
                   <Button
                     color="inherit"
-                    disabled={page <= 1}
+                    disabled={isApplying || page <= 1}
                     onClick={() => setPage((current) => Math.max(1, current - 1))}
                     sx={{
                       minWidth: 84,
@@ -374,7 +404,7 @@ export function ExternalAssetBrowserDialog({
                   </Button>
                   <Button
                     color="inherit"
-                    disabled={page >= pageCount}
+                    disabled={isApplying || page >= pageCount}
                     onClick={() => setPage((current) => Math.min(pageCount, current + 1))}
                     sx={{
                       minWidth: 84,
@@ -423,6 +453,7 @@ export function ExternalAssetBrowserDialog({
                     selectedFormat={selectedFormat}
                     onResolutionChange={setSelectedResolution}
                     onFormatChange={setSelectedFormat}
+                    isApplying={isApplying}
                     onApply={handleApply}
                   />
                 ) : modelDetail ? (
@@ -433,6 +464,7 @@ export function ExternalAssetBrowserDialog({
                     selectedFormat={selectedFormat}
                     onResolutionChange={setSelectedResolution}
                     onFormatChange={setSelectedFormat}
+                    isApplying={isApplying}
                     onApply={handleApply}
                   />
                 ) : textureDetail ? (
@@ -441,12 +473,20 @@ export function ExternalAssetBrowserDialog({
                     theme={theme}
                     selectedResolution={selectedResolution}
                     onResolutionChange={setSelectedResolution}
+                    isApplying={isApplying}
                     onApply={handleApply}
                   />
                 ) : null
               )}
             </Stack>
           </Box>
+
+          {isApplying ? (
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ color: theme.mutedText }}>
+              <CircularProgress size={16} sx={{ color: theme.pillText }} />
+              <Typography sx={{ fontSize: 12 }}>{t("common.processing")}</Typography>
+            </Stack>
+          ) : null}
         </Stack>
       </DialogContent>
     </Dialog>

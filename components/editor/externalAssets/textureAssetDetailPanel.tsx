@@ -1,5 +1,6 @@
 "use client";
 
+import CircularProgress from "@mui/material/CircularProgress";
 import { Button, MenuItem, Stack, TextField, Typography } from "@mui/material";
 import type { EditorThemeTokens } from "@/components/editor/theme";
 import { useI18n } from "@/lib/i18n";
@@ -11,6 +12,7 @@ type TextureAssetDetailPanelProps = {
   theme: EditorThemeTokens;
   selectedResolution: string;
   onResolutionChange: (value: string) => void;
+  isApplying: boolean;
   onApply: () => void | Promise<void>;
 };
 
@@ -19,6 +21,7 @@ export function TextureAssetDetailPanel({
   theme,
   selectedResolution,
   onResolutionChange,
+  isApplying,
   onApply
 }: TextureAssetDetailPanelProps) {
   const { t } = useI18n();
@@ -33,6 +36,7 @@ export function TextureAssetDetailPanel({
           size="small"
           label={t("editor.assets.resolution")}
           value={selectedResolution}
+          disabled={isApplying}
           onChange={(event) => onResolutionChange(event.target.value)}
           sx={{
             "& .MuiOutlinedInput-root": {
@@ -66,6 +70,8 @@ export function TextureAssetDetailPanel({
       <Button
         color="inherit"
         onClick={onApply}
+        disabled={isApplying}
+        startIcon={isApplying ? <CircularProgress size={16} color="inherit" /> : undefined}
         sx={{
           mt: "auto",
           minHeight: 40,
@@ -76,7 +82,7 @@ export function TextureAssetDetailPanel({
           textTransform: "none"
         }}
       >
-        {t("editor.assets.applyTextureSet")}
+        {isApplying ? t("common.processing") : t("editor.assets.applyTextureSet")}
       </Button>
     </>
   );

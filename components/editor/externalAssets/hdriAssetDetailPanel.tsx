@@ -1,5 +1,6 @@
 "use client";
 
+import CircularProgress from "@mui/material/CircularProgress";
 import { Button, MenuItem, Stack, TextField } from "@mui/material";
 import type { EditorThemeTokens } from "@/components/editor/theme";
 import { useI18n } from "@/lib/i18n";
@@ -13,6 +14,7 @@ type HdriAssetDetailPanelProps = {
   selectedFormat: string;
   onResolutionChange: (value: string) => void;
   onFormatChange: (value: string) => void;
+  isApplying: boolean;
   onApply: () => void | Promise<void>;
 };
 
@@ -23,6 +25,7 @@ export function HdriAssetDetailPanel({
   selectedFormat,
   onResolutionChange,
   onFormatChange,
+  isApplying,
   onApply
 }: HdriAssetDetailPanelProps) {
   const { t } = useI18n();
@@ -49,6 +52,7 @@ export function HdriAssetDetailPanel({
           size="small"
           label={t("editor.assets.resolution")}
           value={selectedResolution}
+          disabled={isApplying}
           onChange={(event) => onResolutionChange(event.target.value)}
           sx={{
             "& .MuiOutlinedInput-root": {
@@ -69,6 +73,7 @@ export function HdriAssetDetailPanel({
           size="small"
           label={t("editor.assets.format")}
           value={selectedFormat}
+          disabled={isApplying}
           onChange={(event) => onFormatChange(event.target.value)}
           sx={{
             "& .MuiOutlinedInput-root": {
@@ -88,6 +93,8 @@ export function HdriAssetDetailPanel({
       <Button
         color="inherit"
         onClick={onApply}
+        disabled={isApplying}
+        startIcon={isApplying ? <CircularProgress size={16} color="inherit" /> : undefined}
         sx={{
           mt: "auto",
           minHeight: 40,
@@ -98,7 +105,7 @@ export function HdriAssetDetailPanel({
           textTransform: "none"
         }}
       >
-        {t("editor.assets.applyHdri")}
+        {isApplying ? t("common.processing") : t("editor.assets.applyHdri")}
       </Button>
     </>
   );

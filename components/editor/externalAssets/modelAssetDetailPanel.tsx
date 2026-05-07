@@ -1,5 +1,6 @@
 "use client";
 
+import CircularProgress from "@mui/material/CircularProgress";
 import { Button, MenuItem, Stack, TextField, Typography } from "@mui/material";
 import type { EditorThemeTokens } from "@/components/editor/theme";
 import { useI18n } from "@/lib/i18n";
@@ -13,6 +14,7 @@ type ModelAssetDetailPanelProps = {
   selectedFormat: string;
   onResolutionChange: (value: string) => void;
   onFormatChange: (value: string) => void;
+  isApplying: boolean;
   onApply: () => void | Promise<void>;
 };
 
@@ -23,6 +25,7 @@ export function ModelAssetDetailPanel({
   selectedFormat,
   onResolutionChange,
   onFormatChange,
+  isApplying,
   onApply
 }: ModelAssetDetailPanelProps) {
   const { t } = useI18n();
@@ -64,6 +67,7 @@ export function ModelAssetDetailPanel({
           size="small"
           label={t("editor.assets.resolution")}
           value={selectedResolution}
+          disabled={isApplying}
           onChange={(event) => onResolutionChange(event.target.value)}
           sx={{
             "& .MuiOutlinedInput-root": {
@@ -84,6 +88,7 @@ export function ModelAssetDetailPanel({
           size="small"
           label={t("editor.assets.format")}
           value={selectedFormat}
+          disabled={isApplying}
           onChange={(event) => onFormatChange(event.target.value)}
           sx={{
             "& .MuiOutlinedInput-root": {
@@ -116,6 +121,8 @@ export function ModelAssetDetailPanel({
         onClick={() => {
           void onApply();
         }}
+        disabled={isApplying}
+        startIcon={isApplying ? <CircularProgress size={16} color="inherit" /> : undefined}
         sx={{
           mt: "auto",
           minHeight: 40,
@@ -126,7 +133,7 @@ export function ModelAssetDetailPanel({
           textTransform: "none"
         }}
       >
-        {t("editor.assets.importModel")}
+        {isApplying ? t("common.processing") : t("editor.assets.importModel")}
       </Button>
     </>
   );
