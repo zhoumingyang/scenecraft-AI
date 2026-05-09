@@ -41,6 +41,7 @@ import { useEditorStore } from "@/stores/editorStore";
 import type { EditorThemeTokens } from "./theme";
 import { ExternalAssetBrowserCard } from "./externalAssets/externalAssetBrowserCard";
 import { ExternalAssetDetailDialog } from "./externalAssets/externalAssetDetailDialog";
+import { createLruCache } from "./externalAssets/lruCache";
 import type {
   ExternalHdriApplyPayload,
   ExternalModelApplyPayload,
@@ -165,7 +166,11 @@ export function ExternalAssetBrowserDialog({
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedResolution, setSelectedResolution] = useState("");
   const [selectedFormat, setSelectedFormat] = useState("");
-  const detailCacheRef = useRef<Map<string, ExternalAssetDetail>>(new Map());
+  const detailCacheRef = useRef(
+    createLruCache<string, ExternalAssetDetail>({
+      maxSize: DETAIL_CACHE_LIMIT
+    })
+  );
   const detailRequestId = useRef(0);
   const {
     assets,
@@ -265,33 +270,6 @@ export function ExternalAssetBrowserDialog({
     setSelectedFormat(availableFormats[0] ?? "");
   }, [selectedAssetDetail, selectedFormat, selectedResolution]);
 
-  const touchCachedDetail = (cacheKey: string) => {
-    const detail = detailCacheRef.current.get(cacheKey);
-    if (!detail) {
-      return null;
-    }
-
-    detailCacheRef.current.delete(cacheKey);
-    detailCacheRef.current.set(cacheKey, detail);
-    return detail;
-  };
-
-  const writeCachedDetail = (cacheKey: string, detail: ExternalAssetDetail) => {
-    if (detailCacheRef.current.has(cacheKey)) {
-      detailCacheRef.current.delete(cacheKey);
-    }
-
-    detailCacheRef.current.set(cacheKey, detail);
-
-    while (detailCacheRef.current.size > DETAIL_CACHE_LIMIT) {
-      const oldestKey = detailCacheRef.current.keys().next().value as string | undefined;
-      if (!oldestKey) {
-        break;
-      }
-      detailCacheRef.current.delete(oldestKey);
-    }
-  };
-
   const applyDetailSelection = (detail: ExternalAssetDetail) => {
     const nextSelection = getPreferredSelection(detail);
     setSelectedAssetDetail(detail);
@@ -316,7 +294,7 @@ export function ExternalAssetBrowserDialog({
     setSelectedFormat("");
 
     const cacheKey = getDetailCacheKey(item.assetType, item.assetId);
-    const cachedDetail = touchCachedDetail(cacheKey);
+    const cachedDetail = detailCacheRef.current.get(cacheKey);
     if (cachedDetail) {
       detailRequestId.current += 1;
       setIsDetailLoading(false);
@@ -334,7 +312,7 @@ export function ExternalAssetBrowserDialog({
           return;
         }
 
-        writeCachedDetail(cacheKey, detail);
+        detailCacheRef.current.set(cacheKey, detail);
         applyDetailSelection(detail);
       })
       .catch((error: unknown) => {
@@ -435,229 +413,229 @@ export function ExternalAssetBrowserDialog({
   return (
     <>
       <Dialog
-      open={open}
-      onClose={handleDialogClose}
-      disableEscapeKeyDown={isApplying}
-      fullWidth
-      maxWidth="xl"
-      slotProps={{
-        backdrop: {
-          sx: {
-            background:
-              editorThemeMode === "dark"
-                ? "radial-gradient(circle at 20% 18%, rgba(114,234,255,0.14), transparent 48%), rgba(5,8,19,0.82)"
-                : "radial-gradient(circle at 20% 18%, rgba(145,198,255,0.2), transparent 48%), rgba(242,247,255,0.7)",
-            backdropFilter: "blur(6px)"
+        open={open}
+        onClose={handleDialogClose}
+        disableEscapeKeyDown={isApplying}
+        fullWidth
+        maxWidth="xl"
+        slotProps={{
+          backdrop: {
+            sx: {
+              background:
+                editorThemeMode === "dark"
+                  ? "radial-gradient(circle at 20% 18%, rgba(114,234,255,0.14), transparent 48%), rgba(5,8,19,0.82)"
+                  : "radial-gradient(circle at 20% 18%, rgba(145,198,255,0.2), transparent 48%), rgba(242,247,255,0.7)",
+              backdropFilter: "blur(6px)"
+            }
           }
-        }
-      }}
-      PaperProps={{
-        sx: {
-          width: "min(1480px, calc(100vw - 48px))",
-          borderRadius: 1.5,
-          border: theme.panelBorder,
-          background: theme.panelBg,
-          overflow: "hidden"
-        }
-      }}
-    >
-      <DialogTitle
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 1.5,
-          color: theme.titleText,
-          fontWeight: 700
+        }}
+        PaperProps={{
+          sx: {
+            width: "min(1480px, calc(100vw - 48px))",
+            borderRadius: 1.5,
+            border: theme.panelBorder,
+            background: theme.panelBg,
+            overflow: "hidden"
+          }
         }}
       >
-        <Typography component="span" sx={{ fontSize: 18, fontWeight: 700, color: theme.titleText }}>
-          {dialogTitle}
-        </Typography>
-        <IconButton
-          size="small"
-          onClick={handleDialogClose}
-          aria-label={t("dialog.close")}
-          disabled={isApplying}
+        <DialogTitle
           sx={{
-            color: theme.pillText,
-            border: theme.sectionBorder,
-            background: theme.iconButtonBg
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 1.5,
+            color: theme.titleText,
+            fontWeight: 700
           }}
         >
-          <CloseRoundedIcon sx={{ fontSize: 18 }} />
-        </IconButton>
-      </DialogTitle>
+          <Typography component="span" sx={{ fontSize: 18, fontWeight: 700, color: theme.titleText }}>
+            {dialogTitle}
+          </Typography>
+          <IconButton
+            size="small"
+            onClick={handleDialogClose}
+            aria-label={t("dialog.close")}
+            disabled={isApplying}
+            sx={{
+              color: theme.pillText,
+              border: theme.sectionBorder,
+              background: theme.iconButtonBg
+            }}
+          >
+            <CloseRoundedIcon sx={{ fontSize: 18 }} />
+          </IconButton>
+        </DialogTitle>
 
-      <DialogContent sx={{ px: 3, pb: 3, pt: 0 }}>
-        <Stack spacing={1.25}>
-          <Stack direction={{ xs: "column", md: "row" }} spacing={1}>
-            <Stack direction="row" spacing={1} sx={{ flex: 1 }}>
+        <DialogContent sx={{ px: 3, pb: 3, pt: 0 }}>
+          <Stack spacing={1.25}>
+            <Stack direction={{ xs: "column", md: "row" }} spacing={1}>
+              <Stack direction="row" spacing={1} sx={{ flex: 1 }}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  value={queryInput}
+                  onChange={(event) => setQueryInput(event.target.value)}
+                  placeholder={t("editor.assets.searchPlaceholder")}
+                  disabled={isApplying}
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      color: theme.pillText,
+                      background: theme.inputBg
+                    }
+                  }}
+                />
+                <Button
+                  color="inherit"
+                  onClick={submitSearch}
+                  disabled={isApplying}
+                  startIcon={<SearchRoundedIcon sx={{ fontSize: 18 }} />}
+                  sx={{
+                    minWidth: 110,
+                    borderRadius: 1,
+                    border: theme.sectionBorder,
+                    background: theme.iconButtonBg,
+                    color: theme.pillText,
+                    textTransform: "none"
+                  }}
+                >
+                  {t("editor.assets.searchAction")}
+                </Button>
+              </Stack>
+
               <TextField
-                fullWidth
+                select
                 size="small"
-                value={queryInput}
-                onChange={(event) => setQueryInput(event.target.value)}
-                placeholder={t("editor.assets.searchPlaceholder")}
+                value={category}
+                onChange={(event) => {
+                  setCategory(event.target.value);
+                  setPage(1);
+                }}
                 disabled={isApplying}
                 sx={{
+                  minWidth: { xs: "100%", md: 220 },
                   "& .MuiOutlinedInput-root": {
                     color: theme.pillText,
                     background: theme.inputBg
                   }
                 }}
-              />
-              <Button
-                color="inherit"
-                onClick={submitSearch}
-                disabled={isApplying}
-                startIcon={<SearchRoundedIcon sx={{ fontSize: 18 }} />}
-                sx={{
-                  minWidth: 110,
-                  borderRadius: 1,
-                  border: theme.sectionBorder,
-                  background: theme.iconButtonBg,
-                  color: theme.pillText,
-                  textTransform: "none"
-                }}
               >
-                {t("editor.assets.searchAction")}
-              </Button>
+                <MenuItem value="">{t("editor.assets.categoryAll")}</MenuItem>
+                {categories.map((item) => (
+                  <MenuItem key={item.value} value={item.value}>
+                    {item.label} ({item.assetCount})
+                  </MenuItem>
+                ))}
+              </TextField>
             </Stack>
 
-            <TextField
-              select
-              size="small"
-              value={category}
-              onChange={(event) => {
-                setCategory(event.target.value);
-                setPage(1);
-              }}
-              disabled={isApplying}
+            {errorMessage ? <Alert severity="error">{errorMessage}</Alert> : null}
+
+            <Stack
+              spacing={1}
               sx={{
-                minWidth: { xs: "100%", md: 220 },
-                "& .MuiOutlinedInput-root": {
-                  color: theme.pillText,
-                  background: theme.inputBg
-                }
+                minHeight: 420,
+                borderRadius: 1.5,
+                border: theme.sectionBorder,
+                background: theme.sectionBg,
+                p: 1
               }}
             >
-              <MenuItem value="">{t("editor.assets.categoryAll")}</MenuItem>
-              {categories.map((item) => (
-                <MenuItem key={item.value} value={item.value}>
-                  {item.label} ({item.assetCount})
-                </MenuItem>
-              ))}
-            </TextField>
-          </Stack>
-
-          {errorMessage ? <Alert severity="error">{errorMessage}</Alert> : null}
-
-          <Stack
-            spacing={1}
-            sx={{
-              minHeight: 420,
-              borderRadius: 1.5,
-              border: theme.sectionBorder,
-              background: theme.sectionBg,
-              p: 1
-            }}
-          >
-            <Box
-              sx={{
-                display: "grid",
-                gap: 1,
-                gridTemplateColumns: {
-                  xs: "repeat(1, minmax(0, 1fr))",
-                  sm: "repeat(2, minmax(0, 1fr))",
-                  lg: "repeat(3, minmax(0, 1fr))",
-                  xl: "repeat(4, minmax(0, 1fr))"
-                }
-              }}
-            >
-              {assets.map((item) => (
-                <ExternalAssetBrowserCard
-                  key={item.assetId}
-                  item={item}
-                  theme={theme}
-                  isApplying={isApplying}
-                  isSelected={selectedAssetId === item.assetId}
-                  detail={selectedAssetId === item.assetId ? selectedAssetDetail : null}
-                  detailError={selectedAssetId === item.assetId ? selectedDetailError : null}
-                  isDetailLoading={selectedAssetId === item.assetId ? isDetailLoading : false}
-                  selectedResolution={selectedAssetId === item.assetId ? selectedResolution : ""}
-                  selectedFormat={selectedAssetId === item.assetId ? selectedFormat : ""}
-                  availableResolutions={
-                    selectedAssetId === item.assetId ? selectedAvailableResolutions : []
-                  }
-                  availableFormats={selectedAssetId === item.assetId ? selectedAvailableFormats : []}
-                  onSelect={() => handleSelectAsset(item)}
-                  onResolutionChange={setSelectedResolution}
-                  onFormatChange={setSelectedFormat}
-                  onViewDetails={() => setIsDetailOpen(true)}
-                  onApply={handleApply}
-                />
-              ))}
-            </Box>
-
-            {!isListLoading && assets.length === 0 ? (
               <Box
                 sx={{
-                  py: 4,
-                  textAlign: "center",
-                  color: theme.mutedText
+                  display: "grid",
+                  gap: 1,
+                  gridTemplateColumns: {
+                    xs: "repeat(1, minmax(0, 1fr))",
+                    sm: "repeat(2, minmax(0, 1fr))",
+                    lg: "repeat(3, minmax(0, 1fr))",
+                    xl: "repeat(4, minmax(0, 1fr))"
+                  }
                 }}
               >
-                <Typography sx={{ fontSize: 13 }}>{t("editor.assets.empty")}</Typography>
+                {assets.map((item) => (
+                  <ExternalAssetBrowserCard
+                    key={item.assetId}
+                    item={item}
+                    theme={theme}
+                    isApplying={isApplying}
+                    isSelected={selectedAssetId === item.assetId}
+                    detail={selectedAssetId === item.assetId ? selectedAssetDetail : null}
+                    detailError={selectedAssetId === item.assetId ? selectedDetailError : null}
+                    isDetailLoading={selectedAssetId === item.assetId ? isDetailLoading : false}
+                    selectedResolution={selectedAssetId === item.assetId ? selectedResolution : ""}
+                    selectedFormat={selectedAssetId === item.assetId ? selectedFormat : ""}
+                    availableResolutions={
+                      selectedAssetId === item.assetId ? selectedAvailableResolutions : []
+                    }
+                    availableFormats={selectedAssetId === item.assetId ? selectedAvailableFormats : []}
+                    onSelect={() => handleSelectAsset(item)}
+                    onResolutionChange={setSelectedResolution}
+                    onFormatChange={setSelectedFormat}
+                    onViewDetails={() => setIsDetailOpen(true)}
+                    onApply={handleApply}
+                  />
+                ))}
               </Box>
-            ) : null}
 
-            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ pt: 0.5 }}>
-              <Typography sx={{ fontSize: 12, color: theme.mutedText }}>
-                {t("editor.assets.pageStatus", { page, total: pageCount })}
-              </Typography>
-              <Stack direction="row" spacing={1}>
-                <Button
-                  color="inherit"
-                  disabled={isApplying || page <= 1}
-                  onClick={() => setPage((current) => Math.max(1, current - 1))}
+              {!isListLoading && assets.length === 0 ? (
+                <Box
                   sx={{
-                    minWidth: 84,
-                    borderRadius: 1,
-                    border: theme.sectionBorder,
-                    color: theme.pillText,
-                    textTransform: "none"
+                    py: 4,
+                    textAlign: "center",
+                    color: theme.mutedText
                   }}
                 >
-                  {t("editor.assets.previousPage")}
-                </Button>
-                <Button
-                  color="inherit"
-                  disabled={isApplying || page >= pageCount}
-                  onClick={() => setPage((current) => Math.min(pageCount, current + 1))}
-                  sx={{
-                    minWidth: 84,
-                    borderRadius: 1,
-                    border: theme.sectionBorder,
-                    color: theme.pillText,
-                    textTransform: "none"
-                  }}
-                >
-                  {t("editor.assets.nextPage")}
-                </Button>
+                  <Typography sx={{ fontSize: 13 }}>{t("editor.assets.empty")}</Typography>
+                </Box>
+              ) : null}
+
+              <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ pt: 0.5 }}>
+                <Typography sx={{ fontSize: 12, color: theme.mutedText }}>
+                  {t("editor.assets.pageStatus", { page, total: pageCount })}
+                </Typography>
+                <Stack direction="row" spacing={1}>
+                  <Button
+                    color="inherit"
+                    disabled={isApplying || page <= 1}
+                    onClick={() => setPage((current) => Math.max(1, current - 1))}
+                    sx={{
+                      minWidth: 84,
+                      borderRadius: 1,
+                      border: theme.sectionBorder,
+                      color: theme.pillText,
+                      textTransform: "none"
+                    }}
+                  >
+                    {t("editor.assets.previousPage")}
+                  </Button>
+                  <Button
+                    color="inherit"
+                    disabled={isApplying || page >= pageCount}
+                    onClick={() => setPage((current) => Math.min(pageCount, current + 1))}
+                    sx={{
+                      minWidth: 84,
+                      borderRadius: 1,
+                      border: theme.sectionBorder,
+                      color: theme.pillText,
+                      textTransform: "none"
+                    }}
+                  >
+                    {t("editor.assets.nextPage")}
+                  </Button>
+                </Stack>
               </Stack>
             </Stack>
-          </Stack>
 
-          {isApplying ? (
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ color: theme.mutedText }}>
-              <CircularProgress size={16} sx={{ color: theme.pillText }} />
-              <Typography sx={{ fontSize: 12 }}>{t("common.processing")}</Typography>
-            </Stack>
-          ) : null}
-        </Stack>
-      </DialogContent>
-    </Dialog>
+            {isApplying ? (
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ color: theme.mutedText }}>
+                <CircularProgress size={16} sx={{ color: theme.pillText }} />
+                <Typography sx={{ fontSize: 12 }}>{t("common.processing")}</Typography>
+              </Stack>
+            ) : null}
+          </Stack>
+        </DialogContent>
+      </Dialog>
 
       <ExternalAssetDetailDialog
         open={isDetailOpen}
