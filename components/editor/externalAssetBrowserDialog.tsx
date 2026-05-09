@@ -541,42 +541,57 @@ export function ExternalAssetBrowserDialog({
                 p: 1
               }}
             >
-              <Box
-                sx={{
-                  display: "grid",
-                  gap: 1,
-                  gridTemplateColumns: {
-                    xs: "repeat(1, minmax(0, 1fr))",
-                    sm: "repeat(2, minmax(0, 1fr))",
-                    lg: "repeat(3, minmax(0, 1fr))",
-                    xl: "repeat(4, minmax(0, 1fr))"
-                  }
-                }}
-              >
-                {assets.map((item) => (
-                  <ExternalAssetBrowserCard
-                    key={item.assetId}
-                    item={item}
-                    theme={theme}
-                    isApplying={isApplying}
-                    isSelected={selectedAssetId === item.assetId}
-                    detail={selectedAssetId === item.assetId ? selectedAssetDetail : null}
-                    detailError={selectedAssetId === item.assetId ? selectedDetailError : null}
-                    isDetailLoading={selectedAssetId === item.assetId ? isDetailLoading : false}
-                    selectedResolution={selectedAssetId === item.assetId ? selectedResolution : ""}
-                    selectedFormat={selectedAssetId === item.assetId ? selectedFormat : ""}
-                    availableResolutions={
-                      selectedAssetId === item.assetId ? selectedAvailableResolutions : []
+              {isListLoading ? (
+                <Stack
+                  spacing={1}
+                  alignItems="center"
+                  justifyContent="center"
+                  sx={{
+                    minHeight: 372,
+                    color: theme.mutedText
+                  }}
+                >
+                  <CircularProgress size={22} sx={{ color: theme.pillText }} />
+                  <Typography sx={{ fontSize: 12 }}>{t("common.processing")}</Typography>
+                </Stack>
+              ) : (
+                <Box
+                  sx={{
+                    display: "grid",
+                    gap: 1,
+                    gridTemplateColumns: {
+                      xs: "repeat(1, minmax(0, 1fr))",
+                      sm: "repeat(2, minmax(0, 1fr))",
+                      lg: "repeat(3, minmax(0, 1fr))",
+                      xl: "repeat(4, minmax(0, 1fr))"
                     }
-                    availableFormats={selectedAssetId === item.assetId ? selectedAvailableFormats : []}
-                    onSelect={() => handleSelectAsset(item)}
-                    onResolutionChange={setSelectedResolution}
-                    onFormatChange={setSelectedFormat}
-                    onViewDetails={() => setIsDetailOpen(true)}
-                    onApply={handleApply}
-                  />
-                ))}
-              </Box>
+                  }}
+                >
+                  {assets.map((item) => (
+                    <ExternalAssetBrowserCard
+                      key={item.assetId}
+                      item={item}
+                      theme={theme}
+                      isApplying={isApplying}
+                      isSelected={selectedAssetId === item.assetId}
+                      detail={selectedAssetId === item.assetId ? selectedAssetDetail : null}
+                      detailError={selectedAssetId === item.assetId ? selectedDetailError : null}
+                      isDetailLoading={selectedAssetId === item.assetId ? isDetailLoading : false}
+                      selectedResolution={selectedAssetId === item.assetId ? selectedResolution : ""}
+                      selectedFormat={selectedAssetId === item.assetId ? selectedFormat : ""}
+                      availableResolutions={
+                        selectedAssetId === item.assetId ? selectedAvailableResolutions : []
+                      }
+                      availableFormats={selectedAssetId === item.assetId ? selectedAvailableFormats : []}
+                      onSelect={() => handleSelectAsset(item)}
+                      onResolutionChange={setSelectedResolution}
+                      onFormatChange={setSelectedFormat}
+                      onViewDetails={() => setIsDetailOpen(true)}
+                      onApply={handleApply}
+                    />
+                  ))}
+                </Box>
+              )}
 
               {!isListLoading && assets.length === 0 ? (
                 <Box
@@ -597,7 +612,7 @@ export function ExternalAssetBrowserDialog({
                 <Stack direction="row" spacing={1}>
                   <Button
                     color="inherit"
-                    disabled={isApplying || page <= 1}
+                    disabled={isApplying || isListLoading || page <= 1}
                     onClick={() => setPage((current) => Math.max(1, current - 1))}
                     sx={{
                       minWidth: 84,
@@ -611,7 +626,7 @@ export function ExternalAssetBrowserDialog({
                   </Button>
                   <Button
                     color="inherit"
-                    disabled={isApplying || page >= pageCount}
+                    disabled={isApplying || isListLoading || page >= pageCount}
                     onClick={() => setPage((current) => Math.min(pageCount, current + 1))}
                     sx={{
                       minWidth: 84,
