@@ -92,6 +92,7 @@ export type ExternalTextureAssetDetail = ExternalAssetListItem & {
   assetType: "texture";
   textureMaps: ExternalAssetTextureMap[];
   availableResolutions: string[];
+  availableFormats: string[];
 };
 
 export type ExternalModelAssetDetail = ExternalAssetListItem & {

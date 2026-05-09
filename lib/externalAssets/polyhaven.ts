@@ -413,6 +413,17 @@ function listTextureResolutions(textureMaps: ExternalAssetTextureMap[]) {
   return Array.from(resolutions).sort((left, right) => normalizeResolutionRank(left) - normalizeResolutionRank(right));
 }
 
+function listTextureFormats(textureMaps: ExternalAssetTextureMap[]) {
+  const formats = new Set<string>();
+  textureMaps.forEach((textureMap) => {
+    textureMap.fileOptions.forEach((file) => {
+      formats.add(file.format);
+    });
+  });
+
+  return Array.from(formats).sort((left, right) => left.localeCompare(right));
+}
+
 function listModelResolutions(modelFiles: ExternalModelFileOption[]) {
   return Array.from(new Set(modelFiles.map((file) => file.resolution))).sort(
     (left, right) => normalizeResolutionRank(left) - normalizeResolutionRank(right)
@@ -524,7 +535,8 @@ export const polyhavenProvider: ExternalAssetProvider = {
       ...baseItem,
       assetType: "texture",
       textureMaps,
-      availableResolutions: listTextureResolutions(textureMaps)
+      availableResolutions: listTextureResolutions(textureMaps),
+      availableFormats: listTextureFormats(textureMaps)
     } satisfies ExternalAssetDetail;
   }
 };

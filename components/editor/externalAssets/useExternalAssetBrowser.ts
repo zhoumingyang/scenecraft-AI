@@ -1,22 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { getPolyhavenAssetDetail, listPolyhavenAssets, listPolyhavenCategories } from "@/frontend/api/externalAssets";
-import {
-  getPreferredHdriFormat,
-  getPreferredHdriResolution,
-  getPreferredModelFormat,
-  getPreferredModelResolution,
-  getPreferredTextureResolution
-} from "@/lib/externalAssets/source";
+import { useEffect, useState } from "react";
+import { listPolyhavenAssets, listPolyhavenCategories } from "@/frontend/api/externalAssets";
 import type {
   ExternalAssetCategoryOption,
-  ExternalAssetDetail,
   ExternalAssetListItem,
-  ExternalModelAssetDetail,
-  ExternalAssetType,
-  ExternalHdriAssetDetail,
-  ExternalTextureAssetDetail
+  ExternalAssetType
 } from "@/lib/externalAssets/types";
 import { getApiErrorMessage } from "@/lib/http/axios";
 import { useI18n } from "@/lib/i18n";
@@ -32,18 +21,13 @@ export function useExternalAssetBrowser({ open, assetType }: UseExternalAssetBro
   const { t } = useI18n();
   const [assets, setAssets] = useState<ExternalAssetListItem[]>([]);
   const [categories, setCategories] = useState<ExternalAssetCategoryOption[]>([]);
-  const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
-  const [selectedAssetDetail, setSelectedAssetDetail] = useState<ExternalAssetDetail | null>(null);
   const [isListLoading, setIsListLoading] = useState(false);
-  const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [queryInput, setQueryInput] = useState("");
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("");
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
-  const [selectedResolution, setSelectedResolution] = useState("");
-  const [selectedFormat, setSelectedFormat] = useState("");
 
   useEffect(() => {
     if (!open) {
@@ -51,10 +35,6 @@ export function useExternalAssetBrowser({ open, assetType }: UseExternalAssetBro
     }
 
     setErrorMessage(null);
-    setSelectedAssetDetail(null);
-    setSelectedAssetId(null);
-    setSelectedResolution("");
-    setSelectedFormat("");
     setQueryInput("");
     setQuery("");
     setCategory("");
@@ -84,13 +64,6 @@ export function useExternalAssetBrowser({ open, assetType }: UseExternalAssetBro
 
         setAssets(response.items);
         setTotal(response.total);
-        setSelectedAssetId((current) => {
-          if (current && response.items.some((item) => item.assetId === current)) {
-            return current;
-          }
-
-          return response.items[0]?.assetId ?? null;
-        });
       })
       .catch((error: unknown) => {
         if (disposed) {
@@ -99,7 +72,6 @@ export function useExternalAssetBrowser({ open, assetType }: UseExternalAssetBro
 
         setAssets([]);
         setTotal(0);
-        setSelectedAssetId(null);
         setErrorMessage(getApiErrorMessage(error, t("editor.assets.loadFailed")));
       })
       .finally(() => {
@@ -137,131 +109,17 @@ export function useExternalAssetBrowser({ open, assetType }: UseExternalAssetBro
     };
   }, [assetType, open]);
 
-  useEffect(() => {
-    if (!open || !selectedAssetId) {
-      setSelectedAssetDetail(null);
-      return;
-    }
-
-    let disposed = false;
-    setIsDetailLoading(true);
-    setErrorMessage(null);
-
-    void getPolyhavenAssetDetail(selectedAssetId, assetType)
-      .then((response) => {
-        if (disposed) {
-          return;
-        }
-
-        setSelectedAssetDetail(response);
-      })
-      .catch((error: unknown) => {
-        if (disposed) {
-          return;
-        }
-
-        setSelectedAssetDetail(null);
-        setErrorMessage(getApiErrorMessage(error, t("editor.assets.detailLoadFailed")));
-      })
-      .finally(() => {
-        if (!disposed) {
-          setIsDetailLoading(false);
-        }
-      });
-
-    return () => {
-      disposed = true;
-    };
-  }, [assetType, open, selectedAssetId, t]);
-
-  useEffect(() => {
-    if (!selectedAssetDetail) {
-      setSelectedResolution("");
-      setSelectedFormat("");
-      return;
-    }
-
-    if (selectedAssetDetail.assetType === "hdri") {
-      const nextResolution = getPreferredHdriResolution(selectedAssetDetail.fileOptions);
-      const nextFormat = getPreferredHdriFormat(selectedAssetDetail.fileOptions, nextResolution);
-      setSelectedResolution(nextResolution);
-      setSelectedFormat(nextFormat);
-      return;
-    }
-
-    if (selectedAssetDetail.assetType === "model") {
-      const nextResolution = getPreferredModelResolution(selectedAssetDetail);
-      const nextFormat = getPreferredModelFormat(selectedAssetDetail.modelFiles, nextResolution);
-      setSelectedResolution(nextResolution);
-      setSelectedFormat(nextFormat);
-      return;
-    }
-
-    setSelectedResolution(getPreferredTextureResolution(selectedAssetDetail));
-    setSelectedFormat("");
-  }, [selectedAssetDetail]);
-
-  useEffect(() => {
-    if (!selectedAssetDetail || !selectedResolution) {
-      return;
-    }
-
-    if (selectedAssetDetail.assetType === "texture") {
-      return;
-    }
-
-    const availableFormats = Array.from(new Set(
-      (selectedAssetDetail.assetType === "hdri"
-        ? selectedAssetDetail.fileOptions
-        : selectedAssetDetail.modelFiles
-      )
-        .filter((file) => file.resolution === selectedResolution)
-        .map((file) => file.format)
-    ));
-
-    if (availableFormats.length === 0) {
-      setSelectedFormat("");
-      return;
-    }
-
-    if (availableFormats.includes(selectedFormat)) {
-      return;
-    }
-
-    setSelectedFormat(
-      selectedAssetDetail.assetType === "hdri"
-        ? getPreferredHdriFormat(selectedAssetDetail.fileOptions, selectedResolution)
-        : getPreferredModelFormat(selectedAssetDetail.modelFiles, selectedResolution)
-    );
-  }, [selectedAssetDetail, selectedFormat, selectedResolution]);
-
   const submitSearch = () => {
     setPage(1);
     setQuery(queryInput.trim());
   };
 
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const hdriDetail = useMemo<ExternalHdriAssetDetail | null>(
-    () => (selectedAssetDetail?.assetType === "hdri" ? selectedAssetDetail : null),
-    [selectedAssetDetail]
-  );
-  const textureDetail = useMemo<ExternalTextureAssetDetail | null>(
-    () => (selectedAssetDetail?.assetType === "texture" ? selectedAssetDetail : null),
-    [selectedAssetDetail]
-  );
-  const modelDetail = useMemo<ExternalModelAssetDetail | null>(
-    () => (selectedAssetDetail?.assetType === "model" ? selectedAssetDetail : null),
-    [selectedAssetDetail]
-  );
 
   return {
     assets,
     categories,
-    selectedAssetId,
-    setSelectedAssetId,
-    selectedAssetDetail,
     isListLoading,
-    isDetailLoading,
     errorMessage,
     setErrorMessage,
     queryInput,
@@ -271,13 +129,6 @@ export function useExternalAssetBrowser({ open, assetType }: UseExternalAssetBro
     page,
     setPage,
     pageCount,
-    selectedResolution,
-    setSelectedResolution,
-    selectedFormat,
-    setSelectedFormat,
-    submitSearch,
-    hdriDetail,
-    textureDetail,
-    modelDetail
+    submitSearch
   };
 }

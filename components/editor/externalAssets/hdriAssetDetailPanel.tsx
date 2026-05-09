@@ -14,8 +14,10 @@ type HdriAssetDetailPanelProps = {
   selectedFormat: string;
   onResolutionChange: (value: string) => void;
   onFormatChange: (value: string) => void;
-  isApplying: boolean;
-  onApply: () => void | Promise<void>;
+  isApplying?: boolean;
+  onApply?: () => void | Promise<void>;
+  showApplyButton?: boolean;
+  showSelectionControls?: boolean;
 };
 
 export function HdriAssetDetailPanel({
@@ -25,8 +27,10 @@ export function HdriAssetDetailPanel({
   selectedFormat,
   onResolutionChange,
   onFormatChange,
-  isApplying,
-  onApply
+  isApplying = false,
+  onApply,
+  showApplyButton = true,
+  showSelectionControls = true
 }: HdriAssetDetailPanelProps) {
   const { t } = useI18n();
   const availableResolutions = Array.from(new Set(asset.fileOptions.map((file) => file.resolution)));
@@ -46,67 +50,71 @@ export function HdriAssetDetailPanel({
         previewUrl={asset.tonemappedUrl || asset.thumbnailUrl}
       />
 
-      <Stack spacing={1}>
-        <TextField
-          select
-          size="small"
-          label={t("editor.assets.resolution")}
-          value={selectedResolution}
+      {showSelectionControls ? (
+        <Stack spacing={1}>
+          <TextField
+            select
+            size="small"
+            label={t("editor.assets.resolution")}
+            value={selectedResolution}
+            disabled={isApplying}
+            onChange={(event) => onResolutionChange(event.target.value)}
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                color: theme.pillText,
+                background: theme.inputBg
+              }
+            }}
+          >
+            {availableResolutions.map((resolution) => (
+              <MenuItem key={resolution} value={resolution}>
+                {resolution.toUpperCase()}
+              </MenuItem>
+            ))}
+          </TextField>
+
+          <TextField
+            select
+            size="small"
+            label={t("editor.assets.format")}
+            value={selectedFormat}
+            disabled={isApplying}
+            onChange={(event) => onFormatChange(event.target.value)}
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                color: theme.pillText,
+                background: theme.inputBg
+              }
+            }}
+          >
+            {availableFormats.map((format) => (
+              <MenuItem key={format} value={format}>
+                {format.toUpperCase()}
+              </MenuItem>
+            ))}
+          </TextField>
+        </Stack>
+      ) : null}
+
+      {showApplyButton ? (
+        <Button
+          color="inherit"
+          onClick={onApply}
           disabled={isApplying}
-          onChange={(event) => onResolutionChange(event.target.value)}
+          startIcon={isApplying ? <CircularProgress size={16} color="inherit" /> : undefined}
           sx={{
-            "& .MuiOutlinedInput-root": {
-              color: theme.pillText,
-              background: theme.inputBg
-            }
+            mt: "auto",
+            minHeight: 40,
+            borderRadius: 1,
+            border: theme.sectionBorder,
+            background: theme.iconButtonBg,
+            color: theme.pillText,
+            textTransform: "none"
           }}
         >
-          {availableResolutions.map((resolution) => (
-            <MenuItem key={resolution} value={resolution}>
-              {resolution.toUpperCase()}
-            </MenuItem>
-          ))}
-        </TextField>
-
-        <TextField
-          select
-          size="small"
-          label={t("editor.assets.format")}
-          value={selectedFormat}
-          disabled={isApplying}
-          onChange={(event) => onFormatChange(event.target.value)}
-          sx={{
-            "& .MuiOutlinedInput-root": {
-              color: theme.pillText,
-              background: theme.inputBg
-            }
-          }}
-        >
-          {availableFormats.map((format) => (
-            <MenuItem key={format} value={format}>
-              {format.toUpperCase()}
-            </MenuItem>
-          ))}
-        </TextField>
-      </Stack>
-
-      <Button
-        color="inherit"
-        onClick={onApply}
-        disabled={isApplying}
-        startIcon={isApplying ? <CircularProgress size={16} color="inherit" /> : undefined}
-        sx={{
-          mt: "auto",
-          minHeight: 40,
-          borderRadius: 1,
-          border: theme.sectionBorder,
-          background: theme.iconButtonBg,
-          color: theme.pillText,
-          textTransform: "none"
-        }}
-      >
-        {isApplying ? t("common.processing") : t("editor.assets.applyHdri")}
-      </Button>
+          {isApplying ? t("common.processing") : t("editor.assets.applyHdri")}
+        </Button>
+      ) : null}
     </>
   );
 }

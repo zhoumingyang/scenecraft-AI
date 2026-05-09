@@ -14,8 +14,10 @@ type ModelAssetDetailPanelProps = {
   selectedFormat: string;
   onResolutionChange: (value: string) => void;
   onFormatChange: (value: string) => void;
-  isApplying: boolean;
-  onApply: () => void | Promise<void>;
+  isApplying?: boolean;
+  onApply?: () => void | Promise<void>;
+  showApplyButton?: boolean;
+  showSelectionControls?: boolean;
 };
 
 export function ModelAssetDetailPanel({
@@ -25,8 +27,10 @@ export function ModelAssetDetailPanel({
   selectedFormat,
   onResolutionChange,
   onFormatChange,
-  isApplying,
-  onApply
+  isApplying = false,
+  onApply,
+  showApplyButton = true,
+  showSelectionControls = true
 }: ModelAssetDetailPanelProps) {
   const { t } = useI18n();
   const availableFormats = Array.from(new Set(
@@ -62,47 +66,51 @@ export function ModelAssetDetailPanel({
           </Stack>
         ) : null}
 
-        <TextField
-          select
-          size="small"
-          label={t("editor.assets.resolution")}
-          value={selectedResolution}
-          disabled={isApplying}
-          onChange={(event) => onResolutionChange(event.target.value)}
-          sx={{
-            "& .MuiOutlinedInput-root": {
-              color: theme.pillText,
-              background: theme.inputBg
-            }
-          }}
-        >
-          {asset.availableResolutions.map((resolution) => (
-            <MenuItem key={resolution} value={resolution}>
-              {resolution.toUpperCase()}
-            </MenuItem>
-          ))}
-        </TextField>
+        {showSelectionControls ? (
+          <>
+            <TextField
+              select
+              size="small"
+              label={t("editor.assets.resolution")}
+              value={selectedResolution}
+              disabled={isApplying}
+              onChange={(event) => onResolutionChange(event.target.value)}
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  color: theme.pillText,
+                  background: theme.inputBg
+                }
+              }}
+            >
+              {asset.availableResolutions.map((resolution) => (
+                <MenuItem key={resolution} value={resolution}>
+                  {resolution.toUpperCase()}
+                </MenuItem>
+              ))}
+            </TextField>
 
-        <TextField
-          select
-          size="small"
-          label={t("editor.assets.format")}
-          value={selectedFormat}
-          disabled={isApplying}
-          onChange={(event) => onFormatChange(event.target.value)}
-          sx={{
-            "& .MuiOutlinedInput-root": {
-              color: theme.pillText,
-              background: theme.inputBg
-            }
-          }}
-        >
-          {availableFormats.map((format) => (
-            <MenuItem key={format} value={format}>
-              {format.toUpperCase()}
-            </MenuItem>
-          ))}
-        </TextField>
+            <TextField
+              select
+              size="small"
+              label={t("editor.assets.format")}
+              value={selectedFormat}
+              disabled={isApplying}
+              onChange={(event) => onFormatChange(event.target.value)}
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  color: theme.pillText,
+                  background: theme.inputBg
+                }
+              }}
+            >
+              {availableFormats.map((format) => (
+                <MenuItem key={format} value={format}>
+                  {format.toUpperCase()}
+                </MenuItem>
+              ))}
+            </TextField>
+          </>
+        ) : null}
 
         {asset.lods && asset.lods.length > 0 ? (
           <Stack spacing={0.55}>
@@ -116,25 +124,27 @@ export function ModelAssetDetailPanel({
         ) : null}
       </Stack>
 
-      <Button
-        color="inherit"
-        onClick={() => {
-          void onApply();
-        }}
-        disabled={isApplying}
-        startIcon={isApplying ? <CircularProgress size={16} color="inherit" /> : undefined}
-        sx={{
-          mt: "auto",
-          minHeight: 40,
-          borderRadius: 1,
-          border: theme.sectionBorder,
-          background: theme.iconButtonBg,
-          color: theme.pillText,
-          textTransform: "none"
-        }}
-      >
-        {isApplying ? t("common.processing") : t("editor.assets.importModel")}
-      </Button>
+      {showApplyButton ? (
+        <Button
+          color="inherit"
+          onClick={() => {
+            void onApply?.();
+          }}
+          disabled={isApplying}
+          startIcon={isApplying ? <CircularProgress size={16} color="inherit" /> : undefined}
+          sx={{
+            mt: "auto",
+            minHeight: 40,
+            borderRadius: 1,
+            border: theme.sectionBorder,
+            background: theme.iconButtonBg,
+            color: theme.pillText,
+            textTransform: "none"
+          }}
+        >
+          {isApplying ? t("common.processing") : t("editor.assets.importModel")}
+        </Button>
+      ) : null}
     </>
   );
 }

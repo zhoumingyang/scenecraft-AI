@@ -19,6 +19,7 @@ type TextureImportSelection = {
 const PREFERRED_HDRI_RESOLUTIONS = ["2k", "1k", "4k", "8k", "16k"];
 const PREFERRED_TEXTURE_RESOLUTIONS = ["2k", "4k", "1k", "8k", "16k"];
 const PREFERRED_MODEL_RESOLUTIONS = ["2k", "4k", "1k", "8k", "16k"];
+const PREFERRED_TEXTURE_FORMATS = ["jpg", "png", "webp", "exr"];
 
 function normalizeValue(value: string) {
   return value.trim().toLowerCase();
@@ -90,6 +91,10 @@ export function getPreferredTextureResolution(detail: ExternalTextureAssetDetail
   return selectFirstMatchingValue(detail.availableResolutions, PREFERRED_TEXTURE_RESOLUTIONS);
 }
 
+export function getPreferredTextureFormat(detail: ExternalTextureAssetDetail) {
+  return selectFirstMatchingValue(detail.availableFormats, PREFERRED_TEXTURE_FORMATS);
+}
+
 export function getPreferredModelResolution(detail: ExternalModelAssetDetail) {
   return selectFirstMatchingValue(detail.availableResolutions, PREFERRED_MODEL_RESOLUTIONS);
 }
@@ -128,21 +133,30 @@ function getPreferredTextureFormats(materialField: SupportedMaterialTextureField
   return ["png", "jpg", "webp", "exr"];
 }
 
-function selectTextureFile(textureMap: ExternalAssetTextureMap, resolution: string) {
+function selectTextureFile(
+  textureMap: ExternalAssetTextureMap,
+  resolution: string,
+  preferredFormat?: string
+) {
+  const preferredFormats = preferredFormat
+    ? [preferredFormat, ...getPreferredTextureFormats(textureMap.materialField)]
+    : getPreferredTextureFormats(textureMap.materialField);
+
   return selectPreferredFormat(
     textureMap.fileOptions,
-    getPreferredTextureFormats(textureMap.materialField),
+    preferredFormats,
     resolution
   );
 }
 
 export function selectTextureImportFiles(
   detail: ExternalTextureAssetDetail,
-  resolution: string
+  resolution: string,
+  preferredFormat?: string
 ): TextureImportSelection[] {
   return detail.textureMaps
     .map((textureMap) => {
-      const file = selectTextureFile(textureMap, resolution);
+      const file = selectTextureFile(textureMap, resolution, preferredFormat);
       return file
         ? {
             materialField: textureMap.materialField,
