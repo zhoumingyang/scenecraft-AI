@@ -420,16 +420,20 @@ export function useTopBarProjectActions(t: TopBarTranslate) {
     }
   };
 
-  const onApplyExternalHdri = ({ asset, file }: ExternalHdriApplyPayload) => {
+  const onApplyExternalHdri = async ({ asset, file }: ExternalHdriApplyPayload) => {
     if (!app) {
       return;
     }
 
-    app.updateSceneEnvConfig({
-      panoAssetId: "",
-      panoAssetName: file.fileName,
-      panoUrl: file.url,
-      externalSource: createExternalAssetSource(asset, file)
+    await app.dispatch({
+      type: "scene.envConfig.patch",
+      patch: {
+        panoAssetId: "",
+        panoAssetName: file.fileName,
+        panoUrl: file.url,
+        externalSource: createExternalAssetSource(asset, file)
+      },
+      source: "ui"
     });
     app.setSelectedEntity(SCENE_NODE_ID);
   };

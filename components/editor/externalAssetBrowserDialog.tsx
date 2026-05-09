@@ -5,6 +5,7 @@ import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import {
   Alert,
+  Backdrop,
   Box,
   Button,
   CircularProgress,
@@ -60,8 +61,8 @@ type ExternalAssetBrowserDialogProps = {
   theme: EditorThemeTokens;
   assetType: ExternalAssetType;
   onClose: () => void;
-  onApplyHdri?: (payload: ExternalHdriApplyPayload) => void;
-  onApplyTexture?: (payload: ExternalTextureApplyPayload) => void;
+  onApplyHdri?: (payload: ExternalHdriApplyPayload) => Promise<void> | void;
+  onApplyTexture?: (payload: ExternalTextureApplyPayload) => Promise<void> | void;
   onApplyModel?: (payload: ExternalModelApplyPayload) => Promise<void> | void;
 };
 
@@ -147,6 +148,26 @@ function getPreferredSelection(asset: ExternalAssetDetail) {
   };
 }
 
+function preloadImageUrl(url: string, errorMessage: string) {
+  return new Promise<void>((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve();
+    image.onerror = () => reject(new Error(errorMessage));
+    image.src = url;
+  });
+}
+
+async function preloadTextureSelections(
+  selections: ExternalTextureApplyPayload["selections"],
+  errorMessage: string
+) {
+  await Promise.all(
+    Array.from(new Set(selections.map((selection) => selection.file.url))).map((url) =>
+      preloadImageUrl(url, errorMessage)
+    )
+  );
+}
+
 export function ExternalAssetBrowserDialog({
   open,
   theme,
@@ -158,6 +179,8 @@ export function ExternalAssetBrowserDialog({
 }: ExternalAssetBrowserDialogProps) {
   const { t } = useI18n();
   const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
+  const beginSceneLoading = useEditorStore((state) => state.beginSceneLoading);
+  const endSceneLoading = useEditorStore((state) => state.endSceneLoading);
   const [isApplying, setIsApplying] = useState(false);
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
   const [selectedAssetDetail, setSelectedAssetDetail] = useState<ExternalAssetDetail | null>(null);
@@ -193,7 +216,9 @@ export function ExternalAssetBrowserDialog({
 
   useEffect(() => {
     if (!open) {
-      setIsApplying(false);
+      if (!isApplying) {
+        setIsApplying(false);
+      }
       setSelectedAssetId(null);
       setSelectedAssetDetail(null);
       setSelectedDetailError(null);
@@ -203,7 +228,7 @@ export function ExternalAssetBrowserDialog({
       setSelectedFormat("");
       detailRequestId.current += 1;
     }
-  }, [open]);
+  }, [isApplying, open]);
 
   useEffect(() => {
     setSelectedAssetId(null);
@@ -351,6 +376,7 @@ export function ExternalAssetBrowserDialog({
     }
 
     setIsApplying(true);
+    let sceneLoadingStarted = false;
 
     try {
       if (asset.assetType === "hdri") {
@@ -360,11 +386,13 @@ export function ExternalAssetBrowserDialog({
           return;
         }
 
+        onClose();
+        beginSceneLoading(t("editor.scene.loadingTitle"));
+        sceneLoadingStarted = true;
         await onApplyHdri?.({
           asset,
           file
         });
-        onClose();
         return;
       }
 
@@ -375,11 +403,13 @@ export function ExternalAssetBrowserDialog({
           return;
         }
 
+        onClose();
+        beginSceneLoading(t("editor.scene.loadingTitle"));
+        sceneLoadingStarted = true;
         await onApplyModel?.({
           asset,
           file
         });
-        onClose();
         return;
       }
 
@@ -389,16 +419,20 @@ export function ExternalAssetBrowserDialog({
         return;
       }
 
+      onClose();
+      beginSceneLoading(t("editor.scene.loadingTitle"));
+      sceneLoadingStarted = true;
+      await preloadTextureSelections(selections, t("editor.assets.loadFailed"));
       await onApplyTexture?.({
         asset,
         selections
       });
-      onClose();
     } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : t("editor.import.modelLoadError")
-      );
+      window.alert(error instanceof Error ? error.message : t("editor.import.modelLoadError"));
     } finally {
+      if (sceneLoadingStarted) {
+        endSceneLoading();
+      }
       setIsApplying(false);
     }
   };
@@ -662,6 +696,27 @@ export function ExternalAssetBrowserDialog({
         onFormatChange={setSelectedFormat}
         onClose={() => setIsDetailOpen(false)}
       />
+
+      <Backdrop
+        open={isApplying}
+        sx={{
+          zIndex: (muiTheme) => muiTheme.zIndex.modal + 1,
+          display: "flex",
+          flexDirection: "column",
+          gap: 1.5,
+          color: theme.titleText,
+          backdropFilter: "blur(10px)",
+          background:
+            editorThemeMode === "dark"
+              ? "radial-gradient(circle at 50% 28%, rgba(114,234,255,0.16), transparent 38%), rgba(4,7,16,0.78)"
+              : "radial-gradient(circle at 50% 28%, rgba(145,198,255,0.22), transparent 38%), rgba(245,249,255,0.78)"
+        }}
+      >
+        <CircularProgress size={34} thickness={4.2} sx={{ color: theme.titleText }} />
+        <Typography sx={{ fontSize: 14, fontWeight: 700, color: theme.titleText }}>
+          {t("editor.scene.loadingTitle")}
+        </Typography>
+      </Backdrop>
     </>
   );
 }
