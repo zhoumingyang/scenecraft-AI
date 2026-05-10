@@ -148,6 +148,7 @@ export function createModelBinding(context: BindingContext, model: ModelEntityMo
       assetRoot.add(asset.object);
       setEntityId(group, model.id);
       applyAnimationState();
+      context.invalidateScene?.();
     })
     .catch(() => {
       // Keep empty group when model loading fails.
@@ -166,11 +167,19 @@ export function createModelBinding(context: BindingContext, model: ModelEntityMo
     },
     lastTransformSignature: buildTransformSignature(group),
     refresh: (deltaSeconds) => {
+      let sceneChanged = false;
       if (mixer && model.animationPlaybackState === "playing") {
         mixer.timeScale = model.animationTimeScale;
         mixer.update(deltaSeconds);
+        sceneChanged = true;
       }
-      currentAssetUpdate?.(deltaSeconds);
+      if (currentAssetUpdate) {
+        currentAssetUpdate(deltaSeconds);
+        sceneChanged = true;
+      }
+      if (sceneChanged) {
+        context.invalidateScene?.();
+      }
     },
     dispose: () => {
       disposed = true;

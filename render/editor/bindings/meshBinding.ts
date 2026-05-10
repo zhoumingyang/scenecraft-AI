@@ -17,9 +17,10 @@ import type { BindingContext, RenderBinding } from "./types";
 function applyMeshMaterial(
   material: THREE.MeshStandardMaterial,
   source: ResolvedMeshMaterialJSON,
-  loader: THREE.TextureLoader
+  loader: THREE.TextureLoader,
+  onTextureUpdate?: () => void
 ) {
-  applyMeshStandardMaterial(material, source, loader);
+  applyMeshStandardMaterial(material, source, loader, onTextureUpdate);
 }
 
 export function createMeshBinding(context: BindingContext, model: MeshEntityModel): RenderBinding {
@@ -27,7 +28,7 @@ export function createMeshBinding(context: BindingContext, model: MeshEntityMode
   const geometry = createMeshGeometry(model);
   ensureSecondaryUvAttribute(geometry);
   const material = new THREE.MeshStandardMaterial();
-  applyMeshMaterial(material, model.material, textureLoader);
+  applyMeshMaterial(material, model.material, textureLoader, context.invalidateMaterials);
 
   const mesh = new THREE.Mesh(geometry, material);
   mesh.name = `mesh:${model.id}`;
@@ -60,7 +61,8 @@ export function createMeshBinding(context: BindingContext, model: MeshEntityMode
 export function updateMeshBindingMaterial(
   binding: RenderBinding,
   textureLoader: THREE.TextureLoader,
-  patch: Partial<EditorMeshMaterialJSON>
+  patch: Partial<EditorMeshMaterialJSON>,
+  onTextureUpdate?: () => void
 ) {
   if (binding.kind !== "mesh") return;
 
@@ -72,6 +74,6 @@ export function updateMeshBindingMaterial(
   if (!(material instanceof THREE.MeshStandardMaterial)) return;
 
   disposeMeshStandardMaterialTextures(material);
-  applyMeshMaterial(material, model.material, textureLoader);
+  applyMeshMaterial(material, model.material, textureLoader, onTextureUpdate);
   material.needsUpdate = true;
 }

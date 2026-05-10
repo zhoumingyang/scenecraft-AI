@@ -3,12 +3,13 @@
 import { MouseEvent, useMemo, useState } from "react";
 import { Box, Button, ClickAwayListener, Stack, Typography } from "@mui/material";
 import VisibilityRoundedIcon from "@mui/icons-material/VisibilityRounded";
+import BlurOnRoundedIcon from "@mui/icons-material/BlurOnRounded";
 import GridViewRoundedIcon from "@mui/icons-material/GridViewRounded";
 import OpenWithRoundedIcon from "@mui/icons-material/OpenWithRounded";
 import LightModeRoundedIcon from "@mui/icons-material/LightModeRounded";
 import DarkModeRoundedIcon from "@mui/icons-material/DarkModeRounded";
 import KeyboardArrowUpRoundedIcon from "@mui/icons-material/KeyboardArrowUpRounded";
-import type { EditorApp } from "@/render/editor";
+import type { EditorApp, EditorRenderMode } from "@/render/editor";
 import { useI18n } from "@/lib/i18n";
 import { useEditorStore } from "@/stores/editorStore";
 import { getEditorThemeTokens } from "@/components/editor/theme";
@@ -28,6 +29,7 @@ export default function ViewControl({ app, viewStateVersion }: ViewControlProps)
   const currentProjectId = useEditorStore((state) => state.currentProjectId);
   const [open, setOpen] = useState(false);
   const theme = getEditorThemeTokens(editorThemeMode);
+  const renderMode = useMemo(() => app?.getRenderMode() ?? "webgl", [app, viewStateVersion]);
 
   const helperVisibility = useMemo(
     () =>
@@ -78,6 +80,8 @@ export default function ViewControl({ app, viewStateVersion }: ViewControlProps)
     setOpen((value) => !value);
   };
 
+  const nextRenderMode: EditorRenderMode = renderMode === "webgl" ? "pathTrace" : "webgl";
+
   return (
     <ClickAwayListener onClickAway={() => setOpen(false)}>
       <Box sx={{ position: "relative" }}>
@@ -110,6 +114,34 @@ export default function ViewControl({ app, viewStateVersion }: ViewControlProps)
               >
                 {t("editor.view.title")}
               </Typography>
+              <Button
+                color="inherit"
+                disabled={!app}
+                onClick={() => {
+                  app?.setRenderMode(nextRenderMode);
+                }}
+                sx={{
+                  justifyContent: "flex-start",
+                  px: 1.1,
+                  py: 0.9,
+                  borderRadius: 1.6,
+                  background: theme.itemBg,
+                  color: theme.text,
+                  textTransform: "none"
+                }}
+              >
+                <Stack direction="row" spacing={1} alignItems="center" sx={{ width: "100%" }}>
+                  <BlurOnRoundedIcon sx={{ fontSize: 16 }} />
+                  <Typography sx={{ flex: 1, fontSize: 13, textAlign: "left" }}>
+                    {t("editor.view.renderer")}
+                  </Typography>
+                  <Typography sx={{ fontSize: 12, color: theme.mutedText }}>
+                    {renderMode === "webgl"
+                      ? t("editor.view.renderer.webgl")
+                      : t("editor.view.renderer.pathTrace")}
+                  </Typography>
+                </Stack>
+              </Button>
               {helperItems.map((item) => (
                 <Button
                   key={item.key}

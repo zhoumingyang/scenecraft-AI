@@ -4,11 +4,16 @@ import { HDRLoader } from "three/examples/jsm/loaders/HDRLoader.js";
 import { RectAreaLightUniformsLib } from "three/examples/jsm/lights/RectAreaLightUniformsLib.js";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import { CameraModel } from "../models";
-import type { EditorViewportCaptureMode, ResolvedEditorEnvConfigJSON } from "../core/types";
+import type {
+  EditorRenderMode,
+  EditorViewportCaptureMode,
+  ResolvedEditorEnvConfigJSON
+} from "../core/types";
 import { buildTransformSignature } from "../utils/object3d";
 import { CustomTransformGizmo } from "./customTransformGizmo";
 import { configureRendererColorManagement } from "./colorManagement";
 import { EditorRuntimeEnvironment } from "./editorRuntimeEnvironment";
+import { EditorRuntimePathTracer } from "./editorRuntimePathTracer";
 import { EditorRuntimePostProcessing } from "./editorRuntimePostProcessing";
 import { FirstPersonController } from "./firstPersonController";
 import { ModelLoaderFactory } from "./modelLoaderFactory";
@@ -36,12 +41,14 @@ export class EditorRuntime {
   private readonly clock = new THREE.Clock();
   private readonly defaultBackground = new THREE.Color("#05070f");
   private readonly environment: EditorRuntimeEnvironment;
+  private readonly pathTracer: EditorRuntimePathTracer;
   private readonly postProcessing: EditorRuntimePostProcessing;
   private disposed = false;
   private startOptions: RuntimeStartOptions | null = null;
   private lastCameraSignature = "";
   private currentCameraType = 1;
   private transformDragging = false;
+  private renderMode: EditorRenderMode = "webgl";
 
   constructor(host: HTMLDivElement) {
     RectAreaLightUniformsLib.init();
@@ -77,6 +84,11 @@ export class EditorRuntime {
       renderer: this.renderer,
       defaultBackground: this.defaultBackground,
       invalidateSceneMaterials: this.invalidateSceneMaterials
+    });
+    this.pathTracer = new EditorRuntimePathTracer({
+      scene: this.scene,
+      camera: this.camera,
+      renderer: this.renderer
     });
     this.textureLoader = this.environment.textureLoader;
     this.hdrLoader = this.environment.hdrLoader;
@@ -124,6 +136,7 @@ export class EditorRuntime {
     this.scene.remove(this.transformGizmo.root);
     this.orbitControls.dispose();
     this.environment.dispose();
+    this.pathTracer.dispose();
     this.postProcessing.dispose();
     this.renderer.dispose();
     if (this.host.contains(this.renderer.domElement)) {
@@ -132,6 +145,11 @@ export class EditorRuntime {
   }
 
   renderFrame(deltaSeconds = 0) {
+    if (this.renderMode === "pathTrace") {
+      this.renderPathTraceFrame();
+      return;
+    }
+
     this.postProcessing.render(deltaSeconds);
   }
 
@@ -155,6 +173,7 @@ export class EditorRuntime {
     this.camera.updateProjectionMatrix();
     this.lastCameraSignature = buildTransformSignature(this.camera);
     this.postProcessing.syncCameraState();
+    this.pathTracer.invalidateCamera();
   }
 
   alignCameraModelToFirstPerson(cameraModel: CameraModel) {
@@ -205,6 +224,7 @@ export class EditorRuntime {
     cameraModel.copyTransformFromObject(this.camera);
     this.lastCameraSignature = nextSignature;
     this.postProcessing.syncCameraState();
+    this.pathTracer.invalidateCamera();
     return true;
   }
 
@@ -220,6 +240,39 @@ export class EditorRuntime {
 
   isFirstPersonCamera() {
     return this.currentCameraType === 2;
+  }
+
+  getRenderMode() {
+    return this.renderMode;
+  }
+
+  setRenderMode(mode: EditorRenderMode) {
+    if (this.renderMode === mode) return false;
+    this.renderMode = mode;
+    if (mode === "pathTrace") {
+      this.pathTracer.invalidateScene();
+    }
+    return true;
+  }
+
+  invalidatePathTraceScene() {
+    this.pathTracer.invalidateScene();
+  }
+
+  invalidatePathTraceCamera() {
+    this.pathTracer.invalidateCamera();
+  }
+
+  invalidatePathTraceMaterials() {
+    this.pathTracer.invalidateMaterials();
+  }
+
+  invalidatePathTraceLights() {
+    this.pathTracer.invalidateLights();
+  }
+
+  invalidatePathTraceEnvironment() {
+    this.pathTracer.invalidateEnvironment();
   }
 
   getGridHelperVisible() {
@@ -272,10 +325,12 @@ export class EditorRuntime {
 
   async setEnvironmentFromUrl(url: string, assetName = url) {
     await this.environment.setEnvironmentFromUrl(url, assetName);
+    this.pathTracer.invalidateEnvironment();
   }
 
   clearEnvironment() {
     this.environment.clearEnvironment();
+    this.pathTracer.invalidateEnvironment();
   }
 
   setOutlineSelection(objects: THREE.Object3D[]) {
@@ -315,6 +370,8 @@ export class EditorRuntime {
   applyEnvConfig(envConfig: ResolvedEditorEnvConfigJSON) {
     this.environment.applyEnvConfig(envConfig);
     this.postProcessing.applyConfig(envConfig.postProcessing);
+    this.pathTracer.invalidateScene();
+    this.pathTracer.invalidateEnvironment();
   }
 
   private invalidateSceneMaterials = () => {
@@ -331,7 +388,21 @@ export class EditorRuntime {
         material.needsUpdate = true;
       }
     });
+    this.pathTracer.invalidateMaterials();
   };
+
+  private renderPathTraceFrame() {
+    const previousTransformGizmoVisible = this.transformGizmo.root.visible;
+    this.transformGizmo.root.visible = false;
+
+    try {
+      this.environment.withEditorHelpersHidden(() => {
+        this.pathTracer.renderSample();
+      });
+    } finally {
+      this.transformGizmo.root.visible = previousTransformGizmoVisible;
+    }
+  }
 
   private setTransformDragging(isDragging: boolean) {
     this.transformDragging = isDragging;
@@ -367,6 +438,7 @@ export class EditorRuntime {
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
     this.postProcessing.syncCameraState();
+    this.pathTracer.invalidateCamera();
   };
 
   private animate = () => {

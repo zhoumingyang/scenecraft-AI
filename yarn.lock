@@ -2066,7 +2066,17 @@ supports-preserve-symlinks-flag@^1.0.0:
   resolved "https://registry.npmmirror.com/supports-preserve-symlinks-flag/-/supports-preserve-symlinks-flag-1.0.0.tgz"
   integrity sha512-ot0WnXS9fgdkgIcePe6RHNk1WA8+muPa6cSjeR3V8K27q9BB1rTE3R1p7Hv0z1ZyAc8s6Vvv8DIyWf681MAt0w==
 
-three@^0.180.0, three@>=0.137:
+three-gpu-pathtracer@^0.0.24:
+  version "0.0.24"
+  resolved "https://registry.npmjs.org/three-gpu-pathtracer/-/three-gpu-pathtracer-0.0.24.tgz"
+  integrity sha512-fHQ7g7ywvSwRAQywhsfech2/kspQKinfFNOcNDTJS2Q34CzcF1kpESlOVvJH8kX/bGlCnxMI+Qo16kWGAy7zCA==
+
+three-mesh-bvh@^0.9.9, three-mesh-bvh@>=0.7.4:
+  version "0.9.9"
+  resolved "https://registry.npmjs.org/three-mesh-bvh/-/three-mesh-bvh-0.9.9.tgz"
+  integrity sha512-FJKitcjvbALmeQRK+Sc+nLGorCpkrZBrbgJZFzhdyWboak37DZikn46hvQkNqSbJPm227ahYmS6k3N/GXaAyXw==
+
+three@^0.180.0, "three@>= 0.159.0", three@>=0.137, three@>=0.180.0:
   version "0.180.0"
   resolved "https://registry.npmjs.org/three/-/three-0.180.0.tgz"
   integrity sha512-o+qycAMZrh+TsE01GqWUxUIKR1AL0S8pq7zDkYOQw8GqfX8b8VoCKYUoHbhiX5j+7hr8XsuHDVU6+gkQJQKg9w==
@@ -2144,6 +2154,11 @@ word-wrap@^1.2.5:
   version "1.2.5"
   resolved "https://registry.npmmirror.com/word-wrap/-/word-wrap-1.2.5.tgz"
   integrity sha512-BN22B5eaMMI9UMtjrGd5g5eCYPpCPDUy0FJXbYsaT5zYxjFOckS53SQDE3pWkVoWpHXVb3BrYcEN4Twa55B5cA==
+
+xatlas-web@^0.1.0:
+  version "0.1.0"
+  resolved "https://registry.npmjs.org/xatlas-web/-/xatlas-web-0.1.0.tgz"
+  integrity sha512-PprVfuXbaIskxLTLBUQRaWfgSy9xUQqAMIRooOw0P6NYqwgh6T0voeer6+Z5M7AFt5SGXUybuww/uDGs1yw8vQ==
 
 xtend@^4.0.0:
   version "4.0.2"

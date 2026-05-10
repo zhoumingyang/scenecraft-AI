@@ -308,6 +308,7 @@ export type ResolvedEditorPostProcessingConfigJSON = {
 };
 
 export type EditorViewportCaptureMode = "viewport" | "clean";
+export type EditorRenderMode = "webgl" | "pathTrace";
 
 export type EditorEnvConfigJSON = {
   panoAssetId?: string;

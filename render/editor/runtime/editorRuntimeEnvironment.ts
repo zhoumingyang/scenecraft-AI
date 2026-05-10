@@ -95,6 +95,28 @@ export class EditorRuntimeEnvironment {
     this.syncLightHelperVisibility();
   }
 
+  withEditorHelpersHidden<T>(callback: () => T): T {
+    const previousGridVisible = this.gridHelper.visible;
+    const lightHelperSnapshots: Array<{ object: THREE.Object3D; visible: boolean }> = [];
+
+    this.scene.traverse((object) => {
+      if (object.userData?.editorLightHelper !== true) return;
+      lightHelperSnapshots.push({ object, visible: object.visible });
+      object.visible = false;
+    });
+
+    this.gridHelper.visible = false;
+
+    try {
+      return callback();
+    } finally {
+      this.gridHelper.visible = previousGridVisible;
+      lightHelperSnapshots.forEach(({ object, visible }) => {
+        object.visible = visible;
+      });
+    }
+  }
+
   getShadowEnabled() {
     return this.groundMode === "plane";
   }
@@ -113,7 +135,12 @@ export class EditorRuntimeEnvironment {
     this.gridHelper.scale.set(ground.scale[0], 1, ground.scale[2]);
     this.groundPlane.scale.set(ground.scale[0], 1, ground.scale[2]);
     disposeMeshStandardMaterialTextures(this.groundPlane.material);
-    applyMeshStandardMaterial(this.groundPlane.material, ground.material, this.textureLoader);
+    applyMeshStandardMaterial(
+      this.groundPlane.material,
+      ground.material,
+      this.textureLoader,
+      this.invalidateSceneMaterials
+    );
     this.groundPlane.material.needsUpdate = true;
     this.invalidateSceneMaterials();
     this.syncGroundVisibility();

@@ -25,4 +25,6 @@ export type BindingContext = {
   scene: THREE.Scene;
   modelLoaderFactory: ModelLoaderFactory;
   textureLoader: THREE.TextureLoader;
+  invalidateScene?: () => void;
+  invalidateMaterials?: () => void;
 };

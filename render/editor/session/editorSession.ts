@@ -311,7 +311,9 @@ export class EditorSession {
     this.registry = new BindingRegistry({
       scene: runtime.scene,
       modelLoaderFactory: runtime.modelLoaderFactory,
-      textureLoader: runtime.textureLoader
+      textureLoader: runtime.textureLoader,
+      invalidateScene: () => runtime.invalidatePathTraceScene(),
+      invalidateMaterials: () => runtime.invalidatePathTraceMaterials()
     });
   }
 
@@ -772,7 +774,12 @@ export class EditorSession {
     const binding = this.registry.get(entityId);
     if (!binding || binding.kind !== "mesh" || binding.model.locked) return;
 
-    updateMeshBindingMaterial(binding, this.runtime.textureLoader, patch);
+    updateMeshBindingMaterial(
+      binding,
+      this.runtime.textureLoader,
+      patch,
+      () => this.runtime.invalidatePathTraceMaterials()
+    );
     this.emit({
       type: "entityUpdated",
       entityId,

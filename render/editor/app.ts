@@ -9,6 +9,7 @@ import type {
   EditorEnvConfigJSON,
   EditorGroundConfigJSON,
   EditorLightJSON,
+  EditorRenderMode,
   LightingConflictState,
   EditorPostProcessPassId,
   EditorPostProcessingPassParamsMap,
@@ -111,10 +112,12 @@ export class EditorApp {
 
   previewAi3DPlan(plan: Ai3DPlan) {
     this.session.previewAi3DPlan(plan);
+    this.runtime.invalidatePathTraceScene();
   }
 
   clearAi3DPreview() {
     this.session.clearAi3DPreview();
+    this.runtime.invalidatePathTraceScene();
   }
 
   captureAi3DPreviewImages() {
@@ -160,6 +163,15 @@ export class EditorApp {
 
   getLightingConflictState(): LightingConflictState {
     return this.session.getLightingConflictState();
+  }
+
+  getRenderMode() {
+    return this.runtime.getRenderMode();
+  }
+
+  setRenderMode(mode: EditorRenderMode) {
+    if (!this.runtime.setRenderMode(mode)) return;
+    this.emit({ type: "viewStateUpdated" });
   }
 
   isFirstPersonCamera() {
@@ -479,9 +491,36 @@ export class EditorApp {
   }
 
   private emit(event: EditorAppEvent) {
+    this.invalidatePathTraceForEvent(event);
     this.listeners.forEach((listener) => {
       listener(event);
     });
+  }
+
+  private invalidatePathTraceForEvent(event: EditorAppEvent) {
+    if (event.type === "projectLoaded") {
+      this.runtime.invalidatePathTraceScene();
+      return;
+    }
+
+    if (event.type === "cameraUpdated") {
+      this.runtime.invalidatePathTraceCamera();
+      return;
+    }
+
+    if (event.type === "sceneUpdated") {
+      this.runtime.invalidatePathTraceScene();
+      return;
+    }
+
+    if (event.type !== "entityUpdated") return;
+
+    if (event.entityKind === "light") {
+      this.runtime.invalidatePathTraceLights();
+      return;
+    }
+
+    this.runtime.invalidatePathTraceScene();
   }
 
   private onPointerDown = (event: PointerEvent) => {

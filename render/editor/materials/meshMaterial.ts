@@ -123,10 +123,12 @@ function applyTexture(
   loader: THREE.TextureLoader,
   schema: ResolvedTextureSchema,
   assign: (texture: THREE.Texture | null) => void,
-  role: "color" | "emissive" | "normal" | "roughness" | "metalness" | "ao"
+  role: "color" | "emissive" | "normal" | "roughness" | "metalness" | "ao",
+  onTextureUpdate?: () => void
 ) {
   if (!schema.url) {
     assign(null);
+    onTextureUpdate?.();
     return;
   }
 
@@ -134,6 +136,7 @@ function applyTexture(
     configureTexture(texture, schema);
     applyTextureColorSpace(texture, role);
     assign(texture);
+    onTextureUpdate?.();
   });
 }
 
@@ -153,7 +156,8 @@ export function disposeMeshStandardMaterialTextures(material: THREE.MeshStandard
 export function applyMeshStandardMaterial(
   material: THREE.MeshStandardMaterial,
   source: ResolvedMeshMaterialJSON,
-  loader: THREE.TextureLoader
+  loader: THREE.TextureLoader,
+  onTextureUpdate?: () => void
 ) {
   material.color.set(source.color);
   material.opacity = source.opacity;
@@ -168,27 +172,28 @@ export function applyMeshStandardMaterial(
   applyTexture(loader, source.diffuseMap, (texture) => {
     material.map = texture;
     material.needsUpdate = true;
-  }, "color");
+  }, "color", onTextureUpdate);
   applyTexture(loader, source.metalnessMap, (texture) => {
     material.metalnessMap = texture;
     material.needsUpdate = true;
-  }, "metalness");
+  }, "metalness", onTextureUpdate);
   applyTexture(loader, source.roughnessMap, (texture) => {
     material.roughnessMap = texture;
     material.needsUpdate = true;
-  }, "roughness");
+  }, "roughness", onTextureUpdate);
   applyTexture(loader, source.normalMap, (texture) => {
     material.normalMap = texture;
     material.needsUpdate = true;
-  }, "normal");
+  }, "normal", onTextureUpdate);
   applyTexture(loader, source.aoMap, (texture) => {
     material.aoMap = texture;
     material.needsUpdate = true;
-  }, "ao");
+  }, "ao", onTextureUpdate);
   applyTexture(loader, source.emissiveMap, (texture) => {
     material.emissiveMap = texture;
     material.needsUpdate = true;
-  }, "emissive");
+  }, "emissive", onTextureUpdate);
 
   normalizeMaterialColorSpaces(material);
+  onTextureUpdate?.();
 }
