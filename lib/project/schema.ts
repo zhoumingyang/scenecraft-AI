@@ -170,6 +170,15 @@ const editorCameraSchema = z
   })
   .strict();
 
+const editorGroundConfigSchema = z
+  .object({
+    mode: z.enum(["grid", "plane"]).optional(),
+    visible: z.boolean().optional(),
+    scale: numericArraySchema.optional(),
+    material: editorMeshMaterialSchema.optional()
+  })
+  .strict();
+
 const editorEnvConfigSchema = z
   .object({
     panoAssetId: z.string().trim().max(120).optional(),
@@ -189,7 +198,8 @@ const editorEnvConfigSchema = z
         passes: z.record(z.string(), z.unknown()).optional()
       })
       .strict()
-      .optional()
+      .optional(),
+    ground: editorGroundConfigSchema.optional()
   })
   .strict();
 

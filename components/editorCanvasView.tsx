@@ -18,7 +18,10 @@ import { createEditorSdk } from "@/render/editor/sdk";
 import { useEditorStore } from "@/stores/editorStore";
 import { getEditorThemeTokens } from "@/components/editor/theme";
 import { syncEditorProjectSearchParam } from "@/components/editor/projectPersistence";
-import { restoreViewHelperVisibility } from "@/components/editor/viewHelperPreferences";
+import {
+  applyGroundFallbackFromViewHelperStorage,
+  restoreViewHelperVisibility
+} from "@/components/editor/viewHelperPreferences";
 
 type EditorCanvasViewProps = {
   userEmail: string | null;
@@ -142,13 +145,17 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
         if (initialProjectId) {
           try {
             const response = await getProject(initialProjectId);
+            const project = applyGroundFallbackFromViewHelperStorage(
+              response.project.snapshot,
+              response.project.id
+            );
             await app.dispatch({
               type: "project.load",
-              project: response.project.snapshot
+              project
             });
             restoreViewHelperVisibility(app, response.project.id);
             setCurrentProject(response.project.id);
-            setProjectMeta(response.project.snapshot.meta ?? null);
+            setProjectMeta(project.meta ?? null);
             setLoadedAiLibrary(response.project.aiSnapshot);
             clearPendingAiGenerations();
             clearLocalProjectAssets();

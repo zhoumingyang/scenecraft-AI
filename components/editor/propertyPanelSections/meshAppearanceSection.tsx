@@ -7,6 +7,7 @@ import { ColorField } from "@/components/common/propertyFieldControls";
 import { getEditorThemeTokens } from "@/components/editor/theme";
 import { useI18n } from "@/lib/i18n";
 import type { ResolvedMeshMaterialJSON, ResolvedTextureSchema } from "@/render/editor";
+import type { MeshMaterialPatch } from "@/render/editor";
 import { useEditorStore } from "@/stores/editorStore";
 import { TextureFieldKey } from "./shared";
 import { formatNumber } from "./util";
@@ -89,8 +90,9 @@ function TextureConfigRow({
 }
 
 type MeshAppearanceSectionProps = {
-  entityId: string;
+  entityId?: string;
   material: ResolvedMeshMaterialJSON;
+  onMaterialPatch?: (patch: MeshMaterialPatch) => void;
   onTextureConfigOpen: (key: TextureFieldKey) => void;
   onMaterialLibraryOpen: () => void;
   materialLibraryEnabled: boolean;
@@ -99,6 +101,7 @@ type MeshAppearanceSectionProps = {
 export function MeshAppearanceSection({
   entityId,
   material,
+  onMaterialPatch,
   onTextureConfigOpen,
   onMaterialLibraryOpen,
   materialLibraryEnabled
@@ -109,25 +112,43 @@ export function MeshAppearanceSection({
   const theme = getEditorThemeTokens(editorThemeMode);
 
   const updateColor = (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    app?.updateMeshMaterial(entityId, { color: event.target.value });
+    const patch = { color: event.target.value };
+    if (onMaterialPatch) {
+      onMaterialPatch(patch);
+      return;
+    }
+    if (entityId) app?.updateMeshMaterial(entityId, patch);
   };
 
   const updateEmissive = (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    app?.updateMeshMaterial(entityId, { emissive: event.target.value });
+    const patch = { emissive: event.target.value };
+    if (onMaterialPatch) {
+      onMaterialPatch(patch);
+      return;
+    }
+    if (entityId) app?.updateMeshMaterial(entityId, patch);
   };
 
   const updateMaterialValue = (
     key: "opacity" | "metalness" | "roughness" | "aoMapIntensity" | "emissiveIntensity",
     value: number
   ) => {
-    app?.updateMeshMaterial(entityId, { [key]: value });
+    const patch = { [key]: value };
+    if (onMaterialPatch) {
+      onMaterialPatch(patch);
+      return;
+    }
+    if (entityId) app?.updateMeshMaterial(entityId, patch);
   };
 
   const updateNormalScale = (axis: "x" | "y", value: number) => {
-    if (!app) return;
     const next = [...material.normalScale] as [number, number];
     next[axis === "x" ? 0 : 1] = value;
-    app.updateMeshMaterial(entityId, { normalScale: next });
+    if (onMaterialPatch) {
+      onMaterialPatch({ normalScale: next });
+      return;
+    }
+    if (entityId) app?.updateMeshMaterial(entityId, { normalScale: next });
   };
 
   return (

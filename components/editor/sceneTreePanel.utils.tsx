@@ -5,7 +5,7 @@ import FolderRoundedIcon from "@mui/icons-material/FolderRounded";
 import GridViewRoundedIcon from "@mui/icons-material/GridViewRounded";
 import LightModeRoundedIcon from "@mui/icons-material/LightModeRounded";
 import PublicRoundedIcon from "@mui/icons-material/PublicRounded";
-import type { EditorProjectModel } from "@/render/editor";
+import { GROUND_HELPER_NODE_ID, type EditorProjectModel } from "@/render/editor";
 import { useI18n } from "@/lib/i18n";
 import type { SceneTreeNode, SceneTreeNodeType, SceneTreeSection } from "./sceneTreePanel.types";
 
@@ -45,6 +45,23 @@ function createSceneNode(
     label,
     fallbackLabel: label,
     children
+  };
+}
+
+function createGridHelperNode(
+  project: EditorProjectModel,
+  t: ReturnType<typeof useI18n>["t"]
+): SceneTreeNode {
+  const label = t("editor.view.gridHelper");
+  return {
+    id: GROUND_HELPER_NODE_ID,
+    type: "gridHelper",
+    locked: false,
+    visible: project.envConfig.ground.visible,
+    effectivelyVisible: project.envConfig.ground.visible,
+    label,
+    fallbackLabel: label,
+    children: []
   };
 }
 
@@ -167,6 +184,7 @@ function buildSceneRootChildren(
 
 export function getNodeIcon(nodeType: SceneTreeNodeType) {
   if (nodeType === "scene") return <PublicRoundedIcon sx={{ fontSize: 16 }} />;
+  if (nodeType === "gridHelper") return <GridViewRoundedIcon sx={{ fontSize: 16 }} />;
   if (nodeType === "group") return <AccountTreeRoundedIcon sx={{ fontSize: 16 }} />;
   if (nodeType === "model") return <FolderRoundedIcon sx={{ fontSize: 16 }} />;
   if (nodeType === "mesh") return <GridViewRoundedIcon sx={{ fontSize: 16 }} />;
@@ -178,7 +196,10 @@ export function buildSceneTreeNodes(
   t: ReturnType<typeof useI18n>["t"],
   sceneNodeId: string
 ) {
-  return [createSceneNode(sceneNodeId, t, project ? buildSceneRootChildren(project, t) : [])];
+  const children = project
+    ? [createGridHelperNode(project, t), ...buildSceneRootChildren(project, t)]
+    : [];
+  return [createSceneNode(sceneNodeId, t, children)];
 }
 
 export function buildSceneTreeSections(

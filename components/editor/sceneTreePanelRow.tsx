@@ -53,10 +53,11 @@ export default function SceneTreePanelRow({
   onSubmitRenaming
 }: SceneTreePanelRowProps) {
   const selectionDisabled = node.type !== "scene" && (!node.effectivelyVisible || node.locked);
-  const lockDisabled = node.type === "scene" || !node.effectivelyVisible;
-  const canToggleVisible = node.type !== "light" && node.type !== "scene";
-  const canDuplicate = node.type !== "scene" && !node.locked && node.effectivelyVisible;
-  const canDelete = node.type !== "scene" && !node.locked && node.effectivelyVisible;
+  const isGridHelper = node.type === "gridHelper";
+  const lockDisabled = node.type === "scene" || isGridHelper || !node.effectivelyVisible;
+  const canToggleVisible = node.type !== "light" && node.type !== "scene" && !isGridHelper;
+  const canDuplicate = node.type !== "scene" && !isGridHelper && !node.locked && node.effectivelyVisible;
+  const canDelete = node.type !== "scene" && !isGridHelper && !node.locked && node.effectivelyVisible;
   const canToggleLock = !lockDisabled;
   const rowColor = node.locked ? theme.mutedText : selected ? theme.pillText : theme.text;
   const canExpand = node.children.length > 0;
@@ -174,6 +175,7 @@ export default function SceneTreePanelRow({
           <Box
             onDoubleClick={(event) => {
               event.stopPropagation();
+              if (isGridHelper) return;
               onStartRenaming(node);
             }}
             sx={{
@@ -220,56 +222,60 @@ export default function SceneTreePanelRow({
         </Tooltip>
       ) : null}
 
-      <Tooltip title={node.locked ? "unlock" : "lock"} arrow>
-        <span>
-          <IconButton
-            size="small"
-            disabled={!canToggleLock}
-            onClick={(event) => {
-              event.stopPropagation();
-              if (isEditing) onStopRenaming();
-              onToggleLock(node.id, node.locked);
-            }}
-            sx={iconButtonSx}
-          >
-            {node.locked ? <LockRoundedIcon sx={{ fontSize: 16 }} /> : <LockOpenRoundedIcon sx={{ fontSize: 16 }} />}
-          </IconButton>
-        </span>
-      </Tooltip>
+      {!isGridHelper ? (
+        <>
+          <Tooltip title={node.locked ? "unlock" : "lock"} arrow>
+            <span>
+              <IconButton
+                size="small"
+                disabled={!canToggleLock}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  if (isEditing) onStopRenaming();
+                  onToggleLock(node.id, node.locked);
+                }}
+                sx={iconButtonSx}
+              >
+                {node.locked ? <LockRoundedIcon sx={{ fontSize: 16 }} /> : <LockOpenRoundedIcon sx={{ fontSize: 16 }} />}
+              </IconButton>
+            </span>
+          </Tooltip>
 
-      <Tooltip title="copy" arrow>
-        <span>
-          <IconButton
-            size="small"
-            disabled={!canDuplicate}
-            onClick={(event) => {
-              event.stopPropagation();
-              if (isEditing) onStopRenaming();
-              onDuplicateEntity(node.id);
-            }}
-            sx={iconButtonSx}
-          >
-            <ContentCopyRoundedIcon sx={{ fontSize: 16 }} />
-          </IconButton>
-        </span>
-      </Tooltip>
+          <Tooltip title="copy" arrow>
+            <span>
+              <IconButton
+                size="small"
+                disabled={!canDuplicate}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  if (isEditing) onStopRenaming();
+                  onDuplicateEntity(node.id);
+                }}
+                sx={iconButtonSx}
+              >
+                <ContentCopyRoundedIcon sx={{ fontSize: 16 }} />
+              </IconButton>
+            </span>
+          </Tooltip>
 
-      <Tooltip title="delete" arrow>
-        <span>
-          <IconButton
-            size="small"
-            disabled={!canDelete}
-            onClick={(event) => {
-              event.stopPropagation();
-              if (isEditing) onStopRenaming();
-              onDeleteEntity(node.id);
-            }}
-            sx={iconButtonSx}
-          >
-            <DeleteOutlineRoundedIcon sx={{ fontSize: 16 }} />
-          </IconButton>
-        </span>
-      </Tooltip>
+          <Tooltip title="delete" arrow>
+            <span>
+              <IconButton
+                size="small"
+                disabled={!canDelete}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  if (isEditing) onStopRenaming();
+                  onDeleteEntity(node.id);
+                }}
+                sx={iconButtonSx}
+              >
+                <DeleteOutlineRoundedIcon sx={{ fontSize: 16 }} />
+              </IconButton>
+            </span>
+          </Tooltip>
+        </>
+      ) : null}
     </Stack>
   );
 }

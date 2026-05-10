@@ -1,8 +1,11 @@
 import type {
   EditorEnvConfigJSON,
+  EditorMeshMaterialJSON,
   EditorProjectMetaJSON,
   EditorProjectJSON,
   EditorProjectThumbnailJSON,
+  ResolvedMeshMaterialJSON,
+  EditorGroundConfigJSON,
   ResolvedEditorEnvConfigJSON
 } from "../core/types";
 import {
@@ -11,8 +14,9 @@ import {
   DEFAULT_EDITOR_ENVIRONMENT_INTENSITY,
   DEFAULT_EDITOR_ENVIRONMENT_ROTATION_Y
 } from "../constants/environment";
-import { normalizeString } from "../utils/normalize";
+import { normalizeBoolean, normalizeString, normalizeVec3 } from "../utils/normalize";
 import { normalizeEditorPostProcessingConfig } from "../postProcessing";
+import { createDefaultMeshMaterialJSON, normalizeMeshMaterial } from "../materials/meshMaterial";
 import {
   DEFAULT_EDITOR_TONE_MAPPING,
   DEFAULT_EDITOR_TONE_MAPPING_EXPOSURE
@@ -60,7 +64,78 @@ function normalizeEnvConfig(source?: EditorEnvConfigJSON): ResolvedEditorEnvConf
     environmentRotationY: source?.environmentRotationY ?? DEFAULT_EDITOR_ENVIRONMENT_ROTATION_Y,
     toneMapping: source?.toneMapping ?? DEFAULT_EDITOR_TONE_MAPPING,
     toneMappingExposure: source?.toneMappingExposure ?? DEFAULT_EDITOR_TONE_MAPPING_EXPOSURE,
-    postProcessing: normalizeEditorPostProcessingConfig(source?.postProcessing)
+    postProcessing: normalizeEditorPostProcessingConfig(source?.postProcessing),
+    ground: normalizeGroundConfig(source?.ground)
+  };
+}
+
+function normalizeGroundConfig(source?: EditorGroundConfigJSON) {
+  return {
+    mode: source?.mode === "plane" ? "plane" as const : "grid" as const,
+    visible: normalizeBoolean(source?.visible, true),
+    scale: normalizeVec3(source?.scale, [1, 1, 1]),
+    material: normalizeMeshMaterial(source?.material ?? createDefaultMeshMaterialJSON())
+  };
+}
+
+function serializeMaterial(source: ResolvedMeshMaterialJSON): EditorMeshMaterialJSON {
+  return {
+    color: source.color,
+    opacity: source.opacity,
+    diffuseMap: {
+      assetId: source.diffuseMap.assetId,
+      url: source.diffuseMap.url,
+      externalSource: cloneExternalSource(source.diffuseMap.externalSource) ?? undefined,
+      offset: [...source.diffuseMap.offset],
+      repeat: [...source.diffuseMap.repeat],
+      rotation: source.diffuseMap.rotation
+    },
+    metalness: source.metalness,
+    metalnessMap: {
+      assetId: source.metalnessMap.assetId,
+      url: source.metalnessMap.url,
+      externalSource: cloneExternalSource(source.metalnessMap.externalSource) ?? undefined,
+      offset: [...source.metalnessMap.offset],
+      repeat: [...source.metalnessMap.repeat],
+      rotation: source.metalnessMap.rotation
+    },
+    roughness: source.roughness,
+    roughnessMap: {
+      assetId: source.roughnessMap.assetId,
+      url: source.roughnessMap.url,
+      externalSource: cloneExternalSource(source.roughnessMap.externalSource) ?? undefined,
+      offset: [...source.roughnessMap.offset],
+      repeat: [...source.roughnessMap.repeat],
+      rotation: source.roughnessMap.rotation
+    },
+    normalMap: {
+      assetId: source.normalMap.assetId,
+      url: source.normalMap.url,
+      externalSource: cloneExternalSource(source.normalMap.externalSource) ?? undefined,
+      offset: [...source.normalMap.offset],
+      repeat: [...source.normalMap.repeat],
+      rotation: source.normalMap.rotation
+    },
+    normalScale: [...source.normalScale],
+    aoMap: {
+      assetId: source.aoMap.assetId,
+      url: source.aoMap.url,
+      externalSource: cloneExternalSource(source.aoMap.externalSource) ?? undefined,
+      offset: [...source.aoMap.offset],
+      repeat: [...source.aoMap.repeat],
+      rotation: source.aoMap.rotation
+    },
+    aoMapIntensity: source.aoMapIntensity,
+    emissive: source.emissive,
+    emissiveIntensity: source.emissiveIntensity,
+    emissiveMap: {
+      assetId: source.emissiveMap.assetId,
+      url: source.emissiveMap.url,
+      externalSource: cloneExternalSource(source.emissiveMap.externalSource) ?? undefined,
+      offset: [...source.emissiveMap.offset],
+      repeat: [...source.emissiveMap.repeat],
+      rotation: source.emissiveMap.rotation
+    }
   };
 }
 
@@ -200,6 +275,12 @@ export class EditorProjectModel {
         environmentRotationY: this.envConfig.environmentRotationY,
         toneMapping: this.envConfig.toneMapping,
         toneMappingExposure: this.envConfig.toneMappingExposure,
+        ground: {
+          mode: this.envConfig.ground.mode,
+          visible: this.envConfig.ground.visible,
+          scale: [...this.envConfig.ground.scale],
+          material: serializeMaterial(this.envConfig.ground.material)
+        },
         postProcessing: {
           passes: {
             pixelated: {
@@ -293,64 +374,7 @@ export class EditorProjectModel {
         uvs: item.uvs.map((uv) => ({ ...uv })),
         normals: item.normals.map((normal) => ({ ...normal })),
         indices: [...item.indices],
-        material: {
-          color: item.material.color,
-          opacity: item.material.opacity,
-          diffuseMap: {
-            assetId: item.material.diffuseMap.assetId,
-            url: item.material.diffuseMap.url,
-            externalSource: cloneExternalSource(item.material.diffuseMap.externalSource) ?? undefined,
-            offset: [...item.material.diffuseMap.offset],
-            repeat: [...item.material.diffuseMap.repeat],
-            rotation: item.material.diffuseMap.rotation
-          },
-          metalness: item.material.metalness,
-          metalnessMap: {
-            assetId: item.material.metalnessMap.assetId,
-            url: item.material.metalnessMap.url,
-            externalSource: cloneExternalSource(item.material.metalnessMap.externalSource) ?? undefined,
-            offset: [...item.material.metalnessMap.offset],
-            repeat: [...item.material.metalnessMap.repeat],
-            rotation: item.material.metalnessMap.rotation
-          },
-          roughness: item.material.roughness,
-          roughnessMap: {
-            assetId: item.material.roughnessMap.assetId,
-            url: item.material.roughnessMap.url,
-            externalSource: cloneExternalSource(item.material.roughnessMap.externalSource) ?? undefined,
-            offset: [...item.material.roughnessMap.offset],
-            repeat: [...item.material.roughnessMap.repeat],
-            rotation: item.material.roughnessMap.rotation
-          },
-          normalMap: {
-            assetId: item.material.normalMap.assetId,
-            url: item.material.normalMap.url,
-            externalSource: cloneExternalSource(item.material.normalMap.externalSource) ?? undefined,
-            offset: [...item.material.normalMap.offset],
-            repeat: [...item.material.normalMap.repeat],
-            rotation: item.material.normalMap.rotation
-          },
-          normalScale: [...item.material.normalScale],
-          aoMap: {
-            assetId: item.material.aoMap.assetId,
-            url: item.material.aoMap.url,
-            externalSource: cloneExternalSource(item.material.aoMap.externalSource) ?? undefined,
-            offset: [...item.material.aoMap.offset],
-            repeat: [...item.material.aoMap.repeat],
-            rotation: item.material.aoMap.rotation
-          },
-          aoMapIntensity: item.material.aoMapIntensity,
-          emissive: item.material.emissive,
-          emissiveIntensity: item.material.emissiveIntensity,
-          emissiveMap: {
-            assetId: item.material.emissiveMap.assetId,
-            url: item.material.emissiveMap.url,
-            externalSource: cloneExternalSource(item.material.emissiveMap.externalSource) ?? undefined,
-            offset: [...item.material.emissiveMap.offset],
-            repeat: [...item.material.emissiveMap.repeat],
-            rotation: item.material.emissiveMap.rotation
-          }
-        },
+        material: serializeMaterial(item.material),
         locked: item.locked,
         visible: item.visible,
         position: [...item.position],

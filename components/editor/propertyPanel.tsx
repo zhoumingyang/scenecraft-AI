@@ -11,9 +11,10 @@ import {
 import { isPolyhavenProviderEnabled } from "@/lib/externalAssets/config";
 import { useI18n } from "@/lib/i18n";
 import { createExternalAssetSource } from "@/lib/externalAssets/source";
-import { SCENE_NODE_ID } from "@/render/editor";
+import { GROUND_HELPER_NODE_ID, SCENE_NODE_ID } from "@/render/editor";
 import { useEditorStore } from "@/stores/editorStore";
 import {
+  GroundScaleSection,
   LightSettingsSection,
   MeshAppearanceSection,
   ModelAnimationSection,
@@ -54,6 +55,14 @@ export default function PropertyPanel() {
       };
     }
 
+    if (selectedEntityId === GROUND_HELPER_NODE_ID) {
+      if (!project.envConfig.ground.visible) return null;
+      return {
+        kind: "gridHelper" as const,
+        item: project.envConfig.ground
+      };
+    }
+
     const record = project.getEntityById(selectedEntityId);
     if (!record) return null;
 
@@ -74,6 +83,8 @@ export default function PropertyPanel() {
             ? t("editor.sceneTree.model")
             : entityRecord.kind === "mesh"
               ? t("editor.sceneTree.meshes")
+              : entityRecord.kind === "gridHelper"
+                ? t("editor.view.gridHelper")
               : getLightTypeLabel(entityRecord.item.lightType, t)
         : t("editor.properties.none");
 
@@ -96,7 +107,7 @@ export default function PropertyPanel() {
   );
 
   const handleApplyTextureSet = ({ asset, selections }: ExternalTextureApplyPayload) => {
-    if (!app || entityRecord?.kind !== "mesh") {
+    if (!app || (entityRecord?.kind !== "mesh" && entityRecord?.kind !== "gridHelper")) {
       return;
     }
 
@@ -109,6 +120,11 @@ export default function PropertyPanel() {
       };
       return patch;
     }, {});
+
+    if (entityRecord.kind === "gridHelper") {
+      app.updateGroundMaterial(materialPatch);
+      return;
+    }
 
     app.updateMeshMaterial(entityRecord.item.id, materialPatch);
   };
@@ -245,6 +261,8 @@ export default function PropertyPanel() {
 
                     {entityRecord.kind === "scene" ? (
                       <SceneSettingsSection envConfig={entityRecord.envConfig} />
+                    ) : entityRecord.kind === "gridHelper" ? (
+                      <GroundScaleSection scale={entityRecord.item.scale} />
                     ) : (
                       <TransformSection
                         entityId={entityRecord.item.id}
@@ -258,6 +276,16 @@ export default function PropertyPanel() {
                       <MeshAppearanceSection
                         entityId={entityRecord.item.id}
                         material={entityRecord.item.material}
+                        onTextureConfigOpen={setActiveTextureField}
+                        onMaterialLibraryOpen={() => setMaterialLibraryOpen(true)}
+                        materialLibraryEnabled={isPolyhavenEnabled}
+                      />
+                    ) : null}
+
+                    {entityRecord.kind === "gridHelper" && entityRecord.item.mode === "plane" ? (
+                      <MeshAppearanceSection
+                        material={entityRecord.item.material}
+                        onMaterialPatch={(patch) => app?.updateGroundMaterial(patch)}
                         onTextureConfigOpen={setActiveTextureField}
                         onMaterialLibraryOpen={() => setMaterialLibraryOpen(true)}
                         materialLibraryEnabled={isPolyhavenEnabled}
@@ -297,18 +325,28 @@ export default function PropertyPanel() {
           </Stack>
         </Box>
 
-        {entityRecord?.kind === "mesh" && activeTextureField ? (
+        {(entityRecord?.kind === "mesh" || entityRecord?.kind === "gridHelper") && activeTextureField ? (
           <TextureConfigDialog
             open
-            entityId={entityRecord.item.id}
+            entityId={entityRecord.kind === "mesh" ? entityRecord.item.id : undefined}
             textureField={activeTextureField}
             title={getTextureDialogTitle(activeTextureField, t)}
             texture={entityRecord.item.material[activeTextureField]}
+            targetPath={
+              entityRecord.kind === "gridHelper"
+                ? `ground:${activeTextureField}`
+                : `mesh:${entityRecord.item.id}:${activeTextureField}`
+            }
+            onTexturePatch={
+              entityRecord.kind === "gridHelper"
+                ? (texture) => app?.updateGroundMaterial({ [activeTextureField]: texture })
+                : undefined
+            }
             onClose={() => setActiveTextureField(null)}
           />
         ) : null}
 
-        {entityRecord?.kind === "mesh" && isPolyhavenEnabled ? (
+        {(entityRecord?.kind === "mesh" || entityRecord?.kind === "gridHelper") && isPolyhavenEnabled ? (
           <ExternalAssetBrowserDialog
             open={materialLibraryOpen}
             theme={theme}

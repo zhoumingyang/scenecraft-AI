@@ -6,6 +6,7 @@ import {
   DEFAULT_EDITOR_ENVIRONMENT_ROTATION_Y
 } from "../constants/environment";
 import { createDefaultEditorPostProcessingConfigJSON } from "../postProcessing";
+import { createDefaultMeshMaterialJSON } from "../materials/meshMaterial";
 import {
   DEFAULT_EDITOR_TONE_MAPPING,
   DEFAULT_EDITOR_TONE_MAPPING_EXPOSURE
@@ -29,6 +30,15 @@ function createDefaultEditorCameraJSON() {
   };
 }
 
+function createDefaultGroundConfigJSON() {
+  return {
+    mode: "grid" as const,
+    visible: true,
+    scale: [1, 1, 1],
+    material: createDefaultMeshMaterialJSON()
+  };
+}
+
 export function createDefaultEditorProjectJSON(): EditorProjectJSON {
   const projectId = createUuid();
   const postProcessing = createDefaultEditorPostProcessingConfigJSON();
@@ -46,7 +56,8 @@ export function createDefaultEditorProjectJSON(): EditorProjectJSON {
       environmentRotationY: DEFAULT_EDITOR_ENVIRONMENT_ROTATION_Y,
       toneMapping: DEFAULT_EDITOR_TONE_MAPPING,
       toneMappingExposure: DEFAULT_EDITOR_TONE_MAPPING_EXPOSURE,
-      postProcessing
+      postProcessing,
+      ground: createDefaultGroundConfigJSON()
     },
     model: [],
     mesh: [],
@@ -72,7 +83,8 @@ export function createEmptyEditorProjectJSON(projectId = createUuid()): EditorPr
       environmentRotationY: DEFAULT_EDITOR_ENVIRONMENT_ROTATION_Y,
       toneMapping: DEFAULT_EDITOR_TONE_MAPPING,
       toneMappingExposure: DEFAULT_EDITOR_TONE_MAPPING_EXPOSURE,
-      postProcessing
+      postProcessing,
+      ground: createDefaultGroundConfigJSON()
     },
     model: [],
     mesh: [],

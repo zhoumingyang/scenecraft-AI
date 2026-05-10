@@ -2,8 +2,16 @@ import * as THREE from "three";
 import { EXRLoader } from "three/examples/jsm/loaders/EXRLoader.js";
 import { HDRLoader } from "three/examples/jsm/loaders/HDRLoader.js";
 
-import type { ResolvedEditorEnvConfigJSON } from "../core/types";
+import type {
+  EditorGroundMode,
+  ResolvedEditorEnvConfigJSON,
+  ResolvedEditorGroundConfigJSON
+} from "../core/types";
 import { isHighDynamicRangeEnvironmentAssetName } from "../constants/environment";
+import {
+  applyMeshStandardMaterial,
+  disposeMeshStandardMaterialTextures
+} from "../materials/meshMaterial";
 import { applyTextureColorSpace } from "./colorManagement";
 
 const DEFAULT_SCENE_ROTATION = new THREE.Euler();
@@ -25,12 +33,11 @@ export class EditorRuntimeEnvironment {
   private readonly defaultBackground: THREE.Color;
   private readonly invalidateSceneMaterials: () => void;
   private readonly gridHelper: THREE.GridHelper;
-  private readonly shadowGroundBase: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>;
-  private readonly shadowGroundReceiver: THREE.Mesh<THREE.PlaneGeometry, THREE.ShadowMaterial>;
+  private readonly groundPlane: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshStandardMaterial>;
   private readonly pmremGenerator: THREE.PMREMGenerator;
-  private gridHelperVisible = true;
+  private groundVisible = true;
+  private groundMode: EditorGroundMode = "grid";
   private lightHelpersVisible = true;
-  private shadowEnabled = false;
   private environmentTexture: THREE.Texture | null = null;
   private environmentMapTexture: THREE.Texture | null = null;
 
@@ -49,51 +56,33 @@ export class EditorRuntimeEnvironment {
     this.gridHelper.position.y = -0.0001;
     this.scene.add(this.gridHelper);
 
-    this.shadowGroundBase = new THREE.Mesh(
+    this.groundPlane = new THREE.Mesh(
       new THREE.PlaneGeometry(80, 80),
-      new THREE.MeshBasicMaterial({
+      new THREE.MeshStandardMaterial({
         color: new THREE.Color("#ffffff"),
-        transparent: true,
-        opacity: 0.96,
+        roughness: 1,
+        metalness: 0,
         side: THREE.DoubleSide
       })
     );
-    this.shadowGroundBase.name = "shadow-ground-base";
-    this.shadowGroundBase.rotation.x = -Math.PI / 2;
-    this.shadowGroundBase.position.y = -0.001;
-    this.shadowGroundBase.visible = false;
-    this.scene.add(this.shadowGroundBase);
-
-    this.shadowGroundReceiver = new THREE.Mesh(
-      new THREE.PlaneGeometry(80, 80),
-      new THREE.ShadowMaterial({
-        color: new THREE.Color("#000000"),
-        opacity: 0.3,
-        depthWrite: false,
-        polygonOffset: true,
-        polygonOffsetFactor: -1,
-        polygonOffsetUnits: -1
-      })
-    );
-    this.shadowGroundReceiver.name = "shadow-ground-receiver";
-    this.shadowGroundReceiver.rotation.x = -Math.PI / 2;
-    this.shadowGroundReceiver.position.y = 0;
-    this.shadowGroundReceiver.castShadow = false;
-    this.shadowGroundReceiver.receiveShadow = true;
-    this.shadowGroundReceiver.renderOrder = 1;
-    this.shadowGroundReceiver.visible = false;
-    this.scene.add(this.shadowGroundReceiver);
+    this.groundPlane.name = "ground-plane";
+    this.groundPlane.rotation.x = -Math.PI / 2;
+    this.groundPlane.position.y = -0.001;
+    this.groundPlane.castShadow = false;
+    this.groundPlane.receiveShadow = true;
+    this.groundPlane.visible = false;
+    this.scene.add(this.groundPlane);
 
     this.pmremGenerator = new THREE.PMREMGenerator(this.renderer);
     this.pmremGenerator.compileEquirectangularShader();
   }
 
   getGridHelperVisible() {
-    return this.gridHelperVisible;
+    return this.groundVisible;
   }
 
   setGridHelperVisible(visible: boolean) {
-    this.gridHelperVisible = visible;
+    this.groundVisible = visible;
     this.syncGroundVisibility();
   }
 
@@ -107,12 +96,25 @@ export class EditorRuntimeEnvironment {
   }
 
   getShadowEnabled() {
-    return this.shadowEnabled;
+    return this.groundMode === "plane";
   }
 
   setShadowEnabled(enabled: boolean) {
-    this.shadowEnabled = enabled;
+    this.groundMode = enabled ? "plane" : "grid";
     this.renderer.shadowMap.enabled = enabled;
+    this.invalidateSceneMaterials();
+    this.syncGroundVisibility();
+  }
+
+  applyGroundConfig(ground: ResolvedEditorGroundConfigJSON) {
+    this.groundMode = ground.mode;
+    this.groundVisible = ground.visible;
+    this.renderer.shadowMap.enabled = ground.mode === "plane";
+    this.gridHelper.scale.set(ground.scale[0], 1, ground.scale[2]);
+    this.groundPlane.scale.set(ground.scale[0], 1, ground.scale[2]);
+    disposeMeshStandardMaterialTextures(this.groundPlane.material);
+    applyMeshStandardMaterial(this.groundPlane.material, ground.material, this.textureLoader);
+    this.groundPlane.material.needsUpdate = true;
     this.invalidateSceneMaterials();
     this.syncGroundVisibility();
   }
@@ -193,24 +195,22 @@ export class EditorRuntimeEnvironment {
     this.scene.backgroundRotation.set(0, rotationY, 0);
     this.renderer.toneMapping = envConfig.toneMapping as THREE.ToneMapping;
     this.renderer.toneMappingExposure = envConfig.toneMappingExposure;
+    this.applyGroundConfig(envConfig.ground);
     this.invalidateSceneMaterials();
   }
 
   dispose() {
     this.clearEnvironment();
     this.scene.remove(this.gridHelper);
-    this.scene.remove(this.shadowGroundBase);
-    this.scene.remove(this.shadowGroundReceiver);
-    this.shadowGroundBase.geometry.dispose();
-    this.shadowGroundBase.material.dispose();
-    this.shadowGroundReceiver.geometry.dispose();
-    this.shadowGroundReceiver.material.dispose();
+    this.scene.remove(this.groundPlane);
+    this.groundPlane.geometry.dispose();
+    disposeMeshStandardMaterialTextures(this.groundPlane.material);
+    this.groundPlane.material.dispose();
     this.pmremGenerator.dispose();
   }
 
   private syncGroundVisibility() {
-    this.gridHelper.visible = this.gridHelperVisible && !this.shadowEnabled;
-    this.shadowGroundBase.visible = this.gridHelperVisible && this.shadowEnabled;
-    this.shadowGroundReceiver.visible = this.gridHelperVisible && this.shadowEnabled;
+    this.gridHelper.visible = this.groundVisible && this.groundMode === "grid";
+    this.groundPlane.visible = this.groundVisible && this.groundMode === "plane";
   }
 }

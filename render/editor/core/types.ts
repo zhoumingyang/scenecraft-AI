@@ -6,7 +6,7 @@ import type {
 import type { ExternalAssetSourceJSON } from "@/lib/externalAssets/types";
 
 export type { AssetUnit, ModelAnimationPlaybackState, ModelFileFormat } from "../constants/model";
-export { SCENE_NODE_ID } from "../constants/scene";
+export { GROUND_HELPER_NODE_ID, SCENE_NODE_ID } from "../constants/scene";
 
 export type Vec3Tuple = [number, number, number];
 export type QuatTuple = [number, number, number, number];
@@ -111,6 +111,22 @@ export type ResolvedMeshMaterialJSON = {
   emissive: string;
   emissiveIntensity: number;
   emissiveMap: ResolvedTextureSchema;
+};
+
+export type EditorGroundMode = "grid" | "plane";
+
+export type EditorGroundConfigJSON = {
+  mode?: EditorGroundMode;
+  visible?: boolean;
+  scale?: number[];
+  material?: EditorMeshMaterialJSON;
+};
+
+export type ResolvedEditorGroundConfigJSON = {
+  mode: EditorGroundMode;
+  visible: boolean;
+  scale: Vec3Tuple;
+  material: ResolvedMeshMaterialJSON;
 };
 
 export type EditorMeshJSON = {
@@ -307,14 +323,16 @@ export type EditorEnvConfigJSON = {
   toneMapping?: number;
   toneMappingExposure?: number;
   postProcessing?: EditorPostProcessingConfigJSON;
+  ground?: EditorGroundConfigJSON;
 };
 
 export type ResolvedEditorEnvConfigJSON = Omit<
   Required<EditorEnvConfigJSON>,
-  "postProcessing" | "externalSource"
+  "postProcessing" | "externalSource" | "ground"
 > & {
   externalSource: ExternalAssetSourceJSON | null;
   postProcessing: ResolvedEditorPostProcessingConfigJSON;
+  ground: ResolvedEditorGroundConfigJSON;
 };
 
 export type EditorProjectMetaJSON = {

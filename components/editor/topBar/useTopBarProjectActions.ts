@@ -20,6 +20,7 @@ import {
 } from "@/render/editor";
 import { useEditorStore, type ProjectSaveStatus } from "@/stores/editorStore";
 import {
+  applyGroundFallbackFromViewHelperStorage,
   hasStoredViewHelperVisibility,
   persistViewHelperVisibility,
   restoreViewHelperVisibility
@@ -119,6 +120,9 @@ export function useTopBarProjectActions(t: TopBarTranslate) {
     markUnsavedChanges(false);
     syncEditorProjectSearchParam(project.id);
   };
+
+  const prepareProjectForLoad = (project: PersistedProject) =>
+    applyGroundFallbackFromViewHelperStorage(project.snapshot, project.id);
 
   const resetToDefaultProjectState = (project: EditorProjectJSON) => {
     restoreProjectViewHelpers(null);
@@ -285,7 +289,7 @@ export function useTopBarProjectActions(t: TopBarTranslate) {
       await runWithSceneLoading(() =>
         app.dispatch({
           type: "project.load",
-          project: response.project.snapshot
+          project: prepareProjectForLoad(response.project)
         })
       );
       applyPersistedProjectState(response.project, meta);
@@ -374,7 +378,7 @@ export function useTopBarProjectActions(t: TopBarTranslate) {
         const projectResponse = await getProject(projectId);
         await app.dispatch({
           type: "project.load",
-          project: projectResponse.project.snapshot
+          project: prepareProjectForLoad(projectResponse.project)
         });
         return projectResponse;
       });

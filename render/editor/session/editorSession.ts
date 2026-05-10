@@ -8,6 +8,7 @@ import type { EditorCommand, MeshMaterialPatch } from "../core/commands";
 import type {
   EditorCameraJSON,
   EditorEnvConfigJSON,
+  EditorGroundConfigJSON,
   EditorLightJSON,
   LightingConflictState,
   EditorProjectJSON,
@@ -25,10 +26,14 @@ import type { LightPresetId } from "../lightPresets";
 import { EditorProjectModel, MeshEntityModel, ModelEntityModel } from "../models";
 import { createEmptyEditorProjectJSON } from "../factories/projectFactory";
 import { mergeEditorPostProcessingConfig } from "../postProcessing";
+import { normalizeMeshMaterial } from "../materials/meshMaterial";
 import { EditorRuntime } from "../runtime/editorRuntime";
 import { createMeshGeometry } from "../utils/geometry";
 import { inferModelFileFormat } from "../utils/modelFile";
-import { SCENE_NODE_ID as SCENE_SELECTION_ID } from "../core/types";
+import {
+  GROUND_HELPER_NODE_ID,
+  SCENE_NODE_ID as SCENE_SELECTION_ID
+} from "../core/types";
 
 type Emit = (event: EditorAppEvent) => void;
 
@@ -392,6 +397,10 @@ export class EditorSession {
     return this.selectedEntityId;
   }
 
+  getGroundConfig() {
+    return this.projectModel?.envConfig.ground ?? null;
+  }
+
   getLightingConflictState(): LightingConflictState {
     if (!this.projectModel) {
       return {
@@ -552,6 +561,12 @@ export class EditorSession {
         return;
       case "scene.envConfig.patch":
         await this.updateSceneEnvConfig(command.patch, command.source ?? "ui");
+        return;
+      case "ground.patch":
+        this.updateGroundConfig(command.patch, command.source ?? "ui");
+        return;
+      case "ground.material":
+        this.updateGroundMaterial(command.patch, command.source ?? "ui");
         return;
       case "mesh.material":
         this.updateMeshMaterial(command.entityId, command.patch, command.source ?? "ui");
@@ -725,7 +740,8 @@ export class EditorSession {
       ...patch,
       postProcessing: patch.postProcessing
         ? mergeEditorPostProcessingConfig(this.projectModel.envConfig.postProcessing, patch.postProcessing)
-        : this.projectModel.envConfig.postProcessing
+        : this.projectModel.envConfig.postProcessing,
+      ground: this.projectModel.envConfig.ground
     };
 
     const shouldReloadEnvironment =
@@ -763,6 +779,70 @@ export class EditorSession {
       entityKind: "mesh",
       source
     });
+  }
+
+  updateGroundConfig(patch: Partial<EditorGroundConfigJSON>, source: SyncSource = "ui") {
+    if (!this.projectModel) return;
+
+    this.projectModel.envConfig = {
+      ...this.projectModel.envConfig,
+      ground: {
+        ...this.projectModel.envConfig.ground,
+        ...patch,
+        scale: patch.scale
+          ? [
+              patch.scale[0] ?? this.projectModel.envConfig.ground.scale[0],
+              this.projectModel.envConfig.ground.scale[1],
+              patch.scale[2] ?? this.projectModel.envConfig.ground.scale[2]
+            ]
+          : this.projectModel.envConfig.ground.scale,
+        material: this.projectModel.envConfig.ground.material
+      }
+    };
+
+    this.runtime.applyEnvConfig(this.projectModel.envConfig);
+
+    if (!this.projectModel.envConfig.ground.visible && this.selectedEntityId === GROUND_HELPER_NODE_ID) {
+      this.setSelectedEntity(null, source);
+    }
+
+    this.emit({ type: "sceneUpdated", source });
+    this.emit({ type: "viewStateUpdated" });
+  }
+
+  updateGroundMaterial(patch: MeshMaterialPatch, source: SyncSource = "ui") {
+    if (!this.projectModel) return;
+
+    const material = this.projectModel.envConfig.ground.material;
+    this.projectModel.envConfig = {
+      ...this.projectModel.envConfig,
+      ground: {
+        ...this.projectModel.envConfig.ground,
+        material: normalizeMeshMaterial({
+          ...material,
+          ...patch,
+          diffuseMap: patch.diffuseMap
+            ? { ...material.diffuseMap, ...patch.diffuseMap }
+            : material.diffuseMap,
+          metalnessMap: patch.metalnessMap
+            ? { ...material.metalnessMap, ...patch.metalnessMap }
+            : material.metalnessMap,
+          roughnessMap: patch.roughnessMap
+            ? { ...material.roughnessMap, ...patch.roughnessMap }
+            : material.roughnessMap,
+          normalMap: patch.normalMap
+            ? { ...material.normalMap, ...patch.normalMap }
+            : material.normalMap,
+          aoMap: patch.aoMap ? { ...material.aoMap, ...patch.aoMap } : material.aoMap,
+          emissiveMap: patch.emissiveMap
+            ? { ...material.emissiveMap, ...patch.emissiveMap }
+            : material.emissiveMap
+        })
+      }
+    };
+
+    this.runtime.applyEnvConfig(this.projectModel.envConfig);
+    this.emit({ type: "sceneUpdated", source });
   }
 
   async createMesh(geometryName: string, source: SyncSource = "ui") {
@@ -905,6 +985,15 @@ export class EditorSession {
   }
 
   setSelectedEntity(entityId: string | null, source: SyncSource = "ui") {
+    if (entityId === GROUND_HELPER_NODE_ID) {
+      if (!this.projectModel?.envConfig.ground.visible) return;
+      if (this.selectedEntityId === entityId) return;
+      this.selectedEntityId = entityId;
+      this.runtime.attachTransformTarget(null);
+      this.emit({ type: "selectionChanged", selectedEntityId: entityId, source });
+      return;
+    }
+
     if (entityId && entityId !== SCENE_SELECTION_ID) {
       const binding = this.registry.get(entityId);
       if (!binding || binding.model.locked || !this.projectModel?.isEntityEffectivelyVisible(entityId)) return;

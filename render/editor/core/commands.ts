@@ -1,6 +1,7 @@
 import type {
   EditorCameraJSON,
   EditorEnvConfigJSON,
+  EditorGroundConfigJSON,
   EditorLightJSON,
   EditorMeshMaterialJSON,
   EditorProjectJSON,
@@ -71,6 +72,16 @@ export type EditorCommand =
   | {
       type: "scene.envConfig.patch";
       patch: Partial<EditorEnvConfigJSON>;
+      source?: SyncSource;
+    }
+  | {
+      type: "ground.patch";
+      patch: Partial<EditorGroundConfigJSON>;
+      source?: SyncSource;
+    }
+  | {
+      type: "ground.material";
+      patch: MeshMaterialPatch;
       source?: SyncSource;
     }
   | {

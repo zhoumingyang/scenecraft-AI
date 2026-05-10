@@ -1,59 +1,16 @@
 import type {
   EditorMeshJSON,
   EditorMeshMaterialJSON,
-  ResolvedMeshMaterialJSON,
-  ResolvedTextureSchema,
-  TextureSchema
+  ResolvedMeshMaterialJSON
 } from "../core/types";
 import {
-  clampUnitInterval,
   normalizeBoolean,
-  normalizeColor,
   normalizeId,
   normalizeNumber,
   normalizeString
 } from "../utils/normalize";
+import { normalizeMeshMaterial } from "../materials/meshMaterial";
 import { BaseEntityModel } from "./baseEntity";
-
-function normalizeVec2(value: unknown, fallback: [number, number]): [number, number] {
-  if (!Array.isArray(value)) return [...fallback];
-  return [normalizeNumber(value[0], fallback[0]), normalizeNumber(value[1], fallback[1])];
-}
-
-function normalizeTexture(source?: TextureSchema | null): ResolvedTextureSchema {
-  return {
-    assetId: normalizeString(source?.assetId),
-    url: normalizeString(source?.url),
-    externalSource: source?.externalSource ?? null,
-    offset: normalizeVec2(source?.offset, [0, 0]),
-    repeat: normalizeVec2(source?.repeat, [1, 1]),
-    rotation: normalizeNumber(source?.rotation, 0)
-  };
-}
-
-function normalizeMaterial(
-  source?: EditorMeshMaterialJSON,
-  legacy?: Pick<EditorMeshJSON, "color" | "textureUrl">
-): ResolvedMeshMaterialJSON {
-  return {
-    color: normalizeColor(source?.color ?? legacy?.color, "#ffffff"),
-    opacity: clampUnitInterval(source?.opacity, 1),
-    diffuseMap: normalizeTexture(
-      source?.diffuseMap ?? (legacy?.textureUrl ? { url: legacy.textureUrl } : undefined)
-    ),
-    metalness: clampUnitInterval(source?.metalness, 0),
-    metalnessMap: normalizeTexture(source?.metalnessMap),
-    roughness: clampUnitInterval(source?.roughness, 1),
-    roughnessMap: normalizeTexture(source?.roughnessMap),
-    normalMap: normalizeTexture(source?.normalMap),
-    normalScale: normalizeVec2(source?.normalScale, [1, 1]),
-    aoMap: normalizeTexture(source?.aoMap),
-    aoMapIntensity: clampUnitInterval(source?.aoMapIntensity, 1),
-    emissive: normalizeColor(source?.emissive, "#000000"),
-    emissiveIntensity: normalizeNumber(source?.emissiveIntensity, 1),
-    emissiveMap: normalizeTexture(source?.emissiveMap)
-  };
-}
 
 export class MeshEntityModel extends BaseEntityModel {
   meshType: number;
@@ -92,12 +49,12 @@ export class MeshEntityModel extends BaseEntityModel {
     this.indices = Array.isArray(source.indices)
       ? source.indices.filter((item) => typeof item === "number" && Number.isFinite(item))
       : [];
-    this.material = normalizeMaterial(source.material, source);
+    this.material = normalizeMeshMaterial(source.material, source);
     this.visible = normalizeBoolean(source.visible, true);
   }
 
   patchMaterial(source: Partial<EditorMeshMaterialJSON>) {
-    this.material = normalizeMaterial({
+    this.material = normalizeMeshMaterial({
       ...this.material,
       ...source,
       diffuseMap: source.diffuseMap

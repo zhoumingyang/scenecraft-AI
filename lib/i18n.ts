@@ -278,7 +278,7 @@ const dictionaries: Record<Locale, Dictionary> = {
     "editor.project.aiLibraryCount": "{count} assets",
     "editor.project.aiLibraryEmpty": "Generated and saved AI image resources for this project will appear here.",
     "editor.project.aiAssetDeleteConfirm": "Delete this AI asset from the library?",
-    "editor.scene.loadingTitle": "Loading scene...",
+    "editor.scene.loadingTitle": "Loading...",
     "editor.scene.loadingHint": "Preparing environment, assets, and editor state.",
     "editor.camera.birdView": "Bird view",
     "editor.camera.firstPerson": "First person",

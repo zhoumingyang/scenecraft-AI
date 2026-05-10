@@ -55,7 +55,7 @@ export default function SceneTreePanel() {
   };
 
   const startRenaming = (node: SceneTreeNode) => {
-    if (node.type === "scene") return;
+    if (node.type === "scene" || node.type === "gridHelper") return;
     setEditingNodeId(node.id);
     setDraftLabel(node.label);
   };
@@ -66,7 +66,7 @@ export default function SceneTreePanel() {
   };
 
   const submitRenaming = (node: SceneTreeNode) => {
-    if (node.type === "scene") return;
+    if (node.type === "scene" || node.type === "gridHelper") return;
     const nextLabel = draftLabel.trim() || node.fallbackLabel;
     app?.updateEntityLabel(node.id, nextLabel);
     stopRenaming();

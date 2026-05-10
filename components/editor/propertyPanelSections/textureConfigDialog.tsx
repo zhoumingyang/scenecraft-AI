@@ -58,10 +58,12 @@ function TextureTransformSlider({
 
 type TextureConfigDialogProps = {
   open: boolean;
-  entityId: string;
+  entityId?: string;
   textureField: TextureFieldKey;
   title: string;
   texture: ResolvedTextureSchema;
+  targetPath?: string;
+  onTexturePatch?: (texture: ResolvedTextureSchema) => void;
   onClose: () => void;
 };
 
@@ -71,6 +73,8 @@ export function TextureConfigDialog({
   textureField,
   title,
   texture,
+  targetPath,
+  onTexturePatch,
   onClose
 }: TextureConfigDialogProps) {
   const { t } = useI18n();
@@ -91,12 +95,19 @@ export function TextureConfigDialog({
     }
   ) => {
     if (!app) return;
-    app.updateMeshMaterial(entityId, {
-      [textureField]: {
-        ...texture,
-        ...patch
-      } as ResolvedTextureSchema
-    });
+    const nextTexture = {
+      ...texture,
+      ...patch
+    } as ResolvedTextureSchema;
+    if (onTexturePatch) {
+      onTexturePatch(nextTexture);
+      return;
+    }
+    if (entityId) {
+      app.updateMeshMaterial(entityId, {
+        [textureField]: nextTexture
+      });
+    }
   };
 
   const onPickTexture = () => {
@@ -115,29 +126,43 @@ export function TextureConfigDialog({
       sourceUrl: textureUrl,
       file,
       kind: "texture_image",
-      targetPath: `mesh:${entityId}:${textureField}`,
+      targetPath: targetPath ?? `mesh:${entityId ?? "unknown"}:${textureField}`,
       entityId
     });
-    app.updateMeshMaterial(entityId, {
-      [textureField]: {
-        ...texture,
-        assetId: "",
-        externalSource: null,
-        url: textureUrl
-      } as ResolvedTextureSchema
-    });
+    const nextTexture = {
+      ...texture,
+      assetId: "",
+      externalSource: null,
+      url: textureUrl
+    } as ResolvedTextureSchema;
+    if (onTexturePatch) {
+      onTexturePatch(nextTexture);
+      return;
+    }
+    if (entityId) {
+      app.updateMeshMaterial(entityId, {
+        [textureField]: nextTexture
+      });
+    }
   };
 
   const onApplyAiAsset = ({ imageUrl }: { imageUrl: string }) => {
     if (!app) return;
-    app.updateMeshMaterial(entityId, {
-      [textureField]: {
-        ...texture,
-        assetId: "",
-        externalSource: null,
-        url: imageUrl
-      } as ResolvedTextureSchema
-    });
+    const nextTexture = {
+      ...texture,
+      assetId: "",
+      externalSource: null,
+      url: imageUrl
+    } as ResolvedTextureSchema;
+    if (onTexturePatch) {
+      onTexturePatch(nextTexture);
+      return;
+    }
+    if (entityId) {
+      app.updateMeshMaterial(entityId, {
+        [textureField]: nextTexture
+      });
+    }
   };
 
   if (!open) return null;

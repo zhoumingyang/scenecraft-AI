@@ -1,6 +1,6 @@
 import type { ElementType } from "react";
 
-export type SceneTreeNodeType = "scene" | "group" | "model" | "mesh" | "light";
+export type SceneTreeNodeType = "scene" | "gridHelper" | "group" | "model" | "mesh" | "light";
 
 export type SceneTreeNode = {
   id: string;

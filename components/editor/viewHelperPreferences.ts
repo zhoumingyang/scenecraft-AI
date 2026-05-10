@@ -1,6 +1,6 @@
 "use client";
 
-import type { EditorApp, EditorViewHelperVisibility } from "@/render/editor";
+import type { EditorApp, EditorProjectJSON, EditorViewHelperVisibility } from "@/render/editor";
 
 const VIEW_HELPER_STORAGE_PREFIX = "editor:view-helper-visibility";
 const DEFAULT_VIEW_HELPER_STORAGE_KEY = "default";
@@ -70,8 +70,30 @@ export function persistViewHelperVisibility(
 export function restoreViewHelperVisibility(app: EditorApp, projectId: string | null) {
   const visibility = loadViewHelperVisibility(projectId);
 
-  app.setViewHelperVisibility("gridHelper", visibility.gridHelper);
   app.setViewHelperVisibility("transformGizmo", visibility.transformGizmo);
   app.setViewHelperVisibility("lightHelper", visibility.lightHelper);
-  app.setViewHelperVisibility("shadow", visibility.shadow);
+  persistViewHelperVisibility(projectId, app.getViewHelperVisibility());
+}
+
+export function applyGroundFallbackFromViewHelperStorage(
+  project: EditorProjectJSON,
+  projectId: string | null
+): EditorProjectJSON {
+  if (project.envConfig?.ground || !hasStoredViewHelperVisibility(projectId)) {
+    return project;
+  }
+
+  const visibility = loadViewHelperVisibility(projectId);
+
+  return {
+    ...project,
+    envConfig: {
+      ...project.envConfig,
+      ground: {
+        mode: visibility.shadow ? "plane" : "grid",
+        visible: visibility.gridHelper,
+        scale: [1, 1, 1]
+      }
+    }
+  };
 }

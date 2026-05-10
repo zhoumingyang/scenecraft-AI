@@ -7,6 +7,7 @@ import type { EditorAppEvent, EditorAppListener } from "./core/events";
 import type {
   EditorCameraJSON,
   EditorEnvConfigJSON,
+  EditorGroundConfigJSON,
   EditorLightJSON,
   LightingConflictState,
   EditorPostProcessPassId,
@@ -136,6 +137,10 @@ export class EditorApp {
     return this.session.getSelectedEntityId();
   }
 
+  getGroundConfig() {
+    return this.session.getGroundConfig();
+  }
+
   getIsolatedEntityId(): string | null {
     return this.session.getIsolatedEntityId();
   }
@@ -198,22 +203,27 @@ export class EditorApp {
     visible: boolean
   ) {
     if (helper === "gridHelper") {
-      this.runtime.setGridHelperVisible(visible);
+      this.session.updateGroundConfig({ visible }, "ui");
     } else if (helper === "transformGizmo") {
       this.runtime.setTransformGizmoVisible(visible);
     } else if (helper === "lightHelper") {
       this.runtime.setLightHelpersVisible(visible);
     } else {
-      this.runtime.setShadowEnabled(visible);
+      this.session.updateGroundConfig({ mode: visible ? "plane" : "grid" }, "ui");
     }
     this.emit({ type: "viewStateUpdated" });
   }
 
   setViewHelperVisibilityState(visibility: EditorViewHelperVisibility) {
-    this.runtime.setGridHelperVisible(visibility.gridHelper);
+    this.session.updateGroundConfig(
+      {
+        visible: visibility.gridHelper,
+        mode: visibility.shadow ? "plane" : "grid"
+      },
+      "ui"
+    );
     this.runtime.setTransformGizmoVisible(visibility.transformGizmo);
     this.runtime.setLightHelpersVisible(visibility.lightHelper);
-    this.runtime.setShadowEnabled(visibility.shadow);
     this.emit({ type: "viewStateUpdated" });
   }
 
@@ -326,6 +336,22 @@ export class EditorApp {
   updateSceneEnvConfig(patch: Partial<EditorEnvConfigJSON>, source: SyncSource = "ui") {
     void this.dispatch({
       type: "scene.envConfig.patch",
+      patch,
+      source
+    });
+  }
+
+  updateGroundConfig(patch: Partial<EditorGroundConfigJSON>, source: SyncSource = "ui") {
+    void this.dispatch({
+      type: "ground.patch",
+      patch,
+      source
+    });
+  }
+
+  updateGroundMaterial(patch: MeshMaterialPatch, source: SyncSource = "ui") {
+    void this.dispatch({
+      type: "ground.material",
       patch,
       source
     });

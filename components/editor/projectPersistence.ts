@@ -69,6 +69,38 @@ export function applyUploadedAssetToProjectSnapshot(
     };
   }
 
+  if (snapshot.envConfig?.ground?.material) {
+    let nextMaterial = snapshot.envConfig.ground.material;
+    let changed = false;
+
+    TEXTURE_FIELDS.forEach((field) => {
+      const texture = nextMaterial[field];
+      if (!texture || texture.url !== sourceUrl) {
+        return;
+      }
+
+      nextMaterial = {
+        ...nextMaterial,
+        [field]: {
+          ...texture,
+          url: uploadedAsset.url,
+          assetId: uploadedAsset.assetId
+        }
+      };
+      changed = true;
+    });
+
+    if (changed) {
+      snapshot.envConfig = {
+        ...snapshot.envConfig,
+        ground: {
+          ...snapshot.envConfig.ground,
+          material: nextMaterial
+        }
+      };
+    }
+  }
+
   snapshot.model = snapshot.model?.map((model) =>
     model.source === sourceUrl
       ? {
@@ -119,6 +151,12 @@ export function projectSnapshotUsesSourceUrl(snapshot: EditorProjectJSON, source
   }
 
   if (snapshot.model?.some((model) => model.source === sourceUrl)) {
+    return true;
+  }
+
+  if (
+    TEXTURE_FIELDS.some((field) => snapshot.envConfig?.ground?.material?.[field]?.url === sourceUrl)
+  ) {
     return true;
   }
 
