@@ -133,6 +133,12 @@ public/draco/           GLTF Draco decoder assets
 
 ### 1. Install dependencies
 
+Use Node 22 LTS for local development:
+
+```bash
+nvm use
+```
+
 ```bash
 npm install
 ```
@@ -178,6 +184,10 @@ For social login support:
 ```bash
 npm run dev
 ```
+
+The default development script uses webpack because the editor can trigger high
+memory usage in Turbopack dev mode on some local Node setups. To explicitly test
+Turbopack, run `npm run dev:turbo`.
 
 Default routes:
 
