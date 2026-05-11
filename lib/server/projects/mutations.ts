@@ -1,4 +1,4 @@
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { assets, projects } from "@/db/schema";
 import type { SaveProjectRequest } from "@/lib/api/contracts/projects";
 import { requireDatabase } from "@/lib/server/db/requireDatabase";
@@ -7,6 +7,11 @@ type SaveProjectMutationArgs = {
   projectId: string;
   userId: string;
   payload: SaveProjectRequest;
+};
+
+type ProjectMutationResult<TProject> = {
+  project: TProject;
+  deletedAssetObjectKeys: string[];
 };
 
 export async function createProject({ projectId, userId, payload }: SaveProjectMutationArgs) {
@@ -63,8 +68,24 @@ export async function updateProject({ projectId, userId, payload }: SaveProjectM
   const serializedTags = JSON.stringify(payload.snapshot.meta?.tags ?? []);
   const serializedSnapshot = JSON.stringify(payload.snapshot);
   const serializedAiSnapshot = JSON.stringify(payload.aiSnapshot);
+  const nextThumbnailAssetId = payload.snapshot.thumbnail?.assetId ?? null;
 
-  return db.transaction(async (tx) => {
+  return db.transaction(async (tx): Promise<ProjectMutationResult<typeof projects.$inferSelect | null>> => {
+    const [existing] = await tx
+      .select({
+        thumbnailAssetId: projects.thumbnailAssetId
+      })
+      .from(projects)
+      .where(and(eq(projects.id, projectId), eq(projects.userId, userId), isNull(projects.deletedAt)))
+      .limit(1);
+
+    if (!existing) {
+      return {
+        project: null,
+        deletedAssetObjectKeys: []
+      };
+    }
+
     if (payload.uploadedAssets?.length) {
       await tx
         .insert(assets)
@@ -94,29 +115,78 @@ export async function updateProject({ projectId, userId, payload }: SaveProjectM
         tags: sql`${serializedTags}::jsonb`,
         snapshot: sql`${serializedSnapshot}::jsonb`,
         aiSnapshot: sql`${serializedAiSnapshot}::jsonb`,
-        thumbnailAssetId: payload.snapshot.thumbnail?.assetId ?? null,
+        thumbnailAssetId: nextThumbnailAssetId,
         version: sql`${projects.version} + 1`,
         lastOpenedAt: new Date(),
         updatedAt: new Date()
       })
-      .where(and(eq(projects.id, projectId), eq(projects.userId, userId)))
+      .where(and(eq(projects.id, projectId), eq(projects.userId, userId), isNull(projects.deletedAt)))
       .returning();
 
-    return updated ?? null;
+    const deletedAssetObjectKeys: string[] = [];
+    const previousThumbnailAssetId = existing.thumbnailAssetId;
+    if (previousThumbnailAssetId && previousThumbnailAssetId !== nextThumbnailAssetId) {
+      const deletedThumbnailAssets = await tx
+        .delete(assets)
+        .where(
+          and(
+            eq(assets.id, previousThumbnailAssetId),
+            eq(assets.userId, userId),
+            eq(assets.projectId, projectId),
+            eq(assets.kind, "project_thumbnail")
+          )
+        )
+        .returning({
+          objectKey: assets.objectKey
+        });
+
+      deletedAssetObjectKeys.push(
+        ...deletedThumbnailAssets.map((asset) => asset.objectKey)
+      );
+    }
+
+    return {
+      project: updated ?? null,
+      deletedAssetObjectKeys
+    };
   });
 }
 
 export async function deleteProject(projectId: string, userId: string) {
   const db = requireDatabase();
 
-  const [deleted] = await db
-    .update(projects)
-    .set({
-      deletedAt: new Date(),
-      updatedAt: new Date()
-    })
-    .where(and(eq(projects.id, projectId), eq(projects.userId, userId), isNull(projects.deletedAt)))
-    .returning();
+  return db.transaction(async (tx): Promise<ProjectMutationResult<typeof projects.$inferSelect | null>> => {
+    const projectAssets = await tx
+      .select({
+        id: assets.id,
+        objectKey: assets.objectKey
+      })
+      .from(assets)
+      .where(and(eq(assets.projectId, projectId), eq(assets.userId, userId)));
 
-  return deleted ?? null;
+    const [deleted] = await tx
+      .update(projects)
+      .set({
+        deletedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(and(eq(projects.id, projectId), eq(projects.userId, userId), isNull(projects.deletedAt)))
+      .returning();
+
+    if (!deleted) {
+      return {
+        project: null,
+        deletedAssetObjectKeys: []
+      };
+    }
+
+    if (projectAssets.length > 0) {
+      await tx.delete(assets).where(inArray(assets.id, projectAssets.map((asset) => asset.id)));
+    }
+
+    return {
+      project: deleted,
+      deletedAssetObjectKeys: projectAssets.map((asset) => asset.objectKey)
+    };
+  });
 }

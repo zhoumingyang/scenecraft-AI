@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { SaveProjectRequest, SaveProjectResponse } from "@/lib/api/contracts/projects";
 import { projectSaveRequestSchema } from "@/lib/project/schema";
 import { getSession } from "@/lib/server/auth/getSession";
+import { deleteBlobAssets } from "@/lib/server/assets/config";
 import { getErrorMessage } from "@/lib/server/http/getErrorMessage";
 import { deleteProject, updateProject } from "@/lib/server/projects/mutations";
 import { getProjectByIdForUser } from "@/lib/server/projects/queries";
@@ -65,15 +66,20 @@ export async function PUT(request: Request, context: RouteContext) {
       return NextResponse.json({ message: "Project not found." }, { status: 404 });
     }
 
-    const updated = await updateProject({
+    const updateResult = await updateProject({
       projectId: id,
       userId: session.user.id,
       payload
     });
+    const updated = updateResult.project;
 
     if (!updated) {
       return NextResponse.json({ message: "Project not found." }, { status: 404 });
     }
+
+    await deleteBlobAssets(updateResult.deletedAssetObjectKeys).catch((cleanupError) => {
+      console.warn("[projects] Failed to delete replaced project assets.", cleanupError);
+    });
 
     const response: SaveProjectResponse = {
       project: {
@@ -107,10 +113,15 @@ export async function DELETE(_: Request, context: RouteContext) {
       return NextResponse.json({ message: "Project not found." }, { status: 404 });
     }
 
-    const deleted = await deleteProject(id, session.user.id);
+    const deleteResult = await deleteProject(id, session.user.id);
+    const deleted = deleteResult.project;
     if (!deleted) {
       return NextResponse.json({ message: "Project not found." }, { status: 404 });
     }
+
+    await deleteBlobAssets(deleteResult.deletedAssetObjectKeys).catch((cleanupError) => {
+      console.warn("[projects] Failed to delete project assets.", cleanupError);
+    });
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {

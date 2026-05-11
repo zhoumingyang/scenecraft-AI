@@ -1,3 +1,4 @@
+import { del } from "@vercel/blob";
 import { generateClientTokenFromReadWriteToken } from "@vercel/blob/client";
 import type { PrepareAssetUploadRequest } from "@/lib/api/contracts/assets";
 import {
@@ -52,4 +53,14 @@ export async function createAssetUploadClientToken(
     clientToken,
     maximumSizeInBytes
   };
+}
+
+export async function deleteBlobAssets(objectKeys: string[]) {
+  const uniqueObjectKeys = Array.from(new Set(objectKeys.filter((objectKey) => objectKey.trim())));
+  if (uniqueObjectKeys.length === 0) {
+    return;
+  }
+
+  assertBlobConfigured();
+  await del(uniqueObjectKeys);
 }
