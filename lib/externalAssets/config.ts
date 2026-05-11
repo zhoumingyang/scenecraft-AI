@@ -19,11 +19,7 @@ function readBooleanFlag(value: string | undefined, fallback: boolean) {
 }
 
 export function isPolyhavenProviderEnabled() {
-  return readBooleanFlag(
-    process.env.ASSET_PROVIDER_POLYHAVEN_ENABLED ??
-      process.env.NEXT_PUBLIC_ASSET_PROVIDER_POLYHAVEN_ENABLED,
-    true
-  );
+  return readBooleanFlag(process.env.NEXT_PUBLIC_ASSET_PROVIDER_POLYHAVEN_ENABLED, true);
 }
 
 export function isPolyhavenAttributionEnabled() {
