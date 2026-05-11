@@ -1,15 +1,25 @@
 import { headers } from "next/headers";
+import { isAPIError } from "better-auth/api";
 import { auth } from "@/lib/auth";
+
+function isExpectedSessionReadFailure(error: unknown) {
+  return isAPIError(error) && (error.status === "UNAUTHORIZED" || error.status === "BAD_REQUEST");
+}
 
 export async function getSession() {
   try {
     return await auth.api.getSession({
-      headers: await headers()
+      headers: await headers(),
+      query: {
+        disableCookieCache: true
+      }
     });
-  } catch {
-    // Old or malformed cookies can throw while Better Auth parses the session.
-    // Treat that case as "signed out" so protected pages redirect cleanly.
-    console.warn("[auth] Failed to read session cookie. Treating request as signed out.");
+  } catch (error) {
+    if (!isExpectedSessionReadFailure(error)) {
+      throw error;
+    }
+
+    console.warn("[auth] Invalid session request. Treating request as signed out.");
     return null;
   }
 }
