@@ -6,6 +6,7 @@ import {
   readImageDimensions
 } from "@/components/editor/projectPersistence";
 import { uploadPreparedAsset } from "@/frontend/api/assets";
+import { appApiClient } from "@/frontend/api/client";
 import type {
   PrepareAssetUploadRequest,
   UploadedProjectAsset
@@ -22,7 +23,23 @@ export function cloneProjectSnapshot(snapshot: EditorProjectJSON) {
 }
 
 async function sourceUrlToFile(sourceUrl: string, fileName: string, fallbackMimeType: string) {
+  const parsedUrl = URL.canParse(sourceUrl) ? new URL(sourceUrl) : null;
+  if (parsedUrl?.protocol === "https:" || parsedUrl?.protocol === "http:") {
+    const response = await appApiClient.post<Blob>(
+      "/assets/fetch",
+      { url: sourceUrl },
+      { responseType: "blob" }
+    );
+    const blob = response.data;
+    return new File([blob], fileName, {
+      type: blob.type || fallbackMimeType
+    });
+  }
+
   const response = await fetch(sourceUrl);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch generated image: ${response.status}.`);
+  }
   const blob = await response.blob();
   return new File([blob], fileName, {
     type: blob.type || fallbackMimeType
