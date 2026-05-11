@@ -265,6 +265,18 @@ function removeResultFromGenerations<
   });
 }
 
+function revokeLocalAssetSourceUrl(sourceUrl: string) {
+  if (!sourceUrl.startsWith("blob:") || typeof URL === "undefined") {
+    return;
+  }
+
+  URL.revokeObjectURL(sourceUrl);
+}
+
+function revokeLocalProjectAssets(assets: LocalProjectAssetEntry[]) {
+  assets.forEach((asset) => revokeLocalAssetSourceUrl(asset.sourceUrl));
+}
+
 export const useEditorStore = create<EditorStoreState>((set) => ({
   app: null,
   editorThemeMode: "dark",
@@ -359,10 +371,26 @@ export const useEditorStore = create<EditorStoreState>((set) => ({
       }
     })),
   registerLocalProjectAsset: (asset) =>
-    set((state) => ({
-      localProjectAssets: [...state.localProjectAssets, asset]
-    })),
-  clearLocalProjectAssets: () => set({ localProjectAssets: [] }),
+    set((state) => {
+      const replacedAssets = state.localProjectAssets.filter(
+        (currentAsset) => currentAsset.targetPath === asset.targetPath
+      );
+      revokeLocalProjectAssets(replacedAssets);
+
+      return {
+        localProjectAssets: [
+          ...state.localProjectAssets.filter(
+            (currentAsset) => currentAsset.targetPath !== asset.targetPath
+          ),
+          asset
+        ]
+      };
+    }),
+  clearLocalProjectAssets: () =>
+    set((state) => {
+      revokeLocalProjectAssets(state.localProjectAssets);
+      return { localProjectAssets: [] };
+    }),
   markUnsavedChanges: (hasUnsavedChanges) => set({ hasUnsavedChanges }),
   setSaveStatus: (saveStatus) => set({ saveStatus }),
   syncLightingConflictNotice: ({ hasAmbientLight, hasHemisphereLight, hasConflict }) =>

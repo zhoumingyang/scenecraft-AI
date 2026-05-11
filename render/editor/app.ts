@@ -99,14 +99,33 @@ export class EditorApp {
   }
 
   async loadProject(projectJson: EditorProjectJSON) {
+    this.revokeEnvironmentUrlIfChanged(projectJson.envConfig?.panoUrl ?? "");
     await this.session.loadProject(projectJson);
   }
 
   async clearProject() {
+    this.revokeEnvironmentUrl();
     await this.session.clearProject();
   }
 
   async dispatch(command: EditorCommand) {
+    if (command.type === "project.load") {
+      await this.loadProject(command.project);
+      return;
+    }
+
+    if (command.type === "project.clear") {
+      await this.clearProject();
+      return;
+    }
+
+    if (
+      command.type === "scene.envConfig.patch" &&
+      command.patch.panoUrl !== undefined
+    ) {
+      this.revokeEnvironmentUrlIfChanged(command.patch.panoUrl);
+    }
+
     await this.session.dispatch(command);
   }
 
@@ -575,6 +594,14 @@ export class EditorApp {
       URL.revokeObjectURL(this.environmentUrl);
     }
     this.environmentUrl = null;
+  }
+
+  private revokeEnvironmentUrlIfChanged(nextUrl: string) {
+    if (!this.environmentUrl || this.environmentUrl === nextUrl) {
+      return;
+    }
+
+    this.revokeEnvironmentUrl();
   }
 }
 
