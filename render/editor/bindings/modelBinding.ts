@@ -28,6 +28,18 @@ function poseAllSkeletons(root: THREE.Object3D) {
   });
 }
 
+function disposeLoadedAsset(
+  object: THREE.Object3D,
+  customDispose: ((object: THREE.Object3D) => void) | null | undefined
+) {
+  if (customDispose) {
+    customDispose(object);
+    return;
+  }
+
+  disposeObject3D(object);
+}
+
 export function createModelBinding(context: BindingContext, model: ModelEntityModel): RenderBinding {
   const { scene, modelLoaderFactory } = context;
   const group = new THREE.Group();
@@ -130,7 +142,7 @@ export function createModelBinding(context: BindingContext, model: ModelEntityMo
     })
     .then((asset) => {
       if (disposed) {
-        asset.dispose?.(asset.object) ?? disposeObject3D(asset.object);
+        disposeLoadedAsset(asset.object, asset.dispose);
         return;
       }
       currentAssetRoot = asset.object;
@@ -191,7 +203,7 @@ export function createModelBinding(context: BindingContext, model: ModelEntityMo
       actionsById.clear();
       removeObjectFromParent(group);
       if (currentAssetRoot) {
-        currentAssetDispose?.(currentAssetRoot);
+        disposeLoadedAsset(currentAssetRoot, currentAssetDispose);
         currentAssetRoot = null;
       }
       currentAssetUpdate = null;
