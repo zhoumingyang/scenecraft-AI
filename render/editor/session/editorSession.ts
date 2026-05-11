@@ -352,7 +352,15 @@ export class EditorSession {
     this.runtime.syncLightHelperVisibility();
 
     if (pendingBindingReady.length > 0) {
-      await Promise.allSettled(pendingBindingReady);
+      const readyResults = await Promise.allSettled(pendingBindingReady);
+      const failedBindings = readyResults.filter((result) => result.status === "rejected");
+      if (failedBindings.length > 0) {
+        throw new Error(
+          failedBindings.length === 1
+            ? "Failed to load a model asset in this project."
+            : `Failed to load ${failedBindings.length} model assets in this project.`
+        );
+      }
     }
 
     this.emit({ type: "projectLoaded", projectId: this.projectModel.id });

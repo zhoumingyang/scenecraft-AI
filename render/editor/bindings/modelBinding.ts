@@ -161,9 +161,6 @@ export function createModelBinding(context: BindingContext, model: ModelEntityMo
       setEntityId(group, model.id);
       applyAnimationState();
       context.invalidateScene?.();
-    })
-    .catch(() => {
-      // Keep empty group when model loading fails.
     });
 
   return {
