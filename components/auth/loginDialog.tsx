@@ -12,6 +12,10 @@ import { useI18n } from "@/lib/i18n";
 type LoginDialogProps = {
   open: boolean;
   onClose: () => void;
+  socialProviders: {
+    google: boolean;
+    github: boolean;
+  };
 };
 
 const rowLabelSx = {
@@ -28,9 +32,10 @@ const socialButtonSx = {
   backgroundColor: "rgba(255,255,255,0.04)"
 };
 
-export default function LoginDialog({ open, onClose }: LoginDialogProps) {
+export default function LoginDialog({ open, onClose, socialProviders }: LoginDialogProps) {
   const router = useRouter();
   const { t } = useI18n();
+  const hasSocialProviders = socialProviders.google || socialProviders.github;
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -185,29 +190,37 @@ export default function LoginDialog({ open, onClose }: LoginDialogProps) {
               </AuthPrimaryButton>
             </Stack>
           </Box>
-          <Divider sx={{ my: 2.4 }}>{t("auth.login.socialDivider")}</Divider>
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={1.2}>
-            <Button
-              variant="outlined"
-              startIcon={<GoogleIcon />}
-              onClick={() => onSocialSignIn("google")}
-              disabled={busy}
-              fullWidth
-              sx={socialButtonSx}
-            >
-              {t("auth.login.withGoogle")}
-            </Button>
-            <Button
-              variant="outlined"
-              startIcon={<GitHubIcon />}
-              onClick={() => onSocialSignIn("github")}
-              disabled={busy}
-              fullWidth
-              sx={socialButtonSx}
-            >
-              {t("auth.login.withGithub")}
-            </Button>
-          </Stack>
+          {hasSocialProviders ? (
+            <>
+              <Divider sx={{ my: 2.4 }}>{t("auth.login.socialDivider")}</Divider>
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={1.2}>
+                {socialProviders.google ? (
+                  <Button
+                    variant="outlined"
+                    startIcon={<GoogleIcon />}
+                    onClick={() => onSocialSignIn("google")}
+                    disabled={busy}
+                    fullWidth
+                    sx={socialButtonSx}
+                  >
+                    {t("auth.login.withGoogle")}
+                  </Button>
+                ) : null}
+                {socialProviders.github ? (
+                  <Button
+                    variant="outlined"
+                    startIcon={<GitHubIcon />}
+                    onClick={() => onSocialSignIn("github")}
+                    disabled={busy}
+                    fullWidth
+                    sx={socialButtonSx}
+                  >
+                    {t("auth.login.withGithub")}
+                  </Button>
+                ) : null}
+              </Stack>
+            </>
+          ) : null}
         </>
       ) : (
         <>
