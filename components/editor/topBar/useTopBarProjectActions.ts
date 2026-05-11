@@ -111,6 +111,10 @@ export function useTopBarProjectActions(t: TopBarTranslate) {
     clearLocalProjectAssets();
   };
 
+  const confirmDiscardUnsavedChanges = () => {
+    return !hasUnsavedChanges || window.confirm(t("editor.project.confirmDiscardChanges"));
+  };
+
   const applyPersistedProjectState = (project: PersistedProject, fallbackMeta: EditorProjectMetaJSON | null = null) => {
     restoreProjectViewHelpers(project.id);
     setCurrentProject(project.id);
@@ -338,11 +342,19 @@ export function useTopBarProjectActions(t: TopBarTranslate) {
   };
 
   const onCreateProject = async () => {
+    if (!confirmDiscardUnsavedChanges()) {
+      return;
+    }
+
     await loadDefaultProject();
   };
 
   const onClearProject = async () => {
     if (!app) return;
+    if (!confirmDiscardUnsavedChanges()) {
+      return;
+    }
+
     await app.dispatch({ type: "project.clear" });
     markUnsavedChanges(true);
   };
@@ -366,7 +378,7 @@ export function useTopBarProjectActions(t: TopBarTranslate) {
       return;
     }
 
-    if (hasUnsavedChanges && !window.confirm(t("editor.project.confirmDiscardChanges"))) {
+    if (!confirmDiscardUnsavedChanges()) {
       return;
     }
 
