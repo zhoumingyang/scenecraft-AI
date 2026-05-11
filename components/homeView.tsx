@@ -16,9 +16,13 @@ import { useI18n } from "@/lib/i18n";
 type HomeViewProps = {
   isAuthenticated: boolean;
   displayName: string | null;
+  socialProviders: {
+    google: boolean;
+    github: boolean;
+  };
 };
 
-export default function HomeView({ isAuthenticated, displayName }: HomeViewProps) {
+export default function HomeView({ isAuthenticated, displayName, socialProviders }: HomeViewProps) {
   const router = useRouter();
   const { authMode, setAuthMode } = useAppStore();
   const { locale, setLocale, t } = useI18n();
@@ -211,6 +215,7 @@ export default function HomeView({ isAuthenticated, displayName }: HomeViewProps
         onClose={closeAuthModal}
         resetPasswordToken={resetPasswordToken}
         onResetPasswordTokenClear={() => setResetPasswordToken(null)}
+        socialProviders={socialProviders}
       />
     </Box>
   );

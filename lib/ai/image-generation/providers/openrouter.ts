@@ -14,7 +14,9 @@ import type {
   ImageGenerationResult
 } from "@/lib/ai/image-generation/types";
 
-const openRouterImageClient = createHttpClient();
+const openRouterImageClient = createHttpClient({
+  timeout: 240_000
+});
 
 type OpenRouterResponse = {
   id?: string;

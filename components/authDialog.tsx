@@ -8,6 +8,10 @@ type AuthDialogProps = {
   onClose: () => void;
   resetPasswordToken: string | null;
   onResetPasswordTokenClear: () => void;
+  socialProviders: {
+    google: boolean;
+    github: boolean;
+  };
 };
 
 export default function AuthDialog({
@@ -15,12 +19,17 @@ export default function AuthDialog({
   mode,
   onClose,
   resetPasswordToken,
-  onResetPasswordTokenClear
+  onResetPasswordTokenClear,
+  socialProviders
 }: AuthDialogProps) {
   return (
     <>
       <RegisterDialog open={open && mode === "register"} onClose={onClose} />
-      <LoginDialog open={open && mode === "login"} onClose={onClose} />
+      <LoginDialog
+        open={open && mode === "login"}
+        onClose={onClose}
+        socialProviders={socialProviders}
+      />
       <ResetPasswordDialog token={resetPasswordToken} onClose={onResetPasswordTokenClear} />
     </>
   );

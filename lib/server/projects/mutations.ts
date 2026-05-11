@@ -1,7 +1,18 @@
 import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { assets, projects } from "@/db/schema";
 import type { SaveProjectRequest } from "@/lib/api/contracts/projects";
+import { sanitizeAssetFileName } from "@/lib/server/assets/config";
 import { requireDatabase } from "@/lib/server/db/requireDatabase";
+import type { EditorMeshMaterialJSON } from "@/render/editor";
+
+const TEXTURE_FIELDS = [
+  "diffuseMap",
+  "metalnessMap",
+  "roughnessMap",
+  "normalMap",
+  "aoMap",
+  "emissiveMap"
+] as const;
 
 type SaveProjectMutationArgs = {
   projectId: string;
@@ -14,8 +25,75 @@ type ProjectMutationResult<TProject> = {
   deletedAssetObjectKeys: string[];
 };
 
+function assertUploadedAssetsBelongToProject({ projectId, userId, payload }: SaveProjectMutationArgs) {
+  payload.uploadedAssets?.forEach((asset) => {
+    if (asset.projectId !== projectId) {
+      throw new Error("Uploaded asset project id must match the project being saved.");
+    }
+
+    const expectedObjectKey = [
+      "users",
+      userId,
+      "projects",
+      projectId,
+      asset.kind,
+      `${asset.assetId}-${sanitizeAssetFileName(asset.originalName)}`
+    ].join("/");
+
+    if (asset.objectKey !== expectedObjectKey) {
+      throw new Error("Uploaded asset object key is invalid for this user and project.");
+    }
+  });
+}
+
+function addAssetId(assetIds: Set<string>, assetId: string | null | undefined) {
+  const normalizedAssetId = assetId?.trim();
+  if (normalizedAssetId) {
+    assetIds.add(normalizedAssetId);
+  }
+}
+
+function collectMaterialAssetIds(assetIds: Set<string>, material: EditorMeshMaterialJSON | undefined) {
+  if (!material) {
+    return;
+  }
+
+  TEXTURE_FIELDS.forEach((field) => {
+    addAssetId(assetIds, material[field]?.assetId);
+  });
+}
+
+function collectReferencedProjectAssetIds(payload: SaveProjectRequest) {
+  const assetIds = new Set<string>();
+  const { snapshot, aiSnapshot } = payload;
+
+  addAssetId(assetIds, snapshot.thumbnail?.assetId);
+  addAssetId(assetIds, snapshot.envConfig?.panoAssetId);
+  collectMaterialAssetIds(assetIds, snapshot.envConfig?.ground?.material);
+
+  snapshot.model?.forEach((model) => {
+    addAssetId(assetIds, model.sourceAssetId);
+  });
+
+  snapshot.mesh?.forEach((mesh) => {
+    collectMaterialAssetIds(assetIds, mesh.material);
+  });
+
+  aiSnapshot.imageGenerations.forEach((generation) => {
+    generation.referenceImages?.forEach((image) => {
+      addAssetId(assetIds, image.assetId);
+    });
+    generation.results.forEach((image) => {
+      addAssetId(assetIds, image.assetId);
+    });
+  });
+
+  return assetIds;
+}
+
 export async function createProject({ projectId, userId, payload }: SaveProjectMutationArgs) {
   const db = requireDatabase();
+  assertUploadedAssetsBelongToProject({ projectId, userId, payload });
   const serializedTags = JSON.stringify(payload.snapshot.meta?.tags ?? []);
   const serializedSnapshot = JSON.stringify(payload.snapshot);
   const serializedAiSnapshot = JSON.stringify(payload.aiSnapshot);
@@ -65,6 +143,7 @@ export async function createProject({ projectId, userId, payload }: SaveProjectM
 
 export async function updateProject({ projectId, userId, payload }: SaveProjectMutationArgs) {
   const db = requireDatabase();
+  assertUploadedAssetsBelongToProject({ projectId, userId, payload });
   const serializedTags = JSON.stringify(payload.snapshot.meta?.tags ?? []);
   const serializedSnapshot = JSON.stringify(payload.snapshot);
   const serializedAiSnapshot = JSON.stringify(payload.aiSnapshot);
@@ -124,24 +203,26 @@ export async function updateProject({ projectId, userId, payload }: SaveProjectM
       .returning();
 
     const deletedAssetObjectKeys: string[] = [];
-    const previousThumbnailAssetId = existing.thumbnailAssetId;
-    if (previousThumbnailAssetId && previousThumbnailAssetId !== nextThumbnailAssetId) {
-      const deletedThumbnailAssets = await tx
+    const referencedAssetIds = collectReferencedProjectAssetIds(payload);
+    const projectAssets = await tx
+      .select({
+        id: assets.id,
+        objectKey: assets.objectKey
+      })
+      .from(assets)
+      .where(and(eq(assets.userId, userId), eq(assets.projectId, projectId)));
+    const unreferencedAssets = projectAssets.filter((asset) => !referencedAssetIds.has(asset.id));
+
+    if (unreferencedAssets.length > 0) {
+      const deletedAssets = await tx
         .delete(assets)
-        .where(
-          and(
-            eq(assets.id, previousThumbnailAssetId),
-            eq(assets.userId, userId),
-            eq(assets.projectId, projectId),
-            eq(assets.kind, "project_thumbnail")
-          )
-        )
+        .where(inArray(assets.id, unreferencedAssets.map((asset) => asset.id)))
         .returning({
           objectKey: assets.objectKey
         });
 
       deletedAssetObjectKeys.push(
-        ...deletedThumbnailAssets.map((asset) => asset.objectKey)
+        ...deletedAssets.map((asset) => asset.objectKey)
       );
     }
 

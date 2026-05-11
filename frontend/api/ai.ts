@@ -17,7 +17,10 @@ export async function generateAiImages(payload: GenerateAiImagesRequest) {
   return postJson<GenerateAiImagesResponse, GenerateAiImagesRequest>(
     appApiClient,
     "/ai/images/generate",
-    payload
+    payload,
+    {
+      timeout: 240_000
+    }
   );
 }
 

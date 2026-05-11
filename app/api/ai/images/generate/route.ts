@@ -8,6 +8,8 @@ import type { ImageGenerationRequest } from "@/lib/ai/image-generation/types";
 import type { GenerateAiImagesRequest } from "@/lib/api/contracts/ai";
 import { getSession } from "@/lib/server/auth/getSession";
 
+export const maxDuration = 180;
+
 const IMAGE_SIZES = new Set(IMAGE_SIZE_OPTIONS.map((item) => item.value));
 
 function getImageGenerationErrorStatus(message: string) {

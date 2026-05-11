@@ -35,7 +35,7 @@ export default function AiImageParametersSection({
 }: AiImageParametersSectionProps) {
   const { t } = useI18n();
   const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
-  const supportsImageSize = getImageGenerationModelConfig(model).supportsImageSize;
+  const modelConfig = getImageGenerationModelConfig(model);
   const theme = getEditorThemeTokens(editorThemeMode);
   const fieldSx = {
     "& .MuiOutlinedInput-root": {
@@ -61,7 +61,7 @@ export default function AiImageParametersSection({
           sx={fieldSx}
         />
 
-        {supportsImageSize ? (
+        {modelConfig.supportsImageSize ? (
           <TextField
             select
             size="small"
@@ -78,49 +78,53 @@ export default function AiImageParametersSection({
           </TextField>
         ) : null}
 
-        <Stack spacing={0.55}>
-          <Typography sx={{ fontSize: 11, color: theme.mutedText }}>
-            {t("editor.ai.cfg")}
-          </Typography>
-          <Stack direction="row" spacing={0.9} alignItems="center">
-            <Slider
-              size="small"
-              min={0.1}
-              max={20}
-              step={0.01}
-              value={cfg}
-              onChange={(_, value) => onCfgChange(value as number)}
-              sx={{ flex: 1, color: editorThemeMode === "dark" ? "#72a8ff" : "#5f93ef" }}
-            />
-            <Typography
-              sx={{ minWidth: 36, textAlign: "right", fontSize: 11, color: theme.pillText }}
-            >
-              {cfg.toFixed(2)}
+        {modelConfig.supportsCfg ? (
+          <Stack spacing={0.55}>
+            <Typography sx={{ fontSize: 11, color: theme.mutedText }}>
+              {t("editor.ai.cfg")}
             </Typography>
+            <Stack direction="row" spacing={0.9} alignItems="center">
+              <Slider
+                size="small"
+                min={0.1}
+                max={20}
+                step={0.01}
+                value={cfg}
+                onChange={(_, value) => onCfgChange(value as number)}
+                sx={{ flex: 1, color: editorThemeMode === "dark" ? "#72a8ff" : "#5f93ef" }}
+              />
+              <Typography
+                sx={{ minWidth: 36, textAlign: "right", fontSize: 11, color: theme.pillText }}
+              >
+                {cfg.toFixed(2)}
+              </Typography>
+            </Stack>
           </Stack>
-        </Stack>
+        ) : null}
 
-        <Stack spacing={0.55}>
-          <Typography sx={{ fontSize: 11, color: theme.mutedText }}>
-            {t("editor.ai.inferenceSteps")}
-          </Typography>
-          <Stack direction="row" spacing={0.9} alignItems="center">
-            <Slider
-              size="small"
-              min={1}
-              max={50}
-              step={1}
-              value={inferenceSteps}
-              onChange={(_, value) => onInferenceStepsChange(value as number)}
-              sx={{ flex: 1, color: editorThemeMode === "dark" ? "#72a8ff" : "#5f93ef" }}
-            />
-            <Typography
-              sx={{ minWidth: 28, textAlign: "right", fontSize: 11, color: theme.pillText }}
-            >
-              {inferenceSteps}
+        {modelConfig.supportsInferenceSteps ? (
+          <Stack spacing={0.55}>
+            <Typography sx={{ fontSize: 11, color: theme.mutedText }}>
+              {t("editor.ai.inferenceSteps")}
             </Typography>
+            <Stack direction="row" spacing={0.9} alignItems="center">
+              <Slider
+                size="small"
+                min={1}
+                max={50}
+                step={1}
+                value={inferenceSteps}
+                onChange={(_, value) => onInferenceStepsChange(value as number)}
+                sx={{ flex: 1, color: editorThemeMode === "dark" ? "#72a8ff" : "#5f93ef" }}
+              />
+              <Typography
+                sx={{ minWidth: 28, textAlign: "right", fontSize: 11, color: theme.pillText }}
+              >
+                {inferenceSteps}
+              </Typography>
+            </Stack>
           </Stack>
-        </Stack>
+        ) : null}
       </Stack>
     </PropertyPanelSection>
   );
