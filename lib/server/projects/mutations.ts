@@ -1,6 +1,7 @@
 import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { assets, projects } from "@/db/schema";
 import type { SaveProjectRequest } from "@/lib/api/contracts/projects";
+import { sanitizeAssetFileName } from "@/lib/server/assets/config";
 import { requireDatabase } from "@/lib/server/db/requireDatabase";
 
 type SaveProjectMutationArgs = {
@@ -14,8 +15,30 @@ type ProjectMutationResult<TProject> = {
   deletedAssetObjectKeys: string[];
 };
 
+function assertUploadedAssetsBelongToProject({ projectId, userId, payload }: SaveProjectMutationArgs) {
+  payload.uploadedAssets?.forEach((asset) => {
+    if (asset.projectId !== projectId) {
+      throw new Error("Uploaded asset project id must match the project being saved.");
+    }
+
+    const expectedObjectKey = [
+      "users",
+      userId,
+      "projects",
+      projectId,
+      asset.kind,
+      `${asset.assetId}-${sanitizeAssetFileName(asset.originalName)}`
+    ].join("/");
+
+    if (asset.objectKey !== expectedObjectKey) {
+      throw new Error("Uploaded asset object key is invalid for this user and project.");
+    }
+  });
+}
+
 export async function createProject({ projectId, userId, payload }: SaveProjectMutationArgs) {
   const db = requireDatabase();
+  assertUploadedAssetsBelongToProject({ projectId, userId, payload });
   const serializedTags = JSON.stringify(payload.snapshot.meta?.tags ?? []);
   const serializedSnapshot = JSON.stringify(payload.snapshot);
   const serializedAiSnapshot = JSON.stringify(payload.aiSnapshot);
@@ -65,6 +88,7 @@ export async function createProject({ projectId, userId, payload }: SaveProjectM
 
 export async function updateProject({ projectId, userId, payload }: SaveProjectMutationArgs) {
   const db = requireDatabase();
+  assertUploadedAssetsBelongToProject({ projectId, userId, payload });
   const serializedTags = JSON.stringify(payload.snapshot.meta?.tags ?? []);
   const serializedSnapshot = JSON.stringify(payload.snapshot);
   const serializedAiSnapshot = JSON.stringify(payload.aiSnapshot);
