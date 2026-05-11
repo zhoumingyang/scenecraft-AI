@@ -8,7 +8,9 @@ import type {
 
 const SILICONFLOW_IMAGE_ENDPOINT = "https://api.siliconflow.cn/v1/images/generations";
 const QWEN_IMAGE_DEFAULT_SIZE = "1328x1328";
-const siliconFlowImageClient = createHttpClient();
+const siliconFlowImageClient = createHttpClient({
+  timeout: 240_000
+});
 
 type SiliconFlowResponse = {
   images?: Array<{
