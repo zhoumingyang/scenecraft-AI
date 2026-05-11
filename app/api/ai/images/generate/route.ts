@@ -10,6 +10,10 @@ import { getSession } from "@/lib/server/auth/getSession";
 
 const IMAGE_SIZES = new Set(IMAGE_SIZE_OPTIONS.map((item) => item.value));
 
+function getImageGenerationErrorStatus(message: string) {
+  return message.includes("_API_KEY is not configured") ? 500 : 400;
+}
+
 function validateRequestBody(body: unknown): ImageGenerationRequest {
   if (!body || typeof body !== "object") {
     throw new Error("Invalid request body.");
@@ -106,6 +110,6 @@ export async function POST(request: Request) {
     return NextResponse.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Image generation failed.";
-    return NextResponse.json({ message }, { status: 400 });
+    return NextResponse.json({ message }, { status: getImageGenerationErrorStatus(message) });
   }
 }

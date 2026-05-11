@@ -10,17 +10,17 @@ export function createImageGenerationProvider(
 ): ImageGenerationProvider {
   switch (providerId) {
     case "siliconflow": {
-      const apiKey = process.env.SILICONFLOW_API_KEY;
+      const apiKey = process.env.SILICONFLOW_API_KEY?.trim();
       if (!apiKey) {
-        throw new Error("Missing SILICONFLOW_API_KEY env.");
+        throw new Error("SILICONFLOW_API_KEY is not configured.");
       }
 
       return new SiliconFlowImageGenerationProvider(apiKey);
     }
     case "openrouter": {
-      const apiKey = process.env.OPENROUTER_API_KEY;
+      const apiKey = process.env.OPENROUTER_API_KEY?.trim();
       if (!apiKey) {
-        throw new Error("Missing OPENROUTER_API_KEY env.");
+        throw new Error("OPENROUTER_API_KEY is not configured.");
       }
 
       return new OpenRouterImageGenerationProvider(apiKey);
