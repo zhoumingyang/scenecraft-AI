@@ -27,6 +27,8 @@ export type ImageGenerationModelConfig = {
   label: string;
   providerId: ImageGenerationProviderId;
   supportsImageSize: boolean;
+  supportsCfg: boolean;
+  supportsInferenceSteps: boolean;
   minReferenceImages: number;
   maxReferenceImages: number;
   outputModalities: Array<"image" | "text">;
@@ -38,6 +40,8 @@ export const IMAGE_GENERATION_MODELS: ImageGenerationModelConfig[] = [
     label: "Qwen/Qwen-Image",
     providerId: "siliconflow",
     supportsImageSize: true,
+    supportsCfg: true,
+    supportsInferenceSteps: true,
     minReferenceImages: 0,
     maxReferenceImages: 0,
     outputModalities: ["image"]
@@ -47,6 +51,8 @@ export const IMAGE_GENERATION_MODELS: ImageGenerationModelConfig[] = [
     label: "Qwen/Qwen-Image-Edit-2509",
     providerId: "siliconflow",
     supportsImageSize: false,
+    supportsCfg: true,
+    supportsInferenceSteps: true,
     minReferenceImages: 1,
     maxReferenceImages: 3,
     outputModalities: ["image"]
@@ -56,6 +62,8 @@ export const IMAGE_GENERATION_MODELS: ImageGenerationModelConfig[] = [
     label: "Google Gemini 3.1 Flash Image Preview",
     providerId: "openrouter",
     supportsImageSize: true,
+    supportsCfg: false,
+    supportsInferenceSteps: false,
     minReferenceImages: 0,
     maxReferenceImages: 4,
     outputModalities: ["image", "text"]
@@ -65,6 +73,8 @@ export const IMAGE_GENERATION_MODELS: ImageGenerationModelConfig[] = [
     label: "Sourceful Riverflow V2 Pro",
     providerId: "openrouter",
     supportsImageSize: true,
+    supportsCfg: false,
+    supportsInferenceSteps: false,
     minReferenceImages: 0,
     maxReferenceImages: 4,
     outputModalities: ["image"]
@@ -74,6 +84,8 @@ export const IMAGE_GENERATION_MODELS: ImageGenerationModelConfig[] = [
     label: "Sourceful Riverflow V2 Fast",
     providerId: "openrouter",
     supportsImageSize: true,
+    supportsCfg: false,
+    supportsInferenceSteps: false,
     minReferenceImages: 0,
     maxReferenceImages: 4,
     outputModalities: ["image"]
@@ -83,6 +95,8 @@ export const IMAGE_GENERATION_MODELS: ImageGenerationModelConfig[] = [
     label: "Black Forest Labs FLUX.2 Flex",
     providerId: "openrouter",
     supportsImageSize: true,
+    supportsCfg: false,
+    supportsInferenceSteps: false,
     minReferenceImages: 0,
     maxReferenceImages: 4,
     outputModalities: ["image"]
@@ -92,6 +106,8 @@ export const IMAGE_GENERATION_MODELS: ImageGenerationModelConfig[] = [
     label: "Black Forest Labs FLUX.2 Pro",
     providerId: "openrouter",
     supportsImageSize: true,
+    supportsCfg: false,
+    supportsInferenceSteps: false,
     minReferenceImages: 0,
     maxReferenceImages: 4,
     outputModalities: ["image"]
