@@ -7,8 +7,10 @@ import type {
 import type { MeshEntityModel } from "../models";
 import { ensureSecondaryUvAttribute } from "../runtime/colorManagement";
 import {
+  applyMeshStandardMaterialScalars,
   applyMeshStandardMaterial,
-  disposeMeshStandardMaterialTextures
+  disposeMeshStandardMaterialTextures,
+  hasTextureMaterialPatch
 } from "../materials/meshMaterial";
 import { createMeshGeometry } from "../utils/geometry";
 import { captureObjectTransformState, removeObjectFromParent, setEntityId } from "../utils/object3d";
@@ -72,6 +74,12 @@ export function updateMeshBindingMaterial(
   const mesh = binding.object as THREE.Mesh;
   const material = mesh.material;
   if (!(material instanceof THREE.MeshStandardMaterial)) return;
+
+  if (!hasTextureMaterialPatch(patch)) {
+    applyMeshStandardMaterialScalars(material, model.material);
+    onTextureUpdate?.();
+    return;
+  }
 
   disposeMeshStandardMaterialTextures(material);
   applyMeshMaterial(material, model.material, textureLoader, onTextureUpdate);

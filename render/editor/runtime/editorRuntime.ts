@@ -7,7 +7,8 @@ import { CameraModel } from "../models";
 import type {
   EditorRenderMode,
   EditorViewportCaptureMode,
-  ResolvedEditorEnvConfigJSON
+  ResolvedEditorEnvConfigJSON,
+  ResolvedMeshMaterialJSON
 } from "../core/types";
 import {
   captureObjectTransformState,
@@ -415,6 +416,12 @@ export class EditorRuntime {
     this.postProcessing.applyConfig(envConfig.postProcessing);
     this.pathTracer.invalidateScene();
     this.pathTracer.invalidateEnvironment();
+    this.requestFrame();
+  }
+
+  updateGroundMaterial(material: ResolvedMeshMaterialJSON) {
+    this.environment.updateGroundMaterial(material);
+    this.pathTracer.invalidateMaterials();
     this.requestFrame();
   }
 

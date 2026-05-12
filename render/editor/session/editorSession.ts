@@ -26,7 +26,7 @@ import type { LightPresetId } from "../lightPresets";
 import { EditorProjectModel, MeshEntityModel, ModelEntityModel } from "../models";
 import { createEmptyEditorProjectJSON } from "../factories/projectFactory";
 import { mergeEditorPostProcessingConfig } from "../postProcessing";
-import { normalizeMeshMaterial } from "../materials/meshMaterial";
+import { hasTextureMaterialPatch, normalizeMeshMaterial } from "../materials/meshMaterial";
 import { EditorRuntime } from "../runtime/editorRuntime";
 import { createMeshGeometry } from "../utils/geometry";
 import { inferModelFileFormat } from "../utils/modelFile";
@@ -859,7 +859,11 @@ export class EditorSession {
       }
     };
 
-    this.runtime.applyEnvConfig(this.projectModel.envConfig);
+    if (hasTextureMaterialPatch(patch)) {
+      this.runtime.applyEnvConfig(this.projectModel.envConfig);
+    } else {
+      this.runtime.updateGroundMaterial(this.projectModel.envConfig.ground.material);
+    }
     this.emit({ type: "sceneUpdated", source });
   }
 

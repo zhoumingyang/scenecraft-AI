@@ -18,6 +18,15 @@ import {
   normalizeString
 } from "../utils/normalize";
 
+const TEXTURE_FIELDS = [
+  "diffuseMap",
+  "metalnessMap",
+  "roughnessMap",
+  "normalMap",
+  "aoMap",
+  "emissiveMap"
+] as const;
+
 function normalizeVec2(value: unknown, fallback: [number, number]): [number, number] {
   if (!Array.isArray(value)) return [...fallback];
   return [normalizeNumber(value[0], fallback[0]), normalizeNumber(value[1], fallback[1])];
@@ -153,12 +162,15 @@ export function disposeMeshStandardMaterialTextures(material: THREE.MeshStandard
   disposeTexture(material.emissiveMap);
 }
 
-export function applyMeshStandardMaterial(
+export function hasTextureMaterialPatch(source: Partial<EditorMeshMaterialJSON>) {
+  return TEXTURE_FIELDS.some((field) => source[field] !== undefined);
+}
+
+export function applyMeshStandardMaterialScalars(
   material: THREE.MeshStandardMaterial,
-  source: ResolvedMeshMaterialJSON,
-  loader: THREE.TextureLoader,
-  onTextureUpdate?: () => void
+  source: ResolvedMeshMaterialJSON
 ) {
+  const previousTransparent = material.transparent;
   material.color.set(source.color);
   material.opacity = source.opacity;
   material.transparent = source.opacity < 1;
@@ -168,6 +180,19 @@ export function applyMeshStandardMaterial(
   material.aoMapIntensity = source.aoMapIntensity;
   material.emissive.set(source.emissive);
   material.emissiveIntensity = source.emissiveIntensity;
+
+  if (material.transparent !== previousTransparent) {
+    material.needsUpdate = true;
+  }
+}
+
+export function applyMeshStandardMaterial(
+  material: THREE.MeshStandardMaterial,
+  source: ResolvedMeshMaterialJSON,
+  loader: THREE.TextureLoader,
+  onTextureUpdate?: () => void
+) {
+  applyMeshStandardMaterialScalars(material, source);
 
   applyTexture(loader, source.diffuseMap, (texture) => {
     material.map = texture;

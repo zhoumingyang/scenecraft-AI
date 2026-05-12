@@ -9,6 +9,7 @@ import type {
 } from "../core/types";
 import { isHighDynamicRangeEnvironmentAssetName } from "../constants/environment";
 import {
+  applyMeshStandardMaterialScalars,
   applyMeshStandardMaterial,
   disposeMeshStandardMaterialTextures
 } from "../materials/meshMaterial";
@@ -144,6 +145,10 @@ export class EditorRuntimeEnvironment {
     this.groundPlane.material.needsUpdate = true;
     this.invalidateSceneMaterials();
     this.syncGroundVisibility();
+  }
+
+  updateGroundMaterial(material: ResolvedEditorGroundConfigJSON["material"]) {
+    applyMeshStandardMaterialScalars(this.groundPlane.material, material);
   }
 
   syncLightHelperVisibility() {
