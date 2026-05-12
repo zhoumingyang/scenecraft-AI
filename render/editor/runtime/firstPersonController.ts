@@ -7,12 +7,17 @@ type KeyState = {
   right: boolean;
 };
 
+type FirstPersonControllerOptions = {
+  onChange?: () => void;
+};
+
 export class FirstPersonController {
   enabled = false;
   private static readonly MAX_PITCH = Math.PI / 2 - 1e-3;
 
   private readonly camera: THREE.Camera;
   private readonly domElement: HTMLCanvasElement;
+  private readonly onChange?: () => void;
   private readonly keyState: KeyState = {
     forward: false,
     backward: false,
@@ -31,9 +36,10 @@ export class FirstPersonController {
   private readonly velocity = new THREE.Vector3();
   private readonly worldUp = new THREE.Vector3(0, 1, 0);
 
-  constructor(camera: THREE.Camera, domElement: HTMLCanvasElement) {
+  constructor(camera: THREE.Camera, domElement: HTMLCanvasElement, options: FirstPersonControllerOptions = {}) {
     this.camera = camera;
     this.domElement = domElement;
+    this.onChange = options.onChange;
   }
 
   connect() {
@@ -76,7 +82,7 @@ export class FirstPersonController {
   }
 
   update(deltaSeconds: number) {
-    if (!this.enabled) return;
+    if (!this.enabled) return false;
 
     this.forward.set(0, 0, -1).applyQuaternion(this.camera.quaternion);
     this.forward.y = 0;
@@ -86,7 +92,7 @@ export class FirstPersonController {
     this.forward.normalize();
 
     this.right.crossVectors(this.forward, this.worldUp);
-    if (this.right.lengthSq() < 1e-6) return;
+    if (this.right.lengthSq() < 1e-6) return false;
     this.right.normalize();
 
     this.velocity.set(0, 0, 0);
@@ -94,10 +100,22 @@ export class FirstPersonController {
     if (this.keyState.backward) this.velocity.sub(this.forward);
     if (this.keyState.left) this.velocity.sub(this.right);
     if (this.keyState.right) this.velocity.add(this.right);
-    if (this.velocity.lengthSq() === 0) return;
+    if (this.velocity.lengthSq() === 0) return false;
 
     this.velocity.normalize().multiplyScalar(this.moveSpeed * deltaSeconds);
     this.camera.position.add(this.velocity);
+    return true;
+  }
+
+  hasActiveInput() {
+    return (
+      this.enabled &&
+      (this.isDragging ||
+        this.keyState.forward ||
+        this.keyState.backward ||
+        this.keyState.left ||
+        this.keyState.right)
+    );
   }
 
   private onMouseDown = (event: MouseEvent) => {
@@ -107,6 +125,7 @@ export class FirstPersonController {
     this.isDragging = true;
     this.lastPointerX = event.clientX;
     this.lastPointerY = event.clientY;
+    this.onChange?.();
   };
 
   private onMouseMove = (event: MouseEvent) => {
@@ -130,28 +149,48 @@ export class FirstPersonController {
       FirstPersonController.MAX_PITCH
     );
     this.applyRotationToCamera();
+    this.onChange?.();
   };
 
   private onMouseUp = (event: MouseEvent) => {
     if (event.button !== 0) return;
     this.isDragging = false;
     this.resetPointer();
+    this.onChange?.();
   };
 
   private onKeyDown = (event: KeyboardEvent) => {
     if (!this.enabled) return;
     if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
+    const previousState = { ...this.keyState };
     if (event.code === "KeyW") this.keyState.forward = true;
     if (event.code === "KeyS") this.keyState.backward = true;
     if (event.code === "KeyA") this.keyState.left = true;
     if (event.code === "KeyD") this.keyState.right = true;
+    if (
+      previousState.forward !== this.keyState.forward ||
+      previousState.backward !== this.keyState.backward ||
+      previousState.left !== this.keyState.left ||
+      previousState.right !== this.keyState.right
+    ) {
+      this.onChange?.();
+    }
   };
 
   private onKeyUp = (event: KeyboardEvent) => {
+    const previousState = { ...this.keyState };
     if (event.code === "KeyW") this.keyState.forward = false;
     if (event.code === "KeyS") this.keyState.backward = false;
     if (event.code === "KeyA") this.keyState.left = false;
     if (event.code === "KeyD") this.keyState.right = false;
+    if (
+      previousState.forward !== this.keyState.forward ||
+      previousState.backward !== this.keyState.backward ||
+      previousState.left !== this.keyState.left ||
+      previousState.right !== this.keyState.right
+    ) {
+      this.onChange?.();
+    }
   };
 
   private onContextMenu = (event: MouseEvent) => {

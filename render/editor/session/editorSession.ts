@@ -970,11 +970,13 @@ export class EditorSession {
   }
 
   syncRenderChangesToModel(deltaSeconds = 0) {
+    let sceneChanged = false;
     if (this.projectModel && this.runtime.syncCameraModel(this.projectModel.camera)) {
       this.emit({ type: "cameraUpdated", source: "render" });
+      sceneChanged = true;
     }
 
-    this.registry.refresh(deltaSeconds);
+    sceneChanged = this.registry.refresh(deltaSeconds) || sceneChanged;
 
     this.registry.syncAllObjectTransformsToModel().forEach((binding) => {
       this.emit({
@@ -983,7 +985,10 @@ export class EditorSession {
         entityKind: binding.kind,
         source: "render"
       });
+      sceneChanged = true;
     });
+
+    return sceneChanged;
   }
 
   pick(clientX: number, clientY: number): string | null {

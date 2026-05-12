@@ -189,6 +189,7 @@ export function createModelBinding(context: BindingContext, model: ModelEntityMo
       if (sceneChanged) {
         context.invalidateScene?.();
       }
+      return sceneChanged;
     },
     dispose: () => {
       disposed = true;

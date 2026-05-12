@@ -511,6 +511,7 @@ export class EditorApp {
 
   private emit(event: EditorAppEvent) {
     this.invalidatePathTraceForEvent(event);
+    this.runtime.requestFrame();
     this.listeners.forEach((listener) => {
       listener(event);
     });
@@ -585,7 +586,7 @@ export class EditorApp {
   };
 
   private onFrame = (deltaSeconds: number) => {
-    this.session.syncRenderChangesToModel(deltaSeconds);
+    return this.session.syncRenderChangesToModel(deltaSeconds);
   };
 
   private revokeEnvironmentUrl() {

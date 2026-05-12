@@ -20,8 +20,10 @@ import { ModelLoaderFactory } from "./modelLoaderFactory";
 
 type RuntimeStartOptions = {
   onPointerDown: (event: PointerEvent) => void;
-  onFrame: (deltaSeconds: number) => void;
+  onFrame: (deltaSeconds: number) => boolean;
 };
+
+const ORBIT_DAMPING_FRAME_BUDGET = 45;
 
 export class EditorRuntime {
   readonly host: HTMLDivElement;
@@ -45,6 +47,9 @@ export class EditorRuntime {
   private readonly postProcessing: EditorRuntimePostProcessing;
   private disposed = false;
   private startOptions: RuntimeStartOptions | null = null;
+  private frameDirty = true;
+  private processingFrame = false;
+  private orbitDampingFramesRemaining = 0;
   private lastCameraSignature = "";
   private currentCameraType = 1;
   private transformDragging = false;
@@ -97,7 +102,9 @@ export class EditorRuntime {
     this.orbitControls.enableDamping = true;
     this.orbitControls.enablePan = true;
     this.orbitControls.target.set(0, 0, 0);
-    this.firstPersonController = new FirstPersonController(this.camera, this.renderer.domElement);
+    this.firstPersonController = new FirstPersonController(this.camera, this.renderer.domElement, {
+      onChange: this.requestFrame
+    });
     this.transformGizmo = new CustomTransformGizmo(this.camera, this.renderer.domElement, this.raycaster);
     this.scene.add(this.transformGizmo.root);
   }
@@ -109,11 +116,12 @@ export class EditorRuntime {
     this.resize();
     this.clock.start();
     this.firstPersonController.connect();
+    this.orbitControls.addEventListener("change", this.onOrbitControlsChange);
     this.renderer.domElement.addEventListener("pointerdown", options.onPointerDown);
     window.addEventListener("pointermove", this.onPointerMove);
     window.addEventListener("pointerup", this.onPointerUp);
     window.addEventListener("resize", this.resize);
-    this.animate();
+    this.requestFrame();
   }
 
   stop() {
@@ -121,6 +129,7 @@ export class EditorRuntime {
     window.cancelAnimationFrame(this.rafId);
     this.clock.stop();
     window.removeEventListener("resize", this.resize);
+    this.orbitControls.removeEventListener("change", this.onOrbitControlsChange);
     this.renderer.domElement.removeEventListener("pointerdown", this.startOptions.onPointerDown);
     window.removeEventListener("pointermove", this.onPointerMove);
     window.removeEventListener("pointerup", this.onPointerUp);
@@ -153,6 +162,14 @@ export class EditorRuntime {
     this.postProcessing.render(deltaSeconds);
   }
 
+  requestFrame = () => {
+    if (this.disposed || !this.startOptions) return;
+    this.frameDirty = true;
+    if (this.rafId !== 0 || this.processingFrame) return;
+    this.clock.getDelta();
+    this.rafId = window.requestAnimationFrame(this.animate);
+  };
+
   applyCameraModel(cameraModel: CameraModel) {
     this.currentCameraType = cameraModel.cameraType;
     this.camera.fov = cameraModel.fov;
@@ -174,6 +191,7 @@ export class EditorRuntime {
     this.lastCameraSignature = buildTransformSignature(this.camera);
     this.postProcessing.syncCameraState();
     this.pathTracer.invalidateCamera();
+    this.requestFrame();
   }
 
   alignCameraModelToFirstPerson(cameraModel: CameraModel) {
@@ -225,17 +243,23 @@ export class EditorRuntime {
     this.lastCameraSignature = nextSignature;
     this.postProcessing.syncCameraState();
     this.pathTracer.invalidateCamera();
+    this.requestFrame();
     return true;
   }
 
   update(deltaSeconds: number) {
     this.transformGizmo.update();
+    let changed = false;
     if (this.currentCameraType === 1) {
-      this.orbitControls.update();
-      return;
+      changed = this.orbitControls.update();
+      if (this.orbitDampingFramesRemaining > 0) {
+        this.orbitDampingFramesRemaining -= 1;
+      }
+      return changed;
     }
 
-    this.firstPersonController.update(deltaSeconds);
+    changed = this.firstPersonController.update(deltaSeconds);
+    return changed;
   }
 
   isFirstPersonCamera() {
@@ -252,27 +276,33 @@ export class EditorRuntime {
     if (mode === "pathTrace") {
       this.pathTracer.invalidateScene();
     }
+    this.requestFrame();
     return true;
   }
 
   invalidatePathTraceScene() {
     this.pathTracer.invalidateScene();
+    this.requestFrame();
   }
 
   invalidatePathTraceCamera() {
     this.pathTracer.invalidateCamera();
+    this.requestFrame();
   }
 
   invalidatePathTraceMaterials() {
     this.pathTracer.invalidateMaterials();
+    this.requestFrame();
   }
 
   invalidatePathTraceLights() {
     this.pathTracer.invalidateLights();
+    this.requestFrame();
   }
 
   invalidatePathTraceEnvironment() {
     this.pathTracer.invalidateEnvironment();
+    this.requestFrame();
   }
 
   getGridHelperVisible() {
@@ -281,6 +311,7 @@ export class EditorRuntime {
 
   setGridHelperVisible(visible: boolean) {
     this.environment.setGridHelperVisible(visible);
+    this.requestFrame();
   }
 
   getTransformGizmoVisible() {
@@ -293,6 +324,7 @@ export class EditorRuntime {
 
   setTransformGizmoVisible(visible: boolean) {
     this.transformGizmo.setVisible(visible);
+    this.requestFrame();
   }
 
   getLightHelpersVisible() {
@@ -301,6 +333,7 @@ export class EditorRuntime {
 
   setLightHelpersVisible(visible: boolean) {
     this.environment.setLightHelpersVisible(visible);
+    this.requestFrame();
   }
 
   getShadowEnabled() {
@@ -309,10 +342,12 @@ export class EditorRuntime {
 
   setShadowEnabled(enabled: boolean) {
     this.environment.setShadowEnabled(enabled);
+    this.requestFrame();
   }
 
   syncLightHelperVisibility() {
     this.environment.syncLightHelperVisibility();
+    this.requestFrame();
   }
 
   hasEnvironmentTexture() {
@@ -326,15 +361,18 @@ export class EditorRuntime {
   async setEnvironmentFromUrl(url: string, assetName = url) {
     await this.environment.setEnvironmentFromUrl(url, assetName);
     this.pathTracer.invalidateEnvironment();
+    this.requestFrame();
   }
 
   clearEnvironment() {
     this.environment.clearEnvironment();
     this.pathTracer.invalidateEnvironment();
+    this.requestFrame();
   }
 
   setOutlineSelection(objects: THREE.Object3D[]) {
     this.postProcessing.setOutlineSelection(objects);
+    this.requestFrame();
   }
 
   captureViewportImage(mode: EditorViewportCaptureMode = "clean") {
@@ -372,6 +410,7 @@ export class EditorRuntime {
     this.postProcessing.applyConfig(envConfig.postProcessing);
     this.pathTracer.invalidateScene();
     this.pathTracer.invalidateEnvironment();
+    this.requestFrame();
   }
 
   private invalidateSceneMaterials = () => {
@@ -389,6 +428,7 @@ export class EditorRuntime {
       }
     });
     this.pathTracer.invalidateMaterials();
+    this.requestFrame();
   };
 
   private renderPathTraceFrame() {
@@ -413,7 +453,13 @@ export class EditorRuntime {
       return;
     }
     this.orbitControls.enabled = !isDragging;
+    this.requestFrame();
   }
+
+  private onOrbitControlsChange = () => {
+    this.orbitDampingFramesRemaining = ORBIT_DAMPING_FRAME_BUDGET;
+    this.requestFrame();
+  };
 
   private onPointerMove = (event: PointerEvent) => {
     if (!this.transformGizmo.isDragging()) return;
@@ -421,12 +467,14 @@ export class EditorRuntime {
       clientX: event.clientX,
       clientY: event.clientY
     });
+    this.requestFrame();
   };
 
   private onPointerUp = () => {
     if (!this.transformGizmo.isDragging()) return;
     this.transformGizmo.endPointerInteraction();
     this.setTransformDragging(false);
+    this.requestFrame();
   };
 
   private resize = () => {
@@ -439,14 +487,38 @@ export class EditorRuntime {
     this.camera.updateProjectionMatrix();
     this.postProcessing.syncCameraState();
     this.pathTracer.invalidateCamera();
+    this.requestFrame();
   };
 
   private animate = () => {
     if (!this.startOptions) return;
-    this.rafId = window.requestAnimationFrame(this.animate);
+    this.rafId = 0;
     const deltaSeconds = this.clock.getDelta();
-    this.update(deltaSeconds);
-    this.startOptions.onFrame(deltaSeconds);
-    this.renderFrame(deltaSeconds);
+    this.processingFrame = true;
+    const runtimeChanged = this.update(deltaSeconds);
+    const sessionChanged = this.startOptions.onFrame(deltaSeconds);
+    this.processingFrame = false;
+    const shouldRender =
+      this.frameDirty || runtimeChanged || sessionChanged || this.renderMode === "pathTrace";
+
+    if (shouldRender) {
+      this.renderFrame(deltaSeconds);
+      this.frameDirty = false;
+    }
+
+    if (this.shouldContinueAnimating(runtimeChanged, sessionChanged)) {
+      this.rafId = window.requestAnimationFrame(this.animate);
+    }
   };
+
+  private shouldContinueAnimating(runtimeChanged: boolean, sessionChanged: boolean) {
+    return (
+      this.renderMode === "pathTrace" ||
+      this.transformDragging ||
+      this.firstPersonController.hasActiveInput() ||
+      this.orbitDampingFramesRemaining > 0 ||
+      runtimeChanged ||
+      sessionChanged
+    );
+  }
 }

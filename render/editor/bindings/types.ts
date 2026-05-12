@@ -18,7 +18,7 @@ export type RenderBinding = {
   };
   dispose: () => void;
   lastTransformSignature: string;
-  refresh?: (deltaSeconds: number) => void;
+  refresh?: (deltaSeconds: number) => boolean;
 };
 
 export type BindingContext = {

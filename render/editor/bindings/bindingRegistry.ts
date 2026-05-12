@@ -97,8 +97,10 @@ export class BindingRegistry {
   }
 
   refresh(deltaSeconds = 0) {
+    let sceneChanged = false;
     this.bindingsById.forEach((binding) => {
-      binding.refresh?.(deltaSeconds);
+      sceneChanged = binding.refresh?.(deltaSeconds) === true || sceneChanged;
     });
+    return sceneChanged;
   }
 }

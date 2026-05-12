@@ -244,6 +244,7 @@ export function createLightBinding(context: BindingContext, model: LightEntityMo
       } else if (parts.helper instanceof RectAreaLightHelper) {
         parts.helper.updateMatrixWorld();
       }
+      return false;
     },
     dispose: () => {
       removeObjectFromParent(parts.root);
