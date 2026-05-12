@@ -978,15 +978,20 @@ export class EditorSession {
 
     sceneChanged = this.registry.refresh(deltaSeconds) || sceneChanged;
 
-    this.registry.syncAllObjectTransformsToModel().forEach((binding) => {
+    const renderTransformedBinding =
+      this.selectedEntityId && this.selectedEntityId !== SCENE_SELECTION_ID
+        ? this.registry.syncObjectTransformToModel(this.selectedEntityId)
+        : null;
+
+    if (renderTransformedBinding) {
       this.emit({
         type: "entityUpdated",
-        entityId: binding.model.id,
-        entityKind: binding.kind,
+        entityId: renderTransformedBinding.model.id,
+        entityKind: renderTransformedBinding.kind,
         source: "render"
       });
       sceneChanged = true;
-    });
+    }
 
     return sceneChanged;
   }

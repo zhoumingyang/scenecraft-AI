@@ -11,7 +11,7 @@ import {
   disposeMeshStandardMaterialTextures
 } from "../materials/meshMaterial";
 import { createMeshGeometry } from "../utils/geometry";
-import { buildTransformSignature, removeObjectFromParent, setEntityId } from "../utils/object3d";
+import { captureObjectTransformState, removeObjectFromParent, setEntityId } from "../utils/object3d";
 import type { BindingContext, RenderBinding } from "./types";
 
 function applyMeshMaterial(
@@ -48,7 +48,7 @@ export function createMeshBinding(context: BindingContext, model: MeshEntityMode
     model,
     object: mesh,
     applyState,
-    lastTransformSignature: buildTransformSignature(mesh),
+    lastTransformState: captureObjectTransformState(mesh),
     dispose: () => {
       removeObjectFromParent(mesh);
       geometry.dispose();

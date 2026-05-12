@@ -3,6 +3,7 @@ import * as THREE from "three";
 import type { EntityKind } from "../core/types";
 import type { EntityModel } from "../models";
 import type { ModelLoaderFactory } from "../runtime/modelLoaderFactory";
+import type { ObjectTransformState } from "../utils/object3d";
 
 export type RenderBinding = {
   kind: EntityKind;
@@ -17,7 +18,7 @@ export type RenderBinding = {
     hasClip: (animationId: string | null) => boolean;
   };
   dispose: () => void;
-  lastTransformSignature: string;
+  lastTransformState: ObjectTransformState;
   refresh?: (deltaSeconds: number) => boolean;
 };
 

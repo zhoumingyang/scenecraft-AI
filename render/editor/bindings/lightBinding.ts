@@ -3,7 +3,12 @@ import { RectAreaLightHelper } from "three/examples/jsm/helpers/RectAreaLightHel
 
 import type { EditorLightJSON } from "../core/types";
 import type { LightEntityModel } from "../models";
-import { buildTransformSignature, removeObjectFromParent, setEntityId } from "../utils/object3d";
+import {
+  captureObjectTransformState,
+  removeObjectFromParent,
+  setEntityId,
+  updateObjectTransformState
+} from "../utils/object3d";
 import type { BindingContext, RenderBinding } from "./types";
 
 const SOFT_SHADOW_MAP_SIZE = 1024;
@@ -231,7 +236,7 @@ export function createLightBinding(context: BindingContext, model: LightEntityMo
     model,
     object: parts.root,
     pickTargets: [parts.root, parts.helper],
-    lastTransformSignature: buildTransformSignature(parts.root),
+    lastTransformState: captureObjectTransformState(parts.root),
     refresh: () => {
       if (parts.helper instanceof THREE.DirectionalLightHelper) {
         parts.helper.update();
@@ -288,5 +293,5 @@ export function updateLightBinding(binding: RenderBinding, patch: Partial<Editor
     light,
     helper
   });
-  binding.lastTransformSignature = buildTransformSignature(binding.object);
+  updateObjectTransformState(binding.lastTransformState, binding.object);
 }

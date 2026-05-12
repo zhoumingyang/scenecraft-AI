@@ -9,7 +9,12 @@ import type {
   EditorViewportCaptureMode,
   ResolvedEditorEnvConfigJSON
 } from "../core/types";
-import { buildTransformSignature } from "../utils/object3d";
+import {
+  captureObjectTransformState,
+  hasObjectTransformChanged,
+  updateObjectTransformState,
+  type ObjectTransformState
+} from "../utils/object3d";
 import { CustomTransformGizmo } from "./customTransformGizmo";
 import { configureRendererColorManagement } from "./colorManagement";
 import { EditorRuntimeEnvironment } from "./editorRuntimeEnvironment";
@@ -50,7 +55,7 @@ export class EditorRuntime {
   private frameDirty = true;
   private processingFrame = false;
   private orbitDampingFramesRemaining = 0;
-  private lastCameraSignature = "";
+  private lastCameraTransformState: ObjectTransformState;
   private currentCameraType = 1;
   private transformDragging = false;
   private renderMode: EditorRenderMode = "webgl";
@@ -65,6 +70,7 @@ export class EditorRuntime {
     this.camera = new THREE.PerspectiveCamera(60, 1, 0.1, 2000);
     this.camera.position.set(10, 10, 10);
     this.camera.lookAt(0, 0, 0);
+    this.lastCameraTransformState = captureObjectTransformState(this.camera);
 
     this.renderer = new THREE.WebGLRenderer({
       antialias: false,
@@ -188,7 +194,7 @@ export class EditorRuntime {
     }
 
     this.camera.updateProjectionMatrix();
-    this.lastCameraSignature = buildTransformSignature(this.camera);
+    updateObjectTransformState(this.lastCameraTransformState, this.camera);
     this.postProcessing.syncCameraState();
     this.pathTracer.invalidateCamera();
     this.requestFrame();
@@ -237,10 +243,9 @@ export class EditorRuntime {
   }
 
   syncCameraModel(cameraModel: CameraModel): boolean {
-    const nextSignature = buildTransformSignature(this.camera);
-    if (nextSignature === this.lastCameraSignature) return false;
+    if (!hasObjectTransformChanged(this.camera, this.lastCameraTransformState)) return false;
     cameraModel.copyTransformFromObject(this.camera);
-    this.lastCameraSignature = nextSignature;
+    updateObjectTransformState(this.lastCameraTransformState, this.camera);
     this.postProcessing.syncCameraState();
     this.pathTracer.invalidateCamera();
     this.requestFrame();

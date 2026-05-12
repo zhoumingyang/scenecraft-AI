@@ -4,7 +4,7 @@ import { getExternalAssetIncludedFiles } from "@/lib/externalAssets/source";
 import type { ModelEntityModel } from "../models";
 import { normalizeObject3DMaterials } from "../runtime/colorManagement";
 import {
-  buildTransformSignature,
+  captureObjectTransformState,
   disposeObject3D,
   removeObjectFromParent,
   setEntityId
@@ -174,7 +174,7 @@ export function createModelBinding(context: BindingContext, model: ModelEntityMo
       step: stepAnimation,
       hasClip: (animationId: string | null) => (animationId ? clipsById.has(animationId) : false)
     },
-    lastTransformSignature: buildTransformSignature(group),
+    lastTransformState: captureObjectTransformState(group),
     refresh: (deltaSeconds) => {
       let sceneChanged = false;
       if (mixer && model.animationPlaybackState === "playing") {

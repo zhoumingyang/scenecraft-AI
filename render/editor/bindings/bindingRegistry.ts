@@ -1,7 +1,10 @@
 import * as THREE from "three";
 
 import type { EntityModel } from "../models";
-import { buildTransformSignature } from "../utils/object3d";
+import {
+  hasObjectTransformChanged,
+  updateObjectTransformState
+} from "../utils/object3d";
 import { createBinding } from "./bindingFactory";
 import type { BindingContext, RenderBinding } from "./types";
 
@@ -49,7 +52,7 @@ export class BindingRegistry {
 
     nextParent.add(binding.object);
     binding.model.applyTransformToObject(binding.object);
-    binding.lastTransformSignature = buildTransformSignature(binding.object);
+    updateObjectTransformState(binding.lastTransformState, binding.object);
     return binding;
   }
 
@@ -68,7 +71,7 @@ export class BindingRegistry {
     if (!binding) return null;
     binding.model.applyTransformToObject(binding.object);
     binding.applyState?.();
-    binding.lastTransformSignature = buildTransformSignature(binding.object);
+    updateObjectTransformState(binding.lastTransformState, binding.object);
     return binding;
   }
 
@@ -76,21 +79,19 @@ export class BindingRegistry {
     const binding = this.bindingsById.get(entityId);
     if (!binding) return null;
 
-    const nextSignature = buildTransformSignature(binding.object);
-    if (nextSignature === binding.lastTransformSignature) return null;
+    if (!hasObjectTransformChanged(binding.object, binding.lastTransformState)) return null;
 
     binding.model.copyTransformFromObject(binding.object);
-    binding.lastTransformSignature = nextSignature;
+    updateObjectTransformState(binding.lastTransformState, binding.object);
     return binding;
   }
 
   syncAllObjectTransformsToModel(): RenderBinding[] {
     const changed: RenderBinding[] = [];
     this.bindingsById.forEach((binding) => {
-      const nextSignature = buildTransformSignature(binding.object);
-      if (nextSignature === binding.lastTransformSignature) return;
+      if (!hasObjectTransformChanged(binding.object, binding.lastTransformState)) return;
       binding.model.copyTransformFromObject(binding.object);
-      binding.lastTransformSignature = nextSignature;
+      updateObjectTransformState(binding.lastTransformState, binding.object);
       changed.push(binding);
     });
     return changed;
