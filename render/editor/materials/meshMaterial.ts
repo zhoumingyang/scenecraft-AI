@@ -27,6 +27,13 @@ const TEXTURE_FIELDS = [
   "emissiveMap"
 ] as const;
 
+type TextureRole = "color" | "emissive" | "normal" | "roughness" | "metalness" | "ao";
+
+const TEXTURE_ROLES: TextureRole[] = ["color", "metalness", "roughness", "normal", "ao", "emissive"];
+const TEXTURE_LOAD_TOKENS_KEY = "__editorTextureLoadTokens";
+
+type TextureLoadTokens = Partial<Record<TextureRole, number>>;
+
 function normalizeVec2(value: unknown, fallback: [number, number]): [number, number] {
   if (!Array.isArray(value)) return [...fallback];
   return [normalizeNumber(value[0], fallback[0]), normalizeNumber(value[1], fallback[1])];
@@ -128,13 +135,49 @@ function configureTexture(texture: THREE.Texture, schema: ResolvedTextureSchema)
   texture.needsUpdate = true;
 }
 
+function getTextureLoadTokens(material: THREE.MeshStandardMaterial): TextureLoadTokens {
+  const userData = material.userData as Record<string, unknown>;
+  const existing = userData[TEXTURE_LOAD_TOKENS_KEY];
+  if (existing && typeof existing === "object") {
+    return existing as TextureLoadTokens;
+  }
+
+  const tokens: TextureLoadTokens = {};
+  userData[TEXTURE_LOAD_TOKENS_KEY] = tokens;
+  return tokens;
+}
+
+function nextTextureLoadToken(material: THREE.MeshStandardMaterial, role: TextureRole) {
+  const tokens = getTextureLoadTokens(material);
+  const nextToken = (tokens[role] ?? 0) + 1;
+  tokens[role] = nextToken;
+  return nextToken;
+}
+
+function isTextureLoadCurrent(
+  material: THREE.MeshStandardMaterial,
+  role: TextureRole,
+  token: number
+) {
+  return getTextureLoadTokens(material)[role] === token;
+}
+
+function invalidateTextureLoads(material: THREE.MeshStandardMaterial) {
+  TEXTURE_ROLES.forEach((role) => {
+    nextTextureLoadToken(material, role);
+  });
+}
+
 function applyTexture(
   loader: THREE.TextureLoader,
+  material: THREE.MeshStandardMaterial,
   schema: ResolvedTextureSchema,
   assign: (texture: THREE.Texture | null) => void,
-  role: "color" | "emissive" | "normal" | "roughness" | "metalness" | "ao",
+  role: TextureRole,
   onTextureUpdate?: () => void
 ) {
+  const loadToken = nextTextureLoadToken(material, role);
+
   if (!schema.url) {
     assign(null);
     onTextureUpdate?.();
@@ -142,6 +185,11 @@ function applyTexture(
   }
 
   loader.load(schema.url, (texture) => {
+    if (!isTextureLoadCurrent(material, role, loadToken)) {
+      texture.dispose();
+      return;
+    }
+
     configureTexture(texture, schema);
     applyTextureColorSpace(texture, role);
     assign(texture);
@@ -154,6 +202,7 @@ function disposeTexture(texture: THREE.Texture | null) {
 }
 
 export function disposeMeshStandardMaterialTextures(material: THREE.MeshStandardMaterial) {
+  invalidateTextureLoads(material);
   disposeTexture(material.map);
   disposeTexture(material.metalnessMap);
   disposeTexture(material.roughnessMap);
@@ -194,27 +243,27 @@ export function applyMeshStandardMaterial(
 ) {
   applyMeshStandardMaterialScalars(material, source);
 
-  applyTexture(loader, source.diffuseMap, (texture) => {
+  applyTexture(loader, material, source.diffuseMap, (texture) => {
     material.map = texture;
     material.needsUpdate = true;
   }, "color", onTextureUpdate);
-  applyTexture(loader, source.metalnessMap, (texture) => {
+  applyTexture(loader, material, source.metalnessMap, (texture) => {
     material.metalnessMap = texture;
     material.needsUpdate = true;
   }, "metalness", onTextureUpdate);
-  applyTexture(loader, source.roughnessMap, (texture) => {
+  applyTexture(loader, material, source.roughnessMap, (texture) => {
     material.roughnessMap = texture;
     material.needsUpdate = true;
   }, "roughness", onTextureUpdate);
-  applyTexture(loader, source.normalMap, (texture) => {
+  applyTexture(loader, material, source.normalMap, (texture) => {
     material.normalMap = texture;
     material.needsUpdate = true;
   }, "normal", onTextureUpdate);
-  applyTexture(loader, source.aoMap, (texture) => {
+  applyTexture(loader, material, source.aoMap, (texture) => {
     material.aoMap = texture;
     material.needsUpdate = true;
   }, "ao", onTextureUpdate);
-  applyTexture(loader, source.emissiveMap, (texture) => {
+  applyTexture(loader, material, source.emissiveMap, (texture) => {
     material.emissiveMap = texture;
     material.needsUpdate = true;
   }, "emissive", onTextureUpdate);
