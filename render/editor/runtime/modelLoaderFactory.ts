@@ -30,6 +30,8 @@ type ModelLoadOptions = {
   includedFiles?: ExternalAssetIncludedFile[];
 };
 
+const MODEL_ASSET_CACHE_LIMIT = 8;
+
 function normalizeIncludedFileKey(value: string) {
   return value
     .trim()
@@ -117,17 +119,20 @@ export class ModelLoaderFactory {
   load(source: string, format: ModelFileFormat, options?: ModelLoadOptions): Promise<LoadedModelAsset> {
     const cacheKey = this.buildCacheKey(source, format, options);
     const shouldCache = format !== "vrm";
-    const cached = shouldCache ? this.assetCache.get(cacheKey) : undefined;
-    const parsedAssetPromise =
-      cached ??
-      this.loadParsedAsset(source, format, options).catch((error) => {
+    const cached = shouldCache ? this.getCachedAsset(cacheKey) : undefined;
+    let parsedAssetPromise = cached;
+
+    if (!parsedAssetPromise) {
+      const loadingPromise = this.loadParsedAsset(source, format, options).catch((error) => {
         if (shouldCache) {
-          this.assetCache.delete(cacheKey);
+          this.deleteCachedAsset(cacheKey, loadingPromise);
         }
         throw error;
       });
-    if (!cached && shouldCache) {
-      this.assetCache.set(cacheKey, parsedAssetPromise);
+      parsedAssetPromise = loadingPromise;
+      if (shouldCache) {
+        this.setCachedAsset(cacheKey, parsedAssetPromise);
+      }
     }
 
     return parsedAssetPromise.then((asset) => ({
@@ -145,6 +150,34 @@ export class ModelLoaderFactory {
 
   release(source: string, format: ModelFileFormat, options?: ModelLoadOptions) {
     this.assetCache.delete(this.buildCacheKey(source, format, options));
+  }
+
+  private getCachedAsset(cacheKey: string) {
+    const cached = this.assetCache.get(cacheKey);
+    if (!cached) return undefined;
+
+    this.assetCache.delete(cacheKey);
+    this.assetCache.set(cacheKey, cached);
+    return cached;
+  }
+
+  private setCachedAsset(cacheKey: string, asset: Promise<ParsedModelAsset>) {
+    this.assetCache.set(cacheKey, asset);
+    this.pruneAssetCache();
+  }
+
+  private deleteCachedAsset(cacheKey: string, expectedAsset: Promise<ParsedModelAsset>) {
+    if (this.assetCache.get(cacheKey) === expectedAsset) {
+      this.assetCache.delete(cacheKey);
+    }
+  }
+
+  private pruneAssetCache() {
+    while (this.assetCache.size > MODEL_ASSET_CACHE_LIMIT) {
+      const oldestKey = this.assetCache.keys().next().value as string | undefined;
+      if (!oldestKey) return;
+      this.assetCache.delete(oldestKey);
+    }
   }
 
   private buildCacheKey(source: string, format: ModelFileFormat, options?: ModelLoadOptions) {
