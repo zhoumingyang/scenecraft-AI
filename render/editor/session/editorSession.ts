@@ -710,7 +710,8 @@ export class EditorSession {
       type: "entityUpdated",
       entityId,
       entityKind: binding.kind,
-      source
+      source,
+      affectsSceneTree: false
     });
   }
 
@@ -792,7 +793,9 @@ export class EditorSession {
       type: "entityUpdated",
       entityId,
       entityKind: "mesh",
-      source
+      source,
+      affectsSceneTree: false,
+      affectsMeshList: false
     });
   }
 
@@ -886,7 +889,8 @@ export class EditorSession {
       type: "entityUpdated",
       entityId,
       entityKind: "light",
-      source
+      source,
+      affectsSceneTree: false
     });
   }
 
@@ -965,7 +969,8 @@ export class EditorSession {
       type: "entityUpdated",
       entityId,
       entityKind: binding.kind,
-      source: "render"
+      source: "render",
+      affectsSceneTree: false
     });
   }
 
@@ -988,7 +993,8 @@ export class EditorSession {
         type: "entityUpdated",
         entityId: renderTransformedBinding.model.id,
         entityKind: renderTransformedBinding.kind,
-        source: "render"
+        source: "render",
+        affectsSceneTree: false
       });
       sceneChanged = true;
     }
@@ -1569,7 +1575,8 @@ export class EditorSession {
       type: "entityUpdated",
       entityId,
       entityKind: "model",
-      source
+      source,
+      affectsSceneTree: false
     });
   }
 
@@ -1584,7 +1591,8 @@ export class EditorSession {
       type: "entityUpdated",
       entityId,
       entityKind: "model",
-      source
+      source,
+      affectsSceneTree: false
     });
   }
 
@@ -1624,7 +1632,8 @@ export class EditorSession {
       type: "entityUpdated",
       entityId,
       entityKind: "model",
-      source
+      source,
+      affectsSceneTree: false
     });
   }
 }

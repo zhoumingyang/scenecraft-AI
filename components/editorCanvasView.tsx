@@ -45,6 +45,9 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
   const beginSceneLoading = useEditorStore((state) => state.beginSceneLoading);
   const endSceneLoading = useEditorStore((state) => state.endSceneLoading);
   const bumpProjectVersion = useEditorStore((state) => state.bumpProjectVersion);
+  const bumpEntityVersion = useEditorStore((state) => state.bumpEntityVersion);
+  const bumpSceneTreeVersion = useEditorStore((state) => state.bumpSceneTreeVersion);
+  const bumpMeshListVersion = useEditorStore((state) => state.bumpMeshListVersion);
   const bumpEntityRenderVersion = useEditorStore((state) => state.bumpEntityRenderVersion);
   const bumpProjectLoadVersion = useEditorStore((state) => state.bumpProjectLoadVersion);
   const bumpCameraVersion = useEditorStore((state) => state.bumpCameraVersion);
@@ -58,7 +61,7 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
     const app = createEditorSdk(canvasHostRef.current);
     setApp(app);
     let frameRequestId = 0;
-    let pendingEntityRenderVersion = false;
+    const pendingRenderEntityIds = new Set<string>();
     let disposed = false;
 
     const syncLightingConflictState = (reset = false) => {
@@ -72,8 +75,11 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
       frameRequestId = 0;
       if (disposed) return;
 
-      if (pendingEntityRenderVersion) {
-        pendingEntityRenderVersion = false;
+      if (pendingRenderEntityIds.size > 0) {
+        pendingRenderEntityIds.forEach((entityId) => {
+          bumpEntityVersion(entityId);
+        });
+        pendingRenderEntityIds.clear();
         bumpEntityRenderVersion();
       }
     };
@@ -95,6 +101,8 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
       if (event.type === "projectLoaded") {
         bumpProjectLoadVersion();
         bumpProjectVersion();
+        bumpSceneTreeVersion();
+        bumpMeshListVersion();
         bumpCameraVersion();
         bumpViewStateVersion();
         markUnsavedChanges(false);
@@ -104,10 +112,21 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
 
       if (event.type === "entityUpdated") {
         if (event.source === "render") {
-          pendingEntityRenderVersion = true;
+          pendingRenderEntityIds.add(event.entityId);
           scheduleRenderDrivenUpdates();
+        } else {
+          bumpEntityVersion(event.entityId);
         }
-        bumpProjectVersion();
+
+        const affectsSceneTree = event.affectsSceneTree ?? true;
+        if (affectsSceneTree) {
+          bumpSceneTreeVersion();
+        }
+
+        const affectsMeshList = event.affectsMeshList ?? (affectsSceneTree && event.entityKind === "mesh");
+        if (affectsMeshList) {
+          bumpMeshListVersion();
+        }
         markUnsavedChanges(true);
         if (event.entityKind === "light") {
           syncLightingConflictState();
@@ -203,6 +222,9 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
     clearPendingAiGenerations,
     bumpProjectLoadVersion,
     bumpProjectVersion,
+    bumpEntityVersion,
+    bumpSceneTreeVersion,
+    bumpMeshListVersion,
     bumpEntityRenderVersion,
     bumpCameraVersion,
     bumpViewStateVersion,

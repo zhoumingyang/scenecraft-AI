@@ -35,9 +35,10 @@ export default function PropertyPanel() {
   const app = useEditorStore((state) => state.app);
   const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
   const selectedEntityId = useEditorStore((state) => state.selectedEntityId);
-  const projectVersion = useEditorStore((state) => state.projectVersion);
-  const entityRenderVersion = useEditorStore((state) => state.entityRenderVersion);
   const viewStateVersion = useEditorStore((state) => state.viewStateVersion);
+  const selectedEntityVersion = useEditorStore((state) =>
+    selectedEntityId ? state.entityVersions[selectedEntityId] ?? 0 : 0
+  );
   const inspectorMode = useEditorStore((state) => state.aiImage.inspectorMode);
   const [open, setOpen] = useState(true);
   const [activeTextureField, setActiveTextureField] = useState<TextureFieldKey | null>(null);
@@ -69,7 +70,7 @@ export default function PropertyPanel() {
     return {
       ...record
     };
-  }, [app, selectedEntityId, projectVersion, entityRenderVersion]);
+  }, [app, selectedEntityId, selectedEntityVersion, viewStateVersion]);
 
   const panelTitle =
     inspectorMode === "ai"

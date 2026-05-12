@@ -33,7 +33,7 @@ export default function AiImageResultsSection({
   const { t } = useI18n();
   const app = useEditorStore((state) => state.app);
   const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
-  const projectVersion = useEditorStore((state) => state.projectVersion);
+  const meshListVersion = useEditorStore((state) => state.meshListVersion);
   const recordAiResultAppliedToMesh = useEditorStore((state) => state.recordAiResultAppliedToMesh);
   const theme = getEditorThemeTokens(editorThemeMode);
   const [applyPanel, setApplyPanel] = useState<{
@@ -41,7 +41,7 @@ export default function AiImageResultsSection({
     imageUrl: string;
     anchorEl: HTMLElement | null;
   } | null>(null);
-  const meshItems = useMemo<EditorMeshListItem[]>(() => app?.getMeshList() ?? [], [app, projectVersion]);
+  const meshItems = useMemo<EditorMeshListItem[]>(() => app?.getMeshList() ?? [], [app, meshListVersion]);
 
   useEffect(() => {
     if (meshItems.length > 0) return;

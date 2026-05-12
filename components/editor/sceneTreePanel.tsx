@@ -18,7 +18,7 @@ export default function SceneTreePanel() {
   const app = useEditorStore((state) => state.app);
   const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
   const selectedEntityId = useEditorStore((state) => state.selectedEntityId);
-  const projectVersion = useEditorStore((state) => state.projectVersion);
+  const sceneTreeVersion = useEditorStore((state) => state.sceneTreeVersion);
   const [open, setOpen] = useState(false);
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
   const [draftLabel, setDraftLabel] = useState("");
@@ -26,7 +26,7 @@ export default function SceneTreePanel() {
 
   const sections = useMemo(
     () => buildSceneTreeSections(app?.projectModel, t, SCENE_NODE_ID),
-    [app, projectVersion, t]
+    [app, sceneTreeVersion, t]
   );
 
   const onSelectEntity = (entityId: string) => {

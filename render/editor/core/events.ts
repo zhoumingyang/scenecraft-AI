@@ -5,6 +5,8 @@ export type EntityUpdatedEvent = {
   entityId: string;
   entityKind: EntityKind;
   source: SyncSource;
+  affectsSceneTree?: boolean;
+  affectsMeshList?: boolean;
 };
 
 export type CameraUpdatedEvent = {

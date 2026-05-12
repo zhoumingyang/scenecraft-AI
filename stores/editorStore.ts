@@ -136,6 +136,9 @@ type EditorStoreState = {
   projectListDialogOpen: boolean;
   projectSaveDialogOpen: boolean;
   projectVersion: number;
+  entityVersions: Record<string, number>;
+  sceneTreeVersion: number;
+  meshListVersion: number;
   entityRenderVersion: number;
   projectLoadVersion: number;
   cameraVersion: number;
@@ -169,6 +172,9 @@ type EditorStoreState = {
   setProjectListDialogOpen: (open: boolean) => void;
   setProjectSaveDialogOpen: (open: boolean) => void;
   bumpProjectVersion: () => void;
+  bumpEntityVersion: (entityId: string) => void;
+  bumpSceneTreeVersion: () => void;
+  bumpMeshListVersion: () => void;
   bumpEntityRenderVersion: () => void;
   bumpProjectLoadVersion: () => void;
   bumpCameraVersion: () => void;
@@ -293,6 +299,9 @@ export const useEditorStore = create<EditorStoreState>((set) => ({
   projectListDialogOpen: false,
   projectSaveDialogOpen: false,
   projectVersion: 0,
+  entityVersions: {},
+  sceneTreeVersion: 0,
+  meshListVersion: 0,
   entityRenderVersion: 0,
   projectLoadVersion: 0,
   cameraVersion: 0,
@@ -452,6 +461,21 @@ export const useEditorStore = create<EditorStoreState>((set) => ({
   setProjectListDialogOpen: (projectListDialogOpen) => set({ projectListDialogOpen }),
   setProjectSaveDialogOpen: (projectSaveDialogOpen) => set({ projectSaveDialogOpen }),
   bumpProjectVersion: () => set((state) => ({ projectVersion: state.projectVersion + 1 })),
+  bumpEntityVersion: (entityId) =>
+    set((state) => ({
+      entityVersions: {
+        ...state.entityVersions,
+        [entityId]: (state.entityVersions[entityId] ?? 0) + 1
+      }
+    })),
+  bumpSceneTreeVersion: () =>
+    set((state) => ({
+      sceneTreeVersion: state.sceneTreeVersion + 1
+    })),
+  bumpMeshListVersion: () =>
+    set((state) => ({
+      meshListVersion: state.meshListVersion + 1
+    })),
   bumpEntityRenderVersion: () =>
     set((state) => ({
       entityRenderVersion: state.entityRenderVersion + 1
