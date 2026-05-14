@@ -61,11 +61,6 @@ export async function PUT(request: Request, context: RouteContext) {
       );
     }
 
-    const existing = await getProjectByIdForUser(id, session.user.id);
-    if (!existing) {
-      return NextResponse.json({ message: "Project not found." }, { status: 404 });
-    }
-
     const updateResult = await updateProject({
       projectId: id,
       userId: session.user.id,
@@ -108,11 +103,6 @@ export async function DELETE(_: Request, context: RouteContext) {
 
   try {
     const { id } = await context.params;
-    const existing = await getProjectByIdForUser(id, session.user.id);
-    if (!existing) {
-      return NextResponse.json({ message: "Project not found." }, { status: 404 });
-    }
-
     const deleteResult = await deleteProject(id, session.user.id);
     const deleted = deleteResult.project;
     if (!deleted) {
