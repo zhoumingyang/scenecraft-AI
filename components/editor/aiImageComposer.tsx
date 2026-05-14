@@ -33,8 +33,26 @@ export default function AiImageComposer() {
   const app = useEditorStore((state) => state.app);
   const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
   const aiMode = useEditorStore((state) => state.aiMode);
-  const aiImage = useEditorStore((state) => state.aiImage);
-  const ai3d = useEditorStore((state) => state.ai3d);
+  const imagePrompt = useEditorStore((state) => state.aiImage.prompt);
+  const imageModel = useEditorStore((state) => state.aiImage.model);
+  const imageSeed = useEditorStore((state) => state.aiImage.seed);
+  const imageSize = useEditorStore((state) => state.aiImage.imageSize);
+  const imageCfg = useEditorStore((state) => state.aiImage.cfg);
+  const imageInferenceSteps = useEditorStore((state) => state.aiImage.inferenceSteps);
+  const imageReferenceImages = useEditorStore((state) => state.aiImage.referenceImages);
+  const imageIsGenerating = useEditorStore((state) => state.aiImage.isGenerating);
+  const isComposerOpen = useEditorStore((state) => state.aiImage.isComposerOpen);
+  const ai3dPrompt = useEditorStore((state) => state.ai3d.prompt);
+  const ai3dIntentDraft = useEditorStore((state) => state.ai3d.intentDraft);
+  const ai3dIsGenerating = useEditorStore((state) => state.ai3d.isGenerating);
+  const ai3dIsOptimizing = useEditorStore((state) => state.ai3d.isOptimizing);
+  const ai3dErrorMessage = useEditorStore((state) => state.ai3d.errorMessage);
+  const ai3dPreviewStatus = useEditorStore((state) => state.ai3d.previewStatus);
+  const ai3dPlan = useEditorStore((state) => state.ai3d.plan);
+  const ai3dOriginalPlan = useEditorStore((state) => state.ai3d.originalPlan);
+  const ai3dOptimizedPlan = useEditorStore((state) => state.ai3d.optimizedPlan);
+  const ai3dPreviewVariant = useEditorStore((state) => state.ai3d.previewVariant);
+  const ai3dLastDiagnostics = useEditorStore((state) => state.ai3d.lastDiagnostics);
   const setAiMode = useEditorStore((state) => state.setAiMode);
   const setAiPrompt = useEditorStore((state) => state.setAiPrompt);
   const setAiModel = useEditorStore((state) => state.setAiModel);
@@ -46,11 +64,39 @@ export default function AiImageComposer() {
   const setAiGeneratingState = useEditorStore((state) => state.setAiGeneratingState);
   const appendPendingAiGeneration = useEditorStore((state) => state.appendPendingAiGeneration);
   const theme = getEditorThemeTokens(editorThemeMode);
+  const ai3d = useMemo(
+    () => ({
+      prompt: ai3dPrompt,
+      intentDraft: ai3dIntentDraft,
+      isGenerating: ai3dIsGenerating,
+      isOptimizing: ai3dIsOptimizing,
+      errorMessage: ai3dErrorMessage,
+      previewStatus: ai3dPreviewStatus,
+      plan: ai3dPlan,
+      originalPlan: ai3dOriginalPlan,
+      optimizedPlan: ai3dOptimizedPlan,
+      previewVariant: ai3dPreviewVariant,
+      lastDiagnostics: ai3dLastDiagnostics
+    }),
+    [
+      ai3dPrompt,
+      ai3dIntentDraft,
+      ai3dIsGenerating,
+      ai3dIsOptimizing,
+      ai3dErrorMessage,
+      ai3dPreviewStatus,
+      ai3dPlan,
+      ai3dOriginalPlan,
+      ai3dOptimizedPlan,
+      ai3dPreviewVariant,
+      ai3dLastDiagnostics
+    ]
+  );
 
   useEffect(() => {
-    if (!ai3d.errorMessage) return;
+    if (!ai3dErrorMessage) return;
     setIsAi3dErrorToastOpen(true);
-  }, [ai3d.errorMessage]);
+  }, [ai3dErrorMessage]);
 
   const utilityIconButtonSx = useMemo(
     () =>
@@ -86,10 +132,10 @@ export default function AiImageComposer() {
     handlePromptTransform
   } = usePromptTransform({
     aiMode,
-    prompt: aiImage.prompt,
-    ai3dPrompt: ai3d.prompt,
-    isImageBusy: aiImage.isGenerating,
-    isAi3dBusy: ai3d.isGenerating || ai3d.isOptimizing,
+    prompt: imagePrompt,
+    ai3dPrompt,
+    isImageBusy: imageIsGenerating,
+    isAi3dBusy: ai3dIsGenerating || ai3dIsOptimizing,
     setAiPrompt,
     setAi3dPrompt,
     setAiGeneratingState,
@@ -98,14 +144,14 @@ export default function AiImageComposer() {
   });
 
   const { handleSubmit } = useAiImageComposer({
-    model: aiImage.model,
-    prompt: aiImage.prompt,
-    seed: aiImage.seed,
-    imageSize: aiImage.imageSize,
-    cfg: aiImage.cfg,
-    inferenceSteps: aiImage.inferenceSteps,
-    referenceImages: aiImage.referenceImages,
-    isGenerating: aiImage.isGenerating,
+    model: imageModel,
+    prompt: imagePrompt,
+    seed: imageSeed,
+    imageSize,
+    cfg: imageCfg,
+    inferenceSteps: imageInferenceSteps,
+    referenceImages: imageReferenceImages,
+    isGenerating: imageIsGenerating,
     isPromptActionPending,
     appendPendingAiGeneration,
     setAiGeneratingState,
@@ -145,7 +191,7 @@ export default function AiImageComposer() {
     }
   };
 
-  if (!aiImage.isComposerOpen) {
+  if (!isComposerOpen) {
     return (
       <Box
         sx={{
@@ -233,7 +279,7 @@ export default function AiImageComposer() {
         >
           <Stack spacing={0.5} sx={{ p: 1.2 }}>
             <PromptInput
-              value={aiMode === "image" ? aiImage.prompt : ai3d.prompt}
+              value={aiMode === "image" ? imagePrompt : ai3dPrompt}
               placeholder={
                 aiMode === "image" ? t("editor.ai.promptPlaceholder") : t("editor.ai3d.promptPlaceholder")
               }
@@ -252,7 +298,7 @@ export default function AiImageComposer() {
             {aiMode === "3d" ? (
               <Ai3dIntentControls
                 theme={theme}
-                value={ai3d.intentDraft}
+                value={ai3dIntentDraft}
                 onChange={setAi3dIntentDraft}
                 t={t}
               />
@@ -277,12 +323,12 @@ export default function AiImageComposer() {
 
               {aiMode === "image" ? (
                 <ImageToolbar
-                  model={aiImage.model}
+                  model={imageModel}
                   theme={theme}
                   utilityIconButtonSx={utilityIconButtonSx}
-                  isGenerating={aiImage.isGenerating}
+                  isGenerating={imageIsGenerating}
                   isPromptActionPending={isPromptActionPending}
-                  prompt={aiImage.prompt}
+                  prompt={imagePrompt}
                   activePromptAction={activePromptAction}
                   setAiModel={setAiModel}
                   focusAiMode={focusAiMode}
@@ -295,9 +341,9 @@ export default function AiImageComposer() {
                   utilityIconButtonSx={utilityIconButtonSx}
                   isAi3dBusy={isAi3dBusy}
                   isPromptActionPending={isPromptActionPending}
-                  prompt={ai3d.prompt}
-                  isGenerating={ai3d.isGenerating}
-                  isOptimizing={ai3d.isOptimizing}
+                  prompt={ai3dPrompt}
+                  isGenerating={ai3dIsGenerating}
+                  isOptimizing={ai3dIsOptimizing}
                   activePromptAction={activePromptAction}
                   handlePromptTransform={handlePromptTransform}
                   t={t}
@@ -308,8 +354,8 @@ export default function AiImageComposer() {
                 size="small"
                 disabled={
                   aiMode === "image"
-                    ? aiImage.isGenerating || isPromptActionPending || !aiImage.prompt.trim()
-                    : isAi3dBusy || !ai3d.prompt.trim()
+                    ? imageIsGenerating || isPromptActionPending || !imagePrompt.trim()
+                    : isAi3dBusy || !ai3dPrompt.trim()
                 }
                 onClick={() => {
                   if (aiMode === "image") {
@@ -323,8 +369,8 @@ export default function AiImageComposer() {
                   transform: "rotate(-90deg)",
                   background:
                     (aiMode === "image"
-                      ? aiImage.prompt.trim() && !aiImage.isGenerating && !isPromptActionPending
-                      : ai3d.prompt.trim() && !isAi3dBusy)
+                      ? imagePrompt.trim() && !imageIsGenerating && !isPromptActionPending
+                      : ai3dPrompt.trim() && !isAi3dBusy)
                       ? editorThemeMode === "dark"
                         ? "linear-gradient(135deg, #2f6df4, #63a4ff)"
                         : "linear-gradient(135deg, #4c86f7, #86b7ff)"
@@ -332,7 +378,7 @@ export default function AiImageComposer() {
                   border: theme.sectionBorder
                 }}
               >
-                {(aiMode === "image" ? aiImage.isGenerating : isAi3dBusy) ? (
+                {(aiMode === "image" ? imageIsGenerating : isAi3dBusy) ? (
                   <CircularProgress size={16} sx={{ color: theme.pillText }} />
                 ) : (
                   <SendRoundedIcon sx={{ fontSize: 18 }} />
@@ -344,12 +390,12 @@ export default function AiImageComposer() {
               <Ai3dPreviewActions
                 theme={theme}
                 utilityIconButtonSx={utilityIconButtonSx}
-                previewVariant={ai3d.previewVariant}
+                previewVariant={ai3dPreviewVariant}
                 primitiveCountText={t("editor.ai3d.primitiveCount", { count: ai3dCreateCount })}
                 canShowOriginal={canShowOriginal}
                 canShowOptimized={canShowOptimized}
                 isAi3dBusy={isAi3dBusy}
-                isOptimizing={ai3d.isOptimizing}
+                isOptimizing={ai3dIsOptimizing}
                 onShowOriginal={handleAi3dShowOriginal}
                 onShowOptimized={handleAi3dShowOptimized}
                 onOptimize={handleAi3dOptimize}
@@ -363,7 +409,7 @@ export default function AiImageComposer() {
       </Box>
 
       <Snackbar
-        open={isAi3dErrorToastOpen && Boolean(ai3d.errorMessage)}
+        open={isAi3dErrorToastOpen && Boolean(ai3dErrorMessage)}
         autoHideDuration={4000}
         onClose={() => setIsAi3dErrorToastOpen(false)}
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
@@ -374,7 +420,7 @@ export default function AiImageComposer() {
           onClose={() => setIsAi3dErrorToastOpen(false)}
           sx={{ width: "100%" }}
         >
-          {ai3d.errorMessage}
+          {ai3dErrorMessage}
         </Alert>
       </Snackbar>
     </Box>
