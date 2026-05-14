@@ -44,7 +44,7 @@ export class EditorRuntimePostProcessing {
   private smaaPass: SMAAPass | null = null;
   private ssrPass: SSRPass | null = null;
   private unrealBloomPass: UnrealBloomPass | null = null;
-  private initialized = false;
+  private readonly viewportSize = new THREE.Vector2(1, 1);
 
   constructor({ scene, camera, renderer }: EditorRuntimePostProcessingOptions) {
     this.scene = scene;
@@ -87,9 +87,8 @@ export class EditorRuntimePostProcessing {
   }
 
   applyConfig(config: ResolvedEditorPostProcessingConfigJSON) {
-    this.ensurePasses();
-
     const { passes } = config;
+    this.ensureConfiguredPasses(config);
 
     if (this.pixelatedPass) {
       this.pixelatedPass.enabled = passes.pixelated.enabled;
@@ -205,8 +204,6 @@ export class EditorRuntimePostProcessing {
   }
 
   syncCameraState() {
-    if (!this.initialized) return;
-
     if (this.bokehPass) {
       const bokehUniforms = this.bokehPass.materialBokeh.uniforms as Record<
         string,
@@ -228,6 +225,7 @@ export class EditorRuntimePostProcessing {
   }
 
   setSize(width: number, height: number) {
+    this.viewportSize.set(Math.max(1, width), Math.max(1, height));
     this.composer.setSize(width, height);
     this.composer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.syncPassSize(width, height);
@@ -258,28 +256,78 @@ export class EditorRuntimePostProcessing {
     this.smaaPass = null;
     this.ssrPass = null;
     this.unrealBloomPass = null;
-    this.initialized = false;
     this.composer.dispose();
   }
 
-  private ensurePasses() {
-    if (this.initialized) return;
+  private ensureConfiguredPasses(config: ResolvedEditorPostProcessingConfigJSON) {
+    if (config.passes.pixelated.enabled) {
+      this.ensurePixelatedPass();
+    }
+    if (config.passes.gtao.enabled) {
+      this.ensureGtaoPass();
+    }
+    if (config.passes.ssr.enabled) {
+      this.ensureSsrPass();
+    }
+    if (config.passes.bokeh.enabled) {
+      this.ensureBokehPass();
+    }
+    if (config.passes.unrealBloom.enabled) {
+      this.ensureUnrealBloomPass();
+    }
+    if (config.passes.afterimage.enabled) {
+      this.ensureAfterimagePass();
+    }
+    if (config.passes.dotScreen.enabled) {
+      this.ensureDotScreenPass();
+    }
+    if (config.passes.halftone.enabled) {
+      this.ensureHalftonePass();
+    }
+    if (config.passes.film.enabled) {
+      this.ensureFilmPass();
+    }
+    if (config.passes.glitch.enabled) {
+      this.ensureGlitchPass();
+    }
+    this.ensureSmaaPass();
+  }
 
-    const size = this.renderer.getSize(new THREE.Vector2());
-    const width = Math.max(1, size.x);
-    const height = Math.max(1, size.y);
-    const resolution = new THREE.Vector2(width, height);
+  private getCurrentSize() {
+    const rendererSize = this.renderer.getSize(this.viewportSize);
+    const width = Math.max(1, rendererSize.x);
+    const height = Math.max(1, rendererSize.y);
+    this.viewportSize.set(width, height);
+    return { width, height };
+  }
 
+  private ensurePixelatedPass() {
+    if (this.pixelatedPass) return;
+
+    const { width, height } = this.getCurrentSize();
+    const effectiveWidth = Math.max(1, Math.round(width * this.renderer.getPixelRatio()));
+    const effectiveHeight = Math.max(1, Math.round(height * this.renderer.getPixelRatio()));
     this.pixelatedPass = new RenderPixelatedPass(6, this.scene, this.camera, {
       normalEdgeStrength: 0.3,
       depthEdgeStrength: 0.4
     });
     this.pixelatedPass.enabled = false;
+    this.pixelatedPass.setSize(effectiveWidth, effectiveHeight);
+  }
 
+  private ensureGtaoPass() {
+    if (this.gtaoPass) return;
+
+    const { width, height } = this.getCurrentSize();
     this.gtaoPass = new GTAOPass(this.scene, this.camera, width, height);
     this.gtaoPass.output = GTAOPass.OUTPUT.Default;
     this.gtaoPass.enabled = false;
+  }
 
+  private ensureSsrPass() {
+    if (this.ssrPass) return;
+
+    const { width, height } = this.getCurrentSize();
     this.ssrPass = new SSRPass({
       renderer: this.renderer,
       scene: this.scene,
@@ -292,23 +340,50 @@ export class EditorRuntimePostProcessing {
     this.ssrPass.output = SSRPass.OUTPUT.Default;
     this.ssrPass.enabled = false;
     this.ssrPass.bouncing = false;
+  }
 
+  private ensureBokehPass() {
+    if (this.bokehPass) return;
+
+    const { width, height } = this.getCurrentSize();
     this.bokehPass = new BokehPass(this.scene, this.camera, {
       focus: 15,
       aperture: 0.01,
       maxblur: 0.01
     });
     this.bokehPass.enabled = false;
+    this.syncPassSize(width, height);
+  }
 
+  private ensureUnrealBloomPass() {
+    if (this.unrealBloomPass) return;
+
+    const { width, height } = this.getCurrentSize();
+    const resolution = new THREE.Vector2(width, height);
     this.unrealBloomPass = new UnrealBloomPass(resolution, 0.8, 0.2, 0.85);
     this.unrealBloomPass.enabled = false;
+  }
+
+  private ensureAfterimagePass() {
+    if (this.afterimagePass) return;
 
     this.afterimagePass = new AfterimagePass(0.92);
     this.afterimagePass.enabled = false;
+  }
+
+  private ensureDotScreenPass() {
+    if (this.dotScreenPass) return;
+
+    const { width, height } = this.getCurrentSize();
 
     this.dotScreenPass = new DotScreenPass(new THREE.Vector2(width / 2, height / 2), 0.5, 1);
     this.dotScreenPass.enabled = false;
+  }
 
+  private ensureHalftonePass() {
+    if (this.halftonePass) return;
+
+    const { width, height } = this.getCurrentSize();
     this.halftonePass = new HalftonePass({
       shape: 1,
       radius: 4,
@@ -318,25 +393,32 @@ export class EditorRuntimePostProcessing {
       greyscale: false
     });
     this.halftonePass.enabled = false;
+    this.syncPassSize(width, height);
+  }
+
+  private ensureFilmPass() {
+    if (this.filmPass) return;
 
     this.filmPass = new FilmPass(0.35, false);
     this.filmPass.enabled = false;
+  }
+
+  private ensureGlitchPass() {
+    if (this.glitchPass) return;
 
     this.glitchPass = new GlitchPass();
     this.glitchPass.enabled = false;
     this.glitchPass.goWild = false;
+  }
+
+  private ensureSmaaPass() {
+    if (this.smaaPass) return;
 
     this.smaaPass = new SMAAPass();
     this.smaaPass.enabled = true;
-
-    this.initialized = true;
-    this.syncPassSize(width, height);
-    this.syncCameraState();
   }
 
   private syncPassSize(width: number, height: number) {
-    if (!this.initialized) return;
-
     const effectiveWidth = Math.max(1, Math.round(width * this.renderer.getPixelRatio()));
     const effectiveHeight = Math.max(1, Math.round(height * this.renderer.getPixelRatio()));
 
