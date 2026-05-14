@@ -19,6 +19,15 @@ const POLYHAVEN_LICENSE_LABEL = "CC0";
 const DEFAULT_PAGE_SIZE = 24;
 const MAX_PAGE_SIZE = 60;
 const REVALIDATE_SECONDS = 300;
+const RESPONSE_CACHE_TTL_MS = 60_000;
+const RESPONSE_CACHE_MAX_ENTRIES = 80;
+
+type CachedResponse<T> = {
+  expiresAt: number;
+  value: T;
+};
+
+const responseCache = new Map<string, CachedResponse<unknown>>();
 
 type PolyhavenAssetSummary = {
   name?: string;
@@ -114,6 +123,53 @@ function buildPolyhavenPageUrl(assetId: string) {
 
 function encodePathSegment(value: string) {
   return encodeURIComponent(value);
+}
+
+function buildResponseCacheKey(scope: string, parts: Array<string | number | null | undefined>) {
+  return JSON.stringify([scope, ...parts.map((part) => part ?? "")]);
+}
+
+function getCachedResponse<T>(key: string): T | null {
+  const cached = responseCache.get(key) as CachedResponse<T> | undefined;
+  if (!cached) {
+    return null;
+  }
+
+  if (cached.expiresAt <= Date.now()) {
+    responseCache.delete(key);
+    return null;
+  }
+
+  return cached.value;
+}
+
+function trimResponseCache() {
+  if (responseCache.size < RESPONSE_CACHE_MAX_ENTRIES) {
+    return;
+  }
+
+  const now = Date.now();
+  for (const [key, cached] of responseCache) {
+    if (cached.expiresAt <= now) {
+      responseCache.delete(key);
+    }
+  }
+
+  while (responseCache.size >= RESPONSE_CACHE_MAX_ENTRIES) {
+    const oldestKey = responseCache.keys().next().value;
+    if (!oldestKey) {
+      return;
+    }
+    responseCache.delete(oldestKey);
+  }
+}
+
+function setCachedResponse<T>(key: string, value: T) {
+  trimResponseCache();
+  responseCache.set(key, {
+    expiresAt: Date.now() + RESPONSE_CACHE_TTL_MS,
+    value
+  });
 }
 
 function normalizeStringArray(value: unknown) {
@@ -449,6 +505,19 @@ export const polyhavenProvider: ExternalAssetProvider = {
     const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(1, input.pageSize ?? DEFAULT_PAGE_SIZE));
     const upstreamType = normalizeAssetTypeForApi(assetType);
     const categoryQuery = input.category?.trim();
+    const normalizedQuery = input.query?.trim() ?? "";
+    const cacheKey = buildResponseCacheKey("assets", [
+      assetType,
+      page,
+      pageSize,
+      categoryQuery,
+      normalizedQuery
+    ]);
+    const cached = getCachedResponse<ExternalAssetListResult>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     const path = categoryQuery
       ? `/assets?type=${encodePathSegment(upstreamType)}&categories=${encodePathSegment(categoryQuery)}`
       : `/assets?type=${encodePathSegment(upstreamType)}`;
@@ -470,15 +539,22 @@ export const polyhavenProvider: ExternalAssetProvider = {
       items: items.slice(startIndex, startIndex + pageSize)
     };
 
+    setCachedResponse(cacheKey, result);
     return result;
   },
 
   async listCategories(assetType) {
+    const cacheKey = buildResponseCacheKey("categories", [assetType]);
+    const cached = getCachedResponse<Awaited<ReturnType<ExternalAssetProvider["listCategories"]>>>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     const response = await fetchPolyhavenJson<PolyhavenCategoriesResponse>(
       `/categories/${encodePathSegment(normalizeAssetTypeForApi(assetType))}`
     );
 
-    return Object.entries(response)
+    const categories = Object.entries(response)
       .filter(([value]) => value !== "all")
       .map(([value, assetCount]) => ({
         value,
@@ -486,9 +562,18 @@ export const polyhavenProvider: ExternalAssetProvider = {
         assetCount
       }))
       .sort((left, right) => right.assetCount - left.assetCount || left.label.localeCompare(right.label));
+
+    setCachedResponse(cacheKey, categories);
+    return categories;
   },
 
   async getAssetDetail(input) {
+    const cacheKey = buildResponseCacheKey("detail", [input.assetType, input.assetId]);
+    const cached = getCachedResponse<ExternalAssetDetail>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     const [info, files] = await Promise.all([
       fetchPolyhavenJson<PolyhavenInfoResponse>(`/info/${encodePathSegment(input.assetId)}`),
       fetchPolyhavenJson<PolyhavenHdriFilesResponse | PolyhavenTextureFilesResponse | PolyhavenModelFilesResponse>(
@@ -502,7 +587,7 @@ export const polyhavenProvider: ExternalAssetProvider = {
       const hdriFiles = files as PolyhavenHdriFilesResponse;
       const fileOptions = extractFileOptions(hdriFiles.hdri);
 
-      return {
+      const detail = {
         ...baseItem,
         assetType: "hdri",
         tonemappedUrl:
@@ -511,12 +596,15 @@ export const polyhavenProvider: ExternalAssetProvider = {
             : null,
         fileOptions
       } satisfies ExternalAssetDetail;
+
+      setCachedResponse(cacheKey, detail);
+      return detail;
     }
 
     if (input.assetType === "model") {
       const modelFiles = extractModelFileOptions(files as PolyhavenModelFilesResponse);
 
-      return {
+      const detail = {
         ...baseItem,
         assetType: "model",
         lods: Array.isArray(info.lods)
@@ -526,17 +614,23 @@ export const polyhavenProvider: ExternalAssetProvider = {
         availableResolutions: listModelResolutions(modelFiles),
         availableFormats: listModelFormats(modelFiles)
       } satisfies ExternalAssetDetail;
+
+      setCachedResponse(cacheKey, detail);
+      return detail;
     }
 
     const textureFiles = files as PolyhavenTextureFilesResponse;
     const textureMaps = buildTextureMaps(textureFiles);
 
-    return {
+    const detail = {
       ...baseItem,
       assetType: "texture",
       textureMaps,
       availableResolutions: listTextureResolutions(textureMaps),
       availableFormats: listTextureFormats(textureMaps)
     } satisfies ExternalAssetDetail;
+
+    setCachedResponse(cacheKey, detail);
+    return detail;
   }
 };
