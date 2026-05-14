@@ -26,6 +26,7 @@ import {
   restoreViewHelperVisibility
 } from "@/components/editor/viewHelperPreferences";
 import {
+  clearProjectTextureReferencesByUrl,
   readImageDimensions,
   syncEditorProjectSearchParam
 } from "@/components/editor/projectPersistence";
@@ -364,6 +365,17 @@ export function useTopBarProjectActions(t: TopBarTranslate) {
     generationId: string;
     resultId: string;
   }) => {
+    const pendingImageUrl =
+      payload.source === "pending"
+        ? pendingAiImageGenerations
+            .find((generation) => generation.id === payload.generationId)
+            ?.results.find((result) => result.id === payload.resultId)?.sourceUrl ?? null
+        : null;
+
+    if (app && pendingImageUrl) {
+      clearProjectTextureReferencesByUrl(app, pendingImageUrl);
+    }
+
     removeAiLibraryResult(payload);
     markUnsavedChanges(true);
   };

@@ -1,5 +1,5 @@
 import type { UploadedProjectAsset } from "@/lib/api/contracts/assets";
-import type { EditorProjectJSON } from "@/render/editor";
+import type { EditorApp, EditorProjectJSON, ResolvedTextureSchema } from "@/render/editor";
 
 const TEXTURE_FIELDS = [
   "diffuseMap",
@@ -165,4 +165,53 @@ export function projectSnapshotUsesSourceUrl(snapshot: EditorProjectJSON, source
       TEXTURE_FIELDS.some((field) => mesh.material?.[field]?.url === sourceUrl)
     ) ?? false
   );
+}
+
+function createClearedTexture(texture: ResolvedTextureSchema): ResolvedTextureSchema {
+  return {
+    ...texture,
+    assetId: "",
+    url: "",
+    externalSource: null
+  };
+}
+
+export function clearProjectTextureReferencesByUrl(app: EditorApp, sourceUrl: string) {
+  const project = app.projectModel;
+  if (!project || !sourceUrl) {
+    return false;
+  }
+
+  let cleared = false;
+  const groundPatch: Partial<Record<(typeof TEXTURE_FIELDS)[number], ResolvedTextureSchema>> = {};
+
+  TEXTURE_FIELDS.forEach((field) => {
+    const texture = project.envConfig.ground.material[field];
+    if (texture.url === sourceUrl) {
+      groundPatch[field] = createClearedTexture(texture);
+    }
+  });
+
+  if (Object.keys(groundPatch).length > 0) {
+    app.updateGroundMaterial(groundPatch);
+    cleared = true;
+  }
+
+  project.meshes.forEach((mesh) => {
+    const meshPatch: Partial<Record<(typeof TEXTURE_FIELDS)[number], ResolvedTextureSchema>> = {};
+
+    TEXTURE_FIELDS.forEach((field) => {
+      const texture = mesh.material[field];
+      if (texture.url === sourceUrl) {
+        meshPatch[field] = createClearedTexture(texture);
+      }
+    });
+
+    if (Object.keys(meshPatch).length > 0) {
+      app.updateMeshMaterial(mesh.id, meshPatch);
+      cleared = true;
+    }
+  });
+
+  return cleared;
 }
