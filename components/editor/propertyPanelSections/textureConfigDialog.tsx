@@ -146,11 +146,11 @@ export function TextureConfigDialog({
     }
   };
 
-  const onApplyAiAsset = ({ imageUrl }: { imageUrl: string }) => {
+  const onApplyAiAsset = ({ imageUrl, assetId }: { imageUrl: string; assetId?: string }) => {
     if (!app) return;
     const nextTexture = {
       ...texture,
-      assetId: "",
+      assetId: assetId ?? "",
       externalSource: null,
       url: imageUrl
     } as ResolvedTextureSchema;

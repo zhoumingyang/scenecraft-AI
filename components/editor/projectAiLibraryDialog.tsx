@@ -34,7 +34,7 @@ type ProjectAiLibraryDialogProps = {
     generationId: string;
     resultId: string;
   }) => void;
-  onApplyAsset?: (payload: { imageUrl: string }) => void;
+  onApplyAsset?: (payload: { imageUrl: string; assetId?: string }) => void;
 };
 
 type AiAssetListItem = {
@@ -43,6 +43,7 @@ type AiAssetListItem = {
   generationId: string;
   resultId: string;
   imageUrl: string;
+  assetId?: string;
   prompt: string;
   model: string;
   createdAt: string;
@@ -72,6 +73,7 @@ export default function ProjectAiLibraryDialog({
         generationId: generation.id,
         resultId: result.id,
         imageUrl: result.url,
+        assetId: result.assetId,
         prompt: generation.prompt,
         model: generation.model,
         createdAt: generation.createdAt
@@ -109,7 +111,8 @@ export default function ProjectAiLibraryDialog({
 
   const handleApply = (item: AiAssetListItem) => {
     onApplyAsset?.({
-      imageUrl: item.imageUrl
+      imageUrl: item.imageUrl,
+      assetId: item.assetId
     });
     onClose();
   };
