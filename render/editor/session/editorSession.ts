@@ -39,6 +39,11 @@ type Emit = (event: EditorAppEvent) => void;
 
 type EntityVisibilitySnapshot = Map<string, boolean>;
 
+function getEnvConfigPathTraceInvalidation(patch: Partial<EditorEnvConfigJSON>) {
+  const nonPostProcessingKeys = Object.keys(patch).filter((key) => key !== "postProcessing");
+  return nonPostProcessingKeys.length > 0 ? "environment" : "none";
+}
+
 type PreviewMeshRecord = {
   nodeId: string;
   mesh: THREE.Mesh;
@@ -771,7 +776,11 @@ export class EditorSession {
 
     this.projectModel.envConfig = nextEnvConfig;
     this.runtime.applyEnvConfig(this.projectModel.envConfig);
-    this.emit({ type: "sceneUpdated", source });
+    this.emit({
+      type: "sceneUpdated",
+      source,
+      pathTraceInvalidation: getEnvConfigPathTraceInvalidation(patch)
+    });
     this.emit({ type: "viewStateUpdated" });
   }
 
@@ -824,7 +833,7 @@ export class EditorSession {
       this.setSelectedEntity(null, source);
     }
 
-    this.emit({ type: "sceneUpdated", source });
+    this.emit({ type: "sceneUpdated", source, pathTraceInvalidation: "scene" });
     this.emit({ type: "viewStateUpdated" });
   }
 
@@ -864,7 +873,7 @@ export class EditorSession {
     } else {
       this.runtime.updateGroundMaterial(this.projectModel.envConfig.ground.material);
     }
-    this.emit({ type: "sceneUpdated", source });
+    this.emit({ type: "sceneUpdated", source, pathTraceInvalidation: "materials" });
   }
 
   async createMesh(geometryName: string, source: SyncSource = "ui") {

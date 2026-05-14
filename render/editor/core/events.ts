@@ -17,6 +17,7 @@ export type CameraUpdatedEvent = {
 export type SceneUpdatedEvent = {
   type: "sceneUpdated";
   source: SyncSource;
+  pathTraceInvalidation?: "scene" | "environment" | "materials" | "none";
 };
 
 export type SelectionChangedEvent = {

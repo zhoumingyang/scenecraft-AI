@@ -22,6 +22,25 @@ type EditorRuntimeEnvironmentOptions = {
   renderer: THREE.WebGLRenderer;
   defaultBackground: THREE.Color;
   invalidateSceneMaterials: () => void;
+  invalidatePathTraceMaterials: () => void;
+};
+
+type SceneMaterialInvalidationState = {
+  environmentEnabled: boolean;
+  shadowMapEnabled: boolean;
+  toneMapping: THREE.ToneMapping;
+};
+
+type GroundApplyResult = {
+  sceneChanged: boolean;
+  shadowMapChanged: boolean;
+  materialChanged: boolean;
+};
+
+type EnvApplyResult = {
+  environmentChanged: boolean;
+  groundSceneChanged: boolean;
+  materialsChanged: boolean;
 };
 
 export class EditorRuntimeEnvironment {
@@ -33,6 +52,7 @@ export class EditorRuntimeEnvironment {
   private readonly renderer: THREE.WebGLRenderer;
   private readonly defaultBackground: THREE.Color;
   private readonly invalidateSceneMaterials: () => void;
+  private readonly invalidatePathTraceMaterials: () => void;
   private readonly gridHelper: THREE.GridHelper;
   private readonly groundPlane: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshStandardMaterial>;
   private readonly pmremGenerator: THREE.PMREMGenerator;
@@ -41,17 +61,21 @@ export class EditorRuntimeEnvironment {
   private lightHelpersVisible = true;
   private environmentTexture: THREE.Texture | null = null;
   private environmentMapTexture: THREE.Texture | null = null;
+  private sceneMaterialInvalidationState: SceneMaterialInvalidationState | null = null;
+  private lastGroundMaterial: ResolvedEditorGroundConfigJSON["material"] | null = null;
 
   constructor({
     scene,
     renderer,
     defaultBackground,
-    invalidateSceneMaterials
+    invalidateSceneMaterials,
+    invalidatePathTraceMaterials
   }: EditorRuntimeEnvironmentOptions) {
     this.scene = scene;
     this.renderer = renderer;
     this.defaultBackground = defaultBackground;
     this.invalidateSceneMaterials = invalidateSceneMaterials;
+    this.invalidatePathTraceMaterials = invalidatePathTraceMaterials;
 
     this.gridHelper = new THREE.GridHelper(80, 80, 0x5f8fc7, 0x39567f);
     this.gridHelper.position.y = -0.0001;
@@ -123,32 +147,61 @@ export class EditorRuntimeEnvironment {
   }
 
   setShadowEnabled(enabled: boolean) {
+    const shadowMapChanged = this.renderer.shadowMap.enabled !== enabled;
     this.groundMode = enabled ? "plane" : "grid";
     this.renderer.shadowMap.enabled = enabled;
-    this.invalidateSceneMaterials();
+    if (shadowMapChanged) {
+      this.invalidateSceneMaterials();
+      this.sceneMaterialInvalidationState = {
+        ...this.createSceneMaterialInvalidationState(),
+        shadowMapEnabled: enabled
+      };
+    }
     this.syncGroundVisibility();
   }
 
-  applyGroundConfig(ground: ResolvedEditorGroundConfigJSON) {
+  applyGroundConfig(ground: ResolvedEditorGroundConfigJSON): GroundApplyResult {
+    const nextShadowMapEnabled = ground.mode === "plane";
+    const shadowMapChanged = this.renderer.shadowMap.enabled !== nextShadowMapEnabled;
+    const sceneChanged =
+      this.groundMode !== ground.mode ||
+      this.groundVisible !== ground.visible ||
+      this.gridHelper.scale.x !== ground.scale[0] ||
+      this.gridHelper.scale.z !== ground.scale[2] ||
+      shadowMapChanged;
+    const materialChanged = this.lastGroundMaterial !== ground.material;
+
     this.groundMode = ground.mode;
     this.groundVisible = ground.visible;
-    this.renderer.shadowMap.enabled = ground.mode === "plane";
+    this.renderer.shadowMap.enabled = nextShadowMapEnabled;
     this.gridHelper.scale.set(ground.scale[0], 1, ground.scale[2]);
     this.groundPlane.scale.set(ground.scale[0], 1, ground.scale[2]);
-    disposeMeshStandardMaterialTextures(this.groundPlane.material);
-    applyMeshStandardMaterial(
-      this.groundPlane.material,
-      ground.material,
-      this.textureLoader,
-      this.invalidateSceneMaterials
-    );
-    this.groundPlane.material.needsUpdate = true;
-    this.invalidateSceneMaterials();
+
+    if (materialChanged) {
+      disposeMeshStandardMaterialTextures(this.groundPlane.material);
+      applyMeshStandardMaterial(
+        this.groundPlane.material,
+        ground.material,
+        this.textureLoader,
+        this.invalidateGroundMaterial
+      );
+      this.invalidateGroundMaterial();
+      this.lastGroundMaterial = ground.material;
+    }
+
     this.syncGroundVisibility();
+
+    return {
+      sceneChanged,
+      shadowMapChanged,
+      materialChanged
+    };
   }
 
   updateGroundMaterial(material: ResolvedEditorGroundConfigJSON["material"]) {
     applyMeshStandardMaterialScalars(this.groundPlane.material, material);
+    this.invalidateGroundMaterial();
+    this.lastGroundMaterial = material;
   }
 
   syncLightHelperVisibility() {
@@ -193,7 +246,6 @@ export class EditorRuntimeEnvironment {
     this.environmentMapTexture = environmentMapTexture;
     previousTexture?.dispose();
     previousEnvironmentMapTexture?.dispose();
-    this.invalidateSceneMaterials();
   }
 
   clearEnvironment() {
@@ -208,10 +260,20 @@ export class EditorRuntimeEnvironment {
     this.environmentMapTexture?.dispose();
     this.environmentTexture = null;
     this.environmentMapTexture = null;
+    this.sceneMaterialInvalidationState = null;
     this.invalidateSceneMaterials();
   }
 
-  applyEnvConfig(envConfig: ResolvedEditorEnvConfigJSON) {
+  applyEnvConfig(envConfig: ResolvedEditorEnvConfigJSON): EnvApplyResult {
+    const previousEnvironment = this.scene.environment;
+    const previousBackground = this.scene.background;
+    const previousBackgroundIntensity = this.scene.backgroundIntensity;
+    const previousBackgroundBlurriness = this.scene.backgroundBlurriness;
+    const previousEnvironmentIntensity = this.scene.environmentIntensity;
+    const previousEnvironmentRotationY = this.scene.environmentRotation.y;
+    const previousBackgroundRotationY = this.scene.backgroundRotation.y;
+    const previousToneMappingExposure = this.renderer.toneMappingExposure;
+    const previousMaterialInvalidationState = this.sceneMaterialInvalidationState;
     const rotationY = envConfig.environmentRotationY;
     this.scene.environment =
       envConfig.environment === 1 && this.environmentMapTexture ? this.environmentMapTexture : null;
@@ -227,8 +289,33 @@ export class EditorRuntimeEnvironment {
     this.scene.backgroundRotation.set(0, rotationY, 0);
     this.renderer.toneMapping = envConfig.toneMapping as THREE.ToneMapping;
     this.renderer.toneMappingExposure = envConfig.toneMappingExposure;
-    this.applyGroundConfig(envConfig.ground);
-    this.invalidateSceneMaterials();
+    const groundResult = this.applyGroundConfig(envConfig.ground);
+    const nextMaterialInvalidationState = this.createSceneMaterialInvalidationState();
+    const materialsChanged =
+      previousMaterialInvalidationState === null ||
+      previousMaterialInvalidationState.environmentEnabled !== nextMaterialInvalidationState.environmentEnabled ||
+      previousMaterialInvalidationState.shadowMapEnabled !== nextMaterialInvalidationState.shadowMapEnabled ||
+      previousMaterialInvalidationState.toneMapping !== nextMaterialInvalidationState.toneMapping;
+
+    this.sceneMaterialInvalidationState = nextMaterialInvalidationState;
+
+    if (materialsChanged) {
+      this.invalidateSceneMaterials();
+    }
+
+    return {
+      environmentChanged:
+        previousEnvironment !== this.scene.environment ||
+        previousBackground !== this.scene.background ||
+        previousBackgroundIntensity !== this.scene.backgroundIntensity ||
+        previousBackgroundBlurriness !== this.scene.backgroundBlurriness ||
+        previousEnvironmentIntensity !== this.scene.environmentIntensity ||
+        previousEnvironmentRotationY !== this.scene.environmentRotation.y ||
+        previousBackgroundRotationY !== this.scene.backgroundRotation.y ||
+        previousToneMappingExposure !== this.renderer.toneMappingExposure,
+      groundSceneChanged: groundResult.sceneChanged,
+      materialsChanged: materialsChanged || groundResult.materialChanged
+    };
   }
 
   dispose() {
@@ -245,4 +332,17 @@ export class EditorRuntimeEnvironment {
     this.gridHelper.visible = this.groundVisible && this.groundMode === "grid";
     this.groundPlane.visible = this.groundVisible && this.groundMode === "plane";
   }
+
+  private createSceneMaterialInvalidationState(): SceneMaterialInvalidationState {
+    return {
+      environmentEnabled: Boolean(this.scene.environment),
+      shadowMapEnabled: this.renderer.shadowMap.enabled,
+      toneMapping: this.renderer.toneMapping
+    };
+  }
+
+  private invalidateGroundMaterial = () => {
+    this.groundPlane.material.needsUpdate = true;
+    this.invalidatePathTraceMaterials();
+  };
 }

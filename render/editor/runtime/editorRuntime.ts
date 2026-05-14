@@ -94,7 +94,8 @@ export class EditorRuntime {
       scene: this.scene,
       renderer: this.renderer,
       defaultBackground: this.defaultBackground,
-      invalidateSceneMaterials: this.invalidateSceneMaterials
+      invalidateSceneMaterials: this.invalidateSceneMaterials,
+      invalidatePathTraceMaterials: this.invalidatePathTraceMaterials
     });
     this.pathTracer = new EditorRuntimePathTracer({
       scene: this.scene,
@@ -411,10 +412,18 @@ export class EditorRuntime {
   }
 
   applyEnvConfig(envConfig: ResolvedEditorEnvConfigJSON) {
-    this.environment.applyEnvConfig(envConfig);
+    const result = this.environment.applyEnvConfig(envConfig);
     this.postProcessing.applyConfig(envConfig.postProcessing);
-    this.pathTracer.invalidateScene();
-    this.pathTracer.invalidateEnvironment();
+    if (result.groundSceneChanged) {
+      this.pathTracer.invalidateScene();
+    } else {
+      if (result.environmentChanged) {
+        this.pathTracer.invalidateEnvironment();
+      }
+      if (result.materialsChanged) {
+        this.pathTracer.invalidateMaterials();
+      }
+    }
     this.requestFrame();
   }
 

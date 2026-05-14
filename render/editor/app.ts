@@ -529,7 +529,19 @@ export class EditorApp {
     }
 
     if (event.type === "sceneUpdated") {
-      this.runtime.invalidatePathTraceScene();
+      if (!event.pathTraceInvalidation || event.pathTraceInvalidation === "scene") {
+        this.runtime.invalidatePathTraceScene();
+        return;
+      }
+
+      if (event.pathTraceInvalidation === "environment") {
+        this.runtime.invalidatePathTraceEnvironment();
+        return;
+      }
+
+      if (event.pathTraceInvalidation === "materials") {
+        this.runtime.invalidatePathTraceMaterials();
+      }
       return;
     }
 
