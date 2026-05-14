@@ -1,9 +1,93 @@
 import { NextResponse } from "next/server";
+import { lookup } from "node:dns/promises";
+import { isIP } from "node:net";
 import { getSession } from "@/lib/server/auth/getSession";
 import { getErrorMessage } from "@/lib/server/http/getErrorMessage";
 
 const MAX_REMOTE_IMAGE_FETCH_BYTES = 25 * 1024 * 1024;
-const PRIVATE_HOSTNAME_RE = /^(localhost|127(?:\.\d{1,3}){3}|0\.0\.0\.0|\[?::1\]?|10(?:\.\d{1,3}){3}|192\.168(?:\.\d{1,3}){2}|169\.254(?:\.\d{1,3}){2}|172\.(?:1[6-9]|2\d|3[0-1])(?:\.\d{1,3}){2})$/i;
+const MAX_REMOTE_IMAGE_REDIRECTS = 5;
+const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
+
+function normalizeHostname(hostname: string) {
+  return hostname.replace(/^\[|\]$/g, "").replace(/\.$/, "").toLowerCase();
+}
+
+function parseIpv4Address(address: string) {
+  const parts = address.split(".");
+  if (parts.length !== 4) {
+    return null;
+  }
+
+  const octets = parts.map((part) => Number(part));
+  return octets.every((octet) => Number.isInteger(octet) && octet >= 0 && octet <= 255)
+    ? octets
+    : null;
+}
+
+function getIpv4MappedAddress(address: string) {
+  const normalized = normalizeHostname(address);
+  const mappedPrefix = "::ffff:";
+  return normalized.startsWith(mappedPrefix) ? normalized.slice(mappedPrefix.length) : null;
+}
+
+function isBlockedIpv4Address(address: string) {
+  const octets = parseIpv4Address(address);
+  if (!octets) {
+    return true;
+  }
+
+  const [first, second, third, fourth] = octets;
+
+  return (
+    first === 0 ||
+    first === 10 ||
+    first === 127 ||
+    first >= 224 ||
+    (first === 100 && second >= 64 && second <= 127) ||
+    (first === 169 && second === 254) ||
+    (first === 172 && second >= 16 && second <= 31) ||
+    (first === 192 && second === 168) ||
+    (first === 192 && second === 0 && third === 0) ||
+    (first === 192 && second === 0 && third === 2) ||
+    (first === 198 && (second === 18 || second === 19)) ||
+    (first === 198 && second === 51 && third === 100) ||
+    (first === 203 && second === 0 && third === 113) ||
+    (first === 255 && second === 255 && third === 255 && fourth === 255)
+  );
+}
+
+function isBlockedIpv6Address(address: string) {
+  const normalized = normalizeHostname(address);
+  const mappedIpv4 = getIpv4MappedAddress(normalized);
+  if (mappedIpv4) {
+    return isBlockedIpv4Address(mappedIpv4);
+  }
+
+  return (
+    normalized === "::" ||
+    normalized === "::1" ||
+    normalized.startsWith("fc") ||
+    normalized.startsWith("fd") ||
+    normalized.startsWith("fe80:") ||
+    normalized.startsWith("ff") ||
+    normalized.startsWith("2001:db8:")
+  );
+}
+
+function isBlockedIpAddress(address: string) {
+  const normalized = normalizeHostname(address);
+  const version = isIP(normalized);
+
+  if (version === 4) {
+    return isBlockedIpv4Address(normalized);
+  }
+
+  if (version === 6) {
+    return isBlockedIpv6Address(normalized);
+  }
+
+  return true;
+}
 
 function parseRemoteImageUrl(value: unknown) {
   if (typeof value !== "string" || !value.trim()) {
@@ -15,11 +99,59 @@ function parseRemoteImageUrl(value: unknown) {
     throw new Error("Only HTTPS image URLs can be fetched.");
   }
 
-  if (PRIVATE_HOSTNAME_RE.test(url.hostname)) {
+  return url;
+}
+
+async function assertPublicRemoteImageUrl(url: URL) {
+  const hostname = normalizeHostname(url.hostname);
+
+  if (hostname === "localhost" || hostname.endsWith(".localhost")) {
     throw new Error("Private network image URLs are not allowed.");
   }
 
-  return url;
+  if (isIP(hostname)) {
+    if (isBlockedIpAddress(hostname)) {
+      throw new Error("Private network image URLs are not allowed.");
+    }
+    return;
+  }
+
+  const addresses = await lookup(hostname, { all: true, verbatim: true });
+  if (
+    addresses.length === 0 ||
+    addresses.some((address) => isBlockedIpAddress(address.address))
+  ) {
+    throw new Error("Private network image URLs are not allowed.");
+  }
+}
+
+async function fetchPublicRemoteImage(url: URL) {
+  let nextUrl = url;
+
+  for (let redirectCount = 0; redirectCount <= MAX_REMOTE_IMAGE_REDIRECTS; redirectCount += 1) {
+    await assertPublicRemoteImageUrl(nextUrl);
+
+    const response = await fetch(nextUrl, {
+      headers: {
+        Accept: "image/*"
+      },
+      cache: "no-store",
+      redirect: "manual"
+    });
+
+    if (!REDIRECT_STATUSES.has(response.status)) {
+      return response;
+    }
+
+    const location = response.headers.get("location");
+    if (!location) {
+      throw new Error(`Remote image request failed with status ${response.status}.`);
+    }
+
+    nextUrl = parseRemoteImageUrl(new URL(location, nextUrl).toString());
+  }
+
+  throw new Error("Remote image request exceeded the redirect limit.");
 }
 
 async function readLimitedResponseBody(response: Response) {
@@ -69,12 +201,7 @@ export async function POST(request: Request) {
   try {
     const body = (await request.json()) as { url?: unknown };
     const url = parseRemoteImageUrl(body.url);
-    const response = await fetch(url, {
-      headers: {
-        Accept: "image/*"
-      },
-      cache: "no-store"
-    });
+    const response = await fetchPublicRemoteImage(url);
 
     if (!response.ok) {
       throw new Error(`Remote image request failed with status ${response.status}.`);
