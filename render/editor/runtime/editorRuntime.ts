@@ -95,7 +95,7 @@ export class EditorRuntime {
       renderer: this.renderer,
       defaultBackground: this.defaultBackground,
       invalidateSceneMaterials: this.invalidateSceneMaterials,
-      invalidatePathTraceMaterials: this.invalidatePathTraceMaterials
+      invalidatePathTraceMaterials: () => this.invalidatePathTraceMaterials()
     });
     this.pathTracer = new EditorRuntimePathTracer({
       scene: this.scene,
