@@ -32,21 +32,22 @@ const COLLAPSED_VISIBLE_WIDTH = 44;
 
 export default function PropertyPanel() {
   const { t } = useI18n();
-  const app = useEditorStore((state) => state.app);
-  const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
-  const selectedEntityId = useEditorStore((state) => state.selectedEntityId);
-  const viewStateVersion = useEditorStore((state) => state.viewStateVersion);
-  const selectedEntityVersion = useEditorStore((state) =>
-    selectedEntityId ? state.entityVersions[selectedEntityId] ?? 0 : 0
-  );
-  const inspectorMode = useEditorStore((state) => state.aiImage.inspectorMode);
   const [open, setOpen] = useState(true);
+  const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
+  const app = useEditorStore((state) => (open ? state.app : null));
+  const selectedEntityId = useEditorStore((state) => (open ? state.selectedEntityId : null));
+  const viewStateVersion = useEditorStore((state) => (open ? state.viewStateVersion : 0));
+  const selectedEntityVersion = useEditorStore((state) =>
+    open && selectedEntityId ? state.entityVersions[selectedEntityId] ?? 0 : 0
+  );
+  const inspectorMode = useEditorStore((state) => (open ? state.aiImage.inspectorMode : "entity"));
   const [activeTextureField, setActiveTextureField] = useState<TextureFieldKey | null>(null);
   const [materialLibraryOpen, setMaterialLibraryOpen] = useState(false);
   const theme = getEditorThemeTokens(editorThemeMode);
   const isPolyhavenEnabled = isPolyhavenProviderEnabled();
 
   const entityRecord = useMemo(() => {
+    if (!open) return null;
     const project = app?.projectModel;
     if (!project || !selectedEntityId) return null;
     if (selectedEntityId === SCENE_NODE_ID) {
@@ -70,7 +71,7 @@ export default function PropertyPanel() {
     return {
       ...record
     };
-  }, [app, selectedEntityId, selectedEntityVersion, viewStateVersion]);
+  }, [app, open, selectedEntityId, selectedEntityVersion, viewStateVersion]);
 
   const panelTitle =
     inspectorMode === "ai"
@@ -90,8 +91,8 @@ export default function PropertyPanel() {
         : t("editor.properties.none");
 
   const isolatedEntityId = useMemo(
-    () => app?.getIsolatedEntityId() ?? null,
-    [app, viewStateVersion]
+    () => (open ? app?.getIsolatedEntityId() ?? null : null),
+    [app, open, viewStateVersion]
   );
   const canIsolateCurrentEntity =
     inspectorMode !== "ai" &&
