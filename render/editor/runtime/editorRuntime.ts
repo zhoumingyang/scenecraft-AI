@@ -75,7 +75,6 @@ export class EditorRuntime {
 
     this.renderer = new THREE.WebGLRenderer({
       antialias: false,
-      preserveDrawingBuffer: true,
       stencil: true
     });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
