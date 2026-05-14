@@ -2,6 +2,8 @@
 
 import { put } from "@vercel/blob/client";
 import type {
+  CleanupUploadedAssetsRequest,
+  CleanupUploadedAssetsResponse,
   PrepareAssetUploadRequest,
   PrepareAssetUploadResponse,
   UploadedProjectAsset
@@ -15,6 +17,14 @@ export async function prepareAssetUpload(payload: PrepareAssetUploadRequest) {
   return postJson<PrepareAssetUploadResponse, PrepareAssetUploadRequest>(
     appApiClient,
     "/assets/prepare",
+    payload
+  );
+}
+
+export async function cleanupUploadedAssets(payload: CleanupUploadedAssetsRequest) {
+  return postJson<CleanupUploadedAssetsResponse, CleanupUploadedAssetsRequest>(
+    appApiClient,
+    "/assets/cleanup",
     payload
   );
 }

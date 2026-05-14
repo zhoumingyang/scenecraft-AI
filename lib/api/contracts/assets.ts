@@ -20,6 +20,14 @@ export type PrepareAssetUploadResponse = {
   maximumSizeInBytes: number;
 };
 
+export type CleanupUploadedAssetsRequest = {
+  objectKeys: string[];
+};
+
+export type CleanupUploadedAssetsResponse = {
+  deletedCount: number;
+};
+
 export type UploadedProjectAsset = {
   assetId: string;
   projectId: string;

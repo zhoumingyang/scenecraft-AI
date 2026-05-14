@@ -34,6 +34,7 @@ import type {
   ExternalHdriApplyPayload,
   ExternalModelApplyPayload
 } from "@/components/editor/externalAssetBrowserDialog";
+import { cleanupUploadedAssets } from "@/frontend/api/assets";
 import { deleteProject, getProject, listProjects, createProject, updateProject } from "@/frontend/api/projects";
 import { isPolyhavenProviderEnabled } from "@/lib/externalAssets/config";
 import type { TopBarTranslate } from "./types";
@@ -267,14 +268,28 @@ export function useTopBarProjectActions(t: TopBarTranslate) {
     });
     setProjectSaveDialogOpen(false);
 
+    const uploadedAssetsForCleanup: string[] = [];
+    let shouldCleanupUploadedAssets = true;
+    const trackUploadedAsset = (asset: { objectKey: string }) => {
+      uploadedAssetsForCleanup.push(asset.objectKey);
+    };
+
     try {
-      const uploadedSceneAssets = await uploadSceneLocalAssets(snapshot, projectId, localProjectAssets);
-      const thumbnailAsset = await uploadProjectThumbnail(app, snapshot, projectId);
+      const uploadedSceneAssets = await uploadSceneLocalAssets(
+        snapshot,
+        projectId,
+        localProjectAssets,
+        { onUploaded: trackUploadedAsset }
+      );
+      const thumbnailAsset = await uploadProjectThumbnail(app, snapshot, projectId, {
+        onUploaded: trackUploadedAsset
+      });
       const uploadedAi = await uploadPendingAiGenerations(
         snapshot,
         projectId,
         loadedAiLibrary,
-        pendingAiImageGenerations
+        pendingAiImageGenerations,
+        { onUploaded: trackUploadedAsset }
       );
       const uploadedAssets = [...uploadedSceneAssets, thumbnailAsset, ...uploadedAi.uploadedAssets];
       const payload = {
@@ -286,6 +301,7 @@ export function useTopBarProjectActions(t: TopBarTranslate) {
       const response = currentProjectId
         ? await updateProject(currentProjectId, payload)
         : await createProject(payload);
+      shouldCleanupUploadedAssets = false;
 
       if (!currentProjectId && !hasStoredViewHelperVisibility(response.project.id)) {
         persistViewHelperVisibility(response.project.id, app.getViewHelperVisibility());
@@ -304,6 +320,14 @@ export function useTopBarProjectActions(t: TopBarTranslate) {
         updatedAt: Date.now()
       });
     } catch (error) {
+      if (shouldCleanupUploadedAssets && uploadedAssetsForCleanup.length > 0) {
+        await cleanupUploadedAssets({
+          objectKeys: uploadedAssetsForCleanup
+        }).catch((cleanupError) => {
+          console.warn("[projects] Failed to clean up uploaded assets after save failure.", cleanupError);
+        });
+      }
+
       const message = error instanceof Error ? error.message : t("editor.project.saveFailed");
       setSaveStatus({
         phase: "error",

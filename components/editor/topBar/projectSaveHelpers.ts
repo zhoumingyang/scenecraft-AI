@@ -14,6 +14,10 @@ import type {
 import type { EditorApp, EditorProjectJSON, ProjectAiImageGenerationJSON, ProjectAiLibraryJSON } from "@/render/editor";
 import type { LocalProjectAssetEntry, PendingAiImageGeneration } from "@/stores/editorStore";
 
+type UploadTrackingOptions = {
+  onUploaded?: (asset: UploadedProjectAsset) => void;
+};
+
 export function cloneProjectSnapshot(snapshot: EditorProjectJSON) {
   if (typeof structuredClone === "function") {
     return structuredClone(snapshot);
@@ -49,7 +53,8 @@ async function sourceUrlToFile(sourceUrl: string, fileName: string, fallbackMime
 export async function uploadSceneLocalAssets(
   snapshot: EditorProjectJSON,
   projectId: string,
-  localProjectAssets: LocalProjectAssetEntry[]
+  localProjectAssets: LocalProjectAssetEntry[],
+  options: UploadTrackingOptions = {}
 ): Promise<UploadedProjectAsset[]> {
   const usedAssets = localProjectAssets.filter((asset) =>
     projectSnapshotUsesSourceUrl(snapshot, asset.sourceUrl)
@@ -70,6 +75,7 @@ export async function uploadSceneLocalAssets(
         }
       };
       const uploaded = await uploadPreparedAsset(request, asset.file);
+      options.onUploaded?.(uploaded);
       applyUploadedAssetToProjectSnapshot(snapshot, asset.sourceUrl, uploaded);
       return uploaded;
     })
@@ -80,7 +86,8 @@ export async function uploadPendingAiGenerations(
   snapshot: EditorProjectJSON,
   projectId: string,
   loadedAiLibrary: ProjectAiLibraryJSON,
-  pendingAiImageGenerations: PendingAiImageGeneration[]
+  pendingAiImageGenerations: PendingAiImageGeneration[],
+  options: UploadTrackingOptions = {}
 ): Promise<{ aiSnapshot: ProjectAiLibraryJSON; uploadedAssets: UploadedProjectAsset[] }> {
   if (pendingAiImageGenerations.length === 0) {
     return {
@@ -112,6 +119,7 @@ export async function uploadPendingAiGenerations(
         },
         file
       );
+      options.onUploaded?.(uploaded);
       uploadedAssets.push(uploaded);
       uploadedReferenceImages.push({
         assetId: uploaded.assetId,
@@ -142,6 +150,7 @@ export async function uploadPendingAiGenerations(
         },
         file
       );
+      options.onUploaded?.(uploaded);
       uploadedAssets.push(uploaded);
       applyUploadedAssetToProjectSnapshot(snapshot, result.sourceUrl, uploaded);
       uploadedResults.push({
@@ -182,7 +191,8 @@ export async function uploadPendingAiGenerations(
 export async function uploadProjectThumbnail(
   app: EditorApp,
   snapshot: EditorProjectJSON,
-  projectId: string
+  projectId: string,
+  options: UploadTrackingOptions = {}
 ): Promise<UploadedProjectAsset> {
   const thumbnailDataUrl = app.captureViewportImage("viewport");
   const dimensions = await readImageDimensions(thumbnailDataUrl);
@@ -202,6 +212,7 @@ export async function uploadProjectThumbnail(
     },
     file
   );
+  options.onUploaded?.(uploaded);
 
   snapshot.thumbnail = {
     assetId: uploaded.assetId,
