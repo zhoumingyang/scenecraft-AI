@@ -1,7 +1,7 @@
 "use client";
 
 import * as THREE from "three";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Checkbox, FormControlLabel, Stack, Typography } from "@mui/material";
 import PropertyPanelSection from "@/components/common/propertyPanelSection";
 import { getEditorThemeTokens } from "@/components/editor/theme";
@@ -11,6 +11,7 @@ import {
   AxisSliderGroup
 } from "@/components/common/propertyFieldControls";
 import { useI18n } from "@/lib/i18n";
+import type { TransformPatch } from "@/render/editor";
 import { useEditorStore } from "@/stores/editorStore";
 import { formatDegrees, formatNumber, AXIS_INDEX, buildDefaultPositionDraft, buildDefaultRotationDraft, degreesToQuaternion, quaternionToDegrees } from "./util";
 
@@ -41,6 +42,65 @@ export function TransformSection({
     axis: Axis;
     startDraft: [number, number, number];
   } | null>(null);
+  const appRef = useRef(app);
+  const entityIdRef = useRef(entityId);
+  const scaleDraftRef = useRef<[number, number, number]>(scaleValues);
+  const pendingTransformPatchRef = useRef<TransformPatch | null>(null);
+  const pendingTransformFrameRef = useRef<number | null>(null);
+
+  const flushScheduledTransformUpdate = useCallback(() => {
+    const patch = pendingTransformPatchRef.current;
+    pendingTransformPatchRef.current = null;
+
+    if (pendingTransformFrameRef.current !== null && typeof window !== "undefined") {
+      window.cancelAnimationFrame(pendingTransformFrameRef.current);
+      pendingTransformFrameRef.current = null;
+    }
+
+    if (!patch) return;
+    appRef.current?.updateEntityTransform(entityIdRef.current, patch);
+  }, []);
+
+  const scheduleTransformUpdate = useCallback(
+    (patch: TransformPatch) => {
+      pendingTransformPatchRef.current = {
+        ...pendingTransformPatchRef.current,
+        ...patch
+      };
+
+      if (typeof window === "undefined") {
+        flushScheduledTransformUpdate();
+        return;
+      }
+
+      if (pendingTransformFrameRef.current !== null) return;
+
+      pendingTransformFrameRef.current = window.requestAnimationFrame(() => {
+        const nextPatch = pendingTransformPatchRef.current;
+        pendingTransformPatchRef.current = null;
+        pendingTransformFrameRef.current = null;
+
+        if (!nextPatch) return;
+        appRef.current?.updateEntityTransform(entityIdRef.current, nextPatch);
+      });
+    },
+    [flushScheduledTransformUpdate]
+  );
+
+  useEffect(() => {
+    appRef.current = app;
+  }, [app]);
+
+  useEffect(() => {
+    flushScheduledTransformUpdate();
+    entityIdRef.current = entityId;
+  }, [entityId, flushScheduledTransformUpdate]);
+
+  useEffect(() => {
+    scaleDraftRef.current = scaleValues;
+  }, [scaleValues]);
+
+  useEffect(() => () => flushScheduledTransformUpdate(), [flushScheduledTransformUpdate]);
 
   useEffect(() => {
     if (activePositionAxis) return;
@@ -116,49 +176,62 @@ export function TransformSection({
   };
 
   const updateRotation = (axis: Axis, value: number) => {
-    if (!app) return;
+    if (!appRef.current) return;
     const nextRotation = [...rotationDraft] as [number, number, number];
     nextRotation[AXIS_INDEX[axis]] = value;
+    const nextQuaternion = degreesToQuaternion(nextRotation);
     setRotationDraft(nextRotation);
-    lastRotationQuaternionRef.current = degreesToQuaternion(nextRotation)
+    lastRotationQuaternionRef.current = nextQuaternion
       .map((component) => component.toFixed(6))
       .join(",");
-    app.updateEntityTransform(entityId, {
-      quaternion: degreesToQuaternion(nextRotation)
+    scheduleTransformUpdate({
+      quaternion: nextQuaternion
     });
   };
 
   const commitRotation = (axis: Axis, value: number) => {
+    const nextRotation = [...rotationDraft] as [number, number, number];
+    nextRotation[AXIS_INDEX[axis]] = value;
+    const nextQuaternion = degreesToQuaternion(nextRotation);
+
     setActiveRotationAxis((current) => (current === axis ? null : current));
-    setRotationDraft((prev) => {
-      const next = [...prev] as [number, number, number];
-      next[AXIS_INDEX[axis]] = value;
-      return next;
-    });
+    setRotationDraft(nextRotation);
+    lastRotationQuaternionRef.current = nextQuaternion
+      .map((component) => component.toFixed(6))
+      .join(",");
+    scheduleTransformUpdate({ quaternion: nextQuaternion });
+    flushScheduledTransformUpdate();
   };
 
   const updateScale = (axis: Axis, value: number) => {
-    if (!app) return;
-    const nextScale = [...scaleValues] as [number, number, number];
+    if (!appRef.current) return;
+    const currentScale = scaleDraftRef.current;
+    const nextScale = [...currentScale] as [number, number, number];
     const axisIndex = AXIS_INDEX[axis];
 
     if (isUniformScaleEnabled) {
-      const baseValue = scaleValues[axisIndex];
+      const baseValue = currentScale[axisIndex];
       if (Math.abs(baseValue) < 1e-6) {
         nextScale[0] = value;
         nextScale[1] = value;
         nextScale[2] = value;
       } else {
         const ratio = value / baseValue;
-        nextScale[0] = Number((scaleValues[0] * ratio).toFixed(4));
-        nextScale[1] = Number((scaleValues[1] * ratio).toFixed(4));
-        nextScale[2] = Number((scaleValues[2] * ratio).toFixed(4));
+        nextScale[0] = Number((currentScale[0] * ratio).toFixed(4));
+        nextScale[1] = Number((currentScale[1] * ratio).toFixed(4));
+        nextScale[2] = Number((currentScale[2] * ratio).toFixed(4));
       }
     } else {
       nextScale[axisIndex] = value;
     }
 
-    app.updateEntityTransform(entityId, { scale: nextScale });
+    scaleDraftRef.current = nextScale;
+    scheduleTransformUpdate({ scale: nextScale });
+  };
+
+  const commitScale = (axis: Axis, value: number) => {
+    updateScale(axis, value);
+    flushScheduledTransformUpdate();
   };
 
   const nudgePosition = (axis: Axis, delta: number) => {
@@ -240,6 +313,7 @@ export function TransformSection({
           step={0.1}
           formatter={(value) => formatNumber(value, 1)}
           onChange={updateScale}
+          onChangeCommit={commitScale}
         />
       </Stack>
     </PropertyPanelSection>
