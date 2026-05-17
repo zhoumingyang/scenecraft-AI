@@ -1,29 +1,10 @@
 import { NextResponse } from "next/server";
 import { transformPromptWithOpenRouter } from "@/lib/ai/prompt-transform/openrouter";
-import type { TransformPromptRequest } from "@/lib/api/contracts/ai";
+import {
+  getAiApiErrorMessage,
+  transformPromptRequestSchema
+} from "@/lib/api/contracts/ai";
 import { getSession } from "@/lib/server/auth/getSession";
-
-function validateRequestBody(body: unknown) {
-  if (!body || typeof body !== "object") {
-    throw new Error("Invalid request body.");
-  }
-
-  const payload = body as Partial<TransformPromptRequest>;
-  const prompt = typeof payload.prompt === "string" ? payload.prompt.trim() : "";
-
-  if (!prompt) {
-    throw new Error("Prompt is required.");
-  }
-
-  if (payload.mode !== "optimize" && payload.mode !== "translate-en") {
-    throw new Error("Unsupported prompt transform mode.");
-  }
-
-  return {
-    mode: payload.mode,
-    prompt
-  };
-}
 
 export async function POST(request: Request) {
   const session = await getSession();
@@ -39,7 +20,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = validateRequestBody(await request.json());
+    const body = transformPromptRequestSchema.parse(await request.json());
     const result = await transformPromptWithOpenRouter({
       apiKey,
       mode: body.mode,
@@ -48,7 +29,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(result);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Prompt transform failed.";
+    const message = getAiApiErrorMessage(error, "Prompt transform failed.");
     return NextResponse.json({ message }, { status: 400 });
   }
 }

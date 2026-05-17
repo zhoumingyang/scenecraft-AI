@@ -8,7 +8,9 @@ import { createHttpClient, getResponseHeader } from "@/lib/http/axios";
 const OPENROUTER_PROMPT_MODEL = "openai/gpt-5.4";
 const openRouterTextClient = createHttpClient();
 
-export type PromptTransformMode = "optimize" | "translate-en";
+export const PROMPT_TRANSFORM_MODES = ["optimize", "translate-en"] as const;
+
+export type PromptTransformMode = (typeof PROMPT_TRANSFORM_MODES)[number];
 
 type OpenRouterTextResponse = {
   id?: string;

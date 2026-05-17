@@ -10,15 +10,17 @@ export const IMAGE_SIZE_OPTIONS = [
   { value: "1056x1584", label: "1056x1584 (2:3)", aspectRatio: "2:3" }
 ] as const;
 
-export type ImageGenerationModelId =
-  | "Qwen/Qwen-Image"
-  | "Qwen/Qwen-Image-Edit-2509"
-  | "google/gemini-3.1-flash-image-preview"
-  | "sourceful/riverflow-v2-pro"
-  | "sourceful/riverflow-v2-fast"
-  | "black-forest-labs/flux.2-flex"
-  | "black-forest-labs/flux.2-pro";
+export const IMAGE_GENERATION_MODEL_IDS = [
+  "Qwen/Qwen-Image",
+  "Qwen/Qwen-Image-Edit-2509",
+  "google/gemini-3.1-flash-image-preview",
+  "sourceful/riverflow-v2-pro",
+  "sourceful/riverflow-v2-fast",
+  "black-forest-labs/flux.2-flex",
+  "black-forest-labs/flux.2-pro"
+] as const;
 
+export type ImageGenerationModelId = (typeof IMAGE_GENERATION_MODEL_IDS)[number];
 export type ImageGenerationImageSize = (typeof IMAGE_SIZE_OPTIONS)[number]["value"];
 export type ImageGenerationAspectRatio = (typeof IMAGE_SIZE_OPTIONS)[number]["aspectRatio"];
 

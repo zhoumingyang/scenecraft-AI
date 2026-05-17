@@ -1,32 +1,12 @@
 import { NextResponse } from "next/server";
-import { validateAi3DIntentInput } from "@/lib/ai/ai3d/intent";
 import { generateAi3DPlan } from "@/lib/ai/ai3d/core/pipeline";
-import type { GenerateAi3DRequest } from "@/lib/api/contracts/ai";
+import {
+  generateAi3DRequestSchema,
+  getAiApiErrorMessage
+} from "@/lib/api/contracts/ai";
 import { getSession } from "@/lib/server/auth/getSession";
 
 export const maxDuration = 180;
-
-function validateRequestBody(body: unknown) {
-  if (!body || typeof body !== "object") {
-    throw new Error("Invalid request body.");
-  }
-
-  const payload = body as Partial<GenerateAi3DRequest>;
-  const prompt = typeof payload.prompt === "string" ? payload.prompt.trim() : "";
-  const referenceImages = Array.isArray(payload.referenceImages)
-    ? payload.referenceImages.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
-    : [];
-
-  if (!prompt) {
-    throw new Error("Prompt is required.");
-  }
-
-  return {
-    prompt,
-    intent: validateAi3DIntentInput(payload.intent),
-    referenceImages
-  };
-}
 
 export async function POST(request: Request) {
   const session = await getSession();
@@ -42,17 +22,17 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = validateRequestBody(await request.json());
+    const body = generateAi3DRequestSchema.parse(await request.json());
     const result = await generateAi3DPlan({
       apiKey,
       prompt: body.prompt,
       intent: body.intent,
-      referenceImages: body.referenceImages
+      referenceImages: body.referenceImages ?? []
     });
 
     return NextResponse.json(result);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "AI 3D generation failed.";
+    const message = getAiApiErrorMessage(error, "AI 3D generation failed.");
     return NextResponse.json({ message }, { status: 400 });
   }
 }

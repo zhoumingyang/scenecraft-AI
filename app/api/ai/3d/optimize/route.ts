@@ -1,42 +1,12 @@
 import { NextResponse } from "next/server";
-import {
-  validateAi3DIntentInput,
-  validateAi3DPlanDiagnostics
-} from "@/lib/ai/ai3d/intent";
 import { optimizeAi3DPlan } from "@/lib/ai/ai3d/core/pipeline";
-import type { OptimizeAi3DRequest } from "@/lib/api/contracts/ai";
-import { validateAi3DPlan } from "@/render/editor/ai3d/plan";
+import {
+  getAiApiErrorMessage,
+  optimizeAi3DRequestSchema
+} from "@/lib/api/contracts/ai";
 import { getSession } from "@/lib/server/auth/getSession";
 
 export const maxDuration = 240;
-
-function validateRequestBody(body: unknown) {
-  if (!body || typeof body !== "object") {
-    throw new Error("Invalid request body.");
-  }
-
-  const payload = body as Partial<OptimizeAi3DRequest>;
-  const prompt = typeof payload.prompt === "string" ? payload.prompt.trim() : "";
-  const images = Array.isArray(payload.images)
-    ? payload.images.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
-    : [];
-
-  if (!prompt) {
-    throw new Error("Prompt is required.");
-  }
-
-  if (images.length < 1) {
-    throw new Error("At least 1 preview image is required.");
-  }
-
-  return {
-    prompt,
-    images,
-    plan: validateAi3DPlan(payload.plan),
-    intent: validateAi3DIntentInput(payload.intent),
-    diagnostics: payload.diagnostics ? validateAi3DPlanDiagnostics(payload.diagnostics) : undefined
-  };
-}
 
 export async function POST(request: Request) {
   const session = await getSession();
@@ -52,7 +22,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = validateRequestBody(await request.json());
+    const body = optimizeAi3DRequestSchema.parse(await request.json());
     const result = await optimizeAi3DPlan({
       apiKey,
       prompt: body.prompt,
@@ -64,7 +34,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(result);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "AI 3D optimization failed.";
+    const message = getAiApiErrorMessage(error, "AI 3D optimization failed.");
     return NextResponse.json({ message }, { status: 400 });
   }
 }
