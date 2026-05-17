@@ -3,7 +3,6 @@ import type {
   ExternalAssetFileOption,
   ExternalAssetIncludedFile,
   ExternalAssetListItem,
-  ExternalAssetListResult,
   ExternalModelFileOption,
   ExternalAssetProvider,
   ExternalAssetTextureMap,
@@ -28,6 +27,7 @@ type CachedResponse<T> = {
 };
 
 const responseCache = new Map<string, CachedResponse<unknown>>();
+const inFlightResponseCache = new Map<string, Promise<unknown>>();
 
 type PolyhavenAssetSummary = {
   name?: string;
@@ -170,6 +170,30 @@ function setCachedResponse<T>(key: string, value: T) {
     expiresAt: Date.now() + RESPONSE_CACHE_TTL_MS,
     value
   });
+}
+
+async function getOrLoadCachedResponse<T>(key: string, load: () => Promise<T>) {
+  const cached = getCachedResponse<T>(key);
+  if (cached) {
+    return cached;
+  }
+
+  const inFlight = inFlightResponseCache.get(key) as Promise<T> | undefined;
+  if (inFlight) {
+    return inFlight;
+  }
+
+  const request = load()
+    .then((value) => {
+      setCachedResponse(key, value);
+      return value;
+    })
+    .finally(() => {
+      inFlightResponseCache.delete(key);
+    });
+
+  inFlightResponseCache.set(key, request);
+  return request;
 }
 
 function normalizeStringArray(value: unknown) {
@@ -504,43 +528,32 @@ export const polyhavenProvider: ExternalAssetProvider = {
     const page = Math.max(1, input.page ?? 1);
     const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(1, input.pageSize ?? DEFAULT_PAGE_SIZE));
     const upstreamType = normalizeAssetTypeForApi(assetType);
-    const categoryQuery = input.category?.trim();
+    const categoryQuery = input.category?.trim() ?? "";
     const normalizedQuery = input.query?.trim() ?? "";
-    const cacheKey = buildResponseCacheKey("assets", [
-      assetType,
-      page,
-      pageSize,
-      categoryQuery,
-      normalizedQuery
-    ]);
-    const cached = getCachedResponse<ExternalAssetListResult>(cacheKey);
-    if (cached) {
-      return cached;
-    }
+    const listCacheKey = buildResponseCacheKey("asset-list", [assetType, categoryQuery]);
+    const items = await getOrLoadCachedResponse<ExternalAssetListItem[]>(listCacheKey, async () => {
+      const path = categoryQuery
+        ? `/assets?type=${encodePathSegment(upstreamType)}&categories=${encodePathSegment(categoryQuery)}`
+        : `/assets?type=${encodePathSegment(upstreamType)}`;
+      const response = await fetchPolyhavenJson<PolyhavenListAssetsResponse>(path);
 
-    const path = categoryQuery
-      ? `/assets?type=${encodePathSegment(upstreamType)}&categories=${encodePathSegment(categoryQuery)}`
-      : `/assets?type=${encodePathSegment(upstreamType)}`;
-    const response = await fetchPolyhavenJson<PolyhavenListAssetsResponse>(path);
+      return Object.entries(response)
+        .map(([assetId, asset]) => mapAssetSummaryToListItem(assetId, assetType, asset))
+        .sort((left, right) => right.downloadCount - left.downloadCount || left.displayName.localeCompare(right.displayName));
+    });
 
-    const items = Object.entries(response)
-      .map(([assetId, asset]) => mapAssetSummaryToListItem(assetId, assetType, asset))
-      .filter((item) => matchesQuery(item, input.query))
-      .sort((left, right) => right.downloadCount - left.downloadCount || left.displayName.localeCompare(right.displayName));
+    const filteredItems = items.filter((item) => matchesQuery(item, normalizedQuery));
 
     const startIndex = (page - 1) * pageSize;
 
-    const result: ExternalAssetListResult = {
+    return {
       provider: "polyhaven",
       assetType,
       page,
       pageSize,
-      total: items.length,
-      items: items.slice(startIndex, startIndex + pageSize)
+      total: filteredItems.length,
+      items: filteredItems.slice(startIndex, startIndex + pageSize)
     };
-
-    setCachedResponse(cacheKey, result);
-    return result;
   },
 
   async listCategories(assetType) {
