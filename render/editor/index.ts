@@ -27,6 +27,12 @@ export {
 export { createDefaultEditorProjectJSON, createEmptyEditorProjectJSON } from "./factories/projectFactory";
 export { getLightPresetDefinition, LIGHT_PRESET_DEFINITIONS, LIGHT_PRESET_IDS } from "./lightPresets";
 export type { LightPresetDefinition, LightPresetId, LightPresetLightDefinition } from "./lightPresets";
+export {
+  createPbrAtlasMaterialPatch,
+  PBR_ATLAS_FIELDS,
+  PBR_ATLAS_LAYOUT_VERSION
+} from "./materials/pbrAtlas";
+export type { PbrAtlasTextureField } from "./materials/pbrAtlas";
 export * from "./constants/environment";
 export * from "./postProcessing";
 export * from "./core/types";
