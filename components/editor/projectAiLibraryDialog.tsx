@@ -14,11 +14,12 @@ import {
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
 import FormatPaintRoundedIcon from "@mui/icons-material/FormatPaintRounded";
+import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import VisibilityRoundedIcon from "@mui/icons-material/VisibilityRounded";
 import AiImagePreviewDialog from "@/components/editor/aiImagePreviewDialog";
 import type { EditorThemeTokens } from "@/components/editor/theme";
 import { useI18n } from "@/lib/i18n";
-import type { ProjectAiLibraryJSON } from "@/render/editor";
+import type { ProjectAiGenerationMetadataJSON, ProjectAiLibraryJSON } from "@/render/editor";
 import type { PendingAiImageGeneration } from "@/stores/editorStore";
 import { useEditorStore } from "@/stores/editorStore";
 
@@ -35,6 +36,7 @@ type ProjectAiLibraryDialogProps = {
     resultId: string;
   }) => void;
   onApplyAsset?: (payload: { imageUrl: string; assetId?: string }) => void;
+  onApplyPbrAtlas?: (payload: { imageUrl: string; assetId?: string }) => void;
 };
 
 type AiAssetListItem = {
@@ -47,6 +49,7 @@ type AiAssetListItem = {
   prompt: string;
   model: string;
   createdAt: string;
+  metadata?: ProjectAiGenerationMetadataJSON | null;
 };
 
 export default function ProjectAiLibraryDialog({
@@ -57,7 +60,8 @@ export default function ProjectAiLibraryDialog({
   mode = "manage",
   onClose,
   onDeleteAsset,
-  onApplyAsset
+  onApplyAsset,
+  onApplyPbrAtlas
 }: ProjectAiLibraryDialogProps) {
   const { t } = useI18n();
   const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
@@ -76,7 +80,8 @@ export default function ProjectAiLibraryDialog({
         assetId: result.assetId,
         prompt: generation.prompt,
         model: generation.model,
-        createdAt: generation.createdAt
+        createdAt: generation.createdAt,
+        metadata: generation.metadata ?? null
       }))
     );
     const pendingItems = pendingGenerations.flatMap((generation) =>
@@ -88,7 +93,8 @@ export default function ProjectAiLibraryDialog({
         imageUrl: result.sourceUrl,
         prompt: generation.prompt,
         model: generation.model,
-        createdAt: generation.createdAt
+        createdAt: generation.createdAt,
+        metadata: generation.metadata ?? null
       }))
     );
 
@@ -111,6 +117,14 @@ export default function ProjectAiLibraryDialog({
 
   const handleApply = (item: AiAssetListItem) => {
     onApplyAsset?.({
+      imageUrl: item.imageUrl,
+      assetId: item.assetId
+    });
+    onClose();
+  };
+
+  const handleApplyPbrAtlas = (item: AiAssetListItem) => {
+    onApplyPbrAtlas?.({
       imageUrl: item.imageUrl,
       assetId: item.assetId
     });
@@ -243,6 +257,23 @@ export default function ProjectAiLibraryDialog({
                     <Typography sx={{ fontSize: 11, color: theme.text }}>
                       {item.model}
                     </Typography>
+                    {item.metadata?.kind === "pbr_texture_atlas" ? (
+                      <Typography
+                        sx={{
+                          alignSelf: "flex-start",
+                          borderRadius: 0.75,
+                          border: theme.sectionBorder,
+                          px: 0.6,
+                          py: 0.2,
+                          fontSize: 10,
+                          fontWeight: 700,
+                          color: theme.titleText,
+                          background: theme.itemBg
+                        }}
+                      >
+                        {t("editor.project.aiPbrAtlas")}
+                      </Typography>
+                    ) : null}
                     <Typography sx={{ fontSize: 11, color: theme.mutedText }}>
                       {new Date(item.createdAt).toLocaleString()}
                     </Typography>
@@ -282,19 +313,36 @@ export default function ProjectAiLibraryDialog({
                           </Tooltip>
                         </>
                       ) : (
-                        <Tooltip title={t("editor.properties.applyAiAsset")}>
-                          <IconButton
-                            size="small"
-                            onClick={() => handleApply(item)}
-                            sx={{
-                              color: theme.pillText,
-                              border: theme.sectionBorder,
-                              background: theme.iconButtonBg
-                            }}
-                          >
-                            <FormatPaintRoundedIcon sx={{ fontSize: 16 }} />
-                          </IconButton>
-                        </Tooltip>
+                        <>
+                          <Tooltip title={t("editor.properties.applyAiAsset")}>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleApply(item)}
+                              sx={{
+                                color: theme.pillText,
+                                border: theme.sectionBorder,
+                                background: theme.iconButtonBg
+                              }}
+                            >
+                              <FormatPaintRoundedIcon sx={{ fontSize: 16 }} />
+                            </IconButton>
+                          </Tooltip>
+                          {item.metadata?.kind === "pbr_texture_atlas" && onApplyPbrAtlas ? (
+                            <Tooltip title={t("editor.project.applyPbrAtlas")}>
+                              <IconButton
+                                size="small"
+                                onClick={() => handleApplyPbrAtlas(item)}
+                                sx={{
+                                  color: theme.pillText,
+                                  border: theme.sectionBorder,
+                                  background: theme.iconButtonBg
+                                }}
+                              >
+                                <AutoAwesomeRoundedIcon sx={{ fontSize: 16 }} />
+                              </IconButton>
+                            </Tooltip>
+                          ) : null}
+                        </>
                       )}
                     </Stack>
                   </Stack>

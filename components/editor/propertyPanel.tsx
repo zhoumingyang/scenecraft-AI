@@ -11,7 +11,7 @@ import {
 import { isPolyhavenProviderEnabled } from "@/lib/externalAssets/config";
 import { useI18n } from "@/lib/i18n";
 import { createExternalAssetSource } from "@/lib/externalAssets/source";
-import { GROUND_HELPER_NODE_ID, SCENE_NODE_ID } from "@/render/editor";
+import { createPbrAtlasMaterialPatch, GROUND_HELPER_NODE_ID, SCENE_NODE_ID } from "@/render/editor";
 import { useEditorStore } from "@/stores/editorStore";
 import {
   GroundScaleSection,
@@ -361,6 +361,19 @@ export default function PropertyPanel() {
                 ? (texture) => app?.updateGroundMaterial({ [activeTextureField]: texture })
                 : undefined
             }
+            onApplyPbrAtlas={({ imageUrl, assetId }) => {
+              const patch = createPbrAtlasMaterialPatch({
+                url: imageUrl,
+                assetId
+              });
+
+              if (entityRecord.kind === "gridHelper") {
+                app?.updateGroundMaterial(patch);
+                return;
+              }
+
+              app?.updateMeshMaterial(entityRecord.item.id, patch);
+            }}
             onClose={() => setActiveTextureField(null)}
           />
         ) : null}

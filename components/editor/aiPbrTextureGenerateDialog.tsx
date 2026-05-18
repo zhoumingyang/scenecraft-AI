@@ -16,10 +16,16 @@ import {
   Typography
 } from "@mui/material";
 import { generateAiPbrTexture } from "@/frontend/api/ai";
+import {
+  AI_PBR_TEXTURE_CFG,
+  AI_PBR_TEXTURE_IMAGE_SIZE,
+  AI_PBR_TEXTURE_INFERENCE_STEPS
+} from "@/lib/ai/pbr-texture/constants";
 import { getApiErrorMessage } from "@/lib/http/axios";
 import { useI18n } from "@/lib/i18n";
 import type { GenerateAiPbrTextureResponse } from "@/lib/api/contracts/ai";
 import { createPbrAtlasMaterialPatch } from "@/render/editor";
+import { createClientUuid } from "@/components/editor/projectPersistence";
 import { useEditorStore } from "@/stores/editorStore";
 import { getEditorThemeTokens } from "./theme";
 
@@ -45,6 +51,7 @@ export default function AiPbrTextureGenerateDialog({
   const { t } = useI18n();
   const app = useEditorStore((state) => state.app);
   const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
+  const appendPendingAiGeneration = useEditorStore((state) => state.appendPendingAiGeneration);
   const theme = getEditorThemeTokens(editorThemeMode);
   const [prompt, setPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -79,6 +86,34 @@ export default function AiPbrTextureGenerateDialog({
       } else {
         app.updateGroundMaterial(patch);
       }
+
+      appendPendingAiGeneration({
+        id: createClientUuid("ai-pbr-generation"),
+        createdAt: new Date().toISOString(),
+        prompt: trimmedPrompt,
+        model: result.model,
+        seed: result.seed,
+        imageSize: AI_PBR_TEXTURE_IMAGE_SIZE,
+        cfg: AI_PBR_TEXTURE_CFG,
+        inferenceSteps: AI_PBR_TEXTURE_INFERENCE_STEPS,
+        traceId: result.traceId,
+        referenceImages: [],
+        results: [
+          {
+            id: createClientUuid("ai-pbr-result"),
+            sourceUrl: result.atlasImageUrl,
+            fileName: `pbr-atlas-${Date.now()}.png`,
+            mimeType: "image/png",
+            appliedMeshIds: target.kind === "mesh" && target.id ? [target.id] : []
+          }
+        ],
+        metadata: {
+          kind: "pbr_texture_atlas",
+          atlasLayoutVersion: result.layoutVersion,
+          targetKind: target.kind,
+          targetId: target.kind === "mesh" ? target.id ?? null : null
+        }
+      });
 
       onGenerated?.({
         ...result,

@@ -14,6 +14,7 @@ import type {
   EditorApp,
   LightingConflictState,
   EditorProjectMetaJSON,
+  ProjectAiGenerationMetadataJSON,
   ProjectAiLibraryJSON
 } from "@/render/editor";
 
@@ -68,6 +69,7 @@ export type PendingAiImageGeneration = {
   traceId: string | null;
   referenceImages: PendingAiReferenceImage[];
   results: PendingAiLibraryImage[];
+  metadata?: ProjectAiGenerationMetadataJSON | null;
 };
 
 export type ProjectSaveStatus = {
