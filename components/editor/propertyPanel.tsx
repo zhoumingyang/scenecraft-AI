@@ -24,6 +24,9 @@ import {
   TransformSection
 } from "@/components/editor/propertyPanelSections";
 import AiImagePropertyPanel from "@/components/editor/aiImagePropertyPanel";
+import AiPbrTextureGenerateDialog, {
+  type AiPbrTextureTarget
+} from "@/components/editor/aiPbrTextureGenerateDialog";
 import { getLightTypeLabel, getTextureDialogTitle } from "@/components/editor/propertyPanelSections/util";
 import { getEditorThemeTokens } from "@/components/editor/theme";
 
@@ -43,6 +46,7 @@ export default function PropertyPanel() {
   const inspectorMode = useEditorStore((state) => (open ? state.aiImage.inspectorMode : "entity"));
   const [activeTextureField, setActiveTextureField] = useState<TextureFieldKey | null>(null);
   const [materialLibraryOpen, setMaterialLibraryOpen] = useState(false);
+  const [aiPbrTextureTarget, setAiPbrTextureTarget] = useState<AiPbrTextureTarget | null>(null);
   const theme = getEditorThemeTokens(editorThemeMode);
   const isPolyhavenEnabled = isPolyhavenProviderEnabled();
 
@@ -280,6 +284,13 @@ export default function PropertyPanel() {
                         material={entityRecord.item.material}
                         onTextureConfigOpen={setActiveTextureField}
                         onMaterialLibraryOpen={() => setMaterialLibraryOpen(true)}
+                        onAiPbrTextureOpen={() =>
+                          setAiPbrTextureTarget({
+                            kind: "mesh",
+                            id: entityRecord.item.id,
+                            label: entityRecord.item.label || panelTitle
+                          })
+                        }
                         materialLibraryEnabled={isPolyhavenEnabled}
                       />
                     ) : null}
@@ -290,6 +301,12 @@ export default function PropertyPanel() {
                         onMaterialPatch={(patch) => app?.updateGroundMaterial(patch)}
                         onTextureConfigOpen={setActiveTextureField}
                         onMaterialLibraryOpen={() => setMaterialLibraryOpen(true)}
+                        onAiPbrTextureOpen={() =>
+                          setAiPbrTextureTarget({
+                            kind: "ground",
+                            label: panelTitle
+                          })
+                        }
                         materialLibraryEnabled={isPolyhavenEnabled}
                       />
                     ) : null}
@@ -357,6 +374,12 @@ export default function PropertyPanel() {
             onApplyTexture={handleApplyTextureSet}
           />
         ) : null}
+
+        <AiPbrTextureGenerateDialog
+          open={Boolean(aiPbrTextureTarget)}
+          target={aiPbrTextureTarget}
+          onClose={() => setAiPbrTextureTarget(null)}
+        />
       </Box>
     </Box>
   );
