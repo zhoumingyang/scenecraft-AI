@@ -362,6 +362,13 @@ export type ProjectAiImageResultJSON = ProjectAssetRefJSON & {
   appliedMeshIds?: string[];
 };
 
+export type ProjectAiGenerationMetadataJSON = {
+  kind?: "pbr_texture_atlas";
+  atlasLayoutVersion?: number;
+  targetKind?: "mesh" | "ground";
+  targetId?: string | null;
+};
+
 export type ProjectAiImageGenerationJSON = {
   id: string;
   createdAt: string;
@@ -374,6 +381,7 @@ export type ProjectAiImageGenerationJSON = {
   traceId?: string | null;
   referenceImages?: ProjectAssetRefJSON[];
   results: ProjectAiImageResultJSON[];
+  metadata?: ProjectAiGenerationMetadataJSON | null;
 };
 
 export type ProjectAiLibraryJSON = {

@@ -1,7 +1,8 @@
 "use client";
 
 import { ChangeEvent } from "react";
-import { Button, Slider, Stack, Typography } from "@mui/material";
+import { Box, Button, Slider, Stack, Typography } from "@mui/material";
+import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import PropertyPanelSection from "@/components/common/propertyPanelSection";
 import { ColorField } from "@/components/common/propertyFieldControls";
 import { getEditorThemeTokens } from "@/components/editor/theme";
@@ -72,8 +73,10 @@ function TextureConfigRow({
         onClick={onOpen}
         sx={{
           flex: 1,
+          gap: 0.65,
           justifyContent: "space-between",
           minHeight: 30,
+          minWidth: 0,
           borderRadius: 1,
           border: theme.sectionBorder,
           background: theme.inputBg,
@@ -81,9 +84,35 @@ function TextureConfigRow({
           textTransform: "none"
         }}
       >
-        <span>
-          {texture.url ? t("editor.properties.textureConfigured") : t("editor.properties.textureConfigure")}
-        </span>
+        <Stack direction="row" spacing={0.65} alignItems="center" sx={{ minWidth: 0 }}>
+          {texture.url ? (
+            <Box
+              component="img"
+              src={texture.url}
+              alt=""
+              sx={{
+                width: 22,
+                height: 22,
+                flex: "0 0 auto",
+                borderRadius: 0.6,
+                border: theme.sectionBorder,
+                objectFit: "cover",
+                background: theme.itemBg
+              }}
+            />
+          ) : null}
+          <Box
+            component="span"
+            sx={{
+              minWidth: 0,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap"
+            }}
+          >
+            {texture.url ? t("editor.properties.textureConfigured") : t("editor.properties.textureConfigure")}
+          </Box>
+        </Stack>
       </Button>
     </Stack>
   );
@@ -95,6 +124,7 @@ type MeshAppearanceSectionProps = {
   onMaterialPatch?: (patch: MeshMaterialPatch) => void;
   onTextureConfigOpen: (key: TextureFieldKey) => void;
   onMaterialLibraryOpen: () => void;
+  onAiPbrTextureOpen: () => void;
   materialLibraryEnabled: boolean;
 };
 
@@ -104,6 +134,7 @@ export function MeshAppearanceSection({
   onMaterialPatch,
   onTextureConfigOpen,
   onMaterialLibraryOpen,
+  onAiPbrTextureOpen,
   materialLibraryEnabled
 }: MeshAppearanceSectionProps) {
   const { t } = useI18n();
@@ -172,6 +203,24 @@ export function MeshAppearanceSection({
             {t("editor.properties.materialLibrary")}
           </Button>
         ) : null}
+
+        <Button
+          size="small"
+          color="inherit"
+          startIcon={<AutoAwesomeRoundedIcon sx={{ fontSize: 15 }} />}
+          onClick={onAiPbrTextureOpen}
+          sx={{
+            justifyContent: "center",
+            minHeight: 32,
+            borderRadius: 1,
+            border: theme.sectionBorder,
+            background: theme.inputBg,
+            color: theme.pillText,
+            textTransform: "none"
+          }}
+        >
+          {t("editor.aiPbr.button")}
+        </Button>
 
         <Stack direction="row" spacing={0.8} alignItems="center">
           <Typography sx={{ width: 78, fontSize: 11, color: theme.text }}>

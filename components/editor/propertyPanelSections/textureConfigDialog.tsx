@@ -64,6 +64,7 @@ type TextureConfigDialogProps = {
   texture: ResolvedTextureSchema;
   targetPath?: string;
   onTexturePatch?: (texture: ResolvedTextureSchema) => void;
+  onApplyPbrAtlas?: (payload: { imageUrl: string; assetId?: string }) => void;
   onClose: () => void;
 };
 
@@ -75,6 +76,7 @@ export function TextureConfigDialog({
   texture,
   targetPath,
   onTexturePatch,
+  onApplyPbrAtlas,
   onClose
 }: TextureConfigDialogProps) {
   const { t } = useI18n();
@@ -366,6 +368,7 @@ export function TextureConfigDialog({
         mode="apply"
         onClose={() => setAiLibraryOpen(false)}
         onApplyAsset={onApplyAiAsset}
+        onApplyPbrAtlas={onApplyPbrAtlas}
       />
     </>
   );

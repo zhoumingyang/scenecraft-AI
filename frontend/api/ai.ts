@@ -5,6 +5,8 @@ import type {
   GenerateAi3DResponse,
   GenerateAiImagesRequest,
   GenerateAiImagesResponse,
+  GenerateAiPbrTextureRequest,
+  GenerateAiPbrTextureResponse,
   OptimizeAi3DRequest,
   OptimizeAi3DResponse,
   TransformPromptRequest,
@@ -17,6 +19,17 @@ export async function generateAiImages(payload: GenerateAiImagesRequest) {
   return postJson<GenerateAiImagesResponse, GenerateAiImagesRequest>(
     appApiClient,
     "/ai/images/generate",
+    payload,
+    {
+      timeout: 240_000
+    }
+  );
+}
+
+export async function generateAiPbrTexture(payload: GenerateAiPbrTextureRequest) {
+  return postJson<GenerateAiPbrTextureResponse, GenerateAiPbrTextureRequest>(
+    appApiClient,
+    "/ai/textures/pbr/generate",
     payload,
     {
       timeout: 240_000

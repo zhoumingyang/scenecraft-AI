@@ -11,7 +11,7 @@ import {
 import { isPolyhavenProviderEnabled } from "@/lib/externalAssets/config";
 import { useI18n } from "@/lib/i18n";
 import { createExternalAssetSource } from "@/lib/externalAssets/source";
-import { GROUND_HELPER_NODE_ID, SCENE_NODE_ID } from "@/render/editor";
+import { createPbrAtlasMaterialPatch, GROUND_HELPER_NODE_ID, SCENE_NODE_ID } from "@/render/editor";
 import { useEditorStore } from "@/stores/editorStore";
 import {
   GroundScaleSection,
@@ -24,6 +24,9 @@ import {
   TransformSection
 } from "@/components/editor/propertyPanelSections";
 import AiImagePropertyPanel from "@/components/editor/aiImagePropertyPanel";
+import AiPbrTextureGenerateDialog, {
+  type AiPbrTextureTarget
+} from "@/components/editor/aiPbrTextureGenerateDialog";
 import { getLightTypeLabel, getTextureDialogTitle } from "@/components/editor/propertyPanelSections/util";
 import { getEditorThemeTokens } from "@/components/editor/theme";
 
@@ -43,6 +46,7 @@ export default function PropertyPanel() {
   const inspectorMode = useEditorStore((state) => (open ? state.aiImage.inspectorMode : "entity"));
   const [activeTextureField, setActiveTextureField] = useState<TextureFieldKey | null>(null);
   const [materialLibraryOpen, setMaterialLibraryOpen] = useState(false);
+  const [aiPbrTextureTarget, setAiPbrTextureTarget] = useState<AiPbrTextureTarget | null>(null);
   const theme = getEditorThemeTokens(editorThemeMode);
   const isPolyhavenEnabled = isPolyhavenProviderEnabled();
 
@@ -280,6 +284,13 @@ export default function PropertyPanel() {
                         material={entityRecord.item.material}
                         onTextureConfigOpen={setActiveTextureField}
                         onMaterialLibraryOpen={() => setMaterialLibraryOpen(true)}
+                        onAiPbrTextureOpen={() =>
+                          setAiPbrTextureTarget({
+                            kind: "mesh",
+                            id: entityRecord.item.id,
+                            label: entityRecord.item.label || panelTitle
+                          })
+                        }
                         materialLibraryEnabled={isPolyhavenEnabled}
                       />
                     ) : null}
@@ -290,6 +301,12 @@ export default function PropertyPanel() {
                         onMaterialPatch={(patch) => app?.updateGroundMaterial(patch)}
                         onTextureConfigOpen={setActiveTextureField}
                         onMaterialLibraryOpen={() => setMaterialLibraryOpen(true)}
+                        onAiPbrTextureOpen={() =>
+                          setAiPbrTextureTarget({
+                            kind: "ground",
+                            label: panelTitle
+                          })
+                        }
                         materialLibraryEnabled={isPolyhavenEnabled}
                       />
                     ) : null}
@@ -344,6 +361,19 @@ export default function PropertyPanel() {
                 ? (texture) => app?.updateGroundMaterial({ [activeTextureField]: texture })
                 : undefined
             }
+            onApplyPbrAtlas={({ imageUrl, assetId }) => {
+              const patch = createPbrAtlasMaterialPatch({
+                url: imageUrl,
+                assetId
+              });
+
+              if (entityRecord.kind === "gridHelper") {
+                app?.updateGroundMaterial(patch);
+                return;
+              }
+
+              app?.updateMeshMaterial(entityRecord.item.id, patch);
+            }}
             onClose={() => setActiveTextureField(null)}
           />
         ) : null}
@@ -357,6 +387,12 @@ export default function PropertyPanel() {
             onApplyTexture={handleApplyTextureSet}
           />
         ) : null}
+
+        <AiPbrTextureGenerateDialog
+          open={Boolean(aiPbrTextureTarget)}
+          target={aiPbrTextureTarget}
+          onClose={() => setAiPbrTextureTarget(null)}
+        />
       </Box>
     </Box>
   );

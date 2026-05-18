@@ -145,7 +145,8 @@ export async function uploadPendingAiGenerations(
           metadata: {
             generationId: generation.id,
             resultId: result.id,
-            index
+            index,
+            generationMetadata: generation.metadata ?? null
           }
         },
         file
@@ -175,7 +176,8 @@ export async function uploadPendingAiGenerations(
       inferenceSteps: generation.inferenceSteps,
       traceId: generation.traceId,
       referenceImages: uploadedReferenceImages,
-      results: uploadedResults
+      results: uploadedResults,
+      metadata: generation.metadata ?? null
     });
   }
 

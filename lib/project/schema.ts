@@ -237,6 +237,15 @@ export const projectAiImageResultSchema = assetRefSchema
   })
   .strict();
 
+const projectAiGenerationMetadataSchema = z
+  .object({
+    kind: z.literal("pbr_texture_atlas").optional(),
+    atlasLayoutVersion: z.number().int().positive().optional(),
+    targetKind: z.enum(["mesh", "ground"]).optional(),
+    targetId: z.string().trim().max(120).nullable().optional()
+  })
+  .strict();
+
 export const projectAiImageGenerationSchema = z
   .object({
     id: trimmedString(120),
@@ -249,7 +258,8 @@ export const projectAiImageGenerationSchema = z
     inferenceSteps: z.number().int().positive(),
     traceId: z.string().trim().max(255).nullable().optional(),
     referenceImages: z.array(assetRefSchema).optional(),
-    results: z.array(projectAiImageResultSchema).min(1)
+    results: z.array(projectAiImageResultSchema).min(1),
+    metadata: projectAiGenerationMetadataSchema.nullable().optional()
   })
   .strict();
 
