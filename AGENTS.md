@@ -8,6 +8,7 @@ Scenecraft AI is an AI-assisted browser-based 3D scene editor built on Next.js. 
 
 - interactive 3D scene editing
 - AI image generation and prompt transformation
+- AI PBR texture atlas generation and material application
 - low-poly AI 3D sketch planning and optimization
 - authentication and database-backed user flows
 - authenticated project save/load with persisted scene snapshots
@@ -100,6 +101,7 @@ Next.js App Router entrypoints and API routes.
 - `app/editor/` contains the protected editor route
 - `app/api/auth/` contains auth route handlers
 - `app/api/ai/` contains AI API routes for prompt transformation, image generation, and 3D generation
+- `app/api/ai/textures/pbr/` contains the authenticated AI PBR texture atlas generation route
 - `app/api/projects/` contains project list/create/read/update handlers
 - `app/api/assets/` contains asset upload preparation handlers
 - `app/api/polyhaven/` contains authenticated external asset browsing routes for HDRIs and textures
@@ -111,6 +113,7 @@ Use this area when changing route-level behavior, request/response handling, or 
 React UI components for auth, home, and editor surfaces.
 
 - `components/editor/` contains most editor-facing UI panels and controls
+- `components/editor/aiPbrTextureGenerateDialog.tsx` contains the mesh/ground AI PBR texture generation dialog
 - `components/editor/topBar.tsx` is now a thin composition layer for the top bar UI
 - `components/editor/topBar/` contains top bar hooks, configuration, and save/load orchestration helpers
 - `components/editor/externalAssets/` contains the external asset browser detail panels and browser hook
@@ -124,7 +127,7 @@ Browser-side API clients and request helpers.
 
 - `frontend/api/projects.ts` wraps project list/load/save/delete calls
 - `frontend/api/assets.ts` wraps prepared asset upload flows
-- `frontend/api/ai.ts` wraps AI image / prompt / 3D generation requests
+- `frontend/api/ai.ts` wraps AI image / prompt / AI PBR texture / 3D generation requests
 - `frontend/api/externalAssets.ts` wraps Poly Haven list/detail/category lookups
 
 Use this area when changing browser request behavior or updating how UI code talks to backend routes.
@@ -155,11 +158,21 @@ Includes:
 
 - prompt transformation
 - image generation provider registry and provider implementations
+- PBR texture atlas generation prompt helpers
 - AI 3D planning pipeline
 - OpenRouter-related provider code
 - validation, parsing, diagnostics, rules, templates, and workflow code
 
 Keep API contracts, validation, and provider-specific behavior aligned when editing here.
+
+### `render/editor/materials/`
+
+Editor material helpers live here.
+
+- `render/editor/materials/pbrAtlas.ts` defines the 3x2 PBR atlas layout and creates standard `MeshMaterialPatch` objects
+- The AI PBR texture flow must continue to reuse existing `TextureSchema` fields rather than adding a separate atlas material schema
+
+Keep atlas offsets, repeat values, and material texture field names aligned with `MeshAppearanceSection`, project persistence, and `TextureConfigDialog`.
 
 ### `lib/externalAssets/`
 
@@ -301,6 +314,16 @@ If the task is about AI generation:
 - inspect `lib/ai/`
 - inspect `lib/api/contracts/`
 
+If the task is about AI-generated PBR textures:
+
+- inspect `app/api/ai/textures/pbr/`
+- inspect `lib/ai/pbr-texture/`
+- inspect `render/editor/materials/pbrAtlas.ts`
+- inspect `components/editor/aiPbrTextureGenerateDialog.tsx`
+- inspect `components/editor/propertyPanelSections/meshAppearanceSection.tsx`
+- inspect `components/editor/projectAiLibraryDialog.tsx`
+- preserve the single-atlas, six-`TextureSchema` design unless the task explicitly asks for a schema migration
+
 If the task is about project save/load or asset persistence:
 
 - inspect `app/api/projects/`
@@ -343,6 +366,7 @@ If the task is about scene/project data:
 - Do not mix heavy UI concerns into low-level editor runtime files without a good reason.
 - Do not bypass validation for AI request input.
 - Do not store temporary `blob:` URLs in persisted save payloads if the task is meant to preserve assets across reloads.
+- Do not replace the AI PBR atlas flow with six independent texture files unless the task explicitly asks for that migration.
 - Do not strip persisted `externalSource` metadata from HDRI or texture references if the task touches external asset flows.
 
 ## Good Final Handoff

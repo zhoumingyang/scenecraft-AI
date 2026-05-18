@@ -1,8 +1,8 @@
 # Scenecraft AI
 
-Scenecraft AI is an AI-powered 3D editor for scene creation workflows. It combines interactive 3D scene editing with AI image generation, AI-assisted low-poly 3D sketching, prompt enhancement, and material application in a single workspace, helping users move from an idea to an editable scene draft much faster.
+Scenecraft AI is an AI-powered 3D editor for scene creation workflows. It combines interactive 3D scene editing with AI image generation, AI-assisted low-poly 3D sketching, AI-generated PBR texture atlases, prompt enhancement, and material application in a single workspace, helping users move from an idea to an editable scene draft much faster.
 
-The current version is built with `Next.js`, `React 19`, `Three.js`, `Zustand`, `Drizzle ORM`, and `better-auth`. It already includes a browser-based 3D editor shell, a protected editor workspace, an AI image workflow, and an AI 3D preview-and-optimization pipeline focused on stylized low-poly output.
+The current version is built with `Next.js`, `React 19`, `Three.js`, `Zustand`, `Drizzle ORM`, and `better-auth`. It already includes a browser-based 3D editor shell, a protected editor workspace, an AI image workflow, an AI PBR texture atlas workflow, and an AI 3D preview-and-optimization pipeline focused on stylized low-poly output.
 
 It also now includes a first end-to-end persistence loop for authenticated users:
 
@@ -18,6 +18,7 @@ This is not just a text-to-image demo, and it is not a full desktop-grade DCC to
 
 - Improve prompts with AI
 - Generate reference images or textures inside the editor
+- Generate PBR texture atlases and apply them to mesh or ground materials
 - Apply generated results directly to mesh materials
 - Create previewable, editable low-poly 3D sketches from natural language
 - Continue refining the scene with lights, cameras, environment settings, post-processing, and manual editing
@@ -54,7 +55,24 @@ This is not just a text-to-image demo, and it is not a full desktop-grade DCC to
 - Generated results can be previewed inside the editor and applied directly to mesh materials
 - Saved projects also retain a project-level AI image library, including prompts, generation params, reference images, and generated outputs
 
-### 4. Project Save / Load and Asset Persistence
+### 4. AI PBR Texture Atlas Workflow
+
+- Generates a single 3x2 PBR texture atlas with OpenRouter `openai/gpt-5.4-image-2`
+- Supports selected mesh materials and the ground plane material
+- Applies generated atlases immediately from the material Appearance panel
+- Reuses the existing PBR material texture fields:
+  - Diffuse Map
+  - Metalness Map
+  - Roughness Map
+  - Normal Map
+  - AO Map
+  - Emissive Map
+- Stores the same atlas URL in all six map slots and uses per-map UV offset/repeat values to sample the correct atlas region
+- Shows texture thumbnails directly in material texture rows after application
+- Saves generated PBR atlases into the project AI asset library
+- Allows saved PBR atlas assets to be reused as a full material atlas on another mesh or ground plane
+
+### 5. Project Save / Load and Asset Persistence
 
 - The editor `Save` action now creates and updates real user-owned projects
 - First save prompts for base metadata such as:
@@ -71,7 +89,7 @@ This is not just a text-to-image demo, and it is not a full desktop-grade DCC to
   - project AI image history
 - Imported model files, texture images, environment images, and generated thumbnails are stored in `Vercel Blob`
 
-### 5. AI 3D Sketch Generation and Optimization
+### 6. AI 3D Sketch Generation and Optimization
 
 This is the most distinctive part of the project right now.
 
@@ -113,6 +131,7 @@ This approach makes the result:
 - Database: `Postgres` + `Drizzle ORM`
 - Object storage: `Vercel Blob`
 - AI integration: provider-based image generation, prompt transformation, and AI 3D planning APIs
+- PBR texture generation: OpenRouter `openai/gpt-5.4-image-2`
 
 ## Project Structure
 
@@ -121,7 +140,7 @@ app/                    Next.js App Router pages and API routes
 components/             Home, auth, and editor UI components
 frontend/api/           Browser-side API wrappers for projects, AI, assets, and external assets
 render/editor/          Editor core: runtime, session, models, commands
-lib/ai/                 AI modules for images, 3D planning, prompt transforms, providers
+lib/ai/                 AI modules for images, PBR textures, 3D planning, prompt transforms, providers
 lib/externalAssets/     Poly Haven provider integration, contracts, and source metadata helpers
 lib/server/             Auth/session, DB guards, asset config, and project persistence services
 stores/                 Zustand state stores
@@ -155,7 +174,7 @@ Recommended minimum variables:
 
 - `BETTER_AUTH_SECRET`
 - `BETTER_AUTH_URL`
-- `OPENROUTER_API_KEY`
+- `OPENROUTER_API_KEY` required for OpenRouter-backed AI 3D and AI PBR texture generation
 - `SILICONFLOW_API_KEY` if you want to enable that provider
 - `DATABASE_URL` required if you want project save/load and persistent auth
 - `BLOB_READ_WRITE_TOKEN` required if you want model / texture / thumbnail uploads and project save to succeed
@@ -248,6 +267,7 @@ This token is required for:
 - uploaded textures
 - environment images
 - saved AI image resources
+- saved AI PBR texture atlases
 
 ## External Asset Integration
 
@@ -277,6 +297,7 @@ The project now has a usable authenticated persistence path, but it is still evo
 - Save depends on both `DATABASE_URL` and `BLOB_READ_WRITE_TOKEN`
 - Existing schema changes require `npm run db:push` or equivalent migration application before testing against a fresh database
 - The current AI 3D flow is aimed at low-poly sketching and structural previews, not production-grade high-resolution mesh generation
+- AI PBR texture generation uses a single atlas image and existing material texture UV transforms; it does not currently split maps into six separate image files
 - If `DATABASE_URL` is missing in local development, auth falls back to in-memory mode and will not persist after restart
 - If `BLOB_READ_WRITE_TOKEN` is missing, editor save cannot persist binary assets and will fail clearly
 
@@ -286,6 +307,7 @@ The project now has a usable authenticated persistence path, but it is still evo
 - Fast concept blocking for games, installations, and digital content
 - Low-poly character, prop, and icon sketch generation
 - Experiments that connect AI image generation with interactive material editing
+- Experiments with AI-generated PBR material atlases for editable browser scenes
 
 ## License
 
