@@ -16,6 +16,7 @@ export const IMAGE_GENERATION_MODEL_IDS = [
   "google/gemini-3.1-flash-image-preview",
   "sourceful/riverflow-v2-pro",
   "sourceful/riverflow-v2-fast",
+  "openai/gpt-5.4-image-2",
   "black-forest-labs/flux.2-flex",
   "black-forest-labs/flux.2-pro"
 ] as const;
@@ -91,6 +92,17 @@ export const IMAGE_GENERATION_MODELS: ImageGenerationModelConfig[] = [
     minReferenceImages: 0,
     maxReferenceImages: 4,
     outputModalities: ["image"]
+  },
+  {
+    id: "openai/gpt-5.4-image-2",
+    label: "OpenAI GPT-5.4 Image 2",
+    providerId: "openrouter",
+    supportsImageSize: true,
+    supportsCfg: false,
+    supportsInferenceSteps: false,
+    minReferenceImages: 0,
+    maxReferenceImages: 4,
+    outputModalities: ["image", "text"]
   },
   {
     id: "black-forest-labs/flux.2-flex",
