@@ -43,7 +43,7 @@ export type AiTextureTarget = {
   label: string;
 };
 
-export type AiMode = "image" | "texture" | "3d";
+export type AiMode = "image" | "texture" | "panorama" | "3d";
 
 export type AiReferenceImageSlot = {
   dataUrl: string | null;
@@ -146,6 +146,16 @@ type AiTextureSettings = {
   target: AiTextureTarget | null;
 };
 
+type AiPanoramaSettings = {
+  prompt: string;
+  isGenerating: boolean;
+  errorMessage: string | null;
+  result: {
+    imageUrl: string;
+    prompt: string;
+  } | null;
+};
+
 type EditorStoreState = {
   app: EditorApp | null;
   editorThemeMode: EditorThemeMode;
@@ -173,6 +183,7 @@ type EditorStoreState = {
   lastAiClearedEntityId: string | null;
   aiImage: AiImageSettings;
   aiTexture: AiTextureSettings;
+  aiPanorama: AiPanoramaSettings;
   ai3d: Ai3DSettings;
   setApp: (app: EditorApp | null) => void;
   setEditorThemeMode: (mode: EditorThemeMode) => void;
@@ -221,6 +232,8 @@ type EditorStoreState = {
   clearAiReferenceImageAt: (index: number) => void;
   setAiTexturePrompt: (prompt: string) => void;
   setAiTextureState: (payload: Partial<AiTextureSettings>) => void;
+  setAiPanoramaPrompt: (prompt: string) => void;
+  setAiPanoramaState: (payload: Partial<AiPanoramaSettings>) => void;
   setAi3dPrompt: (prompt: string) => void;
   setAi3dIntentDraft: (payload: Partial<Ai3DIntentInput>) => void;
   setAi3dState: (payload: Partial<Ai3DSettings>) => void;
@@ -262,6 +275,15 @@ function createInitialAiTextureSettings(): AiTextureSettings {
     result: null,
     lastSeed: null,
     target: null
+  };
+}
+
+function createInitialAiPanoramaSettings(): AiPanoramaSettings {
+  return {
+    prompt: "",
+    isGenerating: false,
+    errorMessage: null,
+    result: null
   };
 }
 
@@ -352,6 +374,7 @@ export const useEditorStore = create<EditorStoreState>((set) => ({
   lastAiClearedEntityId: null,
   aiImage: createInitialAiImageSettings(),
   aiTexture: createInitialAiTextureSettings(),
+  aiPanorama: createInitialAiPanoramaSettings(),
   ai3d: {
     prompt: "",
     intentDraft: {},
@@ -642,6 +665,20 @@ export const useEditorStore = create<EditorStoreState>((set) => ({
     set((state) => ({
       aiTexture: {
         ...state.aiTexture,
+        ...payload
+      }
+    })),
+  setAiPanoramaPrompt: (prompt) =>
+    set((state) => ({
+      aiPanorama: {
+        ...state.aiPanorama,
+        prompt
+      }
+    })),
+  setAiPanoramaState: (payload) =>
+    set((state) => ({
+      aiPanorama: {
+        ...state.aiPanorama,
         ...payload
       }
     })),

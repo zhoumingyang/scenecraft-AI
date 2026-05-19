@@ -26,7 +26,7 @@ import { useAiPbrTextureComposer } from "@/components/editor/aiComposer/useAiPbr
 import { useAi3dComposer } from "@/components/editor/aiComposer/useAi3dComposer";
 import { usePromptTransform } from "@/components/editor/aiComposer/usePromptTransform";
 import { useI18n } from "@/lib/i18n";
-import { GROUND_HELPER_NODE_ID } from "@/render/editor";
+import { GROUND_HELPER_NODE_ID, SCENE_NODE_ID } from "@/render/editor";
 import { useEditorStore } from "@/stores/editorStore";
 import type { AiMode, AiTextureTarget } from "@/stores/editorStore";
 
@@ -50,6 +50,8 @@ export default function AiImageComposer() {
   const aiTexturePrompt = useEditorStore((state) => state.aiTexture.prompt);
   const aiTextureIsGenerating = useEditorStore((state) => state.aiTexture.isGenerating);
   const aiTextureTarget = useEditorStore((state) => state.aiTexture.target);
+  const aiPanoramaPrompt = useEditorStore((state) => state.aiPanorama.prompt);
+  const aiPanoramaIsGenerating = useEditorStore((state) => state.aiPanorama.isGenerating);
   const ai3dPrompt = useEditorStore((state) => state.ai3d.prompt);
   const ai3dIntentDraft = useEditorStore((state) => state.ai3d.intentDraft);
   const ai3dIsGenerating = useEditorStore((state) => state.ai3d.isGenerating);
@@ -69,6 +71,8 @@ export default function AiImageComposer() {
   const setLastAiClearedEntityId = useEditorStore((state) => state.setLastAiClearedEntityId);
   const setAiTexturePrompt = useEditorStore((state) => state.setAiTexturePrompt);
   const setAiTextureState = useEditorStore((state) => state.setAiTextureState);
+  const setAiPanoramaPrompt = useEditorStore((state) => state.setAiPanoramaPrompt);
+  const setAiPanoramaState = useEditorStore((state) => state.setAiPanoramaState);
   const setAi3dPrompt = useEditorStore((state) => state.setAi3dPrompt);
   const setAi3dIntentDraft = useEditorStore((state) => state.setAi3dIntentDraft);
   const setAi3dState = useEditorStore((state) => state.setAi3dState);
@@ -199,6 +203,12 @@ export default function AiImageComposer() {
     app?.setSelectedEntity(null);
   };
 
+  const focusPanoramaMode = () => {
+    setAiMode("panorama");
+    setAiInspectorMode("entity");
+    app?.setSelectedEntity(SCENE_NODE_ID);
+  };
+
   const handleModeChange = (mode: AiMode) => {
     if (mode === "image") {
       focusAiMode();
@@ -210,11 +220,22 @@ export default function AiImageComposer() {
       return;
     }
 
+    if (mode === "panorama") {
+      focusPanoramaMode();
+      return;
+    }
+
     focusAi3dMode();
   };
 
   const activePrompt =
-    aiMode === "image" ? imagePrompt : aiMode === "texture" ? aiTexturePrompt : ai3dPrompt;
+    aiMode === "image"
+      ? imagePrompt
+      : aiMode === "texture"
+        ? aiTexturePrompt
+        : aiMode === "panorama"
+          ? aiPanoramaPrompt
+          : ai3dPrompt;
 
   const {
     activePromptAction,
@@ -224,13 +245,17 @@ export default function AiImageComposer() {
     aiMode,
     prompt: imagePrompt,
     aiTexturePrompt,
+    aiPanoramaPrompt,
     ai3dPrompt,
     isImageBusy: imageIsGenerating,
     isTextureBusy: aiTextureIsGenerating,
+    isPanoramaBusy: aiPanoramaIsGenerating,
     isAi3dBusy: ai3dIsGenerating || ai3dIsOptimizing,
     setAiPrompt,
     setAiTexturePrompt,
     setAiTextureState,
+    setAiPanoramaPrompt,
+    setAiPanoramaState,
     setAi3dPrompt,
     setAiGeneratingState,
     setAi3dState,
@@ -294,6 +319,10 @@ export default function AiImageComposer() {
 
       if (aiMode === "texture") {
         void handleTextureSubmit();
+        return;
+      }
+
+      if (aiMode === "panorama") {
         return;
       }
 
@@ -395,7 +424,9 @@ export default function AiImageComposer() {
                   ? t("editor.ai.promptPlaceholder")
                   : aiMode === "texture"
                     ? t("editor.aiPbr.promptPlaceholder")
-                    : t("editor.ai3d.promptPlaceholder")
+                    : aiMode === "panorama"
+                      ? t("editor.aiPanorama.promptPlaceholder")
+                      : t("editor.ai3d.promptPlaceholder")
               }
               theme={theme}
               onFocus={
@@ -403,7 +434,9 @@ export default function AiImageComposer() {
                   ? focusAiMode
                   : aiMode === "texture"
                     ? focusTextureMode
-                    : focusAi3dMode
+                    : aiMode === "panorama"
+                      ? focusPanoramaMode
+                      : focusAi3dMode
               }
               onChange={(value) => {
                 if (aiMode === "image") {
@@ -412,6 +445,10 @@ export default function AiImageComposer() {
                 }
                 if (aiMode === "texture") {
                   setAiTexturePrompt(value);
+                  return;
+                }
+                if (aiMode === "panorama") {
+                  setAiPanoramaPrompt(value);
                   return;
                 }
                 setAi3dPrompt(value);
@@ -465,6 +502,19 @@ export default function AiImageComposer() {
                   handlePromptTransform={handlePromptTransform}
                   t={t}
                 />
+              ) : aiMode === "panorama" ? (
+                <Ai3dToolbar
+                  theme={theme}
+                  utilityIconButtonSx={utilityIconButtonSx}
+                  isAi3dBusy={aiPanoramaIsGenerating}
+                  isPromptActionPending={isPromptActionPending}
+                  prompt={aiPanoramaPrompt}
+                  isGenerating={aiPanoramaIsGenerating}
+                  isOptimizing={false}
+                  activePromptAction={activePromptAction}
+                  handlePromptTransform={handlePromptTransform}
+                  t={t}
+                />
               ) : (
                 <Ai3dToolbar
                   theme={theme}
@@ -487,6 +537,8 @@ export default function AiImageComposer() {
                     ? imageIsGenerating || isPromptActionPending || !imagePrompt.trim()
                     : aiMode === "texture"
                       ? aiTextureIsGenerating || isPromptActionPending || !aiTexturePrompt.trim()
+                      : aiMode === "panorama"
+                        ? true
                       : isAi3dBusy || !ai3dPrompt.trim()
                 }
                 onClick={() => {
@@ -496,6 +548,9 @@ export default function AiImageComposer() {
                   }
                   if (aiMode === "texture") {
                     void handleTextureSubmit();
+                    return;
+                  }
+                  if (aiMode === "panorama") {
                     return;
                   }
                   void handleAi3dSubmit();
@@ -508,6 +563,8 @@ export default function AiImageComposer() {
                       ? imagePrompt.trim() && !imageIsGenerating && !isPromptActionPending
                       : aiMode === "texture"
                         ? activePrompt.trim() && !aiTextureIsGenerating && !isPromptActionPending
+                        : aiMode === "panorama"
+                          ? activePrompt.trim() && !aiPanoramaIsGenerating && !isPromptActionPending
                       : ai3dPrompt.trim() && !isAi3dBusy)
                       ? editorThemeMode === "dark"
                         ? "linear-gradient(135deg, #2f6df4, #63a4ff)"
@@ -520,6 +577,8 @@ export default function AiImageComposer() {
                   ? imageIsGenerating
                   : aiMode === "texture"
                     ? aiTextureIsGenerating
+                    : aiMode === "panorama"
+                      ? aiPanoramaIsGenerating
                     : isAi3dBusy) ? (
                   <CircularProgress size={16} sx={{ color: theme.pillText }} />
                 ) : (
