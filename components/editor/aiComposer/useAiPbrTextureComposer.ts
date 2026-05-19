@@ -9,6 +9,7 @@ import {
 import { getApiErrorMessage } from "@/lib/http/axios";
 import {
   createPbrAtlasMaterialPatch,
+  GROUND_HELPER_NODE_ID,
   type EditorApp
 } from "@/render/editor";
 import { createClientUuid } from "@/components/editor/projectPersistence";
@@ -30,9 +31,38 @@ type Params = {
     errorMessage?: string | null;
     result?: AiTextureResult | null;
     lastSeed?: number | null;
+    target?: AiTextureTarget | null;
   }) => void;
   t: (key: any, params?: Record<string, string | number>) => string;
 };
+
+function resolveCurrentTextureTarget(app: EditorApp | null): AiTextureTarget | null {
+  const entityId = app?.getSelectedEntityId() ?? null;
+  const project = app?.projectModel;
+  if (!entityId || !project) return null;
+
+  if (entityId === GROUND_HELPER_NODE_ID) {
+    if (!project.envConfig.ground.visible || project.envConfig.ground.mode !== "plane") {
+      return null;
+    }
+
+    return {
+      kind: "ground",
+      label: "Ground"
+    };
+  }
+
+  const record = project.getEntityById(entityId);
+  if (!record || record.kind !== "mesh") {
+    return null;
+  }
+
+  return {
+    kind: "mesh",
+    id: record.item.id,
+    label: record.item.label || "Mesh"
+  };
+}
 
 export function useAiPbrTextureComposer({
   app,
@@ -47,6 +77,7 @@ export function useAiPbrTextureComposer({
   const handleTextureSubmit = async () => {
     const trimmedPrompt = prompt.trim();
     if (!trimmedPrompt || isGenerating || isPromptActionPending) return;
+    const activeTarget = resolveCurrentTextureTarget(app) ?? target;
 
     setAiTextureState({
       isGenerating: true,
@@ -56,8 +87,8 @@ export function useAiPbrTextureComposer({
     try {
       const payload = await generateAiPbrTexture({
         prompt: trimmedPrompt,
-        targetKind: target?.kind,
-        targetId: target?.kind === "mesh" ? target.id : undefined
+        targetKind: activeTarget?.kind,
+        targetId: activeTarget?.kind === "mesh" ? activeTarget.id : undefined
       });
       const result: AiTextureResult = {
         atlasImageUrl: payload.atlasImageUrl,
@@ -67,16 +98,17 @@ export function useAiPbrTextureComposer({
         traceId: payload.traceId,
         layoutVersion: payload.layoutVersion
       };
-      const appliedMeshIds = target?.kind === "mesh" && target.id ? [target.id] : [];
+      const appliedMeshIds =
+        activeTarget?.kind === "mesh" && activeTarget.id ? [activeTarget.id] : [];
 
-      if (app && target) {
+      if (app && activeTarget) {
         const patch = createPbrAtlasMaterialPatch({
           url: payload.atlasImageUrl
         });
 
-        if (target.kind === "mesh" && target.id) {
-          app.updateMeshMaterial(target.id, patch);
-        } else if (target.kind === "ground") {
+        if (activeTarget.kind === "mesh" && activeTarget.id) {
+          app.updateMeshMaterial(activeTarget.id, patch);
+        } else if (activeTarget.kind === "ground") {
           app.updateGroundMaterial(patch);
         }
       }
@@ -104,8 +136,8 @@ export function useAiPbrTextureComposer({
         metadata: {
           kind: "pbr_texture_atlas",
           atlasLayoutVersion: payload.layoutVersion,
-          targetKind: target?.kind,
-          targetId: target?.kind === "mesh" ? target.id ?? null : null
+          targetKind: activeTarget?.kind,
+          targetId: activeTarget?.kind === "mesh" ? activeTarget.id ?? null : null
         }
       });
 
@@ -113,7 +145,8 @@ export function useAiPbrTextureComposer({
         isGenerating: false,
         errorMessage: null,
         result,
-        lastSeed: payload.seed
+        lastSeed: payload.seed,
+        target: activeTarget
       });
     } catch (error) {
       setAiTextureState({
