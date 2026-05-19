@@ -28,7 +28,22 @@ export type AiImageResult = {
   url: string;
 };
 
-export type AiMode = "image" | "3d";
+export type AiTextureResult = {
+  atlasImageUrl: string;
+  prompt: string;
+  model: string;
+  seed: number | null;
+  traceId: string | null;
+  layoutVersion: number;
+};
+
+export type AiTextureTarget = {
+  kind: "mesh" | "ground";
+  id?: string;
+  label: string;
+};
+
+export type AiMode = "image" | "texture" | "3d";
 
 export type AiReferenceImageSlot = {
   dataUrl: string | null;
@@ -122,6 +137,15 @@ type Ai3DSettings = {
   lastDiagnostics: Ai3DPlanDiagnostics | null;
 };
 
+type AiTextureSettings = {
+  prompt: string;
+  isGenerating: boolean;
+  errorMessage: string | null;
+  result: AiTextureResult | null;
+  lastSeed: number | null;
+  target: AiTextureTarget | null;
+};
+
 type EditorStoreState = {
   app: EditorApp | null;
   editorThemeMode: EditorThemeMode;
@@ -146,7 +170,9 @@ type EditorStoreState = {
   cameraVersion: number;
   viewStateVersion: number;
   aiMode: AiMode;
+  lastAiClearedEntityId: string | null;
   aiImage: AiImageSettings;
+  aiTexture: AiTextureSettings;
   ai3d: Ai3DSettings;
   setApp: (app: EditorApp | null) => void;
   setEditorThemeMode: (mode: EditorThemeMode) => void;
@@ -182,6 +208,7 @@ type EditorStoreState = {
   bumpCameraVersion: () => void;
   bumpViewStateVersion: () => void;
   setAiMode: (mode: AiMode) => void;
+  setLastAiClearedEntityId: (entityId: string | null) => void;
   setAiInspectorMode: (mode: AiImageSettings["inspectorMode"]) => void;
   setAiComposerOpen: (open: boolean) => void;
   setAiPrompt: (prompt: string) => void;
@@ -192,6 +219,8 @@ type EditorStoreState = {
   setAiInferenceSteps: (steps: number) => void;
   setAiReferenceImageAt: (index: number, image: AiReferenceImageSlot) => void;
   clearAiReferenceImageAt: (index: number) => void;
+  setAiTexturePrompt: (prompt: string) => void;
+  setAiTextureState: (payload: Partial<AiTextureSettings>) => void;
   setAi3dPrompt: (prompt: string) => void;
   setAi3dIntentDraft: (payload: Partial<Ai3DIntentInput>) => void;
   setAi3dState: (payload: Partial<Ai3DSettings>) => void;
@@ -222,6 +251,17 @@ function createInitialAiImageSettings(): AiImageSettings {
     errorMessage: null,
     results: [],
     lastSeed: null
+  };
+}
+
+function createInitialAiTextureSettings(): AiTextureSettings {
+  return {
+    prompt: "",
+    isGenerating: false,
+    errorMessage: null,
+    result: null,
+    lastSeed: null,
+    target: null
   };
 }
 
@@ -309,7 +349,9 @@ export const useEditorStore = create<EditorStoreState>((set) => ({
   cameraVersion: 0,
   viewStateVersion: 0,
   aiMode: "image",
+  lastAiClearedEntityId: null,
   aiImage: createInitialAiImageSettings(),
+  aiTexture: createInitialAiTextureSettings(),
   ai3d: {
     prompt: "",
     intentDraft: {},
@@ -495,6 +537,7 @@ export const useEditorStore = create<EditorStoreState>((set) => ({
       viewStateVersion: state.viewStateVersion + 1
     })),
   setAiMode: (aiMode) => set({ aiMode }),
+  setLastAiClearedEntityId: (lastAiClearedEntityId) => set({ lastAiClearedEntityId }),
   setAiInspectorMode: (mode) =>
     set((state) => ({
       aiImage: {
@@ -586,6 +629,20 @@ export const useEditorStore = create<EditorStoreState>((set) => ({
               }
             : item
         )
+      }
+    })),
+  setAiTexturePrompt: (prompt) =>
+    set((state) => ({
+      aiTexture: {
+        ...state.aiTexture,
+        prompt
+      }
+    })),
+  setAiTextureState: (payload) =>
+    set((state) => ({
+      aiTexture: {
+        ...state.aiTexture,
+        ...payload
       }
     })),
   setAi3dPrompt: (prompt) =>
