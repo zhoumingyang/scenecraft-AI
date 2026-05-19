@@ -355,7 +355,10 @@ export default function PropertyPanel() {
                     </Stack>
 
                     {entityRecord.kind === "scene" ? (
-                      <SceneSettingsSection envConfig={entityRecord.envConfig} />
+                      <SceneSettingsSection
+                        envConfig={entityRecord.envConfig}
+                        onPanoramaPreviewClick={() => setAiLibraryOpen(true)}
+                      />
                     ) : entityRecord.kind === "gridHelper" ? (
                       <GroundScaleSection scale={entityRecord.item.scale} />
                     ) : (

@@ -32,9 +32,13 @@ const toneMappingOptions = [
 
 type SceneSettingsSectionProps = {
   envConfig: ResolvedEditorEnvConfigJSON;
+  onPanoramaPreviewClick?: () => void;
 };
 
-export function SceneSettingsSection({ envConfig }: SceneSettingsSectionProps) {
+export function SceneSettingsSection({
+  envConfig,
+  onPanoramaPreviewClick
+}: SceneSettingsSectionProps) {
   const { t } = useI18n();
   const app = useEditorStore((state) => state.app);
   const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
@@ -81,19 +85,39 @@ export function SceneSettingsSection({ envConfig }: SceneSettingsSectionProps) {
             </Typography>
             {panoPreviewUrl ? (
               <Box
-                component="img"
-                src={panoPreviewUrl}
-                alt="scene pano"
-                onError={() => setPanoPreviewFailed(true)}
+                component="button"
+                type="button"
+                onClick={onPanoramaPreviewClick}
                 sx={{
                   width: "100%",
+                  p: 0,
+                  border: theme.sectionBorder,
                   height: 92,
                   borderRadius: 1,
-                  border: theme.sectionBorder,
-                  objectFit: "cover",
-                  background: theme.inputBg
+                  overflow: "hidden",
+                  background: theme.inputBg,
+                  cursor: onPanoramaPreviewClick ? "pointer" : "default",
+                  "&:hover, &:focus-visible": onPanoramaPreviewClick
+                    ? {
+                        outline: "none",
+                        border: theme.itemSelectedBorder
+                      }
+                    : undefined
                 }}
-              />
+              >
+                <Box
+                  component="img"
+                  src={panoPreviewUrl}
+                  alt="scene pano"
+                  onError={() => setPanoPreviewFailed(true)}
+                  sx={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    display: "block"
+                  }}
+                />
+              </Box>
             ) : (
               <Box
                 sx={{

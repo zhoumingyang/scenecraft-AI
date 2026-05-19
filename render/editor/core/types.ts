@@ -363,7 +363,7 @@ export type ProjectAiImageResultJSON = ProjectAssetRefJSON & {
 };
 
 export type ProjectAiGenerationMetadataJSON = {
-  kind?: "pbr_texture_atlas";
+  kind?: "pbr_texture_atlas" | "panorama";
   atlasLayoutVersion?: number;
   targetKind?: "mesh" | "ground";
   targetId?: string | null;

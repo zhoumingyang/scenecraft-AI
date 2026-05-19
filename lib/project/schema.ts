@@ -239,7 +239,7 @@ export const projectAiImageResultSchema = assetRefSchema
 
 const projectAiGenerationMetadataSchema = z
   .object({
-    kind: z.literal("pbr_texture_atlas").optional(),
+    kind: z.enum(["pbr_texture_atlas", "panorama"]).optional(),
     atlasLayoutVersion: z.number().int().positive().optional(),
     targetKind: z.enum(["mesh", "ground"]).optional(),
     targetId: z.string().trim().max(120).nullable().optional()

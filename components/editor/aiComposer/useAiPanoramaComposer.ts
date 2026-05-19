@@ -3,14 +3,18 @@
 import { generateAiPanorama } from "@/frontend/api/ai";
 import { appApiClient } from "@/frontend/api/client";
 import {
+  AI_PANORAMA_CFG,
   AI_PANORAMA_HEIGHT,
+  AI_PANORAMA_IMAGE_SIZE_LABEL,
+  AI_PANORAMA_INFERENCE_STEPS,
   AI_PANORAMA_OUTPUT_EXTENSION,
   AI_PANORAMA_OUTPUT_MIME_TYPE,
   AI_PANORAMA_WIDTH
 } from "@/lib/ai/panorama/constants";
 import { getApiErrorMessage } from "@/lib/http/axios";
+import { createClientUuid } from "@/components/editor/projectPersistence";
 import type { EditorApp } from "@/render/editor";
-import type { LocalProjectAssetEntry } from "@/stores/editorStore";
+import type { LocalProjectAssetEntry, PendingAiImageGeneration } from "@/stores/editorStore";
 
 type AiPanoramaResult = {
   imageUrl: string;
@@ -22,6 +26,7 @@ type Params = {
   prompt: string;
   isGenerating: boolean;
   isPromptActionPending: boolean;
+  appendPendingAiGeneration: (generation: PendingAiImageGeneration) => void;
   registerLocalProjectAsset: (asset: LocalProjectAssetEntry) => void;
   setAiPanoramaState: (payload: {
     isGenerating?: boolean;
@@ -126,6 +131,7 @@ export function useAiPanoramaComposer({
   prompt,
   isGenerating,
   isPromptActionPending,
+  appendPendingAiGeneration,
   registerLocalProjectAsset,
   setAiPanoramaState,
   t
@@ -155,6 +161,30 @@ export function useAiPanoramaComposer({
         file,
         kind: "environment_image",
         targetPath: "env:pano"
+      });
+      appendPendingAiGeneration({
+        id: createClientUuid("ai-panorama-generation"),
+        createdAt: new Date().toISOString(),
+        prompt: trimmedPrompt,
+        model: payload.model,
+        seed: null,
+        imageSize: AI_PANORAMA_IMAGE_SIZE_LABEL,
+        cfg: AI_PANORAMA_CFG,
+        inferenceSteps: AI_PANORAMA_INFERENCE_STEPS,
+        traceId: payload.traceId,
+        referenceImages: [],
+        results: [
+          {
+            id: createClientUuid("ai-panorama-result"),
+            sourceUrl: imported.sourceUrl,
+            fileName: file.name,
+            mimeType: file.type || AI_PANORAMA_OUTPUT_MIME_TYPE,
+            appliedMeshIds: []
+          }
+        ],
+        metadata: {
+          kind: "panorama"
+        }
       });
       setAiPanoramaState({
         isGenerating: false,

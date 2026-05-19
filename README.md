@@ -85,6 +85,7 @@ This is not just a text-to-image demo, and it is not a full desktop-grade DCC to
 - Automatically selects the scene when Panorama mode is active
 - Applies the generated panorama through the same scene environment path as top bar panorama import
 - Shows the generated panorama in the Scene property panel Panorama section
+- Adds generated panoramas to the project AI Assets dialog with a Panorama badge
 - Registers the generated JPEG as an `environment_image` so project save can persist it through `Vercel Blob`
 
 ### 6. Project Save / Load and Asset Persistence

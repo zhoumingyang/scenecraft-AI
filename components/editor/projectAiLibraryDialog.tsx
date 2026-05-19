@@ -273,6 +273,22 @@ export default function ProjectAiLibraryDialog({
                       >
                         {t("editor.project.aiPbrAtlas")}
                       </Typography>
+                    ) : item.metadata?.kind === "panorama" ? (
+                      <Typography
+                        sx={{
+                          alignSelf: "flex-start",
+                          borderRadius: 0.75,
+                          border: theme.sectionBorder,
+                          px: 0.6,
+                          py: 0.2,
+                          fontSize: 10,
+                          fontWeight: 700,
+                          color: theme.titleText,
+                          background: theme.itemBg
+                        }}
+                      >
+                        {t("editor.project.aiPanorama")}
+                      </Typography>
                     ) : null}
                     <Typography sx={{ fontSize: 11, color: theme.mutedText }}>
                       {new Date(item.createdAt).toLocaleString()}

@@ -350,6 +350,7 @@ If the task is about AI-generated panoramas:
 - inspect `render/editor/app.ts` for `importPanorama`
 - inspect `components/editor/topBar/` for the manual panorama import flow
 - keep the generated output as a `2048x1024` JPEG applied to scene `envConfig.panoUrl`
+- append generated panoramas to `pendingAiImageGenerations` with metadata kind `panorama` so they appear in AI Assets and persist with the project AI library
 - register generated panorama files as `environment_image` assets with target path `env:pano` so project save can persist them
 
 If the task is about project save/load or asset persistence:

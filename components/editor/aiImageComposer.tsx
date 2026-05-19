@@ -301,6 +301,7 @@ export default function AiImageComposer() {
     prompt: aiPanoramaPrompt,
     isGenerating: aiPanoramaIsGenerating,
     isPromptActionPending,
+    appendPendingAiGeneration,
     registerLocalProjectAsset,
     setAiPanoramaState,
     t
