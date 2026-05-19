@@ -23,6 +23,7 @@ import Ai3dIntentControls from "@/components/editor/aiComposer/ai3dIntentControl
 import Ai3dPreviewActions from "@/components/editor/aiComposer/ai3dPreviewActions";
 import { useAiImageComposer } from "@/components/editor/aiComposer/useAiImageComposer";
 import { useAiPbrTextureComposer } from "@/components/editor/aiComposer/useAiPbrTextureComposer";
+import { useAiPanoramaComposer } from "@/components/editor/aiComposer/useAiPanoramaComposer";
 import { useAi3dComposer } from "@/components/editor/aiComposer/useAi3dComposer";
 import { usePromptTransform } from "@/components/editor/aiComposer/usePromptTransform";
 import { useI18n } from "@/lib/i18n";
@@ -52,6 +53,7 @@ export default function AiImageComposer() {
   const aiTextureTarget = useEditorStore((state) => state.aiTexture.target);
   const aiPanoramaPrompt = useEditorStore((state) => state.aiPanorama.prompt);
   const aiPanoramaIsGenerating = useEditorStore((state) => state.aiPanorama.isGenerating);
+  const aiPanoramaErrorMessage = useEditorStore((state) => state.aiPanorama.errorMessage);
   const ai3dPrompt = useEditorStore((state) => state.ai3d.prompt);
   const ai3dIntentDraft = useEditorStore((state) => state.ai3d.intentDraft);
   const ai3dIsGenerating = useEditorStore((state) => state.ai3d.isGenerating);
@@ -78,6 +80,7 @@ export default function AiImageComposer() {
   const setAi3dState = useEditorStore((state) => state.setAi3dState);
   const setAiGeneratingState = useEditorStore((state) => state.setAiGeneratingState);
   const appendPendingAiGeneration = useEditorStore((state) => state.appendPendingAiGeneration);
+  const registerLocalProjectAsset = useEditorStore((state) => state.registerLocalProjectAsset);
   const theme = getEditorThemeTokens(editorThemeMode);
   const ai3d = useMemo(
     () => ({
@@ -112,6 +115,11 @@ export default function AiImageComposer() {
     if (!ai3dErrorMessage) return;
     setIsAi3dErrorToastOpen(true);
   }, [ai3dErrorMessage]);
+
+  useEffect(() => {
+    if (!aiPanoramaErrorMessage) return;
+    setIsAi3dErrorToastOpen(true);
+  }, [aiPanoramaErrorMessage]);
 
   const utilityIconButtonSx = useMemo(
     () =>
@@ -288,6 +296,16 @@ export default function AiImageComposer() {
     t
   });
 
+  const { handlePanoramaSubmit } = useAiPanoramaComposer({
+    app,
+    prompt: aiPanoramaPrompt,
+    isGenerating: aiPanoramaIsGenerating,
+    isPromptActionPending,
+    registerLocalProjectAsset,
+    setAiPanoramaState,
+    t
+  });
+
   const {
     isAi3dBusy,
     hasAi3dPreview,
@@ -323,6 +341,7 @@ export default function AiImageComposer() {
       }
 
       if (aiMode === "panorama") {
+        void handlePanoramaSubmit();
         return;
       }
 
@@ -538,7 +557,7 @@ export default function AiImageComposer() {
                     : aiMode === "texture"
                       ? aiTextureIsGenerating || isPromptActionPending || !aiTexturePrompt.trim()
                       : aiMode === "panorama"
-                        ? true
+                        ? aiPanoramaIsGenerating || isPromptActionPending || !aiPanoramaPrompt.trim()
                       : isAi3dBusy || !ai3dPrompt.trim()
                 }
                 onClick={() => {
@@ -551,6 +570,7 @@ export default function AiImageComposer() {
                     return;
                   }
                   if (aiMode === "panorama") {
+                    void handlePanoramaSubmit();
                     return;
                   }
                   void handleAi3dSubmit();
@@ -622,6 +642,21 @@ export default function AiImageComposer() {
           sx={{ width: "100%" }}
         >
           {ai3dErrorMessage}
+        </Alert>
+      </Snackbar>
+
+      <Snackbar
+        open={isAi3dErrorToastOpen && Boolean(aiPanoramaErrorMessage)}
+        autoHideDuration={4000}
+        onClose={() => setIsAi3dErrorToastOpen(false)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          severity="error"
+          onClose={() => setIsAi3dErrorToastOpen(false)}
+          sx={{ fontSize: 12 }}
+        >
+          {aiPanoramaErrorMessage}
         </Alert>
       </Snackbar>
     </Box>
