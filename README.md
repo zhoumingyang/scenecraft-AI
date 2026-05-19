@@ -81,6 +81,7 @@ This is not just a text-to-image demo, and it is not a full desktop-grade DCC to
 - Uses OpenRouter `openai/gpt-5.4-image-2` through the authenticated panorama API route
 - Builds a seamless equirectangular 360-degree environment prompt on the server
 - Requests the provider-supported `21:9` panorama ratio, then center-crops and normalizes the applied file to `2048x1024` JPEG in the browser
+- Leaves provider resolution at its default to reduce upstream timeouts; the editor owns the final applied image size
 - Automatically selects the scene when Panorama mode is active
 - Applies the generated panorama through the same scene environment path as top bar panorama import
 - Shows the generated panorama in the Scene property panel Panorama section

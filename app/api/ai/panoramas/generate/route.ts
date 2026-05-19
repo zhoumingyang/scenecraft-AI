@@ -48,7 +48,6 @@ export async function POST(request: Request) {
       model: AI_PANORAMA_MODEL_ID,
       prompt: buildPanoramaPrompt(body.prompt),
       imageAspectRatio: AI_PANORAMA_PROVIDER_ASPECT_RATIO,
-      imageResolution: "2K",
       cfg: AI_PANORAMA_CFG,
       inferenceSteps: AI_PANORAMA_INFERENCE_STEPS,
       referenceImages: []

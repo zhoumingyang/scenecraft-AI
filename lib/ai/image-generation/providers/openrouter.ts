@@ -70,10 +70,18 @@ export class OpenRouterImageGenerationProvider implements ImageGenerationProvide
       if (axios.isAxiosError<OpenRouterResponse>(error)) {
         const traceId =
           getResponseHeader(error.response?.headers, "x-request-id") ?? error.response?.data?.id ?? null;
-        const status = error.response?.status ?? "unknown";
+        const status = error.response?.status ?? null;
         const message =
           error.response?.data?.error?.message ||
-          `OpenRouter image request failed with status ${status}.`;
+          (status
+            ? `OpenRouter image request failed with status ${status}.`
+            : [
+                "OpenRouter image request failed before receiving a response.",
+                error.code ? `code: ${error.code}.` : null,
+                error.message ? `message: ${error.message}` : null
+              ]
+                .filter(Boolean)
+                .join(" "));
         throw new Error(traceId ? `${message} (trace: ${traceId})` : message);
       }
 
