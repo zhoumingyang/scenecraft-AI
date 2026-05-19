@@ -25,7 +25,9 @@ import { useAiImageComposer } from "@/components/editor/aiComposer/useAiImageCom
 import { useAi3dComposer } from "@/components/editor/aiComposer/useAi3dComposer";
 import { usePromptTransform } from "@/components/editor/aiComposer/usePromptTransform";
 import { useI18n } from "@/lib/i18n";
+import { GROUND_HELPER_NODE_ID } from "@/render/editor";
 import { useEditorStore } from "@/stores/editorStore";
+import type { AiMode, AiTextureTarget } from "@/stores/editorStore";
 
 export default function AiImageComposer() {
   const { t } = useI18n();
@@ -33,6 +35,8 @@ export default function AiImageComposer() {
   const app = useEditorStore((state) => state.app);
   const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
   const aiMode = useEditorStore((state) => state.aiMode);
+  const selectedEntityId = useEditorStore((state) => state.selectedEntityId);
+  const lastAiClearedEntityId = useEditorStore((state) => state.lastAiClearedEntityId);
   const imagePrompt = useEditorStore((state) => state.aiImage.prompt);
   const imageModel = useEditorStore((state) => state.aiImage.model);
   const imageSeed = useEditorStore((state) => state.aiImage.seed);
@@ -42,6 +46,7 @@ export default function AiImageComposer() {
   const imageReferenceImages = useEditorStore((state) => state.aiImage.referenceImages);
   const imageIsGenerating = useEditorStore((state) => state.aiImage.isGenerating);
   const isComposerOpen = useEditorStore((state) => state.aiImage.isComposerOpen);
+  const aiTexturePrompt = useEditorStore((state) => state.aiTexture.prompt);
   const ai3dPrompt = useEditorStore((state) => state.ai3d.prompt);
   const ai3dIntentDraft = useEditorStore((state) => state.ai3d.intentDraft);
   const ai3dIsGenerating = useEditorStore((state) => state.ai3d.isGenerating);
@@ -58,6 +63,9 @@ export default function AiImageComposer() {
   const setAiModel = useEditorStore((state) => state.setAiModel);
   const setAiComposerOpen = useEditorStore((state) => state.setAiComposerOpen);
   const setAiInspectorMode = useEditorStore((state) => state.setAiInspectorMode);
+  const setLastAiClearedEntityId = useEditorStore((state) => state.setLastAiClearedEntityId);
+  const setAiTexturePrompt = useEditorStore((state) => state.setAiTexturePrompt);
+  const setAiTextureState = useEditorStore((state) => state.setAiTextureState);
   const setAi3dPrompt = useEditorStore((state) => state.setAi3dPrompt);
   const setAi3dIntentDraft = useEditorStore((state) => state.setAi3dIntentDraft);
   const setAi3dState = useEditorStore((state) => state.setAi3dState);
@@ -116,15 +124,94 @@ export default function AiImageComposer() {
     [theme]
   );
 
-  const focusAiMode = () => {
-    setAiInspectorMode("ai");
+  const rememberAndClearSelection = () => {
+    const currentSelectedEntityId = app?.getSelectedEntityId() ?? selectedEntityId;
+    if (currentSelectedEntityId) {
+      setLastAiClearedEntityId(currentSelectedEntityId);
+    }
     app?.setSelectedEntity(null);
+  };
+
+  const resolveTextureTarget = (entityId: string | null): AiTextureTarget | null => {
+    const project = app?.projectModel;
+    if (!project || !entityId) return null;
+
+    if (entityId === GROUND_HELPER_NODE_ID) {
+      if (!project.envConfig.ground.visible || project.envConfig.ground.mode !== "plane") {
+        return null;
+      }
+
+      return {
+        kind: "ground",
+        label: t("editor.view.gridHelper")
+      };
+    }
+
+    const record = project.getEntityById(entityId);
+    if (!record || record.kind !== "mesh") {
+      return null;
+    }
+
+    return {
+      kind: "mesh",
+      id: record.item.id,
+      label: record.item.label || t("editor.sceneTree.meshes")
+    };
+  };
+
+  const focusAiMode = () => {
+    setAiMode("image");
+    setAiInspectorMode("ai");
+    rememberAndClearSelection();
   };
 
   const focusAi3dMode = () => {
     setAiMode("3d");
     setAiInspectorMode("entity");
+    rememberAndClearSelection();
   };
+
+  const focusTextureMode = () => {
+    const rememberedTarget = resolveTextureTarget(lastAiClearedEntityId);
+    const currentTarget = resolveTextureTarget(app?.getSelectedEntityId() ?? selectedEntityId);
+    const nextTarget = rememberedTarget ?? currentTarget;
+
+    setAiMode("texture");
+    setAiInspectorMode("entity");
+    setAiTextureState({
+      target: nextTarget,
+      errorMessage: null
+    });
+
+    if (nextTarget?.kind === "mesh" && nextTarget.id) {
+      app?.setSelectedEntity(nextTarget.id);
+      return;
+    }
+
+    if (nextTarget?.kind === "ground") {
+      app?.setSelectedEntity(GROUND_HELPER_NODE_ID);
+      return;
+    }
+
+    app?.setSelectedEntity(null);
+  };
+
+  const handleModeChange = (mode: AiMode) => {
+    if (mode === "image") {
+      focusAiMode();
+      return;
+    }
+
+    if (mode === "texture") {
+      focusTextureMode();
+      return;
+    }
+
+    focusAi3dMode();
+  };
+
+  const activePrompt =
+    aiMode === "image" ? imagePrompt : aiMode === "texture" ? aiTexturePrompt : ai3dPrompt;
 
   const {
     activePromptAction,
@@ -184,6 +271,10 @@ export default function AiImageComposer() {
 
       if (aiMode === "image") {
         void handleSubmit();
+        return;
+      }
+
+      if (aiMode === "texture") {
         return;
       }
 
@@ -279,15 +370,29 @@ export default function AiImageComposer() {
         >
           <Stack spacing={0.5} sx={{ p: 1.2 }}>
             <PromptInput
-              value={aiMode === "image" ? imagePrompt : ai3dPrompt}
+              value={activePrompt}
               placeholder={
-                aiMode === "image" ? t("editor.ai.promptPlaceholder") : t("editor.ai3d.promptPlaceholder")
+                aiMode === "image"
+                  ? t("editor.ai.promptPlaceholder")
+                  : aiMode === "texture"
+                    ? t("editor.aiPbr.promptPlaceholder")
+                    : t("editor.ai3d.promptPlaceholder")
               }
               theme={theme}
-              onFocus={aiMode === "image" ? focusAiMode : focusAi3dMode}
+              onFocus={
+                aiMode === "image"
+                  ? focusAiMode
+                  : aiMode === "texture"
+                    ? focusTextureMode
+                    : focusAi3dMode
+              }
               onChange={(value) => {
                 if (aiMode === "image") {
                   setAiPrompt(value);
+                  return;
+                }
+                if (aiMode === "texture") {
+                  setAiTexturePrompt(value);
                   return;
                 }
                 setAi3dPrompt(value);
@@ -310,14 +415,7 @@ export default function AiImageComposer() {
                   aiMode={aiMode}
                   theme={theme}
                   t={t}
-                  onChange={(mode) => {
-                    if (mode === "image") {
-                      setAiMode("image");
-                      focusAiMode();
-                      return;
-                    }
-                    focusAi3dMode();
-                  }}
+                  onChange={handleModeChange}
                 />
               </Stack>
 
@@ -335,7 +433,7 @@ export default function AiImageComposer() {
                   handlePromptTransform={handlePromptTransform}
                   t={t}
                 />
-              ) : (
+              ) : aiMode === "3d" ? (
                 <Ai3dToolbar
                   theme={theme}
                   utilityIconButtonSx={utilityIconButtonSx}
@@ -348,18 +446,23 @@ export default function AiImageComposer() {
                   handlePromptTransform={handlePromptTransform}
                   t={t}
                 />
-              )}
+              ) : null}
 
               <IconButton
                 size="small"
                 disabled={
                   aiMode === "image"
                     ? imageIsGenerating || isPromptActionPending || !imagePrompt.trim()
-                    : isAi3dBusy || !ai3dPrompt.trim()
+                    : aiMode === "texture"
+                      ? true
+                      : isAi3dBusy || !ai3dPrompt.trim()
                 }
                 onClick={() => {
                   if (aiMode === "image") {
                     void handleSubmit();
+                    return;
+                  }
+                  if (aiMode === "texture") {
                     return;
                   }
                   void handleAi3dSubmit();
@@ -370,6 +473,8 @@ export default function AiImageComposer() {
                   background:
                     (aiMode === "image"
                       ? imagePrompt.trim() && !imageIsGenerating && !isPromptActionPending
+                      : aiMode === "texture"
+                        ? activePrompt.trim()
                       : ai3dPrompt.trim() && !isAi3dBusy)
                       ? editorThemeMode === "dark"
                         ? "linear-gradient(135deg, #2f6df4, #63a4ff)"
@@ -378,7 +483,7 @@ export default function AiImageComposer() {
                   border: theme.sectionBorder
                 }}
               >
-                {(aiMode === "image" ? imageIsGenerating : isAi3dBusy) ? (
+                {(aiMode === "image" ? imageIsGenerating : aiMode === "texture" ? false : isAi3dBusy) ? (
                   <CircularProgress size={16} sx={{ color: theme.pillText }} />
                 ) : (
                   <SendRoundedIcon sx={{ fontSize: 18 }} />
