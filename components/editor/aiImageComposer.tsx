@@ -22,6 +22,7 @@ import Ai3dToolbar from "@/components/editor/aiComposer/ai3dToolbar";
 import Ai3dIntentControls from "@/components/editor/aiComposer/ai3dIntentControls";
 import Ai3dPreviewActions from "@/components/editor/aiComposer/ai3dPreviewActions";
 import { useAiImageComposer } from "@/components/editor/aiComposer/useAiImageComposer";
+import { useAiPbrTextureComposer } from "@/components/editor/aiComposer/useAiPbrTextureComposer";
 import { useAi3dComposer } from "@/components/editor/aiComposer/useAi3dComposer";
 import { usePromptTransform } from "@/components/editor/aiComposer/usePromptTransform";
 import { useI18n } from "@/lib/i18n";
@@ -47,6 +48,8 @@ export default function AiImageComposer() {
   const imageIsGenerating = useEditorStore((state) => state.aiImage.isGenerating);
   const isComposerOpen = useEditorStore((state) => state.aiImage.isComposerOpen);
   const aiTexturePrompt = useEditorStore((state) => state.aiTexture.prompt);
+  const aiTextureIsGenerating = useEditorStore((state) => state.aiTexture.isGenerating);
+  const aiTextureTarget = useEditorStore((state) => state.aiTexture.target);
   const ai3dPrompt = useEditorStore((state) => state.ai3d.prompt);
   const ai3dIntentDraft = useEditorStore((state) => state.ai3d.intentDraft);
   const ai3dIsGenerating = useEditorStore((state) => state.ai3d.isGenerating);
@@ -245,6 +248,17 @@ export default function AiImageComposer() {
     t
   });
 
+  const { handleTextureSubmit } = useAiPbrTextureComposer({
+    app,
+    prompt: aiTexturePrompt,
+    target: aiTextureTarget,
+    isGenerating: aiTextureIsGenerating,
+    isPromptActionPending,
+    appendPendingAiGeneration,
+    setAiTextureState,
+    t
+  });
+
   const {
     isAi3dBusy,
     hasAi3dPreview,
@@ -275,6 +289,7 @@ export default function AiImageComposer() {
       }
 
       if (aiMode === "texture") {
+        void handleTextureSubmit();
         return;
       }
 
@@ -454,7 +469,7 @@ export default function AiImageComposer() {
                   aiMode === "image"
                     ? imageIsGenerating || isPromptActionPending || !imagePrompt.trim()
                     : aiMode === "texture"
-                      ? true
+                      ? aiTextureIsGenerating || isPromptActionPending || !aiTexturePrompt.trim()
                       : isAi3dBusy || !ai3dPrompt.trim()
                 }
                 onClick={() => {
@@ -463,6 +478,7 @@ export default function AiImageComposer() {
                     return;
                   }
                   if (aiMode === "texture") {
+                    void handleTextureSubmit();
                     return;
                   }
                   void handleAi3dSubmit();
@@ -474,7 +490,7 @@ export default function AiImageComposer() {
                     (aiMode === "image"
                       ? imagePrompt.trim() && !imageIsGenerating && !isPromptActionPending
                       : aiMode === "texture"
-                        ? activePrompt.trim()
+                        ? activePrompt.trim() && !aiTextureIsGenerating && !isPromptActionPending
                       : ai3dPrompt.trim() && !isAi3dBusy)
                       ? editorThemeMode === "dark"
                         ? "linear-gradient(135deg, #2f6df4, #63a4ff)"
@@ -483,7 +499,11 @@ export default function AiImageComposer() {
                   border: theme.sectionBorder
                 }}
               >
-                {(aiMode === "image" ? imageIsGenerating : aiMode === "texture" ? false : isAi3dBusy) ? (
+                {(aiMode === "image"
+                  ? imageIsGenerating
+                  : aiMode === "texture"
+                    ? aiTextureIsGenerating
+                    : isAi3dBusy) ? (
                   <CircularProgress size={16} sx={{ color: theme.pillText }} />
                 ) : (
                   <SendRoundedIcon sx={{ fontSize: 18 }} />
