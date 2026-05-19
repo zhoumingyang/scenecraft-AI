@@ -2,7 +2,6 @@
 
 import { ChangeEvent } from "react";
 import { Box, Button, Slider, Stack, Typography } from "@mui/material";
-import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import PropertyPanelSection from "@/components/common/propertyPanelSection";
 import { ColorField } from "@/components/common/propertyFieldControls";
 import { getEditorThemeTokens } from "@/components/editor/theme";
@@ -124,7 +123,6 @@ type MeshAppearanceSectionProps = {
   onMaterialPatch?: (patch: MeshMaterialPatch) => void;
   onTextureConfigOpen: (key: TextureFieldKey) => void;
   onMaterialLibraryOpen: () => void;
-  onAiPbrTextureOpen: () => void;
   materialLibraryEnabled: boolean;
 };
 
@@ -134,7 +132,6 @@ export function MeshAppearanceSection({
   onMaterialPatch,
   onTextureConfigOpen,
   onMaterialLibraryOpen,
-  onAiPbrTextureOpen,
   materialLibraryEnabled
 }: MeshAppearanceSectionProps) {
   const { t } = useI18n();
@@ -203,24 +200,6 @@ export function MeshAppearanceSection({
             {t("editor.properties.materialLibrary")}
           </Button>
         ) : null}
-
-        <Button
-          size="small"
-          color="inherit"
-          startIcon={<AutoAwesomeRoundedIcon sx={{ fontSize: 15 }} />}
-          onClick={onAiPbrTextureOpen}
-          sx={{
-            justifyContent: "center",
-            minHeight: 32,
-            borderRadius: 1,
-            border: theme.sectionBorder,
-            background: theme.inputBg,
-            color: theme.pillText,
-            textTransform: "none"
-          }}
-        >
-          {t("editor.aiPbr.button")}
-        </Button>
 
         <Stack direction="row" spacing={0.8} alignItems="center">
           <Typography sx={{ width: 78, fontSize: 11, color: theme.text }}>
