@@ -11,6 +11,8 @@ export type ImageGenerationRequest = {
   prompt: string;
   seed?: number;
   imageSize?: ImageGenerationImageSize;
+  imageAspectRatio?: string;
+  imageResolution?: "1K" | "2K" | "4K";
   cfg: number;
   inferenceSteps: number;
   referenceImages?: string[];

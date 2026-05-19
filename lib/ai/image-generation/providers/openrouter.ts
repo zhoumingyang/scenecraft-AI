@@ -102,10 +102,15 @@ export class OpenRouterImageGenerationProvider implements ImageGenerationProvide
       modalities: modelConfig.outputModalities,
       stream: false,
       ...(typeof request.seed === "number" ? { seed: request.seed } : {}),
-      ...(request.imageSize && modelConfig.supportsImageSize
+      ...((request.imageSize || request.imageAspectRatio || request.imageResolution) &&
+      modelConfig.supportsImageSize
         ? {
             image_config: {
-              aspect_ratio: imageSizeToAspectRatio(request.imageSize)
+              ...(request.imageSize
+                ? { aspect_ratio: imageSizeToAspectRatio(request.imageSize) }
+                : {}),
+              ...(request.imageAspectRatio ? { aspect_ratio: request.imageAspectRatio } : {}),
+              ...(request.imageResolution ? { image_size: request.imageResolution } : {})
             }
           }
         : {})
