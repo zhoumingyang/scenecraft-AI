@@ -80,7 +80,7 @@ This is not just a text-to-image demo, and it is not a full desktop-grade DCC to
 - Runs from the AI chat Panorama mode with prompt enhancement and Chinese-to-English prompt translation
 - Uses OpenRouter `openai/gpt-5.4-image-2` through the authenticated panorama API route
 - Builds a seamless equirectangular 360-degree environment prompt on the server
-- Requests a 2:1 panorama and normalizes the applied file to `2048x1024` JPEG in the browser
+- Requests the closest provider-supported panorama ratio and normalizes the applied file to `2048x1024` JPEG in the browser
 - Automatically selects the scene when Panorama mode is active
 - Applies the generated panorama through the same scene environment path as top bar panorama import
 - Shows the generated panorama in the Scene property panel Panorama section

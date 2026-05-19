@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import {
-  AI_PANORAMA_ASPECT_RATIO,
   AI_PANORAMA_CFG,
   AI_PANORAMA_HEIGHT,
   AI_PANORAMA_INFERENCE_STEPS,
   AI_PANORAMA_MODEL_ID,
   AI_PANORAMA_OUTPUT_MIME_TYPE,
+  AI_PANORAMA_PROVIDER_ASPECT_RATIO,
   AI_PANORAMA_WIDTH
 } from "@/lib/ai/panorama/constants";
 import { getImageGenerationModelConfig } from "@/lib/ai/image-generation/models";
@@ -46,7 +46,7 @@ export async function POST(request: Request) {
       providerId: modelConfig.providerId,
       model: AI_PANORAMA_MODEL_ID,
       prompt: buildPanoramaPrompt(body.prompt),
-      imageAspectRatio: AI_PANORAMA_ASPECT_RATIO,
+      imageAspectRatio: AI_PANORAMA_PROVIDER_ASPECT_RATIO,
       imageResolution: "2K",
       cfg: AI_PANORAMA_CFG,
       inferenceSteps: AI_PANORAMA_INFERENCE_STEPS,
