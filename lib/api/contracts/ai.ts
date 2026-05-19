@@ -17,6 +17,7 @@ import {
   validateAi3DPlanDiagnostics
 } from "@/lib/ai/ai3d/intent";
 import type { ImageGenerationResult } from "@/lib/ai/image-generation/types";
+import type { AI_PANORAMA_MODEL_ID } from "@/lib/ai/panorama/constants";
 import { AI3D_TOOL_NAME } from "@/render/editor/ai3d/constants/plan";
 import type { Ai3DPlan } from "@/render/editor";
 import { validateAi3DPlan } from "@/render/editor/ai3d/plan";
@@ -202,6 +203,24 @@ export type GenerateAiPbrTextureResponse = {
   seed: number | null;
   traceId: string | null;
   layoutVersion: 1;
+};
+
+export const generateAiPanoramaRequestSchema = z
+  .object({
+    prompt: promptSchema
+  })
+  .strict();
+
+export type GenerateAiPanoramaRequest = z.infer<typeof generateAiPanoramaRequestSchema>;
+
+export type GenerateAiPanoramaResponse = {
+  panoramaImageUrl: string;
+  model: typeof AI_PANORAMA_MODEL_ID;
+  prompt: string;
+  width: number;
+  height: number;
+  mimeType: string;
+  traceId: string | null;
 };
 
 const promptTransformModeSchema = z
