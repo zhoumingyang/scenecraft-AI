@@ -1,8 +1,8 @@
 # Scenecraft AI
 
-Scenecraft AI is an AI-powered 3D editor for scene creation workflows. It combines interactive 3D scene editing with AI image generation, AI-assisted low-poly 3D sketching, AI-generated PBR texture atlases, prompt enhancement, and material application in a single workspace, helping users move from an idea to an editable scene draft much faster.
+Scenecraft AI is an AI-powered 3D editor for scene creation workflows. It combines interactive 3D scene editing with AI image generation, AI-generated panorama environments, AI-assisted low-poly 3D sketching, AI-generated PBR texture atlases, prompt enhancement, and material application in a single workspace, helping users move from an idea to an editable scene draft much faster.
 
-The current version is built with `Next.js`, `React 19`, `Three.js`, `Zustand`, `Drizzle ORM`, and `better-auth`. It already includes a browser-based 3D editor shell, a protected editor workspace, an AI image workflow, an AI PBR texture atlas workflow, and an AI 3D preview-and-optimization pipeline focused on stylized low-poly output.
+The current version is built with `Next.js`, `React 19`, `Three.js`, `Zustand`, `Drizzle ORM`, and `better-auth`. It already includes a browser-based 3D editor shell, a protected editor workspace, AI image, AI PBR texture atlas, AI panorama, and AI 3D preview-and-optimization workflows.
 
 It also now includes a first end-to-end persistence loop for authenticated users:
 
@@ -19,6 +19,7 @@ This is not just a text-to-image demo, and it is not a full desktop-grade DCC to
 - Improve prompts with AI
 - Generate reference images or textures inside the editor
 - Generate PBR texture atlases and apply them to mesh or ground materials
+- Generate 360 panorama backgrounds and apply them to the scene environment
 - Apply generated results directly to mesh materials
 - Create previewable, editable low-poly 3D sketches from natural language
 - Continue refining the scene with lights, cameras, environment settings, post-processing, and manual editing
@@ -39,6 +40,7 @@ This is not just a text-to-image demo, and it is not a full desktop-grade DCC to
 ### 2. Scene and Visual Controls
 
 - Panorama and HDR environment import
+- AI-generated 360 panorama environments applied directly to the selected scene
 - Poly Haven HDRI browsing from the editor top bar for authenticated users
 - Poly Haven texture browsing from the mesh material panel for authenticated users
 - Tone mapping and exposure controls
@@ -58,8 +60,9 @@ This is not just a text-to-image demo, and it is not a full desktop-grade DCC to
 ### 4. AI PBR Texture Atlas Workflow
 
 - Generates a single 3x2 PBR texture atlas with OpenRouter `openai/gpt-5.4-image-2`
+- Runs from the AI chat Texture mode and supports prompt enhancement and Chinese-to-English prompt translation
 - Supports selected mesh materials and the ground plane material
-- Applies generated atlases immediately from the material Appearance panel
+- Applies generated atlases immediately to the selected mesh or ground material
 - Reuses the existing PBR material texture fields:
   - Diffuse Map
   - Metalness Map
@@ -72,7 +75,18 @@ This is not just a text-to-image demo, and it is not a full desktop-grade DCC to
 - Saves generated PBR atlases into the project AI asset library
 - Allows saved PBR atlas assets to be reused as a full material atlas on another mesh or ground plane
 
-### 5. Project Save / Load and Asset Persistence
+### 5. AI Panorama Workflow
+
+- Runs from the AI chat Panorama mode with prompt enhancement and Chinese-to-English prompt translation
+- Uses OpenRouter `openai/gpt-5.4-image-2` through the authenticated panorama API route
+- Builds a seamless equirectangular 360-degree environment prompt on the server
+- Requests a 2:1 panorama and normalizes the applied file to `2048x1024` JPEG in the browser
+- Automatically selects the scene when Panorama mode is active
+- Applies the generated panorama through the same scene environment path as top bar panorama import
+- Shows the generated panorama in the Scene property panel Panorama section
+- Registers the generated JPEG as an `environment_image` so project save can persist it through `Vercel Blob`
+
+### 6. Project Save / Load and Asset Persistence
 
 - The editor `Save` action now creates and updates real user-owned projects
 - First save prompts for base metadata such as:
@@ -87,9 +101,9 @@ This is not just a text-to-image demo, and it is not a full desktop-grade DCC to
   - environment image URLs
   - uploaded texture URLs
   - project AI image history
-- Imported model files, texture images, environment images, and generated thumbnails are stored in `Vercel Blob`
+- Imported model files, texture images, environment images, AI-generated panoramas, and generated thumbnails are stored in `Vercel Blob`
 
-### 6. AI 3D Sketch Generation and Optimization
+### 7. AI 3D Sketch Generation and Optimization
 
 This is the most distinctive part of the project right now.
 
@@ -132,6 +146,7 @@ This approach makes the result:
 - Object storage: `Vercel Blob`
 - AI integration: provider-based image generation, prompt transformation, and AI 3D planning APIs
 - PBR texture generation: OpenRouter `openai/gpt-5.4-image-2`
+- Panorama generation: OpenRouter `openai/gpt-5.4-image-2`
 
 ## Project Structure
 
@@ -140,7 +155,7 @@ app/                    Next.js App Router pages and API routes
 components/             Home, auth, and editor UI components
 frontend/api/           Browser-side API wrappers for projects, AI, assets, and external assets
 render/editor/          Editor core: runtime, session, models, commands
-lib/ai/                 AI modules for images, PBR textures, 3D planning, prompt transforms, providers
+lib/ai/                 AI modules for images, PBR textures, panoramas, 3D planning, prompt transforms, providers
 lib/externalAssets/     Poly Haven provider integration, contracts, and source metadata helpers
 lib/server/             Auth/session, DB guards, asset config, and project persistence services
 stores/                 Zustand state stores
@@ -174,7 +189,7 @@ Recommended minimum variables:
 
 - `BETTER_AUTH_SECRET`
 - `BETTER_AUTH_URL`
-- `OPENROUTER_API_KEY` required for OpenRouter-backed AI 3D and AI PBR texture generation
+- `OPENROUTER_API_KEY` required for OpenRouter-backed AI 3D, AI PBR texture, AI panorama, and prompt transformation flows
 - `SILICONFLOW_API_KEY` if you want to enable that provider
 - `DATABASE_URL` required if you want project save/load and persistent auth
 - `BLOB_READ_WRITE_TOKEN` required if you want model / texture / thumbnail uploads and project save to succeed
@@ -266,6 +281,7 @@ This token is required for:
 - imported models
 - uploaded textures
 - environment images
+- AI-generated panorama environment images
 - saved AI image resources
 - saved AI PBR texture atlases
 
@@ -298,6 +314,7 @@ The project now has a usable authenticated persistence path, but it is still evo
 - Existing schema changes require `npm run db:push` or equivalent migration application before testing against a fresh database
 - The current AI 3D flow is aimed at low-poly sketching and structural previews, not production-grade high-resolution mesh generation
 - AI PBR texture generation uses a single atlas image and existing material texture UV transforms; it does not currently split maps into six separate image files
+- AI panorama generation applies a generated `2048x1024` JPEG as the scene environment; it is persisted as an environment image when the project is saved
 - If `DATABASE_URL` is missing in local development, auth falls back to in-memory mode and will not persist after restart
 - If `BLOB_READ_WRITE_TOKEN` is missing, editor save cannot persist binary assets and will fail clearly
 
@@ -308,7 +325,8 @@ The project now has a usable authenticated persistence path, but it is still evo
 - Low-poly character, prop, and icon sketch generation
 - Experiments that connect AI image generation with interactive material editing
 - Experiments with AI-generated PBR material atlases for editable browser scenes
+- Experiments with AI-generated panorama environments for browser-based scene lighting and backgrounds
 
 ## License
 
-Released under the [MIT License](/Users/mingyoungzhou/code/self/scenecraft-AI/LICENSE).
+Released under the [MIT License](LICENSE).

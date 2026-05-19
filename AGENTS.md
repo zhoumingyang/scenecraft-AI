@@ -9,10 +9,11 @@ Scenecraft AI is an AI-assisted browser-based 3D scene editor built on Next.js. 
 - interactive 3D scene editing
 - AI image generation and prompt transformation
 - AI PBR texture atlas generation and material application
+- AI panorama generation and scene environment application
 - low-poly AI 3D sketch planning and optimization
 - authentication and database-backed user flows
 - authenticated project save/load with persisted scene snapshots
-- asset persistence for models, textures, environment images, thumbnails, and saved AI image resources
+- asset persistence for models, textures, environment images, AI-generated panoramas, thumbnails, and saved AI image resources
 
 This is not a simple CRUD app. Changes often affect editor runtime behavior, scene data flow, AI request contracts, or auth boundaries.
 
@@ -100,8 +101,9 @@ Next.js App Router entrypoints and API routes.
 - `app/home/` contains home page routes
 - `app/editor/` contains the protected editor route
 - `app/api/auth/` contains auth route handlers
-- `app/api/ai/` contains AI API routes for prompt transformation, image generation, and 3D generation
+- `app/api/ai/` contains AI API routes for prompt transformation, image generation, panorama generation, and 3D generation
 - `app/api/ai/textures/pbr/` contains the authenticated AI PBR texture atlas generation route
+- `app/api/ai/panoramas/` contains the authenticated AI panorama generation route
 - `app/api/projects/` contains project list/create/read/update handlers
 - `app/api/assets/` contains asset upload preparation handlers
 - `app/api/polyhaven/` contains authenticated external asset browsing routes for HDRIs and textures
@@ -113,7 +115,8 @@ Use this area when changing route-level behavior, request/response handling, or 
 React UI components for auth, home, and editor surfaces.
 
 - `components/editor/` contains most editor-facing UI panels and controls
-- `components/editor/aiPbrTextureGenerateDialog.tsx` contains the mesh/ground AI PBR texture generation dialog
+- `components/editor/aiImageComposer.tsx` contains the AI chat composer shell and coordinates Image, Texture, Panorama, and 3D modes
+- `components/editor/aiComposer/` contains AI chat mode controls and mode-specific hooks, including `useAiPbrTextureComposer.ts` and `useAiPanoramaComposer.ts`
 - `components/editor/topBar.tsx` is now a thin composition layer for the top bar UI
 - `components/editor/topBar/` contains top bar hooks, configuration, and save/load orchestration helpers
 - `components/editor/externalAssets/` contains the external asset browser detail panels and browser hook
@@ -127,7 +130,7 @@ Browser-side API clients and request helpers.
 
 - `frontend/api/projects.ts` wraps project list/load/save/delete calls
 - `frontend/api/assets.ts` wraps prepared asset upload flows
-- `frontend/api/ai.ts` wraps AI image / prompt / AI PBR texture / 3D generation requests
+- `frontend/api/ai.ts` wraps AI image / prompt / AI PBR texture / AI panorama / 3D generation requests
 - `frontend/api/externalAssets.ts` wraps Poly Haven list/detail/category lookups
 
 Use this area when changing browser request behavior or updating how UI code talks to backend routes.
@@ -159,6 +162,7 @@ Includes:
 - prompt transformation
 - image generation provider registry and provider implementations
 - PBR texture atlas generation prompt helpers
+- panorama generation constants and server prompt routing
 - AI 3D planning pipeline
 - OpenRouter-related provider code
 - validation, parsing, diagnostics, rules, templates, and workflow code
@@ -173,6 +177,15 @@ Editor material helpers live here.
 - The AI PBR texture flow must continue to reuse existing `TextureSchema` fields rather than adding a separate atlas material schema
 
 Keep atlas offsets, repeat values, and material texture field names aligned with `MeshAppearanceSection`, project persistence, and `TextureConfigDialog`.
+
+### `lib/ai/panorama/`
+
+AI panorama generation constants live here.
+
+- `lib/ai/panorama/constants.ts` defines the OpenRouter model, fixed `2048x1024` output target, JPEG output metadata, and request tuning values
+- The panorama flow should continue to produce a 2:1 scene environment image and apply it through the same scene environment path as manual panorama import
+
+Keep these values aligned with `app/api/ai/panoramas/generate/route.ts`, `components/editor/aiComposer/useAiPanoramaComposer.ts`, scene property panel preview behavior, and project asset persistence.
 
 ### `lib/externalAssets/`
 
@@ -319,10 +332,24 @@ If the task is about AI-generated PBR textures:
 - inspect `app/api/ai/textures/pbr/`
 - inspect `lib/ai/pbr-texture/`
 - inspect `render/editor/materials/pbrAtlas.ts`
-- inspect `components/editor/aiPbrTextureGenerateDialog.tsx`
+- inspect `components/editor/aiComposer/useAiPbrTextureComposer.ts`
+- inspect `components/editor/aiImageComposer.tsx`
 - inspect `components/editor/propertyPanelSections/meshAppearanceSection.tsx`
+- inspect `components/editor/propertyPanel.tsx`
 - inspect `components/editor/projectAiLibraryDialog.tsx`
 - preserve the single-atlas, six-`TextureSchema` design unless the task explicitly asks for a schema migration
+
+If the task is about AI-generated panoramas:
+
+- inspect `app/api/ai/panoramas/`
+- inspect `lib/ai/panorama/`
+- inspect `components/editor/aiComposer/useAiPanoramaComposer.ts`
+- inspect `components/editor/aiImageComposer.tsx`
+- inspect `components/editor/propertyPanelSections/sceneSettingsSection.tsx`
+- inspect `render/editor/app.ts` for `importPanorama`
+- inspect `components/editor/topBar/` for the manual panorama import flow
+- keep the generated output as a `2048x1024` JPEG applied to scene `envConfig.panoUrl`
+- register generated panorama files as `environment_image` assets with target path `env:pano` so project save can persist them
 
 If the task is about project save/load or asset persistence:
 
@@ -367,6 +394,7 @@ If the task is about scene/project data:
 - Do not bypass validation for AI request input.
 - Do not store temporary `blob:` URLs in persisted save payloads if the task is meant to preserve assets across reloads.
 - Do not replace the AI PBR atlas flow with six independent texture files unless the task explicitly asks for that migration.
+- Do not turn AI panorama output into a separate scene schema; it should continue to use the existing scene environment panorama fields and asset persistence path.
 - Do not strip persisted `externalSource` metadata from HDRI or texture references if the task touches external asset flows.
 
 ## Good Final Handoff
