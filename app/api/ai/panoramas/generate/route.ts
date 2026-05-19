@@ -26,7 +26,8 @@ function buildPanoramaPrompt(prompt: string) {
   return [
     "Create a seamless equirectangular 360-degree panorama environment map for a 3D scene.",
     "The image must read as a complete horizon-wrapped scene with no borders, text, UI, watermark, or visible frame.",
-    "Use a 2:1 panorama composition suitable for a scene background and environment lighting.",
+    "Use an ultra-wide panorama composition suitable for a scene background and environment lighting.",
+    "Keep the full 360-degree horizon and important scene content inside a centered 2:1 safe area because the final applied environment will be center-cropped to 2048x1024.",
     `User prompt: ${prompt}`
   ].join("\n");
 }

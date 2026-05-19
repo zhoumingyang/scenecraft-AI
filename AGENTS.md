@@ -182,8 +182,8 @@ Keep atlas offsets, repeat values, and material texture field names aligned with
 
 AI panorama generation constants live here.
 
-- `lib/ai/panorama/constants.ts` defines the OpenRouter model, provider-supported request ratio, fixed `2048x1024` output target, JPEG output metadata, and request tuning values
-- The panorama flow should continue to produce a 2:1 scene environment image and apply it through the same scene environment path as manual panorama import
+- `lib/ai/panorama/constants.ts` defines the OpenRouter model, provider-supported `21:9` request ratio, fixed `2048x1024` output target, JPEG output metadata, and request tuning values
+- The panorama flow should request a provider-supported ultra-wide image, center-crop it to a 2:1 scene environment image, and apply it through the same scene environment path as manual panorama import
 
 Keep these values aligned with `app/api/ai/panoramas/generate/route.ts`, `components/editor/aiComposer/useAiPanoramaComposer.ts`, scene property panel preview behavior, and project asset persistence.
 

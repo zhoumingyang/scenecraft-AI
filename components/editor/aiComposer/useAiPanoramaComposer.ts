@@ -31,6 +31,8 @@ type Params = {
   t: (key: any, params?: Record<string, string | number>) => string;
 };
 
+const PANORAMA_TARGET_ASPECT_RATIO = AI_PANORAMA_WIDTH / AI_PANORAMA_HEIGHT;
+
 async function sourceUrlToBlob(sourceUrl: string) {
   const parsedUrl = URL.canParse(sourceUrl) ? new URL(sourceUrl) : null;
 
@@ -71,6 +73,17 @@ async function loadImageElement(blob: Blob) {
 async function createPanoramaJpegFile(sourceUrl: string) {
   const sourceBlob = await sourceUrlToBlob(sourceUrl);
   const image = await loadImageElement(sourceBlob);
+  const sourceAspectRatio = image.naturalWidth / image.naturalHeight;
+  const cropWidth =
+    sourceAspectRatio > PANORAMA_TARGET_ASPECT_RATIO
+      ? image.naturalHeight * PANORAMA_TARGET_ASPECT_RATIO
+      : image.naturalWidth;
+  const cropHeight =
+    sourceAspectRatio > PANORAMA_TARGET_ASPECT_RATIO
+      ? image.naturalHeight
+      : image.naturalWidth / PANORAMA_TARGET_ASPECT_RATIO;
+  const cropX = (image.naturalWidth - cropWidth) / 2;
+  const cropY = (image.naturalHeight - cropHeight) / 2;
   const canvas = document.createElement("canvas");
   canvas.width = AI_PANORAMA_WIDTH;
   canvas.height = AI_PANORAMA_HEIGHT;
@@ -80,7 +93,17 @@ async function createPanoramaJpegFile(sourceUrl: string) {
     throw new Error("Canvas 2D context is unavailable.");
   }
 
-  context.drawImage(image, 0, 0, AI_PANORAMA_WIDTH, AI_PANORAMA_HEIGHT);
+  context.drawImage(
+    image,
+    cropX,
+    cropY,
+    cropWidth,
+    cropHeight,
+    0,
+    0,
+    AI_PANORAMA_WIDTH,
+    AI_PANORAMA_HEIGHT
+  );
 
   const jpegBlob = await new Promise<Blob>((resolve, reject) => {
     canvas.toBlob((blob) => {
