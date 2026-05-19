@@ -223,10 +223,14 @@ export default function AiImageComposer() {
   } = usePromptTransform({
     aiMode,
     prompt: imagePrompt,
+    aiTexturePrompt,
     ai3dPrompt,
     isImageBusy: imageIsGenerating,
+    isTextureBusy: aiTextureIsGenerating,
     isAi3dBusy: ai3dIsGenerating || ai3dIsOptimizing,
     setAiPrompt,
+    setAiTexturePrompt,
+    setAiTextureState,
     setAi3dPrompt,
     setAiGeneratingState,
     setAi3dState,
@@ -448,7 +452,20 @@ export default function AiImageComposer() {
                   handlePromptTransform={handlePromptTransform}
                   t={t}
                 />
-              ) : aiMode === "3d" ? (
+              ) : aiMode === "texture" ? (
+                <Ai3dToolbar
+                  theme={theme}
+                  utilityIconButtonSx={utilityIconButtonSx}
+                  isAi3dBusy={aiTextureIsGenerating}
+                  isPromptActionPending={isPromptActionPending}
+                  prompt={aiTexturePrompt}
+                  isGenerating={aiTextureIsGenerating}
+                  isOptimizing={false}
+                  activePromptAction={activePromptAction}
+                  handlePromptTransform={handlePromptTransform}
+                  t={t}
+                />
+              ) : (
                 <Ai3dToolbar
                   theme={theme}
                   utilityIconButtonSx={utilityIconButtonSx}
@@ -461,7 +478,7 @@ export default function AiImageComposer() {
                   handlePromptTransform={handlePromptTransform}
                   t={t}
                 />
-              ) : null}
+              )}
 
               <IconButton
                 size="small"

@@ -8,10 +8,16 @@ import type { AiMode } from "@/stores/editorStore";
 type Params = {
   aiMode: AiMode;
   prompt: string;
+  aiTexturePrompt: string;
   ai3dPrompt: string;
   isImageBusy: boolean;
+  isTextureBusy: boolean;
   isAi3dBusy: boolean;
   setAiPrompt: (prompt: string) => void;
+  setAiTexturePrompt: (prompt: string) => void;
+  setAiTextureState: (payload: {
+    errorMessage?: string | null;
+  }) => void;
   setAi3dPrompt: (prompt: string) => void;
   setAiGeneratingState: (payload: {
     isGenerating: boolean;
@@ -26,10 +32,14 @@ type Params = {
 export function usePromptTransform({
   aiMode,
   prompt,
+  aiTexturePrompt,
   ai3dPrompt,
   isImageBusy,
+  isTextureBusy,
   isAi3dBusy,
   setAiPrompt,
+  setAiTexturePrompt,
+  setAiTextureState,
   setAi3dPrompt,
   setAiGeneratingState,
   setAi3dState,
@@ -42,9 +52,10 @@ export function usePromptTransform({
   const isPromptActionPending = activePromptAction !== null;
 
   const handlePromptTransform = async (mode: "optimize" | "translate-en") => {
-    const sourcePrompt = aiMode === "image" ? prompt : ai3dPrompt;
+    const sourcePrompt =
+      aiMode === "image" ? prompt : aiMode === "texture" ? aiTexturePrompt : ai3dPrompt;
     const trimmedPrompt = sourcePrompt.trim();
-    const isBusy = aiMode === "image" ? isImageBusy : isAi3dBusy;
+    const isBusy = aiMode === "image" ? isImageBusy : aiMode === "texture" ? isTextureBusy : isAi3dBusy;
     if (!trimmedPrompt || isBusy || isPromptActionPending || promptActionLockRef.current) {
       return;
     }
@@ -54,6 +65,10 @@ export function usePromptTransform({
     if (aiMode === "image") {
       setAiGeneratingState({
         isGenerating: false,
+        errorMessage: null
+      });
+    } else if (aiMode === "texture") {
+      setAiTextureState({
         errorMessage: null
       });
     } else {
@@ -75,6 +90,8 @@ export function usePromptTransform({
 
       if (aiMode === "image") {
         setAiPrompt(nextPrompt);
+      } else if (aiMode === "texture") {
+        setAiTexturePrompt(nextPrompt);
       } else {
         setAi3dPrompt(nextPrompt);
       }
@@ -82,6 +99,10 @@ export function usePromptTransform({
       if (aiMode === "image") {
         setAiGeneratingState({
           isGenerating: false,
+          errorMessage: getApiErrorMessage(error, t("editor.ai.promptTransformFailed"))
+        });
+      } else if (aiMode === "texture") {
+        setAiTextureState({
           errorMessage: getApiErrorMessage(error, t("editor.ai.promptTransformFailed"))
         });
       } else {
