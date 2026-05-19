@@ -12,8 +12,13 @@ import {
 import { isPolyhavenProviderEnabled } from "@/lib/externalAssets/config";
 import { useI18n } from "@/lib/i18n";
 import { createExternalAssetSource } from "@/lib/externalAssets/source";
-import { createPbrAtlasMaterialPatch, GROUND_HELPER_NODE_ID, SCENE_NODE_ID } from "@/render/editor";
-import { useEditorStore } from "@/stores/editorStore";
+import {
+  createPbrAtlasMaterialPatch,
+  GROUND_HELPER_NODE_ID,
+  SCENE_NODE_ID,
+  type ProjectAiLibraryJSON
+} from "@/render/editor";
+import { useEditorStore, type PendingAiImageGeneration } from "@/stores/editorStore";
 import {
   GroundScaleSection,
   LightSettingsSection,
@@ -31,6 +36,8 @@ import { getEditorThemeTokens } from "@/components/editor/theme";
 
 const PANEL_WIDTH = 272;
 const COLLAPSED_VISIBLE_WIDTH = 44;
+const CLOSED_AI_LIBRARY: ProjectAiLibraryJSON = { version: 1, imageGenerations: [] };
+const CLOSED_PENDING_AI_IMAGE_GENERATIONS: PendingAiImageGeneration[] = [];
 
 export default function PropertyPanel() {
   const { t } = useI18n();
@@ -46,10 +53,10 @@ export default function PropertyPanel() {
   const aiMode = useEditorStore((state) => (open ? state.aiMode : "image"));
   const aiTexture = useEditorStore((state) => (open ? state.aiTexture : null));
   const loadedAiLibrary = useEditorStore((state) =>
-    open ? state.loadedAiLibrary : { version: 1 as const, imageGenerations: [] }
+    open ? state.loadedAiLibrary : CLOSED_AI_LIBRARY
   );
   const pendingAiImageGenerations = useEditorStore((state) =>
-    open ? state.pendingAiImageGenerations : []
+    open ? state.pendingAiImageGenerations : CLOSED_PENDING_AI_IMAGE_GENERATIONS
   );
   const [activeTextureField, setActiveTextureField] = useState<TextureFieldKey | null>(null);
   const [materialLibraryOpen, setMaterialLibraryOpen] = useState(false);
