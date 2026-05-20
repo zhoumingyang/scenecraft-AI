@@ -518,6 +518,7 @@ export default function AiImageComposer() {
                   prompt={aiTexturePrompt}
                   isGenerating={aiTextureIsGenerating}
                   isOptimizing={false}
+                  canOptimizePrompt
                   activePromptAction={activePromptAction}
                   handlePromptTransform={handlePromptTransform}
                   t={t}
@@ -531,6 +532,7 @@ export default function AiImageComposer() {
                   prompt={aiPanoramaPrompt}
                   isGenerating={aiPanoramaIsGenerating}
                   isOptimizing={false}
+                  canOptimizePrompt
                   activePromptAction={activePromptAction}
                   handlePromptTransform={handlePromptTransform}
                   t={t}

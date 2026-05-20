@@ -1,6 +1,7 @@
 "use client";
 
 import { CircularProgress, IconButton, Stack/*, Typography*/ } from "@mui/material";
+import AutoFixHighRoundedIcon from "@mui/icons-material/AutoFixHighRounded";
 import TranslateRoundedIcon from "@mui/icons-material/TranslateRounded";
 import type { EditorThemeTokens } from "@/components/editor/theme";
 
@@ -12,6 +13,7 @@ type Props = {
   prompt: string;
   isGenerating: boolean;
   isOptimizing: boolean;
+  canOptimizePrompt?: boolean;
   activePromptAction: "optimize" | "translate-en" | null;
   handlePromptTransform: (mode: "optimize" | "translate-en") => Promise<void>;
   t: (key: any, params?: Record<string, string | number>) => string;
@@ -25,6 +27,7 @@ export default function Ai3dToolbar({
   prompt,
   // isGenerating,
   // isOptimizing,
+  canOptimizePrompt = false,
   activePromptAction,
   handlePromptTransform,
   t
@@ -38,6 +41,23 @@ export default function Ai3dToolbar({
             ? t("editor.ai3d.optimizingLabel")
             : ""}
       </Typography> */}
+      {canOptimizePrompt ? (
+        <IconButton
+          size="small"
+          disabled={isAi3dBusy || isPromptActionPending || !prompt.trim()}
+          onClick={() => {
+            void handlePromptTransform("optimize");
+          }}
+          title={t("editor.ai.optimizePrompt")}
+          sx={utilityIconButtonSx}
+        >
+          {activePromptAction === "optimize" ? (
+            <CircularProgress size={16} sx={{ color: theme.pillText }} />
+          ) : (
+            <AutoFixHighRoundedIcon sx={{ fontSize: 18 }} />
+          )}
+        </IconButton>
+      ) : null}
       <IconButton
         size="small"
         disabled={isAi3dBusy || isPromptActionPending || !prompt.trim()}
