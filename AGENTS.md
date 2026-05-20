@@ -169,6 +169,8 @@ Includes:
 
 Keep API contracts, validation, and provider-specific behavior aligned when editing here.
 
+Prompt optimization uses the shared `/api/ai/prompts/transform` endpoint with target-specific rules for `image`, `texture`, and `panorama`; `translate-en` remains generic and should ignore the target. Frontend AI chat modes should pass the matching target when optimizing prompts.
+
 ### `render/editor/materials/`
 
 Editor material helpers live here.
@@ -327,6 +329,7 @@ If the task is about AI generation:
 - inspect `app/api/ai/`
 - inspect `lib/ai/`
 - inspect `lib/api/contracts/`
+- keep prompt optimization target-aware for Image, Texture, and Panorama modes while preserving generic translation behavior
 
 If the task is about AI-generated PBR textures:
 

@@ -24,7 +24,8 @@ export async function POST(request: Request) {
     const result = await transformPromptWithOpenRouter({
       apiKey,
       mode: body.mode,
-      prompt: body.prompt
+      prompt: body.prompt,
+      target: body.target
     });
 
     return NextResponse.json(result);

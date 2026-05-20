@@ -3,14 +3,14 @@ import {
   getOpenRouterChatCompletionsEndpoint,
   getOpenRouterHeaders
 } from "@/lib/ai/openrouter/config";
+import type {
+  PromptTransformMode,
+  PromptTransformTarget
+} from "@/lib/ai/prompt-transform/constants";
 import { createHttpClient, getResponseHeader } from "@/lib/http/axios";
 
 const OPENROUTER_PROMPT_MODEL = "openai/gpt-5.4";
 const openRouterTextClient = createHttpClient();
-
-export const PROMPT_TRANSFORM_MODES = ["optimize", "translate-en"] as const;
-
-export type PromptTransformMode = (typeof PROMPT_TRANSFORM_MODES)[number];
 
 type OpenRouterTextResponse = {
   id?: string;
@@ -37,25 +37,51 @@ type OpenRouterTextContent =
     }>
   | undefined;
 
-function getSystemPrompt(mode: PromptTransformMode) {
-  if (mode === "optimize") {
-    return [
-      "You rewrite image-generation prompts.",
-      "Return only the optimized prompt text.",
-      "Do not add explanations, labels, quotes, markdown, or any extra content.",
-      "Keep the same language as the input.",
-      "Improve clarity, specificity, visual detail, and generation quality.",
-      "Do not change the user's intent."
-    ].join(" ");
+const SHARED_OPTIMIZE_PROMPT_RULES = [
+  "You rewrite prompts for AI visual generation.",
+  "Return only the optimized prompt text.",
+  "Do not add explanations, labels, quotes, markdown, or any extra content.",
+  "Keep the same language as the input.",
+  "Preserve the user's intent and avoid inventing a different subject.",
+  "Improve clarity, specificity, visual detail, and generation reliability."
+];
+
+const TARGET_OPTIMIZE_PROMPT_RULES: Record<PromptTransformTarget, string[]> = {
+  image: [
+    "Optimize for a general image-generation model.",
+    "Add concrete subject details, composition, camera or framing, lighting, style, material or surface detail, color palette, atmosphere, and image quality cues when helpful.",
+    "Avoid adding texture-atlas, panorama, equirectangular, or 3D editor constraints."
+  ],
+  texture: [
+    "Optimize for generating one seamless tileable PBR material texture atlas.",
+    "Preserve the user's material intent while adding physically plausible material properties, surface detail, scale, wear, roughness, metalness, and tileability cues.",
+    "Include the 3 column by 2 row atlas requirement: top row diffuse or albedo, metalness, roughness; bottom row normal, ambient occlusion, emissive.",
+    "Require aligned map features across all six slots.",
+    "Forbid text, labels, captions, borders, gutters, icons, annotations, and unrelated objects.",
+    "Do not ask for six separate files."
+  ],
+  panorama: [
+    "Optimize for a 360-degree equirectangular scene environment panorama.",
+    "Preserve the user's environment intent while adding horizon continuity, seamless edge wrapping, background or environment lighting, sky and ground relationship, depth cues, and immersive atmosphere.",
+    "Request an ultra-wide provider-compatible composition with important content inside a centered 2:1 safe area for the final 2048x1024 crop.",
+    "Avoid ordinary wide landscape-photo framing, close foreground hero subjects, text, labels, UI, watermarks, and visible frame edges."
+  ]
+};
+
+const TRANSLATE_PROMPT_RULES = [
+  "You translate image-generation prompts into English.",
+  "Return only the translated English prompt text.",
+  "Do not add explanations, labels, quotes, markdown, or any extra content.",
+  "If the input is already English, return it unchanged.",
+  "Preserve the original intent and visual detail."
+];
+
+function getSystemPrompt(mode: PromptTransformMode, target: PromptTransformTarget = "image") {
+  if (mode === "translate-en") {
+    return TRANSLATE_PROMPT_RULES.join(" ");
   }
 
-  return [
-    "You translate image-generation prompts into English.",
-    "Return only the translated English prompt text.",
-    "Do not add explanations, labels, quotes, markdown, or any extra content.",
-    "If the input is already English, return it unchanged.",
-    "Preserve the original intent and visual detail."
-  ].join(" ");
+  return [...SHARED_OPTIMIZE_PROMPT_RULES, ...TARGET_OPTIMIZE_PROMPT_RULES[target]].join(" ");
 }
 
 function readTextContent(content: OpenRouterTextContent) {
@@ -76,11 +102,13 @@ function readTextContent(content: OpenRouterTextContent) {
 export async function transformPromptWithOpenRouter({
   apiKey,
   mode,
-  prompt
+  prompt,
+  target = "image"
 }: {
   apiKey: string;
   mode: PromptTransformMode;
   prompt: string;
+  target?: PromptTransformTarget;
 }) {
   try {
     const response = await openRouterTextClient.post<OpenRouterTextResponse>(
@@ -90,7 +118,7 @@ export async function transformPromptWithOpenRouter({
         messages: [
           {
             role: "system",
-            content: getSystemPrompt(mode)
+            content: getSystemPrompt(mode, target)
           },
           {
             role: "user",

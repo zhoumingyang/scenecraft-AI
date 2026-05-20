@@ -53,14 +53,14 @@ This is not just a text-to-image demo, and it is not a full desktop-grade DCC to
 - Supports both text-to-image and reference-image-based generation flows
 - Adjustable generation parameters such as `seed`, `image size`, `CFG`, and `inference steps`
 - Reference image upload for editing and style continuation workflows
-- Prompt enhancement and Chinese-to-English prompt translation
+- Target-aware image prompt enhancement and shared Chinese-to-English prompt translation
 - Generated results can be previewed inside the editor and applied directly to mesh materials
 - Saved projects also retain a project-level AI image library, including prompts, generation params, reference images, and generated outputs
 
 ### 4. AI PBR Texture Atlas Workflow
 
 - Generates a single 3x2 PBR texture atlas with OpenRouter `openai/gpt-5.4-image-2`
-- Runs from the AI chat Texture mode and supports prompt enhancement and Chinese-to-English prompt translation
+- Runs from the AI chat Texture mode and supports PBR atlas-aware prompt enhancement plus shared Chinese-to-English prompt translation
 - Supports selected mesh materials and the ground plane material
 - Applies generated atlases immediately to the selected mesh or ground material
 - Reuses the existing PBR material texture fields:
@@ -77,7 +77,7 @@ This is not just a text-to-image demo, and it is not a full desktop-grade DCC to
 
 ### 5. AI Panorama Workflow
 
-- Runs from the AI chat Panorama mode with prompt enhancement and Chinese-to-English prompt translation
+- Runs from the AI chat Panorama mode with panorama-aware prompt enhancement plus shared Chinese-to-English prompt translation
 - Uses OpenRouter `openai/gpt-5.4-image-2` through the authenticated panorama API route
 - Builds a seamless equirectangular 360-degree environment prompt on the server
 - Requests the provider-supported `21:9` panorama ratio, then center-crops and normalizes the applied file to `2048x1024` JPEG in the browser
@@ -87,6 +87,8 @@ This is not just a text-to-image demo, and it is not a full desktop-grade DCC to
 - Shows the generated panorama in the Scene property panel Panorama section
 - Adds generated panoramas to the project AI Assets dialog with a Panorama badge
 - Registers the generated JPEG as an `environment_image` so project save can persist it through `Vercel Blob`
+
+Prompt enhancement for Image, Texture, and Panorama modes uses one `/api/ai/prompts/transform` endpoint with target-specific optimization rules. Translation remains a shared prompt transform path across these modes.
 
 ### 6. Project Save / Load and Asset Persistence
 

@@ -35,6 +35,18 @@ type Params = {
   t: (key: any, params?: Record<string, string | number>) => string;
 };
 
+function getPromptTransformTarget(aiMode: AiMode) {
+  if (aiMode === "texture") {
+    return "texture";
+  }
+
+  if (aiMode === "panorama") {
+    return "panorama";
+  }
+
+  return "image";
+}
+
 export function usePromptTransform({
   aiMode,
   prompt,
@@ -107,7 +119,8 @@ export function usePromptTransform({
     try {
       const payload = await transformAiPrompt({
         mode,
-        prompt: trimmedPrompt
+        prompt: trimmedPrompt,
+        target: getPromptTransformTarget(aiMode)
       });
       const nextPrompt = typeof payload.prompt === "string" ? payload.prompt.trim() : "";
 

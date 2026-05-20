@@ -21,8 +21,14 @@ import type { AI_PANORAMA_MODEL_ID } from "@/lib/ai/panorama/constants";
 import { AI3D_TOOL_NAME } from "@/render/editor/ai3d/constants/plan";
 import type { Ai3DPlan } from "@/render/editor";
 import { validateAi3DPlan } from "@/render/editor/ai3d/plan";
-import type { PromptTransformMode } from "@/lib/ai/prompt-transform/openrouter";
-import { PROMPT_TRANSFORM_MODES } from "@/lib/ai/prompt-transform/openrouter";
+import type {
+  PromptTransformMode,
+  PromptTransformTarget
+} from "@/lib/ai/prompt-transform/constants";
+import {
+  PROMPT_TRANSFORM_MODES,
+  PROMPT_TRANSFORM_TARGETS
+} from "@/lib/ai/prompt-transform/constants";
 
 const imageGenerationModelIdSchema = z
   .string()
@@ -231,14 +237,23 @@ const promptTransformModeSchema = z
     { message: "Unsupported prompt transform mode." }
   );
 
+export const promptTransformTargetSchema = z
+  .string()
+  .refine(
+    (value): value is PromptTransformTarget =>
+      PROMPT_TRANSFORM_TARGETS.includes(value as PromptTransformTarget),
+    { message: "Unsupported prompt transform target." }
+  );
+
 export const transformPromptRequestSchema = z
   .object({
     mode: promptTransformModeSchema,
-    prompt: promptSchema
+    prompt: promptSchema,
+    target: promptTransformTargetSchema.optional().default("image")
   })
   .strict();
 
-export type TransformPromptRequest = z.infer<typeof transformPromptRequestSchema>;
+export type TransformPromptRequest = z.input<typeof transformPromptRequestSchema>;
 
 export type TransformPromptResponse = {
   prompt: string;
