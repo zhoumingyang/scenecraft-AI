@@ -26,7 +26,7 @@ import {
   restoreViewHelperVisibility
 } from "@/components/editor/viewHelperPreferences";
 import {
-  clearProjectTextureReferencesByUrl,
+  projectSnapshotUsesAssetReference,
   readImageDimensions,
   syncEditorProjectSearchParam
 } from "@/components/editor/projectPersistence";
@@ -387,13 +387,21 @@ export function useTopBarProjectActions(t: TopBarTranslate) {
     source: "loaded" | "pending";
     assetId: string;
   }) => {
-    const pendingImageUrl =
+    const assetReference =
       payload.source === "pending"
-        ? pendingAiAssets.find((asset) => asset.id === payload.assetId)?.sourceUrl ?? null
-        : null;
+        ? {
+            sourceUrl: pendingAiAssets.find((asset) => asset.id === payload.assetId)?.sourceUrl ?? null,
+            assetId: null
+          }
+        : {
+            sourceUrl: loadedAiLibrary.assets.find((asset) => asset.id === payload.assetId)?.url ?? null,
+            assetId: loadedAiLibrary.assets.find((asset) => asset.id === payload.assetId)?.assetId ?? null
+          };
 
-    if (app && pendingImageUrl) {
-      clearProjectTextureReferencesByUrl(app, pendingImageUrl);
+    const snapshot = app?.getProjectJSON() ?? null;
+    if (snapshot && projectSnapshotUsesAssetReference(snapshot, assetReference)) {
+      window.alert(t("editor.project.aiAssetInUseDeleteBlocked"));
+      return;
     }
 
     removeAiLibraryAsset(payload);

@@ -167,6 +167,41 @@ export function projectSnapshotUsesSourceUrl(snapshot: EditorProjectJSON, source
   );
 }
 
+export function projectSnapshotUsesAssetReference(
+  snapshot: EditorProjectJSON,
+  reference: { sourceUrl?: string | null; assetId?: string | null }
+) {
+  const sourceUrl = reference.sourceUrl?.trim();
+  if (sourceUrl && projectSnapshotUsesSourceUrl(snapshot, sourceUrl)) {
+    return true;
+  }
+
+  const assetId = reference.assetId?.trim();
+  if (!assetId) {
+    return false;
+  }
+
+  if (snapshot.envConfig?.panoAssetId === assetId) {
+    return true;
+  }
+
+  if (snapshot.model?.some((model) => model.sourceAssetId === assetId)) {
+    return true;
+  }
+
+  if (
+    TEXTURE_FIELDS.some((field) => snapshot.envConfig?.ground?.material?.[field]?.assetId === assetId)
+  ) {
+    return true;
+  }
+
+  return (
+    snapshot.mesh?.some((mesh) =>
+      TEXTURE_FIELDS.some((field) => mesh.material?.[field]?.assetId === assetId)
+    ) ?? false
+  );
+}
+
 function createClearedTexture(texture: ResolvedTextureSchema): ResolvedTextureSchema {
   return {
     ...texture,

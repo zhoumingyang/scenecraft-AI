@@ -283,6 +283,8 @@ const dictionaries: Record<Locale, Dictionary> = {
     "editor.project.aiLibraryAll": "All",
     "editor.project.aiImage": "Image",
     "editor.project.aiAssetDeleteConfirm": "Delete this AI asset from the library?",
+    "editor.project.aiAssetInUseDeleteBlocked":
+      "This AI asset is currently used by the scene. Remove or replace it before deleting it from the library.",
     "editor.project.aiPbrAtlas": "PBR Atlas",
     "editor.project.aiPanorama": "Panorama",
     "editor.project.aiTraceId": "Trace ID",
@@ -707,6 +709,7 @@ const dictionaries: Record<Locale, Dictionary> = {
     "editor.project.aiLibraryAll": "全部",
     "editor.project.aiImage": "图片",
     "editor.project.aiAssetDeleteConfirm": "确定从资源库中删除这个 AI 资产吗？",
+    "editor.project.aiAssetInUseDeleteBlocked": "当前场景正在使用这个 AI 资产。请先移除或替换引用后再删除。",
     "editor.project.aiPbrAtlas": "PBR Atlas",
     "editor.project.aiPanorama": "全景图",
     "editor.project.aiTraceId": "Trace ID",
