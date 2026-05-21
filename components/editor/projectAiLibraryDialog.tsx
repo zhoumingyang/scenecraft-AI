@@ -17,6 +17,7 @@ import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
 import FormatPaintRoundedIcon from "@mui/icons-material/FormatPaintRounded";
 import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
+import LandscapeRoundedIcon from "@mui/icons-material/LandscapeRounded";
 import VisibilityRoundedIcon from "@mui/icons-material/VisibilityRounded";
 import AiImagePreviewDialog from "@/components/editor/aiImagePreviewDialog";
 import type { EditorThemeTokens } from "@/components/editor/theme";
@@ -39,6 +40,7 @@ type ProjectAiLibraryDialogProps = {
   }) => void;
   onApplyAsset?: (payload: { imageUrl: string; assetId?: string }) => void;
   onApplyPbrAtlas?: (payload: { imageUrl: string; assetId?: string }) => void;
+  onApplyPanorama?: (payload: { imageUrl: string; assetId?: string; assetName?: string }) => void;
 };
 
 type AiAssetListItem = {
@@ -48,6 +50,7 @@ type AiAssetListItem = {
   kind: ProjectAiAssetJSON["kind"];
   imageUrl: string;
   uploadedAssetId?: string;
+  assetName?: string;
   prompt: string;
   model: string;
   createdAt: string;
@@ -73,7 +76,8 @@ export default function ProjectAiLibraryDialog({
   onClose,
   onDeleteAsset,
   onApplyAsset,
-  onApplyPbrAtlas
+  onApplyPbrAtlas,
+  onApplyPanorama
 }: ProjectAiLibraryDialogProps) {
   const { t } = useI18n();
   const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
@@ -91,6 +95,7 @@ export default function ProjectAiLibraryDialog({
       kind: asset.kind,
       imageUrl: asset.url,
       uploadedAssetId: asset.assetId,
+      assetName: asset.originalName,
       prompt: asset.prompt,
       model: asset.model,
       createdAt: asset.createdAt,
@@ -102,6 +107,7 @@ export default function ProjectAiLibraryDialog({
       assetId: asset.id,
       kind: asset.kind,
       imageUrl: asset.sourceUrl,
+      assetName: asset.fileName,
       prompt: asset.prompt,
       model: asset.model,
       createdAt: asset.createdAt,
@@ -161,6 +167,15 @@ export default function ProjectAiLibraryDialog({
     onApplyPbrAtlas?.({
       imageUrl: item.imageUrl,
       assetId: item.uploadedAssetId
+    });
+    onClose();
+  };
+
+  const handleApplyPanorama = (item: AiAssetListItem) => {
+    onApplyPanorama?.({
+      imageUrl: item.imageUrl,
+      assetId: item.uploadedAssetId,
+      assetName: item.assetName
     });
     onClose();
   };
@@ -385,19 +400,21 @@ export default function ProjectAiLibraryDialog({
                         </>
                       ) : (
                         <>
-                          <Tooltip title={t("editor.properties.applyAiAsset")}>
-                            <IconButton
-                              size="small"
-                              onClick={() => handleApply(item)}
-                              sx={{
-                                color: theme.pillText,
-                                border: theme.sectionBorder,
-                                background: theme.iconButtonBg
-                              }}
-                            >
-                              <FormatPaintRoundedIcon sx={{ fontSize: 16 }} />
-                            </IconButton>
-                          </Tooltip>
+                          {item.kind === "image" && onApplyAsset ? (
+                            <Tooltip title={t("editor.properties.applyAiAsset")}>
+                              <IconButton
+                                size="small"
+                                onClick={() => handleApply(item)}
+                                sx={{
+                                  color: theme.pillText,
+                                  border: theme.sectionBorder,
+                                  background: theme.iconButtonBg
+                                }}
+                              >
+                                <FormatPaintRoundedIcon sx={{ fontSize: 16 }} />
+                              </IconButton>
+                            </Tooltip>
+                          ) : null}
                           {item.kind === "pbr_atlas" && onApplyPbrAtlas ? (
                             <Tooltip title={t("editor.project.applyPbrAtlas")}>
                               <IconButton
@@ -410,6 +427,21 @@ export default function ProjectAiLibraryDialog({
                                 }}
                               >
                                 <AutoAwesomeRoundedIcon sx={{ fontSize: 16 }} />
+                              </IconButton>
+                            </Tooltip>
+                          ) : null}
+                          {item.kind === "panorama" && onApplyPanorama ? (
+                            <Tooltip title={t("editor.project.applyPanorama")}>
+                              <IconButton
+                                size="small"
+                                onClick={() => handleApplyPanorama(item)}
+                                sx={{
+                                  color: theme.pillText,
+                                  border: theme.sectionBorder,
+                                  background: theme.iconButtonBg
+                                }}
+                              >
+                                <LandscapeRoundedIcon sx={{ fontSize: 16 }} />
                               </IconButton>
                             </Tooltip>
                           ) : null}

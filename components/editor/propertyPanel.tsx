@@ -149,6 +149,24 @@ export default function PropertyPanel() {
     app.updateMeshMaterial(entityRecord.item.id, materialPatch);
   };
 
+  const handleApplyPanorama = ({
+    imageUrl,
+    assetId,
+    assetName
+  }: {
+    imageUrl: string;
+    assetId?: string;
+    assetName?: string;
+  }) => {
+    app?.updateSceneEnvConfig({
+      panoAssetId: assetId ?? "",
+      panoAssetName: assetName ?? imageUrl,
+      panoUrl: imageUrl,
+      externalSource: null
+    });
+    app?.setSelectedEntity(SCENE_NODE_ID);
+  };
+
   return (
     <Box
       sx={{
@@ -472,7 +490,10 @@ export default function PropertyPanel() {
           theme={theme}
           loadedLibrary={loadedAiLibrary}
           pendingAssets={pendingAiAssets}
+          mode={entityRecord?.kind === "scene" ? "apply" : "manage"}
+          allowedKinds={entityRecord?.kind === "scene" ? ["panorama"] : undefined}
           onClose={() => setAiLibraryOpen(false)}
+          onApplyPanorama={handleApplyPanorama}
         />
       </Box>
     </Box>

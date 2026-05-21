@@ -366,6 +366,7 @@ export function TextureConfigDialog({
         loadedLibrary={loadedAiLibrary}
         pendingAssets={pendingAiAssets}
         mode="apply"
+        allowedKinds={["image", "pbr_atlas"]}
         onClose={() => setAiLibraryOpen(false)}
         onApplyAsset={onApplyAiAsset}
         onApplyPbrAtlas={onApplyPbrAtlas}
