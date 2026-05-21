@@ -8,6 +8,8 @@ import {
   DialogTitle,
   IconButton,
   Stack,
+  Tab,
+  Tabs,
   Tooltip,
   Typography
 } from "@mui/material";
@@ -19,7 +21,7 @@ import VisibilityRoundedIcon from "@mui/icons-material/VisibilityRounded";
 import AiImagePreviewDialog from "@/components/editor/aiImagePreviewDialog";
 import type { EditorThemeTokens } from "@/components/editor/theme";
 import { useI18n } from "@/lib/i18n";
-import type { ProjectAiAssetJSON, ProjectAiLibraryV2JSON } from "@/render/editor";
+import type { ProjectAiAssetJSON, ProjectAiAssetKindJSON, ProjectAiLibraryV2JSON } from "@/render/editor";
 import type { PendingAiAsset } from "@/stores/editorStore";
 import { useEditorStore } from "@/stores/editorStore";
 
@@ -29,6 +31,7 @@ type ProjectAiLibraryDialogProps = {
   loadedLibrary: ProjectAiLibraryV2JSON;
   pendingAssets: PendingAiAsset[];
   mode?: "manage" | "apply";
+  allowedKinds?: ProjectAiAssetKindJSON[];
   onClose: () => void;
   onDeleteAsset?: (payload: {
     source: "loaded" | "pending";
@@ -48,7 +51,17 @@ type AiAssetListItem = {
   prompt: string;
   model: string;
   createdAt: string;
+  traceId?: string | null;
 };
+
+type AiAssetTab = "all" | ProjectAiAssetKindJSON;
+
+const ALL_ASSET_KINDS: ProjectAiAssetKindJSON[] = ["image", "pbr_atlas", "panorama"];
+
+function getAssetAspectRatio(kind: ProjectAiAssetKindJSON) {
+  if (kind === "panorama") return "2 / 1";
+  return "1 / 1";
+}
 
 export default function ProjectAiLibraryDialog({
   open,
@@ -56,6 +69,7 @@ export default function ProjectAiLibraryDialog({
   loadedLibrary,
   pendingAssets,
   mode = "manage",
+  allowedKinds = ALL_ASSET_KINDS,
   onClose,
   onDeleteAsset,
   onApplyAsset,
@@ -66,6 +80,8 @@ export default function ProjectAiLibraryDialog({
   const [previewItem, setPreviewItem] = useState<Pick<AiAssetListItem, "imageUrl" | "prompt"> | null>(
     null
   );
+  const [activeTab, setActiveTab] = useState<AiAssetTab>("all");
+  const allowedKindSet = useMemo(() => new Set(allowedKinds), [allowedKinds]);
 
   const items = useMemo<AiAssetListItem[]>(() => {
     const savedItems = loadedLibrary.assets.map((asset) => ({
@@ -77,7 +93,8 @@ export default function ProjectAiLibraryDialog({
       uploadedAssetId: asset.assetId,
       prompt: asset.prompt,
       model: asset.model,
-      createdAt: asset.createdAt
+      createdAt: asset.createdAt,
+      traceId: asset.traceId
     }));
     const pendingItems = pendingAssets.map((asset) => ({
       key: `pending:${asset.id}`,
@@ -87,13 +104,39 @@ export default function ProjectAiLibraryDialog({
       imageUrl: asset.sourceUrl,
       prompt: asset.prompt,
       model: asset.model,
-      createdAt: asset.createdAt
+      createdAt: asset.createdAt,
+      traceId: asset.traceId
     }));
 
     return [...pendingItems, ...savedItems].sort(
       (left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime()
     );
   }, [loadedLibrary.assets, pendingAssets]);
+
+  const filteredItems = useMemo(
+    () =>
+      items.filter((item) => {
+        if (!allowedKindSet.has(item.kind)) {
+          return false;
+        }
+        return activeTab === "all" || item.kind === activeTab;
+      }),
+    [activeTab, allowedKindSet, items]
+  );
+
+  const visibleTabs = useMemo(
+    () => ALL_ASSET_KINDS.filter((kind) => allowedKindSet.has(kind)),
+    [allowedKindSet]
+  );
+
+  const getAssetKindLabel = (kind: ProjectAiAssetKindJSON) => {
+    if (kind === "pbr_atlas") return t("editor.project.aiPbrAtlas");
+    if (kind === "panorama") return t("editor.project.aiPanorama");
+    return t("editor.project.aiImage");
+  };
+
+  const getTabCount = (tab: AiAssetTab) =>
+    items.filter((item) => allowedKindSet.has(item.kind) && (tab === "all" || item.kind === tab)).length;
 
   const handleDelete = (item: AiAssetListItem) => {
     if (!window.confirm(t("editor.project.aiAssetDeleteConfirm"))) {
@@ -164,7 +207,7 @@ export default function ProjectAiLibraryDialog({
               {t("editor.project.aiLibraryTitle")}
             </Typography>
             <Typography component="span" sx={{ fontSize: 12, color: theme.mutedText }}>
-              {t("editor.project.aiLibraryCount", { count: items.length })}
+              {t("editor.project.aiLibraryCount", { count: filteredItems.length })}
             </Typography>
           </Stack>
           <IconButton
@@ -182,7 +225,40 @@ export default function ProjectAiLibraryDialog({
         </DialogTitle>
 
         <DialogContent sx={{ px: 3, pb: 3, pt: 0 }}>
-          {items.length === 0 ? (
+          {items.length > 0 ? (
+            <Tabs
+              value={activeTab}
+              onChange={(_, value: AiAssetTab) => setActiveTab(value)}
+              variant="scrollable"
+              scrollButtons="auto"
+              sx={{
+                minHeight: 36,
+                mb: 1.4,
+                borderBottom: theme.sectionBorder,
+                "& .MuiTab-root": {
+                  minHeight: 36,
+                  px: 1.2,
+                  color: theme.text,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  textTransform: "none"
+                },
+                "& .Mui-selected": {
+                  color: theme.titleText
+                },
+                "& .MuiTabs-indicator": {
+                  background: theme.titleText
+                }
+              }}
+            >
+              <Tab value="all" label={`${t("editor.project.aiLibraryAll")} (${getTabCount("all")})`} />
+              {visibleTabs.map((kind) => (
+                <Tab key={kind} value={kind} label={`${getAssetKindLabel(kind)} (${getTabCount(kind)})`} />
+              ))}
+            </Tabs>
+          ) : null}
+
+          {filteredItems.length === 0 ? (
             <Box
               sx={{
                 py: 5,
@@ -209,7 +285,7 @@ export default function ProjectAiLibraryDialog({
                 }
               }}
             >
-              {items.map((item) => (
+              {filteredItems.map((item) => (
                 <Box
                   key={item.key}
                   sx={{
@@ -219,18 +295,37 @@ export default function ProjectAiLibraryDialog({
                     overflow: "hidden"
                   }}
                 >
-                  <Box
-                    component="img"
-                    src={item.imageUrl}
-                    alt={item.prompt}
-                    sx={{
-                      width: "100%",
-                      aspectRatio: "1 / 1",
-                      objectFit: "cover",
-                      display: "block",
-                      borderBottom: theme.sectionBorder
-                    }}
-                  />
+                  <Box sx={{ position: "relative", borderBottom: theme.sectionBorder }}>
+                    <Box
+                      component="img"
+                      src={item.imageUrl}
+                      alt={item.prompt}
+                      sx={{
+                        width: "100%",
+                        aspectRatio: getAssetAspectRatio(item.kind),
+                        objectFit: "cover",
+                        display: "block"
+                      }}
+                    />
+                    <Typography
+                      sx={{
+                        position: "absolute",
+                        top: 8,
+                        left: 8,
+                        borderRadius: 0.75,
+                        px: 0.7,
+                        py: 0.25,
+                        fontSize: 10,
+                        fontWeight: 800,
+                        color: theme.titleText,
+                        background: theme.panelBg,
+                        border: theme.sectionBorder,
+                        boxShadow: "0 8px 18px rgba(0,0,0,0.22)"
+                      }}
+                    >
+                      {getAssetKindLabel(item.kind)}
+                    </Typography>
+                  </Box>
                   <Stack spacing={0.6} sx={{ p: 1 }}>
                     <Typography
                       title={item.prompt}
@@ -248,42 +343,11 @@ export default function ProjectAiLibraryDialog({
                     <Typography sx={{ fontSize: 11, color: theme.text }}>
                       {item.model}
                     </Typography>
-                    {item.kind === "pbr_atlas" ? (
-                      <Typography
-                        sx={{
-                          alignSelf: "flex-start",
-                          borderRadius: 0.75,
-                          border: theme.sectionBorder,
-                          px: 0.6,
-                          py: 0.2,
-                          fontSize: 10,
-                          fontWeight: 700,
-                          color: theme.titleText,
-                          background: theme.itemBg
-                        }}
-                      >
-                        {t("editor.project.aiPbrAtlas")}
+                    <Tooltip title={item.traceId ? `${t("editor.project.aiTraceId")}: ${item.traceId}` : ""}>
+                      <Typography sx={{ fontSize: 11, color: theme.mutedText }}>
+                        {new Date(item.createdAt).toLocaleString()}
                       </Typography>
-                    ) : item.kind === "panorama" ? (
-                      <Typography
-                        sx={{
-                          alignSelf: "flex-start",
-                          borderRadius: 0.75,
-                          border: theme.sectionBorder,
-                          px: 0.6,
-                          py: 0.2,
-                          fontSize: 10,
-                          fontWeight: 700,
-                          color: theme.titleText,
-                          background: theme.itemBg
-                        }}
-                      >
-                        {t("editor.project.aiPanorama")}
-                      </Typography>
-                    ) : null}
-                    <Typography sx={{ fontSize: 11, color: theme.mutedText }}>
-                      {new Date(item.createdAt).toLocaleString()}
-                    </Typography>
+                    </Tooltip>
                     <Stack direction="row" justifyContent="flex-end" spacing={0.5}>
                       {mode === "manage" ? (
                         <>
