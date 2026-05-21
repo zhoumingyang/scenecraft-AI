@@ -79,7 +79,7 @@ export default function AiImageComposer() {
   const setAi3dIntentDraft = useEditorStore((state) => state.setAi3dIntentDraft);
   const setAi3dState = useEditorStore((state) => state.setAi3dState);
   const setAiGeneratingState = useEditorStore((state) => state.setAiGeneratingState);
-  const appendPendingAiGeneration = useEditorStore((state) => state.appendPendingAiGeneration);
+  const appendPendingAiAsset = useEditorStore((state) => state.appendPendingAiAsset);
   const registerLocalProjectAsset = useEditorStore((state) => state.registerLocalProjectAsset);
   const theme = getEditorThemeTokens(editorThemeMode);
   const ai3d = useMemo(
@@ -280,7 +280,7 @@ export default function AiImageComposer() {
     referenceImages: imageReferenceImages,
     isGenerating: imageIsGenerating,
     isPromptActionPending,
-    appendPendingAiGeneration,
+    appendPendingAiAsset,
     setAiGeneratingState,
     t
   });
@@ -291,7 +291,7 @@ export default function AiImageComposer() {
     target: aiTextureTarget,
     isGenerating: aiTextureIsGenerating,
     isPromptActionPending,
-    appendPendingAiGeneration,
+    appendPendingAiAsset,
     setAiTextureState,
     t
   });
@@ -301,7 +301,7 @@ export default function AiImageComposer() {
     prompt: aiPanoramaPrompt,
     isGenerating: aiPanoramaIsGenerating,
     isPromptActionPending,
-    appendPendingAiGeneration,
+    appendPendingAiAsset,
     registerLocalProjectAsset,
     setAiPanoramaState,
     t

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import type { ProjectAssetKind } from "@/lib/api/contracts/assets";
-import { createEmptyProjectAiLibrary } from "@/lib/project/schema";
+import { createEmptyProjectAiLibrary, normalizeProjectAiLibrary } from "@/lib/project/schema";
 import type { Ai3DIntentInput, Ai3DPlanDiagnostics } from "@/lib/ai/ai3d/intent";
 import {
   DEFAULT_IMAGE_GENERATION_MODEL_ID,
@@ -14,8 +14,9 @@ import type {
   EditorApp,
   LightingConflictState,
   EditorProjectMetaJSON,
-  ProjectAiGenerationMetadataJSON,
-  ProjectAiLibraryJSON
+  ProjectAiAssetKindJSON,
+  ProjectAiLibraryJSON,
+  ProjectAiLibraryV2JSON
 } from "@/render/editor";
 
 export type AiImageProviderId = "siliconflow" | "openrouter";
@@ -58,22 +59,15 @@ export type LocalProjectAssetEntry = {
   entityId?: string;
 };
 
-export type PendingAiLibraryImage = {
-  id: string;
-  sourceUrl: string;
-  fileName: string;
-  mimeType: string;
-  appliedMeshIds: string[];
-};
-
 export type PendingAiReferenceImage = {
   dataUrl: string;
   fileName: string;
   mimeType: string;
 };
 
-export type PendingAiImageGeneration = {
+export type PendingAiAsset = {
   id: string;
+  kind: ProjectAiAssetKindJSON;
   createdAt: string;
   prompt: string;
   model: string;
@@ -83,8 +77,16 @@ export type PendingAiImageGeneration = {
   inferenceSteps: number;
   traceId: string | null;
   referenceImages: PendingAiReferenceImage[];
-  results: PendingAiLibraryImage[];
-  metadata?: ProjectAiGenerationMetadataJSON | null;
+  sourceUrl: string;
+  fileName: string;
+  mimeType: string;
+  appliedMeshIds: string[];
+  atlasLayoutVersion?: number;
+  targetKind?: "mesh" | "ground";
+  targetId?: string | null;
+  width?: number;
+  height?: number;
+  targetPath?: "env:pano";
 };
 
 export type ProjectSaveStatus = {
@@ -162,8 +164,8 @@ type EditorStoreState = {
   selectedEntityId: string | null;
   currentProjectId: string | null;
   currentProjectMeta: EditorProjectMetaJSON | null;
-  loadedAiLibrary: ProjectAiLibraryJSON;
-  pendingAiImageGenerations: PendingAiImageGeneration[];
+  loadedAiLibrary: ProjectAiLibraryV2JSON;
+  pendingAiAssets: PendingAiAsset[];
   localProjectAssets: LocalProjectAssetEntry[];
   saveStatus: ProjectSaveStatus;
   sceneLoadingStatus: SceneLoadingStatus;
@@ -191,12 +193,11 @@ type EditorStoreState = {
   setCurrentProject: (projectId: string | null) => void;
   setProjectMeta: (meta: EditorProjectMetaJSON | null) => void;
   setLoadedAiLibrary: (library: ProjectAiLibraryJSON) => void;
-  appendPendingAiGeneration: (generation: PendingAiImageGeneration) => void;
-  clearPendingAiGenerations: () => void;
-  removeAiLibraryResult: (payload: {
+  appendPendingAiAsset: (asset: PendingAiAsset) => void;
+  clearPendingAiAssets: () => void;
+  removeAiLibraryAsset: (payload: {
     source: "loaded" | "pending";
-    generationId: string;
-    resultId: string;
+    assetId: string;
   }) => void;
   recordAiResultAppliedToMesh: (imageUrl: string, meshId: string) => void;
   registerLocalProjectAsset: (asset: LocalProjectAssetEntry) => void;
@@ -312,29 +313,6 @@ function createInitialLightingConflictNotice(): LightingConflictNotice {
   };
 }
 
-function removeResultFromGenerations<
-  TGeneration extends { id: string; results: TResult[] },
-  TResult extends { id: string }
->(generations: TGeneration[], generationId: string, resultId: string) {
-  return generations.flatMap((generation) => {
-    if (generation.id !== generationId) {
-      return [generation];
-    }
-
-    const results = generation.results.filter((result) => result.id !== resultId);
-    if (results.length === 0) {
-      return [];
-    }
-
-    return [
-      {
-        ...generation,
-        results
-      }
-    ];
-  });
-}
-
 function revokeLocalAssetSourceUrl(sourceUrl: string) {
   if (!sourceUrl.startsWith("blob:") || typeof URL === "undefined") {
     return;
@@ -354,7 +332,7 @@ export const useEditorStore = create<EditorStoreState>((set) => ({
   currentProjectId: null,
   currentProjectMeta: null,
   loadedAiLibrary: createEmptyProjectAiLibrary(),
-  pendingAiImageGenerations: [],
+  pendingAiAssets: [],
   localProjectAssets: [],
   saveStatus: createInitialSaveStatus(),
   sceneLoadingStatus: createInitialSceneLoadingStatus(),
@@ -393,56 +371,56 @@ export const useEditorStore = create<EditorStoreState>((set) => ({
   setSelectedEntityId: (selectedEntityId) => set({ selectedEntityId }),
   setCurrentProject: (currentProjectId) => set({ currentProjectId }),
   setProjectMeta: (currentProjectMeta) => set({ currentProjectMeta }),
-  setLoadedAiLibrary: (loadedAiLibrary) => set({ loadedAiLibrary }),
-  appendPendingAiGeneration: (generation) =>
+  setLoadedAiLibrary: (loadedAiLibrary) =>
+    set({
+      loadedAiLibrary: normalizeProjectAiLibrary(loadedAiLibrary)
+    }),
+  appendPendingAiAsset: (asset) =>
     set((state) => ({
-      pendingAiImageGenerations: [...state.pendingAiImageGenerations, generation]
+      pendingAiAssets: [...state.pendingAiAssets, asset]
     })),
-  clearPendingAiGenerations: () => set({ pendingAiImageGenerations: [] }),
-  removeAiLibraryResult: ({ source, generationId, resultId }) =>
+  clearPendingAiAssets: () =>
+    set((state) => {
+      state.pendingAiAssets.forEach((asset) => revokeLocalAssetSourceUrl(asset.sourceUrl));
+      return { pendingAiAssets: [] };
+    }),
+  removeAiLibraryAsset: ({ source, assetId }) =>
     set((state) => ({
       loadedAiLibrary:
         source === "loaded"
           ? {
               ...state.loadedAiLibrary,
-              imageGenerations: removeResultFromGenerations(
-                state.loadedAiLibrary.imageGenerations,
-                generationId,
-                resultId
-              )
+              assets: state.loadedAiLibrary.assets.filter((asset) => asset.id !== assetId)
             }
           : state.loadedAiLibrary,
-      pendingAiImageGenerations:
+      pendingAiAssets:
         source === "pending"
-          ? removeResultFromGenerations(state.pendingAiImageGenerations, generationId, resultId)
-          : state.pendingAiImageGenerations
+          ? state.pendingAiAssets.filter((asset) => {
+              const shouldRemove = asset.id === assetId;
+              if (shouldRemove) {
+                revokeLocalAssetSourceUrl(asset.sourceUrl);
+              }
+              return !shouldRemove;
+            })
+          : state.pendingAiAssets
     })),
   recordAiResultAppliedToMesh: (imageUrl, meshId) =>
     set((state) => ({
-      pendingAiImageGenerations: state.pendingAiImageGenerations.map((generation) => ({
-        ...generation,
-        results: generation.results.map((result) =>
-          result.sourceUrl === imageUrl && !result.appliedMeshIds.includes(meshId)
-            ? {
-                ...result,
-                appliedMeshIds: [...result.appliedMeshIds, meshId]
-              }
-            : result
-        )
+      pendingAiAssets: state.pendingAiAssets.map((asset) => ({
+        ...asset,
+        appliedMeshIds:
+          asset.sourceUrl === imageUrl && !asset.appliedMeshIds.includes(meshId)
+            ? [...asset.appliedMeshIds, meshId]
+            : asset.appliedMeshIds
       })),
       loadedAiLibrary: {
         ...state.loadedAiLibrary,
-        imageGenerations: state.loadedAiLibrary.imageGenerations.map((generation) => ({
-          ...generation,
-          results: generation.results.map((result) =>
-            result.url === imageUrl &&
-            !(result.appliedMeshIds ?? []).includes(meshId)
-              ? {
-                  ...result,
-                  appliedMeshIds: [...(result.appliedMeshIds ?? []), meshId]
-                }
-              : result
-          )
+        assets: state.loadedAiLibrary.assets.map((asset) => ({
+          ...asset,
+          appliedMeshIds:
+            asset.url === imageUrl && !(asset.appliedMeshIds ?? []).includes(meshId)
+              ? [...(asset.appliedMeshIds ?? []), meshId]
+              : asset.appliedMeshIds
         }))
       }
     })),

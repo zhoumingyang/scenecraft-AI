@@ -62,7 +62,7 @@ export function useTopBarProjectActions(t: TopBarTranslate) {
   const currentProjectId = useEditorStore((state) => state.currentProjectId);
   const currentProjectMeta = useEditorStore((state) => state.currentProjectMeta);
   const loadedAiLibrary = useEditorStore((state) => state.loadedAiLibrary);
-  const pendingAiImageGenerations = useEditorStore((state) => state.pendingAiImageGenerations);
+  const pendingAiAssets = useEditorStore((state) => state.pendingAiAssets);
   const localProjectAssets = useEditorStore((state) => state.localProjectAssets);
   const saveStatus = useEditorStore((state) => state.saveStatus);
   const hasUnsavedChanges = useEditorStore((state) => state.hasUnsavedChanges);
@@ -70,7 +70,7 @@ export function useTopBarProjectActions(t: TopBarTranslate) {
   const projectSaveDialogOpen = useEditorStore((state) => state.projectSaveDialogOpen);
   const registerLocalProjectAsset = useEditorStore((state) => state.registerLocalProjectAsset);
   const clearLocalProjectAssets = useEditorStore((state) => state.clearLocalProjectAssets);
-  const clearPendingAiGenerations = useEditorStore((state) => state.clearPendingAiGenerations);
+  const clearPendingAiAssets = useEditorStore((state) => state.clearPendingAiAssets);
   const setCurrentProject = useEditorStore((state) => state.setCurrentProject);
   const setProjectMeta = useEditorStore((state) => state.setProjectMeta);
   const setLoadedAiLibrary = useEditorStore((state) => state.setLoadedAiLibrary);
@@ -80,7 +80,7 @@ export function useTopBarProjectActions(t: TopBarTranslate) {
   const endSceneLoading = useEditorStore((state) => state.endSceneLoading);
   const setProjectListDialogOpen = useEditorStore((state) => state.setProjectListDialogOpen);
   const setProjectSaveDialogOpen = useEditorStore((state) => state.setProjectSaveDialogOpen);
-  const removeAiLibraryResult = useEditorStore((state) => state.removeAiLibraryResult);
+  const removeAiLibraryAsset = useEditorStore((state) => state.removeAiLibraryAsset);
   const [aiLibraryDialogOpen, setAiLibraryDialogOpen] = useState(false);
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [isProjectListLoading, setIsProjectListLoading] = useState(false);
@@ -91,8 +91,7 @@ export function useTopBarProjectActions(t: TopBarTranslate) {
   const isPolyhavenEnabled = isPolyhavenProviderEnabled();
   const isSaving = saveStatus.phase === "saving";
   const aiLibraryAssetCount =
-    loadedAiLibrary.imageGenerations.reduce((count, generation) => count + generation.results.length, 0) +
-    pendingAiImageGenerations.reduce((count, generation) => count + generation.results.length, 0);
+    loadedAiLibrary.assets.length + pendingAiAssets.length;
 
   const runWithSceneLoading = async <T,>(task: () => Promise<T>) => {
     beginSceneLoading(t("editor.scene.loadingTitle"));
@@ -109,7 +108,7 @@ export function useTopBarProjectActions(t: TopBarTranslate) {
   };
 
   const clearProjectScopedState = () => {
-    clearPendingAiGenerations();
+    clearPendingAiAssets();
     clearLocalProjectAssets();
   };
 
@@ -288,7 +287,7 @@ export function useTopBarProjectActions(t: TopBarTranslate) {
         snapshot,
         projectId,
         loadedAiLibrary,
-        pendingAiImageGenerations,
+        pendingAiAssets,
         { onUploaded: trackUploadedAsset }
       );
       const uploadedAssets = [...uploadedSceneAssets, thumbnailAsset, ...uploadedAi.uploadedAssets];
@@ -386,21 +385,18 @@ export function useTopBarProjectActions(t: TopBarTranslate) {
 
   const onDeleteAiLibraryAsset = (payload: {
     source: "loaded" | "pending";
-    generationId: string;
-    resultId: string;
+    assetId: string;
   }) => {
     const pendingImageUrl =
       payload.source === "pending"
-        ? pendingAiImageGenerations
-            .find((generation) => generation.id === payload.generationId)
-            ?.results.find((result) => result.id === payload.resultId)?.sourceUrl ?? null
+        ? pendingAiAssets.find((asset) => asset.id === payload.assetId)?.sourceUrl ?? null
         : null;
 
     if (app && pendingImageUrl) {
       clearProjectTextureReferencesByUrl(app, pendingImageUrl);
     }
 
-    removeAiLibraryResult(payload);
+    removeAiLibraryAsset(payload);
     markUnsavedChanges(true);
   };
 
@@ -537,7 +533,7 @@ export function useTopBarProjectActions(t: TopBarTranslate) {
     openAiLibraryDialog: () => setAiLibraryDialogOpen(true),
     openProjectSelectDialog,
     panoImportInputRef,
-    pendingAiImageGenerations,
+    pendingAiAssets,
     polyhavenHdriDialogOpen,
     polyhavenModelDialogOpen,
     projectListDialogOpen,

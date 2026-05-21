@@ -124,7 +124,7 @@ export default function TopBar() {
         open={actions.aiLibraryDialogOpen}
         theme={theme}
         loadedLibrary={actions.loadedAiLibrary}
-        pendingGenerations={actions.pendingAiImageGenerations}
+        pendingAssets={actions.pendingAiAssets}
         onClose={actions.closeAiLibraryDialog}
         onDeleteAsset={actions.onDeleteAiLibraryAsset}
       />

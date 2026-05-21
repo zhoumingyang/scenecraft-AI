@@ -16,7 +16,7 @@ import { createClientUuid } from "@/components/editor/projectPersistence";
 import type {
   AiTextureResult,
   AiTextureTarget,
-  PendingAiImageGeneration
+  PendingAiAsset
 } from "@/stores/editorStore";
 
 type Params = {
@@ -25,7 +25,7 @@ type Params = {
   target: AiTextureTarget | null;
   isGenerating: boolean;
   isPromptActionPending: boolean;
-  appendPendingAiGeneration: (generation: PendingAiImageGeneration) => void;
+  appendPendingAiAsset: (asset: PendingAiAsset) => void;
   setAiTextureState: (payload: {
     isGenerating?: boolean;
     errorMessage?: string | null;
@@ -70,7 +70,7 @@ export function useAiPbrTextureComposer({
   target,
   isGenerating,
   isPromptActionPending,
-  appendPendingAiGeneration,
+  appendPendingAiAsset,
   setAiTextureState,
   t
 }: Params) {
@@ -113,8 +113,9 @@ export function useAiPbrTextureComposer({
         }
       }
 
-      appendPendingAiGeneration({
-        id: createClientUuid("ai-pbr-generation"),
+      appendPendingAiAsset({
+        id: createClientUuid("ai-pbr-result"),
+        kind: "pbr_atlas",
         createdAt: new Date().toISOString(),
         prompt: trimmedPrompt,
         model: payload.model,
@@ -124,21 +125,13 @@ export function useAiPbrTextureComposer({
         inferenceSteps: AI_PBR_TEXTURE_INFERENCE_STEPS,
         traceId: payload.traceId,
         referenceImages: [],
-        results: [
-          {
-            id: createClientUuid("ai-pbr-result"),
-            sourceUrl: payload.atlasImageUrl,
-            fileName: `pbr-atlas-${Date.now()}.png`,
-            mimeType: "image/png",
-            appliedMeshIds
-          }
-        ],
-        metadata: {
-          kind: "pbr_texture_atlas",
-          atlasLayoutVersion: payload.layoutVersion,
-          targetKind: activeTarget?.kind,
-          targetId: activeTarget?.kind === "mesh" ? activeTarget.id ?? null : null
-        }
+        sourceUrl: payload.atlasImageUrl,
+        fileName: `pbr-atlas-${Date.now()}.png`,
+        mimeType: "image/png",
+        appliedMeshIds,
+        atlasLayoutVersion: payload.layoutVersion,
+        targetKind: activeTarget?.kind,
+        targetId: activeTarget?.kind === "mesh" ? activeTarget.id ?? null : null
       });
 
       setAiTextureState({

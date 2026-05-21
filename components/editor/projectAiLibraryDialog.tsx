@@ -19,21 +19,20 @@ import VisibilityRoundedIcon from "@mui/icons-material/VisibilityRounded";
 import AiImagePreviewDialog from "@/components/editor/aiImagePreviewDialog";
 import type { EditorThemeTokens } from "@/components/editor/theme";
 import { useI18n } from "@/lib/i18n";
-import type { ProjectAiGenerationMetadataJSON, ProjectAiLibraryJSON } from "@/render/editor";
-import type { PendingAiImageGeneration } from "@/stores/editorStore";
+import type { ProjectAiAssetJSON, ProjectAiLibraryV2JSON } from "@/render/editor";
+import type { PendingAiAsset } from "@/stores/editorStore";
 import { useEditorStore } from "@/stores/editorStore";
 
 type ProjectAiLibraryDialogProps = {
   open: boolean;
   theme: EditorThemeTokens;
-  loadedLibrary: ProjectAiLibraryJSON;
-  pendingGenerations: PendingAiImageGeneration[];
+  loadedLibrary: ProjectAiLibraryV2JSON;
+  pendingAssets: PendingAiAsset[];
   mode?: "manage" | "apply";
   onClose: () => void;
   onDeleteAsset?: (payload: {
     source: "loaded" | "pending";
-    generationId: string;
-    resultId: string;
+    assetId: string;
   }) => void;
   onApplyAsset?: (payload: { imageUrl: string; assetId?: string }) => void;
   onApplyPbrAtlas?: (payload: { imageUrl: string; assetId?: string }) => void;
@@ -42,21 +41,20 @@ type ProjectAiLibraryDialogProps = {
 type AiAssetListItem = {
   key: string;
   source: "loaded" | "pending";
-  generationId: string;
-  resultId: string;
+  assetId: string;
+  kind: ProjectAiAssetJSON["kind"];
   imageUrl: string;
-  assetId?: string;
+  uploadedAssetId?: string;
   prompt: string;
   model: string;
   createdAt: string;
-  metadata?: ProjectAiGenerationMetadataJSON | null;
 };
 
 export default function ProjectAiLibraryDialog({
   open,
   theme,
   loadedLibrary,
-  pendingGenerations,
+  pendingAssets,
   mode = "manage",
   onClose,
   onDeleteAsset,
@@ -70,38 +68,32 @@ export default function ProjectAiLibraryDialog({
   );
 
   const items = useMemo<AiAssetListItem[]>(() => {
-    const savedItems = loadedLibrary.imageGenerations.flatMap((generation) =>
-      generation.results.map((result) => ({
-        key: `loaded:${generation.id}:${result.id}`,
-        source: "loaded" as const,
-        generationId: generation.id,
-        resultId: result.id,
-        imageUrl: result.url,
-        assetId: result.assetId,
-        prompt: generation.prompt,
-        model: generation.model,
-        createdAt: generation.createdAt,
-        metadata: generation.metadata ?? null
-      }))
-    );
-    const pendingItems = pendingGenerations.flatMap((generation) =>
-      generation.results.map((result) => ({
-        key: `pending:${generation.id}:${result.id}`,
-        source: "pending" as const,
-        generationId: generation.id,
-        resultId: result.id,
-        imageUrl: result.sourceUrl,
-        prompt: generation.prompt,
-        model: generation.model,
-        createdAt: generation.createdAt,
-        metadata: generation.metadata ?? null
-      }))
-    );
+    const savedItems = loadedLibrary.assets.map((asset) => ({
+      key: `loaded:${asset.id}`,
+      source: "loaded" as const,
+      assetId: asset.id,
+      kind: asset.kind,
+      imageUrl: asset.url,
+      uploadedAssetId: asset.assetId,
+      prompt: asset.prompt,
+      model: asset.model,
+      createdAt: asset.createdAt
+    }));
+    const pendingItems = pendingAssets.map((asset) => ({
+      key: `pending:${asset.id}`,
+      source: "pending" as const,
+      assetId: asset.id,
+      kind: asset.kind,
+      imageUrl: asset.sourceUrl,
+      prompt: asset.prompt,
+      model: asset.model,
+      createdAt: asset.createdAt
+    }));
 
     return [...pendingItems, ...savedItems].sort(
       (left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime()
     );
-  }, [loadedLibrary.imageGenerations, pendingGenerations]);
+  }, [loadedLibrary.assets, pendingAssets]);
 
   const handleDelete = (item: AiAssetListItem) => {
     if (!window.confirm(t("editor.project.aiAssetDeleteConfirm"))) {
@@ -110,15 +102,14 @@ export default function ProjectAiLibraryDialog({
 
     onDeleteAsset?.({
       source: item.source,
-      generationId: item.generationId,
-      resultId: item.resultId
+      assetId: item.assetId
     });
   };
 
   const handleApply = (item: AiAssetListItem) => {
     onApplyAsset?.({
       imageUrl: item.imageUrl,
-      assetId: item.assetId
+      assetId: item.uploadedAssetId
     });
     onClose();
   };
@@ -126,7 +117,7 @@ export default function ProjectAiLibraryDialog({
   const handleApplyPbrAtlas = (item: AiAssetListItem) => {
     onApplyPbrAtlas?.({
       imageUrl: item.imageUrl,
-      assetId: item.assetId
+      assetId: item.uploadedAssetId
     });
     onClose();
   };
@@ -257,7 +248,7 @@ export default function ProjectAiLibraryDialog({
                     <Typography sx={{ fontSize: 11, color: theme.text }}>
                       {item.model}
                     </Typography>
-                    {item.metadata?.kind === "pbr_texture_atlas" ? (
+                    {item.kind === "pbr_atlas" ? (
                       <Typography
                         sx={{
                           alignSelf: "flex-start",
@@ -273,7 +264,7 @@ export default function ProjectAiLibraryDialog({
                       >
                         {t("editor.project.aiPbrAtlas")}
                       </Typography>
-                    ) : item.metadata?.kind === "panorama" ? (
+                    ) : item.kind === "panorama" ? (
                       <Typography
                         sx={{
                           alignSelf: "flex-start",
@@ -343,7 +334,7 @@ export default function ProjectAiLibraryDialog({
                               <FormatPaintRoundedIcon sx={{ fontSize: 16 }} />
                             </IconButton>
                           </Tooltip>
-                          {item.metadata?.kind === "pbr_texture_atlas" && onApplyPbrAtlas ? (
+                          {item.kind === "pbr_atlas" && onApplyPbrAtlas ? (
                             <Tooltip title={t("editor.project.applyPbrAtlas")}>
                               <IconButton
                                 size="small"

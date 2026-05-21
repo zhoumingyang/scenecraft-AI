@@ -83,7 +83,7 @@ export function TextureConfigDialog({
   const app = useEditorStore((state) => state.app);
   const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
   const loadedAiLibrary = useEditorStore((state) => state.loadedAiLibrary);
-  const pendingAiImageGenerations = useEditorStore((state) => state.pendingAiImageGenerations);
+  const pendingAiAssets = useEditorStore((state) => state.pendingAiAssets);
   const registerLocalProjectAsset = useEditorStore((state) => state.registerLocalProjectAsset);
   const [inputKey, setInputKey] = useState(0);
   const [aiLibraryOpen, setAiLibraryOpen] = useState(false);
@@ -364,7 +364,7 @@ export function TextureConfigDialog({
         open={aiLibraryOpen}
         theme={theme}
         loadedLibrary={loadedAiLibrary}
-        pendingGenerations={pendingAiImageGenerations}
+        pendingAssets={pendingAiAssets}
         mode="apply"
         onClose={() => setAiLibraryOpen(false)}
         onApplyAsset={onApplyAiAsset}
