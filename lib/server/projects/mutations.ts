@@ -79,14 +79,23 @@ function collectReferencedProjectAssetIds(payload: SaveProjectRequest) {
     collectMaterialAssetIds(assetIds, mesh.material);
   });
 
-  aiSnapshot.imageGenerations.forEach((generation) => {
-    generation.referenceImages?.forEach((image) => {
-      addAssetId(assetIds, image.assetId);
+  if (aiSnapshot.version === 2) {
+    aiSnapshot.assets.forEach((asset) => {
+      addAssetId(assetIds, asset.assetId);
+      asset.referenceImages?.forEach((image) => {
+        addAssetId(assetIds, image.assetId);
+      });
     });
-    generation.results.forEach((image) => {
-      addAssetId(assetIds, image.assetId);
+  } else {
+    aiSnapshot.imageGenerations.forEach((generation) => {
+      generation.referenceImages?.forEach((image) => {
+        addAssetId(assetIds, image.assetId);
+      });
+      generation.results.forEach((image) => {
+        addAssetId(assetIds, image.assetId);
+      });
     });
-  });
+  }
 
   return assetIds;
 }

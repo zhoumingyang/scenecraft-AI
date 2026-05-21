@@ -40,7 +40,7 @@ import { isPolyhavenProviderEnabled } from "@/lib/externalAssets/config";
 import type { TopBarTranslate } from "./types";
 import {
   cloneProjectSnapshot,
-  uploadPendingAiGenerations,
+  uploadPendingAiAssets,
   uploadProjectThumbnail,
   uploadSceneLocalAssets
 } from "./projectSaveHelpers";
@@ -283,7 +283,7 @@ export function useTopBarProjectActions(t: TopBarTranslate) {
       const thumbnailAsset = await uploadProjectThumbnail(app, snapshot, projectId, {
         onUploaded: trackUploadedAsset
       });
-      const uploadedAi = await uploadPendingAiGenerations(
+      const uploadedAi = await uploadPendingAiAssets(
         snapshot,
         projectId,
         loadedAiLibrary,
