@@ -5,7 +5,7 @@ import { generateAiImages } from "@/frontend/api/ai";
 import { getImageGenerationModelConfig } from "@/lib/ai/image-generation/models";
 import { getApiErrorMessage } from "@/lib/http/axios";
 import { createClientUuid } from "@/components/editor/projectPersistence";
-import type { PendingAiImageGeneration } from "@/stores/editorStore";
+import type { PendingAiAsset } from "@/stores/editorStore";
 import { parseSeed } from "./utils";
 
 type Params = {
@@ -18,7 +18,7 @@ type Params = {
   referenceImages: Array<{ dataUrl: string | null; fileName?: string | null }>;
   isGenerating: boolean;
   isPromptActionPending: boolean;
-  appendPendingAiGeneration: (generation: PendingAiImageGeneration) => void;
+  appendPendingAiAsset: (asset: PendingAiAsset) => void;
   setAiGeneratingState: (payload: {
     isGenerating: boolean;
     errorMessage?: string | null;
@@ -38,7 +38,7 @@ export function useAiImageComposer({
   referenceImages,
   isGenerating,
   isPromptActionPending,
-  appendPendingAiGeneration,
+  appendPendingAiAsset,
   setAiGeneratingState,
   t
 }: Params) {
@@ -101,30 +101,36 @@ export function useAiImageComposer({
         results: images,
         lastSeed: typeof payload?.seed === "number" ? payload.seed : null
       });
-      appendPendingAiGeneration({
-        id: createClientUuid("ai-generation"),
-        createdAt: new Date().toISOString(),
-        prompt: trimmedPrompt,
-        model,
-        seed: typeof payload?.seed === "number" ? payload.seed : parsedSeed ?? null,
-        imageSize: modelConfig.supportsImageSize ? imageSize : undefined,
-        cfg,
-        inferenceSteps,
-        traceId: payload.traceId ?? null,
-        referenceImages: referenceImages
-          .filter((item): item is { dataUrl: string; fileName?: string | null } => Boolean(item.dataUrl))
-          .map((item, index) => ({
-            dataUrl: item.dataUrl,
-            fileName: item.fileName ?? `reference-${index + 1}.png`,
-            mimeType: item.dataUrl.startsWith("data:") ? item.dataUrl.slice(5, item.dataUrl.indexOf(";")) : "image/png"
-          })),
-        results: images.map((image, index) => ({
+      const createdAt = new Date().toISOString();
+      const generatedSeed = typeof payload?.seed === "number" ? payload.seed : parsedSeed ?? null;
+      const pendingReferenceImages = referenceImages
+        .filter((item): item is { dataUrl: string; fileName?: string | null } => Boolean(item.dataUrl))
+        .map((item, index) => ({
+          dataUrl: item.dataUrl,
+          fileName: item.fileName ?? `reference-${index + 1}.png`,
+          mimeType: item.dataUrl.startsWith("data:")
+            ? item.dataUrl.slice(5, item.dataUrl.indexOf(";"))
+            : "image/png"
+        }));
+
+      images.forEach((image, index) => {
+        appendPendingAiAsset({
           id: createClientUuid("ai-result"),
+          kind: "image",
+          createdAt,
+          prompt: trimmedPrompt,
+          model,
+          seed: generatedSeed,
+          imageSize: modelConfig.supportsImageSize ? imageSize : undefined,
+          cfg,
+          inferenceSteps,
+          traceId: payload.traceId ?? null,
+          referenceImages: pendingReferenceImages,
           sourceUrl: image.url,
           fileName: `generated-${Date.now()}-${index + 1}.png`,
           mimeType: "image/png",
           appliedMeshIds: []
-        }))
+        });
       });
     } catch (error) {
       setAiGeneratingState({

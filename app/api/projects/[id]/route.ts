@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { SaveProjectRequest, SaveProjectResponse } from "@/lib/api/contracts/projects";
-import { projectSaveRequestSchema } from "@/lib/project/schema";
+import { normalizeProjectAiLibrary, projectSaveRequestSchema } from "@/lib/project/schema";
 import { getSession } from "@/lib/server/auth/getSession";
 import { deleteBlobAssets } from "@/lib/server/assets/config";
 import { getErrorMessage } from "@/lib/server/http/getErrorMessage";
@@ -34,7 +34,7 @@ export async function GET(_: Request, context: RouteContext) {
         version: project.version,
         updatedAt: project.updatedAt.toISOString(),
         snapshot: project.snapshot,
-        aiSnapshot: project.aiSnapshot
+        aiSnapshot: normalizeProjectAiLibrary(project.aiSnapshot)
       }
     });
   } catch (error) {
@@ -82,7 +82,7 @@ export async function PUT(request: Request, context: RouteContext) {
         version: updated.version,
         updatedAt: updated.updatedAt.toISOString(),
         snapshot: updated.snapshot,
-        aiSnapshot: updated.aiSnapshot
+        aiSnapshot: normalizeProjectAiLibrary(updated.aiSnapshot)
       }
     };
 

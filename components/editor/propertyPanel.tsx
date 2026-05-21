@@ -16,9 +16,9 @@ import {
   createPbrAtlasMaterialPatch,
   GROUND_HELPER_NODE_ID,
   SCENE_NODE_ID,
-  type ProjectAiLibraryJSON
+  type ProjectAiLibraryV2JSON
 } from "@/render/editor";
-import { useEditorStore, type PendingAiImageGeneration } from "@/stores/editorStore";
+import { useEditorStore, type PendingAiAsset } from "@/stores/editorStore";
 import {
   GroundScaleSection,
   LightSettingsSection,
@@ -36,8 +36,8 @@ import { getEditorThemeTokens } from "@/components/editor/theme";
 
 const PANEL_WIDTH = 272;
 const COLLAPSED_VISIBLE_WIDTH = 44;
-const CLOSED_AI_LIBRARY: ProjectAiLibraryJSON = { version: 1, imageGenerations: [] };
-const CLOSED_PENDING_AI_IMAGE_GENERATIONS: PendingAiImageGeneration[] = [];
+const CLOSED_AI_LIBRARY: ProjectAiLibraryV2JSON = { version: 2, assets: [] };
+const CLOSED_PENDING_AI_ASSETS: PendingAiAsset[] = [];
 
 export default function PropertyPanel() {
   const { t } = useI18n();
@@ -55,8 +55,8 @@ export default function PropertyPanel() {
   const loadedAiLibrary = useEditorStore((state) =>
     open ? state.loadedAiLibrary : CLOSED_AI_LIBRARY
   );
-  const pendingAiImageGenerations = useEditorStore((state) =>
-    open ? state.pendingAiImageGenerations : CLOSED_PENDING_AI_IMAGE_GENERATIONS
+  const pendingAiAssets = useEditorStore((state) =>
+    open ? state.pendingAiAssets : CLOSED_PENDING_AI_ASSETS
   );
   const [activeTextureField, setActiveTextureField] = useState<TextureFieldKey | null>(null);
   const [materialLibraryOpen, setMaterialLibraryOpen] = useState(false);
@@ -147,6 +147,24 @@ export default function PropertyPanel() {
     }
 
     app.updateMeshMaterial(entityRecord.item.id, materialPatch);
+  };
+
+  const handleApplyPanorama = ({
+    imageUrl,
+    assetId,
+    assetName
+  }: {
+    imageUrl: string;
+    assetId?: string;
+    assetName?: string;
+  }) => {
+    app?.updateSceneEnvConfig({
+      panoAssetId: assetId ?? "",
+      panoAssetName: assetName ?? imageUrl,
+      panoUrl: imageUrl,
+      externalSource: null
+    });
+    app?.setSelectedEntity(SCENE_NODE_ID);
   };
 
   return (
@@ -471,8 +489,11 @@ export default function PropertyPanel() {
           open={aiLibraryOpen}
           theme={theme}
           loadedLibrary={loadedAiLibrary}
-          pendingGenerations={pendingAiImageGenerations}
+          pendingAssets={pendingAiAssets}
+          mode={entityRecord?.kind === "scene" ? "apply" : "manage"}
+          allowedKinds={entityRecord?.kind === "scene" ? ["panorama"] : undefined}
           onClose={() => setAiLibraryOpen(false)}
+          onApplyPanorama={handleApplyPanorama}
         />
       </Box>
     </Box>

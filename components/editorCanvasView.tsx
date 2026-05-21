@@ -36,7 +36,7 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
   const setCurrentProject = useEditorStore((state) => state.setCurrentProject);
   const setProjectMeta = useEditorStore((state) => state.setProjectMeta);
   const setLoadedAiLibrary = useEditorStore((state) => state.setLoadedAiLibrary);
-  const clearPendingAiGenerations = useEditorStore((state) => state.clearPendingAiGenerations);
+  const clearPendingAiAssets = useEditorStore((state) => state.clearPendingAiAssets);
   const clearLocalProjectAssets = useEditorStore((state) => state.clearLocalProjectAssets);
   const markUnsavedChanges = useEditorStore((state) => state.markUnsavedChanges);
   const setSaveStatus = useEditorStore((state) => state.setSaveStatus);
@@ -176,7 +176,7 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
             setCurrentProject(response.project.id);
             setProjectMeta(project.meta ?? null);
             setLoadedAiLibrary(response.project.aiSnapshot);
-            clearPendingAiGenerations();
+            clearPendingAiAssets();
             clearLocalProjectAssets();
             syncEditorProjectSearchParam(response.project.id);
             setSaveStatus({
@@ -200,7 +200,7 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
         setCurrentProject(null);
         setProjectMeta(defaultProject.meta ?? null);
         setLoadedAiLibrary(createEmptyProjectAiLibrary());
-        clearPendingAiGenerations();
+        clearPendingAiAssets();
         clearLocalProjectAssets();
       } finally {
         endSceneLoading();
@@ -219,7 +219,7 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
     };
   }, [
     clearLocalProjectAssets,
-    clearPendingAiGenerations,
+    clearPendingAiAssets,
     bumpProjectLoadVersion,
     bumpProjectVersion,
     bumpEntityVersion,

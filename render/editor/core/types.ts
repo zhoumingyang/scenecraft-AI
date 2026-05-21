@@ -384,10 +384,57 @@ export type ProjectAiImageGenerationJSON = {
   metadata?: ProjectAiGenerationMetadataJSON | null;
 };
 
-export type ProjectAiLibraryJSON = {
+export type ProjectAiLibraryV1JSON = {
   version: 1;
   imageGenerations: ProjectAiImageGenerationJSON[];
 };
+
+export type ProjectAiAssetKindJSON = "image" | "pbr_atlas" | "panorama";
+
+export type ProjectAiAssetBaseJSON = ProjectAssetRefJSON & {
+  id: string;
+  kind: ProjectAiAssetKindJSON;
+  createdAt: string;
+  prompt: string;
+  model: string;
+  seed?: number | null;
+  imageSize?: string;
+  cfg?: number;
+  inferenceSteps?: number;
+  traceId?: string | null;
+  referenceImages?: ProjectAssetRefJSON[];
+  appliedMeshIds?: string[];
+};
+
+export type ProjectAiImageAssetJSON = ProjectAiAssetBaseJSON & {
+  kind: "image";
+};
+
+export type ProjectAiPbrAtlasAssetJSON = ProjectAiAssetBaseJSON & {
+  kind: "pbr_atlas";
+  atlasLayoutVersion?: number;
+  targetKind?: "mesh" | "ground";
+  targetId?: string | null;
+};
+
+export type ProjectAiPanoramaAssetJSON = ProjectAiAssetBaseJSON & {
+  kind: "panorama";
+  width?: number;
+  height?: number;
+  targetPath: "env:pano";
+};
+
+export type ProjectAiAssetJSON =
+  | ProjectAiImageAssetJSON
+  | ProjectAiPbrAtlasAssetJSON
+  | ProjectAiPanoramaAssetJSON;
+
+export type ProjectAiLibraryV2JSON = {
+  version: 2;
+  assets: ProjectAiAssetJSON[];
+};
+
+export type ProjectAiLibraryJSON = ProjectAiLibraryV1JSON | ProjectAiLibraryV2JSON;
 
 export type EditorProjectJSON = {
   id: string;

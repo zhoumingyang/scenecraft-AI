@@ -4,7 +4,7 @@ import type {
   SaveProjectRequest,
   SaveProjectResponse
 } from "@/lib/api/contracts/projects";
-import { projectSaveRequestSchema } from "@/lib/project/schema";
+import { normalizeProjectAiLibrary, projectSaveRequestSchema } from "@/lib/project/schema";
 import { getSession } from "@/lib/server/auth/getSession";
 import { getErrorMessage } from "@/lib/server/http/getErrorMessage";
 import { createProject } from "@/lib/server/projects/mutations";
@@ -53,7 +53,7 @@ export async function POST(request: Request) {
         version: created.version,
         updatedAt: created.updatedAt.toISOString(),
         snapshot: created.snapshot,
-        aiSnapshot: created.aiSnapshot
+        aiSnapshot: normalizeProjectAiLibrary(created.aiSnapshot)
       }
     };
 

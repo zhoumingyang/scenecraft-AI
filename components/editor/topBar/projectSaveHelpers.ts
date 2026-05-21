@@ -11,8 +11,13 @@ import type {
   PrepareAssetUploadRequest,
   UploadedProjectAsset
 } from "@/lib/api/contracts/assets";
-import type { EditorApp, EditorProjectJSON, ProjectAiImageGenerationJSON, ProjectAiLibraryJSON } from "@/render/editor";
-import type { LocalProjectAssetEntry, PendingAiImageGeneration } from "@/stores/editorStore";
+import type {
+  EditorApp,
+  EditorProjectJSON,
+  ProjectAiAssetJSON,
+  ProjectAiLibraryV2JSON
+} from "@/render/editor";
+import type { LocalProjectAssetEntry, PendingAiAsset } from "@/stores/editorStore";
 
 type UploadTrackingOptions = {
   onUploaded?: (asset: UploadedProjectAsset) => void;
@@ -82,14 +87,14 @@ export async function uploadSceneLocalAssets(
   );
 }
 
-export async function uploadPendingAiGenerations(
+export async function uploadPendingAiAssets(
   snapshot: EditorProjectJSON,
   projectId: string,
-  loadedAiLibrary: ProjectAiLibraryJSON,
-  pendingAiImageGenerations: PendingAiImageGeneration[],
+  loadedAiLibrary: ProjectAiLibraryV2JSON,
+  pendingAiAssets: PendingAiAsset[],
   options: UploadTrackingOptions = {}
-): Promise<{ aiSnapshot: ProjectAiLibraryJSON; uploadedAssets: UploadedProjectAsset[] }> {
-  if (pendingAiImageGenerations.length === 0) {
+): Promise<{ aiSnapshot: ProjectAiLibraryV2JSON; uploadedAssets: UploadedProjectAsset[] }> {
+  if (pendingAiAssets.length === 0) {
     return {
       aiSnapshot: loadedAiLibrary,
       uploadedAssets: []
@@ -97,12 +102,12 @@ export async function uploadPendingAiGenerations(
   }
 
   const uploadedAssets: UploadedProjectAsset[] = [];
-  const savedGenerations: ProjectAiImageGenerationJSON[] = [];
+  const savedAssets: ProjectAiAssetJSON[] = [];
 
-  for (const generation of pendingAiImageGenerations) {
+  for (const asset of pendingAiAssets) {
     const uploadedReferenceImages = [];
-    for (let index = 0; index < generation.referenceImages.length; index += 1) {
-      const image = generation.referenceImages[index];
+    for (let index = 0; index < asset.referenceImages.length; index += 1) {
+      const image = asset.referenceImages[index];
       const file = await dataUrlToFile(image.dataUrl, image.fileName, image.mimeType);
       const uploaded = await uploadPreparedAsset(
         {
@@ -113,7 +118,7 @@ export async function uploadPendingAiGenerations(
           contentType: file.type || image.mimeType,
           sizeBytes: file.size,
           metadata: {
-            generationId: generation.id,
+            aiAssetId: asset.id,
             slot: index
           }
         },
@@ -130,61 +135,74 @@ export async function uploadPendingAiGenerations(
       });
     }
 
-    const uploadedResults = [];
-    for (let index = 0; index < generation.results.length; index += 1) {
-      const result = generation.results[index];
-      const file = await sourceUrlToFile(result.sourceUrl, result.fileName, result.mimeType);
-      const uploaded = await uploadPreparedAsset(
-        {
-          assetId: createClientUuid("asset"),
-          projectId,
-          kind: "ai_generated_image",
-          fileName: file.name,
-          contentType: file.type || result.mimeType,
-          sizeBytes: file.size,
-          metadata: {
-            generationId: generation.id,
-            resultId: result.id,
-            index,
-            generationMetadata: generation.metadata ?? null
-          }
-        },
-        file
-      );
-      options.onUploaded?.(uploaded);
-      uploadedAssets.push(uploaded);
-      applyUploadedAssetToProjectSnapshot(snapshot, result.sourceUrl, uploaded);
-      uploadedResults.push({
-        id: result.id,
-        assetId: uploaded.assetId,
-        url: uploaded.url,
-        mimeType: uploaded.mimeType,
-        originalName: uploaded.originalName,
-        sizeBytes: uploaded.sizeBytes,
-        appliedMeshIds: result.appliedMeshIds
+    const file = await sourceUrlToFile(asset.sourceUrl, asset.fileName, asset.mimeType);
+    const uploaded = await uploadPreparedAsset(
+      {
+        assetId: createClientUuid("asset"),
+        projectId,
+        kind: "ai_generated_image",
+        fileName: file.name,
+        contentType: file.type || asset.mimeType,
+        sizeBytes: file.size,
+        metadata: {
+          aiAssetId: asset.id,
+          aiAssetKind: asset.kind,
+          targetPath: asset.targetPath ?? null
+        }
+      },
+      file
+    );
+    options.onUploaded?.(uploaded);
+    uploadedAssets.push(uploaded);
+    applyUploadedAssetToProjectSnapshot(snapshot, asset.sourceUrl, uploaded);
+
+    const savedBase = {
+      id: asset.id,
+      createdAt: asset.createdAt,
+      prompt: asset.prompt,
+      model: asset.model,
+      seed: asset.seed,
+      imageSize: asset.imageSize,
+      cfg: asset.cfg,
+      inferenceSteps: asset.inferenceSteps,
+      traceId: asset.traceId,
+      referenceImages: uploadedReferenceImages,
+      assetId: uploaded.assetId,
+      url: uploaded.url,
+      mimeType: uploaded.mimeType,
+      originalName: uploaded.originalName,
+      sizeBytes: uploaded.sizeBytes,
+      appliedMeshIds: asset.appliedMeshIds
+    };
+
+    if (asset.kind === "pbr_atlas") {
+      savedAssets.push({
+        ...savedBase,
+        kind: "pbr_atlas",
+        atlasLayoutVersion: asset.atlasLayoutVersion,
+        targetKind: asset.targetKind,
+        targetId: asset.targetId
+      });
+    } else if (asset.kind === "panorama") {
+      savedAssets.push({
+        ...savedBase,
+        kind: "panorama",
+        width: asset.width,
+        height: asset.height,
+        targetPath: "env:pano"
+      });
+    } else {
+      savedAssets.push({
+        ...savedBase,
+        kind: "image"
       });
     }
-
-    savedGenerations.push({
-      id: generation.id,
-      createdAt: generation.createdAt,
-      prompt: generation.prompt,
-      model: generation.model,
-      seed: generation.seed,
-      imageSize: generation.imageSize,
-      cfg: generation.cfg,
-      inferenceSteps: generation.inferenceSteps,
-      traceId: generation.traceId,
-      referenceImages: uploadedReferenceImages,
-      results: uploadedResults,
-      metadata: generation.metadata ?? null
-    });
   }
 
   return {
     aiSnapshot: {
-      version: 1,
-      imageGenerations: [...loadedAiLibrary.imageGenerations, ...savedGenerations]
+      version: 2,
+      assets: [...loadedAiLibrary.assets, ...savedAssets]
     },
     uploadedAssets
   };
