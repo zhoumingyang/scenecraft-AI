@@ -10,10 +10,12 @@ type Params = {
   prompt: string;
   aiTexturePrompt: string;
   aiPanoramaPrompt: string;
+  aiAssetRecommendationPrompt: string;
   ai3dPrompt: string;
   isImageBusy: boolean;
   isTextureBusy: boolean;
   isPanoramaBusy: boolean;
+  isAssetRecommendationBusy: boolean;
   isAi3dBusy: boolean;
   setAiPrompt: (prompt: string) => void;
   setAiTexturePrompt: (prompt: string) => void;
@@ -22,6 +24,10 @@ type Params = {
   }) => void;
   setAiPanoramaPrompt: (prompt: string) => void;
   setAiPanoramaState: (payload: {
+    errorMessage?: string | null;
+  }) => void;
+  setAiAssetRecommendationPrompt: (prompt: string) => void;
+  setAiAssetRecommendationState: (payload: {
     errorMessage?: string | null;
   }) => void;
   setAi3dPrompt: (prompt: string) => void;
@@ -52,16 +58,20 @@ export function usePromptTransform({
   prompt,
   aiTexturePrompt,
   aiPanoramaPrompt,
+  aiAssetRecommendationPrompt,
   ai3dPrompt,
   isImageBusy,
   isTextureBusy,
   isPanoramaBusy,
+  isAssetRecommendationBusy,
   isAi3dBusy,
   setAiPrompt,
   setAiTexturePrompt,
   setAiTextureState,
   setAiPanoramaPrompt,
   setAiPanoramaState,
+  setAiAssetRecommendationPrompt,
+  setAiAssetRecommendationState,
   setAi3dPrompt,
   setAiGeneratingState,
   setAi3dState,
@@ -81,6 +91,8 @@ export function usePromptTransform({
           ? aiTexturePrompt
           : aiMode === "panorama"
             ? aiPanoramaPrompt
+            : aiMode === "assets"
+              ? aiAssetRecommendationPrompt
             : ai3dPrompt;
     const trimmedPrompt = sourcePrompt.trim();
     const isBusy =
@@ -90,6 +102,8 @@ export function usePromptTransform({
           ? isTextureBusy
           : aiMode === "panorama"
             ? isPanoramaBusy
+            : aiMode === "assets"
+              ? isAssetRecommendationBusy
             : isAi3dBusy;
     if (!trimmedPrompt || isBusy || isPromptActionPending || promptActionLockRef.current) {
       return;
@@ -108,6 +122,10 @@ export function usePromptTransform({
       });
     } else if (aiMode === "panorama") {
       setAiPanoramaState({
+        errorMessage: null
+      });
+    } else if (aiMode === "assets") {
+      setAiAssetRecommendationState({
         errorMessage: null
       });
     } else {
@@ -134,6 +152,8 @@ export function usePromptTransform({
         setAiTexturePrompt(nextPrompt);
       } else if (aiMode === "panorama") {
         setAiPanoramaPrompt(nextPrompt);
+      } else if (aiMode === "assets") {
+        setAiAssetRecommendationPrompt(nextPrompt);
       } else {
         setAi3dPrompt(nextPrompt);
       }
@@ -149,6 +169,10 @@ export function usePromptTransform({
         });
       } else if (aiMode === "panorama") {
         setAiPanoramaState({
+          errorMessage: getApiErrorMessage(error, t("editor.ai.promptTransformFailed"))
+        });
+      } else if (aiMode === "assets") {
+        setAiAssetRecommendationState({
           errorMessage: getApiErrorMessage(error, t("editor.ai.promptTransformFailed"))
         });
       } else {
