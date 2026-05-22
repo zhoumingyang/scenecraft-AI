@@ -9,13 +9,18 @@ import {
 } from "@/render/editor";
 import type {
   AiExternalAssetRecommendationBundle,
+  AiExternalAssetRecommendationFile,
+  AiExternalAssetRecommendationAsset,
   AiExternalAssetRecommendationSelectedTarget
 } from "@/lib/api/contracts/ai";
+import type { ExternalAssetSourceJSON } from "@/lib/externalAssets/types";
+import type { MeshMaterialPatch } from "@/render/editor";
 
 type AiAssetRecommendationState = {
   prompt: string;
   isGenerating: boolean;
   isApplying: boolean;
+  selectedItemIds: Record<string, boolean>;
 };
 
 type Params = {
@@ -24,6 +29,7 @@ type Params = {
   isPromptActionPending: boolean;
   setAiAssetRecommendationState: (payload: {
     isGenerating?: boolean;
+    isApplying?: boolean;
     errorMessage?: string | null;
     applyMessage?: string | null;
     bundles?: AiExternalAssetRecommendationBundle[];
@@ -113,6 +119,42 @@ function buildSceneContext(app: EditorApp | null) {
   };
 }
 
+function createRecommendationExternalSource(
+  asset: AiExternalAssetRecommendationAsset,
+  file: AiExternalAssetRecommendationFile
+): ExternalAssetSourceJSON {
+  return {
+    provider: asset.provider,
+    assetId: asset.assetId,
+    assetType: asset.assetType,
+    displayName: asset.displayName,
+    pageUrl: asset.pageUrl,
+    licenseLabel: asset.licenseLabel,
+    authorLabel: asset.authorLabel,
+    selectedFile: {
+      url: file.url,
+      fileName: file.fileName,
+      sizeBytes: file.sizeBytes,
+      md5: file.md5,
+      ...(file.includes && file.includes.length > 0
+        ? {
+            includes: file.includes
+          }
+        : {})
+    },
+    resolution: file.resolution,
+    format: file.format
+  };
+}
+
+function getActiveMeshId(app: EditorApp | null) {
+  const selectedEntityId = app?.getSelectedEntityId() ?? null;
+  if (!app || !selectedEntityId) return null;
+
+  const record = app.projectModel?.getEntityById(selectedEntityId);
+  return record?.kind === "mesh" ? record.item.id : null;
+}
+
 export function useAiAssetRecommendationComposer({
   app,
   aiAssetRecommendations,
@@ -161,7 +203,98 @@ export function useAiAssetRecommendationComposer({
     }
   };
 
+  const handleAssetRecommendationApply = async (bundle: AiExternalAssetRecommendationBundle) => {
+    if (!app || aiAssetRecommendations.isApplying) {
+      return;
+    }
+
+    setAiAssetRecommendationState({
+      isApplying: true,
+      errorMessage: null,
+      applyMessage: null
+    });
+
+    const failures: string[] = [];
+    const isSelected = (itemId: string) => aiAssetRecommendations.selectedItemIds[itemId] ?? true;
+
+    try {
+      if (bundle.hdri && isSelected(bundle.hdri.id)) {
+        try {
+          app.updateSceneEnvConfig({
+            panoAssetId: "",
+            panoAssetName: bundle.hdri.file.fileName,
+            panoUrl: bundle.hdri.file.url,
+            externalSource: createRecommendationExternalSource(bundle.hdri.asset, bundle.hdri.file)
+          });
+          app.setSelectedEntity(SCENE_NODE_ID);
+        } catch {
+          failures.push(bundle.hdri.asset.displayName);
+        }
+      }
+
+      for (const texture of bundle.textures) {
+        if (!isSelected(texture.id)) continue;
+
+        try {
+          const patch: MeshMaterialPatch = {};
+          texture.maps.forEach((textureMap) => {
+            (patch as Record<string, unknown>)[textureMap.materialField] = {
+              assetId: "",
+              url: textureMap.file.url,
+              externalSource: createRecommendationExternalSource(texture.asset, textureMap.file)
+            };
+          });
+
+          if (texture.target === "ground") {
+            app.updateGroundMaterial(patch);
+          } else {
+            const targetId = texture.targetId ?? getActiveMeshId(app);
+            if (!targetId) {
+              throw new Error("No mesh target is selected.");
+            }
+            app.updateMeshMaterial(targetId, patch);
+          }
+        } catch {
+          failures.push(texture.asset.displayName);
+        }
+      }
+
+      for (const model of bundle.models) {
+        if (!isSelected(model.id)) continue;
+
+        try {
+          if (model.file.format !== "gltf" && model.file.format !== "fbx") {
+            throw new Error("Unsupported model format.");
+          }
+
+          await app.importModelFromSource({
+            sourceUrl: model.file.url,
+            format: model.file.format,
+            label: model.asset.displayName,
+            externalSource: createRecommendationExternalSource(model.asset, model.file)
+          });
+        } catch {
+          failures.push(model.asset.displayName);
+        }
+      }
+
+      setAiAssetRecommendationState({
+        isApplying: false,
+        applyMessage:
+          failures.length > 0
+            ? t("editor.aiAssets.applyPartialFailed", { count: failures.length })
+            : t("editor.aiAssets.applySucceeded")
+      });
+    } catch (error) {
+      setAiAssetRecommendationState({
+        isApplying: false,
+        errorMessage: getApiErrorMessage(error, t("editor.aiAssets.applyFailed"))
+      });
+    }
+  };
+
   return {
-    handleAssetRecommendationSubmit
+    handleAssetRecommendationSubmit,
+    handleAssetRecommendationApply
   };
 }

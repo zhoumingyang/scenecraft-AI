@@ -356,13 +356,14 @@ export default function AiImageComposer() {
     t
   });
 
-  const { handleAssetRecommendationSubmit } = useAiAssetRecommendationComposer({
-    app,
-    aiAssetRecommendations,
-    isPromptActionPending,
-    setAiAssetRecommendationState,
-    t
-  });
+  const { handleAssetRecommendationSubmit, handleAssetRecommendationApply } =
+    useAiAssetRecommendationComposer({
+      app,
+      aiAssetRecommendations,
+      isPromptActionPending,
+      setAiAssetRecommendationState,
+      t
+    });
 
   const handlePromptKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
@@ -720,6 +721,7 @@ export default function AiImageComposer() {
                 errorMessage={aiAssetRecommendations.errorMessage}
                 applyMessage={aiAssetRecommendations.applyMessage}
                 onItemSelected={setAiAssetRecommendationItemSelected}
+                onApply={handleAssetRecommendationApply}
                 t={t}
               />
             ) : null}

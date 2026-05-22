@@ -153,6 +153,7 @@ function buildBundle({
   groundTexture,
   selectedTexture,
   models,
+  selectedTargetId,
   selectedTargetLabel
 }: {
   index: number;
@@ -161,6 +162,7 @@ function buildBundle({
   groundTexture: DetailCandidate<ExternalTextureAssetDetail> | null;
   selectedTexture: DetailCandidate<ExternalTextureAssetDetail> | null;
   models: Array<DetailCandidate<ExternalModelAssetDetail>>;
+  selectedTargetId: string | null;
   selectedTargetLabel: string;
 }) {
   const bundleId = createStableId(["bundle", index, hdri?.detail.assetId, groundTexture?.detail.assetId]);
@@ -212,7 +214,7 @@ function buildBundle({
                 assetType: "texture" as const
               },
               target: "selectedMesh" as const,
-              targetId: null,
+              targetId: selectedTargetId,
               targetLabel: selectedTargetLabel,
               maps: selectTextureMaps(selectedTexture.detail),
               reason: formatReason(intent, selectedTexture.query, selectedTexture.detail.displayName)
@@ -341,6 +343,7 @@ export async function recommendExternalAssets(
           selectedTexture:
             input.selectedTarget?.kind === "mesh" ? usableSelectedTextures[index] ?? null : null,
           models: usableModels.slice(index * 3, index * 3 + 3),
+          selectedTargetId: input.selectedTarget?.kind === "mesh" ? input.selectedTarget.id ?? null : null,
           selectedTargetLabel
         })
       )
