@@ -12,6 +12,7 @@ import {
   Typography
 } from "@mui/material";
 import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
+import CategoryRoundedIcon from "@mui/icons-material/CategoryRounded";
 import ExpandLessRoundedIcon from "@mui/icons-material/ExpandLessRounded";
 import FormatPaintRoundedIcon from "@mui/icons-material/FormatPaintRounded";
 import PanoramaPhotosphereRoundedIcon from "@mui/icons-material/PanoramaPhotosphereRounded";
@@ -51,6 +52,11 @@ export default function ModeToggle({ aiMode, theme, t, onChange }: Props) {
         mode: "panorama",
         label: t("editor.ai.modePanorama"),
         icon: PanoramaPhotosphereRoundedIcon
+      },
+      {
+        mode: "assets",
+        label: t("editor.ai.modeAssets"),
+        icon: CategoryRoundedIcon
       },
       {
         mode: "3d",

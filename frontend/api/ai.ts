@@ -11,6 +11,8 @@ import type {
   GenerateAiPbrTextureResponse,
   OptimizeAi3DRequest,
   OptimizeAi3DResponse,
+  RecommendAiExternalAssetsRequest,
+  RecommendAiExternalAssetsResponse,
   TransformPromptRequest,
   TransformPromptResponse
 } from "@/lib/api/contracts/ai";
@@ -65,6 +67,17 @@ export async function optimizeAi3D(payload: OptimizeAi3DRequest) {
   return postJson<OptimizeAi3DResponse, OptimizeAi3DRequest>(
     appApiClient,
     "/ai/3d/optimize",
+    payload,
+    {
+      timeout: 240_000
+    }
+  );
+}
+
+export async function recommendAiExternalAssets(payload: RecommendAiExternalAssetsRequest) {
+  return postJson<RecommendAiExternalAssetsResponse, RecommendAiExternalAssetsRequest>(
+    appApiClient,
+    "/ai/assets/recommend",
     payload,
     {
       timeout: 240_000

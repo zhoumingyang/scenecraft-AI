@@ -21,11 +21,14 @@ import ImageToolbar from "@/components/editor/aiComposer/imageToolbar";
 import Ai3dToolbar from "@/components/editor/aiComposer/ai3dToolbar";
 import Ai3dIntentControls from "@/components/editor/aiComposer/ai3dIntentControls";
 import Ai3dPreviewActions from "@/components/editor/aiComposer/ai3dPreviewActions";
+import AssetRecommendationResults from "@/components/editor/aiComposer/assetRecommendationResults";
 import { useAiImageComposer } from "@/components/editor/aiComposer/useAiImageComposer";
 import { useAiPbrTextureComposer } from "@/components/editor/aiComposer/useAiPbrTextureComposer";
 import { useAiPanoramaComposer } from "@/components/editor/aiComposer/useAiPanoramaComposer";
 import { useAi3dComposer } from "@/components/editor/aiComposer/useAi3dComposer";
+import { useAiAssetRecommendationComposer } from "@/components/editor/aiComposer/useAiAssetRecommendationComposer";
 import { usePromptTransform } from "@/components/editor/aiComposer/usePromptTransform";
+import { isPolyhavenProviderEnabled } from "@/lib/externalAssets/config";
 import { useI18n } from "@/lib/i18n";
 import { GROUND_HELPER_NODE_ID, SCENE_NODE_ID } from "@/render/editor";
 import { useEditorStore } from "@/stores/editorStore";
@@ -54,6 +57,7 @@ export default function AiImageComposer() {
   const aiPanoramaPrompt = useEditorStore((state) => state.aiPanorama.prompt);
   const aiPanoramaIsGenerating = useEditorStore((state) => state.aiPanorama.isGenerating);
   const aiPanoramaErrorMessage = useEditorStore((state) => state.aiPanorama.errorMessage);
+  const aiAssetRecommendations = useEditorStore((state) => state.aiAssetRecommendations);
   const ai3dPrompt = useEditorStore((state) => state.ai3d.prompt);
   const ai3dIntentDraft = useEditorStore((state) => state.ai3d.intentDraft);
   const ai3dIsGenerating = useEditorStore((state) => state.ai3d.isGenerating);
@@ -75,6 +79,15 @@ export default function AiImageComposer() {
   const setAiTextureState = useEditorStore((state) => state.setAiTextureState);
   const setAiPanoramaPrompt = useEditorStore((state) => state.setAiPanoramaPrompt);
   const setAiPanoramaState = useEditorStore((state) => state.setAiPanoramaState);
+  const setAiAssetRecommendationPrompt = useEditorStore(
+    (state) => state.setAiAssetRecommendationPrompt
+  );
+  const setAiAssetRecommendationState = useEditorStore(
+    (state) => state.setAiAssetRecommendationState
+  );
+  const setAiAssetRecommendationItemSelected = useEditorStore(
+    (state) => state.setAiAssetRecommendationItemSelected
+  );
   const setAi3dPrompt = useEditorStore((state) => state.setAi3dPrompt);
   const setAi3dIntentDraft = useEditorStore((state) => state.setAi3dIntentDraft);
   const setAi3dState = useEditorStore((state) => state.setAi3dState);
@@ -82,6 +95,7 @@ export default function AiImageComposer() {
   const appendPendingAiAsset = useEditorStore((state) => state.appendPendingAiAsset);
   const registerLocalProjectAsset = useEditorStore((state) => state.registerLocalProjectAsset);
   const theme = getEditorThemeTokens(editorThemeMode);
+  const isPolyhavenEnabled = isPolyhavenProviderEnabled();
   const ai3d = useMemo(
     () => ({
       prompt: ai3dPrompt,
@@ -217,6 +231,11 @@ export default function AiImageComposer() {
     app?.setSelectedEntity(SCENE_NODE_ID);
   };
 
+  const focusAssetsMode = () => {
+    setAiMode("assets");
+    setAiInspectorMode("entity");
+  };
+
   const handleModeChange = (mode: AiMode) => {
     if (mode === "image") {
       focusAiMode();
@@ -233,6 +252,11 @@ export default function AiImageComposer() {
       return;
     }
 
+    if (mode === "assets") {
+      focusAssetsMode();
+      return;
+    }
+
     focusAi3dMode();
   };
 
@@ -243,6 +267,8 @@ export default function AiImageComposer() {
         ? aiTexturePrompt
         : aiMode === "panorama"
           ? aiPanoramaPrompt
+          : aiMode === "assets"
+            ? aiAssetRecommendations.prompt
           : ai3dPrompt;
 
   const {
@@ -254,16 +280,21 @@ export default function AiImageComposer() {
     prompt: imagePrompt,
     aiTexturePrompt,
     aiPanoramaPrompt,
+    aiAssetRecommendationPrompt: aiAssetRecommendations.prompt,
     ai3dPrompt,
     isImageBusy: imageIsGenerating,
     isTextureBusy: aiTextureIsGenerating,
     isPanoramaBusy: aiPanoramaIsGenerating,
+    isAssetRecommendationBusy:
+      aiAssetRecommendations.isGenerating || aiAssetRecommendations.isApplying,
     isAi3dBusy: ai3dIsGenerating || ai3dIsOptimizing,
     setAiPrompt,
     setAiTexturePrompt,
     setAiTextureState,
     setAiPanoramaPrompt,
     setAiPanoramaState,
+    setAiAssetRecommendationPrompt,
+    setAiAssetRecommendationState,
     setAi3dPrompt,
     setAiGeneratingState,
     setAi3dState,
@@ -327,6 +358,15 @@ export default function AiImageComposer() {
     t
   });
 
+  const { handleAssetRecommendationSubmit, handleAssetRecommendationApply } =
+    useAiAssetRecommendationComposer({
+      app,
+      aiAssetRecommendations,
+      isPromptActionPending,
+      setAiAssetRecommendationState,
+      t
+    });
+
   const handlePromptKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
       event.preventDefault();
@@ -343,6 +383,12 @@ export default function AiImageComposer() {
 
       if (aiMode === "panorama") {
         void handlePanoramaSubmit();
+        return;
+      }
+      if (aiMode === "assets") {
+        if (isPolyhavenEnabled) {
+          void handleAssetRecommendationSubmit();
+        }
         return;
       }
 
@@ -446,6 +492,8 @@ export default function AiImageComposer() {
                     ? t("editor.aiPbr.promptPlaceholder")
                     : aiMode === "panorama"
                       ? t("editor.aiPanorama.promptPlaceholder")
+                      : aiMode === "assets"
+                        ? t("editor.aiAssets.promptPlaceholder")
                       : t("editor.ai3d.promptPlaceholder")
               }
               theme={theme}
@@ -456,6 +504,8 @@ export default function AiImageComposer() {
                     ? focusTextureMode
                     : aiMode === "panorama"
                       ? focusPanoramaMode
+                      : aiMode === "assets"
+                        ? focusAssetsMode
                       : focusAi3dMode
               }
               onChange={(value) => {
@@ -469,6 +519,10 @@ export default function AiImageComposer() {
                 }
                 if (aiMode === "panorama") {
                   setAiPanoramaPrompt(value);
+                  return;
+                }
+                if (aiMode === "assets") {
+                  setAiAssetRecommendationPrompt(value);
                   return;
                 }
                 setAi3dPrompt(value);
@@ -537,6 +591,22 @@ export default function AiImageComposer() {
                   handlePromptTransform={handlePromptTransform}
                   t={t}
                 />
+              ) : aiMode === "assets" ? (
+                <Ai3dToolbar
+                  theme={theme}
+                  utilityIconButtonSx={utilityIconButtonSx}
+                  isAi3dBusy={
+                    aiAssetRecommendations.isGenerating || aiAssetRecommendations.isApplying
+                  }
+                  isPromptActionPending={isPromptActionPending}
+                  prompt={aiAssetRecommendations.prompt}
+                  isGenerating={aiAssetRecommendations.isGenerating}
+                  isOptimizing={false}
+                  canOptimizePrompt
+                  activePromptAction={activePromptAction}
+                  handlePromptTransform={handlePromptTransform}
+                  t={t}
+                />
               ) : (
                 <Ai3dToolbar
                   theme={theme}
@@ -561,7 +631,13 @@ export default function AiImageComposer() {
                       ? aiTextureIsGenerating || isPromptActionPending || !aiTexturePrompt.trim()
                       : aiMode === "panorama"
                         ? aiPanoramaIsGenerating || isPromptActionPending || !aiPanoramaPrompt.trim()
-                      : isAi3dBusy || !ai3dPrompt.trim()
+                        : aiMode === "assets"
+                          ? aiAssetRecommendations.isGenerating ||
+                            aiAssetRecommendations.isApplying ||
+                            !isPolyhavenEnabled ||
+                            isPromptActionPending ||
+                            !aiAssetRecommendations.prompt.trim()
+                          : isAi3dBusy || !ai3dPrompt.trim()
                 }
                 onClick={() => {
                   if (aiMode === "image") {
@@ -576,6 +652,10 @@ export default function AiImageComposer() {
                     void handlePanoramaSubmit();
                     return;
                   }
+                  if (aiMode === "assets") {
+                    void handleAssetRecommendationSubmit();
+                    return;
+                  }
                   void handleAi3dSubmit();
                 }}
                 sx={{
@@ -588,7 +668,13 @@ export default function AiImageComposer() {
                         ? activePrompt.trim() && !aiTextureIsGenerating && !isPromptActionPending
                         : aiMode === "panorama"
                           ? activePrompt.trim() && !aiPanoramaIsGenerating && !isPromptActionPending
-                      : ai3dPrompt.trim() && !isAi3dBusy)
+                          : aiMode === "assets"
+                            ? activePrompt.trim() &&
+                              !aiAssetRecommendations.isGenerating &&
+                              !aiAssetRecommendations.isApplying &&
+                              isPolyhavenEnabled &&
+                              !isPromptActionPending
+                            : ai3dPrompt.trim() && !isAi3dBusy)
                       ? editorThemeMode === "dark"
                         ? "linear-gradient(135deg, #2f6df4, #63a4ff)"
                         : "linear-gradient(135deg, #4c86f7, #86b7ff)"
@@ -602,7 +688,9 @@ export default function AiImageComposer() {
                     ? aiTextureIsGenerating
                     : aiMode === "panorama"
                       ? aiPanoramaIsGenerating
-                    : isAi3dBusy) ? (
+                      : aiMode === "assets"
+                        ? aiAssetRecommendations.isGenerating || aiAssetRecommendations.isApplying
+                        : isAi3dBusy) ? (
                   <CircularProgress size={16} sx={{ color: theme.pillText }} />
                 ) : (
                   <SendRoundedIcon sx={{ fontSize: 18 }} />
@@ -625,6 +713,25 @@ export default function AiImageComposer() {
                 onOptimize={handleAi3dOptimize}
                 onDiscard={handleAi3dDiscard}
                 onApply={handleAi3dApply}
+                t={t}
+              />
+            ) : null}
+
+            {aiMode === "assets" ? (
+              <AssetRecommendationResults
+                theme={theme}
+                bundles={aiAssetRecommendations.bundles}
+                selectedItemIds={aiAssetRecommendations.selectedItemIds}
+                isGenerating={aiAssetRecommendations.isGenerating}
+                isApplying={aiAssetRecommendations.isApplying}
+                errorMessage={
+                  isPolyhavenEnabled
+                    ? aiAssetRecommendations.errorMessage
+                    : t("editor.aiAssets.polyhavenDisabled")
+                }
+                applyMessage={aiAssetRecommendations.applyMessage}
+                onItemSelected={setAiAssetRecommendationItemSelected}
+                onApply={handleAssetRecommendationApply}
                 t={t}
               />
             ) : null}
