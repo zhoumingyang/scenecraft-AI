@@ -156,6 +156,10 @@ export function useAiPanoramaComposer({
         throw new Error(t("editor.aiPanorama.generateFailed"));
       }
 
+      if (payload.environmentPatch) {
+        await app.updateSceneEnvConfig(payload.environmentPatch);
+      }
+
       registerLocalProjectAsset({
         sourceUrl: imported.sourceUrl,
         file,
