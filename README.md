@@ -81,7 +81,9 @@ This is not just a text-to-image demo, and it is not a full desktop-grade DCC to
 
 - Runs from the AI chat Panorama mode with panorama-aware prompt enhancement plus shared Chinese-to-English prompt translation
 - Uses OpenRouter `openai/gpt-5.4-image-2` through the authenticated panorama API route
+- Uses an OpenRouter text intent step before image generation to preserve the user's subject while filling in missing atmosphere, weather, lighting, time-of-day, and style detail
 - Builds a seamless equirectangular 360-degree environment prompt on the server
+- Returns an AI-recommended environment patch and applies it automatically after the generated panorama is imported
 - Requests the provider-supported `21:9` panorama ratio, then center-crops and normalizes the applied file to `2048x1024` JPEG in the browser
 - Leaves provider resolution at its default to reduce upstream timeouts; the editor owns the final applied image size
 - Automatically selects the scene when Panorama mode is active
@@ -212,7 +214,7 @@ Recommended minimum variables:
 - `BETTER_AUTH_SECRET`
 - `BETTER_AUTH_URL`
 - `OPENROUTER_API_KEY` required for OpenRouter-backed AI 3D, AI PBR texture, AI panorama, and prompt transformation flows
-- `OPENROUTER_API_KEY` is also required for AI Poly Haven asset recommendation intent parsing
+- `OPENROUTER_API_KEY` is also required for AI panorama intent completion and AI Poly Haven asset recommendation intent parsing
 - `SILICONFLOW_API_KEY` if you want to enable that provider
 - `DATABASE_URL` required if you want project save/load and persistent auth
 - `BLOB_READ_WRITE_TOKEN` required if you want model / texture / thumbnail uploads and project save to succeed
@@ -343,7 +345,7 @@ The project now has a usable authenticated persistence path, but it is still evo
 - Existing schema changes require `npm run db:push` or equivalent migration application before testing against a fresh database
 - The current AI 3D flow is aimed at low-poly sketching and structural previews, not production-grade high-resolution mesh generation
 - AI PBR texture generation uses a single atlas image and existing material texture UV transforms; it does not currently split maps into six separate image files
-- AI panorama generation applies a generated `2048x1024` JPEG as the scene environment; it is persisted as an environment image when the project is saved
+- AI panorama generation completes the prompt with an LLM before image generation, then applies a generated `2048x1024` JPEG and AI-recommended environment intensity/background/exposure values through the existing scene environment fields; it does not analyze generated image pixels or use post-processing recommendations
 - AI Poly Haven asset recommendation currently uses LLM intent parsing plus keyword search/ranking and route-level memory cache; it does not yet use embeddings or a vector database
 - If `DATABASE_URL` is missing in local development, auth falls back to in-memory mode and will not persist after restart
 - If `BLOB_READ_WRITE_TOKEN` is missing, editor save cannot persist binary assets and will fail clearly

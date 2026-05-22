@@ -14,6 +14,7 @@ import {
   generateAiPanoramaRequestSchema,
   getAiApiErrorMessage
 } from "@/lib/api/contracts/ai";
+import { resolvePanoramaEnvironmentIntent } from "@/lib/ai/panorama/environmentIntent";
 import { getSession } from "@/lib/server/auth/getSession";
 
 export const maxDuration = 180;
@@ -43,10 +44,21 @@ export async function POST(request: Request) {
     const body = generateAiPanoramaRequestSchema.parse(await request.json());
     const modelConfig = getImageGenerationModelConfig(AI_PANORAMA_MODEL_ID);
     const provider = createImageGenerationProvider(modelConfig.providerId);
+    const openRouterApiKey = process.env.OPENROUTER_API_KEY?.trim();
+    const environmentIntent = openRouterApiKey
+      ? await resolvePanoramaEnvironmentIntent({
+          apiKey: openRouterApiKey,
+          prompt: body.prompt
+        }).catch((error) => {
+          console.warn("[ai-panorama] Failed to resolve environment intent.", error);
+          return null;
+        })
+      : null;
+    const generationPrompt = environmentIntent?.enhancedPrompt ?? body.prompt;
     const result = await provider.generateImage({
       providerId: modelConfig.providerId,
       model: AI_PANORAMA_MODEL_ID,
-      prompt: buildPanoramaPrompt(body.prompt),
+      prompt: buildPanoramaPrompt(generationPrompt),
       imageAspectRatio: AI_PANORAMA_PROVIDER_ASPECT_RATIO,
       cfg: AI_PANORAMA_CFG,
       inferenceSteps: AI_PANORAMA_INFERENCE_STEPS,
@@ -62,6 +74,8 @@ export async function POST(request: Request) {
       panoramaImageUrl,
       model: AI_PANORAMA_MODEL_ID,
       prompt: body.prompt,
+      enhancedPrompt: environmentIntent?.enhancedPrompt,
+      environmentPatch: environmentIntent?.environmentPatch,
       width: AI_PANORAMA_WIDTH,
       height: AI_PANORAMA_HEIGHT,
       mimeType: AI_PANORAMA_OUTPUT_MIME_TYPE,

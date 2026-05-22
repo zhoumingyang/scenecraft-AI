@@ -164,7 +164,7 @@ Includes:
 - prompt transformation
 - image generation provider registry and provider implementations
 - PBR texture atlas generation prompt helpers
-- panorama generation constants and server prompt routing
+- panorama generation constants, intent completion, environment patching, and server prompt routing
 - AI 3D planning pipeline
 - AI Poly Haven asset recommendation intent parsing, candidate search, ranking, and bundle assembly
 - OpenRouter-related provider code
@@ -188,7 +188,10 @@ Keep atlas offsets, repeat values, and material texture field names aligned with
 AI panorama generation constants live here.
 
 - `lib/ai/panorama/constants.ts` defines the OpenRouter model, provider-supported `21:9` request ratio, fixed `2048x1024` output target, JPEG output metadata, and request tuning values
+- `lib/ai/panorama/environmentIntent.ts` uses OpenRouter text output to complete underspecified panorama prompts and infer safe scene environment patch values before image generation
 - The panorama flow should request a provider-supported ultra-wide image, center-crop it to a 2:1 scene environment image, and apply it through the same scene environment path as manual panorama import
+- AI panorama environment patches should only touch existing environment visibility, intensity, background blur/brightness, rotation, and exposure fields; do not include `postProcessing`, asset URLs, `externalSource`, ground, or material fields
+- Keep AI panorama intent completion as a prompt-and-parameter inference step; do not add generated image pixel analysis unless explicitly requested.
 - Avoid forcing provider `image_size` for panoramas unless the upstream behavior has been verified; the editor normalizes the final JPEG size locally.
 
 Keep these values aligned with `app/api/ai/panoramas/generate/route.ts`, `components/editor/aiComposer/useAiPanoramaComposer.ts`, scene property panel preview behavior, and project asset persistence.
@@ -374,6 +377,8 @@ If the task is about AI-generated panoramas:
 - inspect `render/editor/app.ts` for `importPanorama`
 - inspect `components/editor/topBar/` for the manual panorama import flow
 - keep the generated output as a `2048x1024` JPEG applied to scene `envConfig.panoUrl`
+- keep the AI environment patch automatic and UI-free unless the task explicitly asks for a recommendation panel or confirmation flow
+- do not add AI panorama `postProcessing` recommendations unless the task explicitly asks for that expansion
 - append generated panoramas to `pendingAiImageGenerations` with metadata kind `panorama` so they appear in AI Assets and persist with the project AI library
 - register generated panorama files as `environment_image` assets with target path `env:pano` so project save can persist them
 
