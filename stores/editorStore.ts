@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { ProjectAssetKind } from "@/lib/api/contracts/assets";
+import type { AiExternalAssetRecommendationBundle } from "@/lib/api/contracts/ai";
 import { createEmptyProjectAiLibrary, normalizeProjectAiLibrary } from "@/lib/project/schema";
 import type { Ai3DIntentInput, Ai3DPlanDiagnostics } from "@/lib/ai/ai3d/intent";
 import {
@@ -44,7 +45,7 @@ export type AiTextureTarget = {
   label: string;
 };
 
-export type AiMode = "image" | "texture" | "panorama" | "3d";
+export type AiMode = "image" | "texture" | "panorama" | "assets" | "3d";
 
 export type AiReferenceImageSlot = {
   dataUrl: string | null;
@@ -158,6 +159,18 @@ type AiPanoramaSettings = {
   } | null;
 };
 
+type AiAssetRecommendationSettings = {
+  prompt: string;
+  isGenerating: boolean;
+  isApplying: boolean;
+  errorMessage: string | null;
+  applyMessage: string | null;
+  bundles: AiExternalAssetRecommendationBundle[];
+  selectedItemIds: Record<string, boolean>;
+  lastTraceId: string | null;
+  cacheHit: boolean;
+};
+
 type EditorStoreState = {
   app: EditorApp | null;
   editorThemeMode: EditorThemeMode;
@@ -186,6 +199,7 @@ type EditorStoreState = {
   aiImage: AiImageSettings;
   aiTexture: AiTextureSettings;
   aiPanorama: AiPanoramaSettings;
+  aiAssetRecommendations: AiAssetRecommendationSettings;
   ai3d: Ai3DSettings;
   setApp: (app: EditorApp | null) => void;
   setEditorThemeMode: (mode: EditorThemeMode) => void;
@@ -235,6 +249,9 @@ type EditorStoreState = {
   setAiTextureState: (payload: Partial<AiTextureSettings>) => void;
   setAiPanoramaPrompt: (prompt: string) => void;
   setAiPanoramaState: (payload: Partial<AiPanoramaSettings>) => void;
+  setAiAssetRecommendationPrompt: (prompt: string) => void;
+  setAiAssetRecommendationState: (payload: Partial<AiAssetRecommendationSettings>) => void;
+  setAiAssetRecommendationItemSelected: (itemId: string, selected: boolean) => void;
   setAi3dPrompt: (prompt: string) => void;
   setAi3dIntentDraft: (payload: Partial<Ai3DIntentInput>) => void;
   setAi3dState: (payload: Partial<Ai3DSettings>) => void;
@@ -285,6 +302,20 @@ function createInitialAiPanoramaSettings(): AiPanoramaSettings {
     isGenerating: false,
     errorMessage: null,
     result: null
+  };
+}
+
+function createInitialAiAssetRecommendationSettings(): AiAssetRecommendationSettings {
+  return {
+    prompt: "",
+    isGenerating: false,
+    isApplying: false,
+    errorMessage: null,
+    applyMessage: null,
+    bundles: [],
+    selectedItemIds: {},
+    lastTraceId: null,
+    cacheHit: false
   };
 }
 
@@ -353,6 +384,7 @@ export const useEditorStore = create<EditorStoreState>((set) => ({
   aiImage: createInitialAiImageSettings(),
   aiTexture: createInitialAiTextureSettings(),
   aiPanorama: createInitialAiPanoramaSettings(),
+  aiAssetRecommendations: createInitialAiAssetRecommendationSettings(),
   ai3d: {
     prompt: "",
     intentDraft: {},
@@ -658,6 +690,30 @@ export const useEditorStore = create<EditorStoreState>((set) => ({
       aiPanorama: {
         ...state.aiPanorama,
         ...payload
+      }
+    })),
+  setAiAssetRecommendationPrompt: (prompt) =>
+    set((state) => ({
+      aiAssetRecommendations: {
+        ...state.aiAssetRecommendations,
+        prompt
+      }
+    })),
+  setAiAssetRecommendationState: (payload) =>
+    set((state) => ({
+      aiAssetRecommendations: {
+        ...state.aiAssetRecommendations,
+        ...payload
+      }
+    })),
+  setAiAssetRecommendationItemSelected: (itemId, selected) =>
+    set((state) => ({
+      aiAssetRecommendations: {
+        ...state.aiAssetRecommendations,
+        selectedItemIds: {
+          ...state.aiAssetRecommendations.selectedItemIds,
+          [itemId]: selected
+        }
       }
     })),
   setAi3dPrompt: (prompt) =>
