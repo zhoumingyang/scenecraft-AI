@@ -10,6 +10,7 @@ Scenecraft AI is an AI-assisted browser-based 3D scene editor built on Next.js. 
 - AI image generation and prompt transformation
 - AI PBR texture atlas generation and material application
 - AI panorama generation and scene environment application
+- AI Poly Haven asset kit recommendation and application
 - low-poly AI 3D sketch planning and optimization
 - authentication and database-backed user flows
 - authenticated project save/load with persisted scene snapshots
@@ -101,12 +102,13 @@ Next.js App Router entrypoints and API routes.
 - `app/home/` contains home page routes
 - `app/editor/` contains the protected editor route
 - `app/api/auth/` contains auth route handlers
-- `app/api/ai/` contains AI API routes for prompt transformation, image generation, panorama generation, and 3D generation
+- `app/api/ai/` contains AI API routes for prompt transformation, image generation, panorama generation, 3D generation, and asset recommendation
 - `app/api/ai/textures/pbr/` contains the authenticated AI PBR texture atlas generation route
 - `app/api/ai/panoramas/` contains the authenticated AI panorama generation route
+- `app/api/ai/assets/recommend/` contains the authenticated AI Poly Haven asset kit recommendation route
 - `app/api/projects/` contains project list/create/read/update handlers
 - `app/api/assets/` contains asset upload preparation handlers
-- `app/api/polyhaven/` contains authenticated external asset browsing routes for HDRIs and textures
+- `app/api/polyhaven/` contains authenticated external asset browsing routes for HDRIs, textures, and models
 
 Use this area when changing route-level behavior, request/response handling, or page composition.
 
@@ -115,8 +117,8 @@ Use this area when changing route-level behavior, request/response handling, or 
 React UI components for auth, home, and editor surfaces.
 
 - `components/editor/` contains most editor-facing UI panels and controls
-- `components/editor/aiImageComposer.tsx` contains the AI chat composer shell and coordinates Image, Texture, Panorama, and 3D modes
-- `components/editor/aiComposer/` contains AI chat mode controls and mode-specific hooks, including `useAiPbrTextureComposer.ts` and `useAiPanoramaComposer.ts`
+- `components/editor/aiImageComposer.tsx` contains the AI chat composer shell and coordinates Image, Texture, Panorama, Assets, and 3D modes
+- `components/editor/aiComposer/` contains AI chat mode controls and mode-specific hooks, including `useAiPbrTextureComposer.ts`, `useAiPanoramaComposer.ts`, and `useAiAssetRecommendationComposer.ts`
 - `components/editor/topBar.tsx` is now a thin composition layer for the top bar UI
 - `components/editor/topBar/` contains top bar hooks, configuration, and save/load orchestration helpers
 - `components/editor/externalAssets/` contains the external asset browser detail panels and browser hook
@@ -130,7 +132,7 @@ Browser-side API clients and request helpers.
 
 - `frontend/api/projects.ts` wraps project list/load/save/delete calls
 - `frontend/api/assets.ts` wraps prepared asset upload flows
-- `frontend/api/ai.ts` wraps AI image / prompt / AI PBR texture / AI panorama / 3D generation requests
+- `frontend/api/ai.ts` wraps AI image / prompt / AI PBR texture / AI panorama / AI asset recommendation / 3D generation requests
 - `frontend/api/externalAssets.ts` wraps Poly Haven list/detail/category lookups
 
 Use this area when changing browser request behavior or updating how UI code talks to backend routes.
@@ -164,6 +166,7 @@ Includes:
 - PBR texture atlas generation prompt helpers
 - panorama generation constants and server prompt routing
 - AI 3D planning pipeline
+- AI Poly Haven asset recommendation intent parsing, candidate search, ranking, and bundle assembly
 - OpenRouter-related provider code
 - validation, parsing, diagnostics, rules, templates, and workflow code
 
@@ -199,9 +202,9 @@ Includes:
 - provider feature flags
 - Poly Haven API integration
 - external asset request/response contracts
-- persisted `externalSource` metadata used by HDRI and texture references
+- persisted `externalSource` metadata used by HDRI, texture, and model references
 
-Keep this area aligned with `app/api/polyhaven/`, `frontend/api/externalAssets.ts`, and the project persistence schema.
+Keep this area aligned with `app/api/polyhaven/`, `frontend/api/externalAssets.ts`, AI asset recommendation code, and the project persistence schema.
 
 ### `lib/project/`
 
@@ -308,6 +311,10 @@ Default minimum:
 npm run lint
 ```
 
+Every completed development task must also include a real local browser smoke test unless it is impossible or irrelevant. Start the local dev server, open the affected UI in a browser, and exercise the changed workflow enough to catch integration problems. For editor changes, this means using `npm run dev`, opening `/editor` with an authenticated local session when needed, interacting with the relevant controls, and checking for visible errors or console errors.
+
+After every completed task, check whether `AGENTS.md` and `README.md` should be updated. Update them in the same task when behavior, commands, setup, architecture, routes, feature surface, verification expectations, or contributor guidance changed. If no doc update is needed, mention that in the handoff.
+
 If a task touches only a narrow area and full verification is not possible, explain:
 
 - what you ran
@@ -330,6 +337,20 @@ If the task is about AI generation:
 - inspect `lib/ai/`
 - inspect `lib/api/contracts/`
 - keep prompt optimization target-aware for Image, Texture, and Panorama modes while preserving generic translation behavior
+
+If the task is about AI Poly Haven asset recommendations:
+
+- inspect `app/api/ai/assets/recommend/`
+- inspect `lib/ai/asset-recommendation/`
+- inspect `lib/api/contracts/ai.ts`
+- inspect `frontend/api/ai.ts`
+- inspect `components/editor/aiImageComposer.tsx`
+- inspect `components/editor/aiComposer/useAiAssetRecommendationComposer.ts`
+- inspect `components/editor/aiComposer/assetRecommendationResults.tsx`
+- inspect `stores/editorStore.ts`
+- keep LLM output limited to intent/search terms; do not trust it to return external asset URLs directly
+- preserve `externalSource` metadata when applying recommended HDRIs, texture maps, or models
+- keep the route authenticated and keep clear behavior when OpenRouter or Poly Haven configuration is missing
 
 If the task is about AI-generated PBR textures:
 
@@ -375,6 +396,7 @@ If the task is about external HDRIs, texture libraries, or Poly Haven integratio
 - inspect `components/editor/externalAssets/`
 - inspect `components/editor/topBar/` for HDRI import flow
 - inspect `components/editor/propertyPanel.tsx` for texture import flow
+- inspect `components/editor/aiComposer/useAiAssetRecommendationComposer.ts` if recommended asset application is involved
 
 If the task is about auth:
 
@@ -401,6 +423,7 @@ If the task is about scene/project data:
 - Do not replace the AI PBR atlas flow with six independent texture files unless the task explicitly asks for that migration.
 - Do not turn AI panorama output into a separate scene schema; it should continue to use the existing scene environment panorama fields and asset persistence path.
 - Do not strip persisted `externalSource` metadata from HDRI or texture references if the task touches external asset flows.
+- Do not let AI asset recommendation code bypass Poly Haven detail lookups or `externalSource` attribution by applying model- or LLM-provided URLs directly.
 
 ## Good Final Handoff
 

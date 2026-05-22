@@ -1,8 +1,8 @@
 # Scenecraft AI
 
-Scenecraft AI is an AI-powered 3D editor for scene creation workflows. It combines interactive 3D scene editing with AI image generation, AI-generated panorama environments, AI-assisted low-poly 3D sketching, AI-generated PBR texture atlases, prompt enhancement, and material application in a single workspace, helping users move from an idea to an editable scene draft much faster.
+Scenecraft AI is an AI-powered 3D editor for scene creation workflows. It combines interactive 3D scene editing with AI image generation, AI-generated panorama environments, AI-assisted low-poly 3D sketching, AI-generated PBR texture atlases, AI-recommended Poly Haven asset kits, prompt enhancement, and material application in a single workspace, helping users move from an idea to an editable scene draft much faster.
 
-The current version is built with `Next.js`, `React 19`, `Three.js`, `Zustand`, `Drizzle ORM`, and `better-auth`. It already includes a browser-based 3D editor shell, a protected editor workspace, AI image, AI PBR texture atlas, AI panorama, and AI 3D preview-and-optimization workflows.
+The current version is built with `Next.js`, `React 19`, `Three.js`, `Zustand`, `Drizzle ORM`, and `better-auth`. It already includes a browser-based 3D editor shell, a protected editor workspace, AI image, AI PBR texture atlas, AI panorama, AI Poly Haven asset recommendation, and AI 3D preview-and-optimization workflows.
 
 It also now includes a first end-to-end persistence loop for authenticated users:
 
@@ -20,6 +20,7 @@ This is not just a text-to-image demo, and it is not a full desktop-grade DCC to
 - Generate reference images or textures inside the editor
 - Generate PBR texture atlases and apply them to mesh or ground materials
 - Generate 360 panorama backgrounds and apply them to the scene environment
+- Ask AI to recommend matching Poly Haven HDRIs, PBR materials, and 3D props as scene kits
 - Apply generated results directly to mesh materials
 - Create previewable, editable low-poly 3D sketches from natural language
 - Continue refining the scene with lights, cameras, environment settings, post-processing, and manual editing
@@ -43,6 +44,7 @@ This is not just a text-to-image demo, and it is not a full desktop-grade DCC to
 - AI-generated 360 panorama environments applied directly to the selected scene
 - Poly Haven HDRI browsing from the editor top bar for authenticated users
 - Poly Haven texture browsing from the mesh material panel for authenticated users
+- AI-recommended Poly Haven asset kits with HDRI, ground material, and 3D prop suggestions
 - Tone mapping and exposure controls
 - Light creation and editing for ambient, hemisphere, directional, point, spot, and rect area lights
 - Built-in lighting presets for faster scene setup
@@ -90,7 +92,23 @@ This is not just a text-to-image demo, and it is not a full desktop-grade DCC to
 
 Prompt enhancement for Image, Texture, and Panorama modes uses one `/api/ai/prompts/transform` endpoint with target-specific optimization rules. Translation remains a shared prompt transform path across these modes.
 
-### 6. Project Save / Load and Asset Persistence
+### 6. AI Poly Haven Asset Recommendation
+
+The AI chat Assets mode turns a scene description into a curated Poly Haven kit for authenticated users.
+
+- Uses `/api/ai/assets/recommend` to parse the prompt into search intent with OpenRouter
+- Searches Poly Haven HDRIs, texture sets, and models through the existing external asset provider
+- Uses a server-side keyword search provider, lightweight ranking, and route-level memory cache in `lib/ai/asset-recommendation/`
+- Returns multiple scene kit bundles with:
+  - HDRI environment suggestions
+  - ground PBR texture suggestions
+  - selected mesh material suggestions when a mesh is selected
+  - 3D model prop suggestions
+- Lets users apply selected items from a bundle in one action
+- Preserves Poly Haven `externalSource` attribution for recommended HDRIs, texture maps, and imported models
+- Does not use a database, IndexedDB, localStorage, embeddings, or vector search in v1
+
+### 7. Project Save / Load and Asset Persistence
 
 - The editor `Save` action now creates and updates real user-owned projects
 - First save prompts for base metadata such as:
@@ -107,7 +125,7 @@ Prompt enhancement for Image, Texture, and Panorama modes uses one `/api/ai/prom
   - project AI image history
 - Imported model files, texture images, environment images, AI-generated panoramas, and generated thumbnails are stored in `Vercel Blob`
 
-### 7. AI 3D Sketch Generation and Optimization
+### 8. AI 3D Sketch Generation and Optimization
 
 This is the most distinctive part of the project right now.
 
@@ -194,6 +212,7 @@ Recommended minimum variables:
 - `BETTER_AUTH_SECRET`
 - `BETTER_AUTH_URL`
 - `OPENROUTER_API_KEY` required for OpenRouter-backed AI 3D, AI PBR texture, AI panorama, and prompt transformation flows
+- `OPENROUTER_API_KEY` is also required for AI Poly Haven asset recommendation intent parsing
 - `SILICONFLOW_API_KEY` if you want to enable that provider
 - `DATABASE_URL` required if you want project save/load and persistent auth
 - `BLOB_READ_WRITE_TOKEN` required if you want model / texture / thumbnail uploads and project save to succeed
@@ -295,6 +314,8 @@ The editor can browse Poly Haven assets through authenticated API routes:
 
 - HDRIs from the top bar import flow
 - texture sets from the mesh material panel
+- models from the top bar import flow
+- AI-recommended asset kits from the AI chat Assets mode
 
 The provider is enabled by default. You can override that behavior with:
 
@@ -304,9 +325,13 @@ The provider is enabled by default. You can override that behavior with:
 Relevant code paths:
 
 - `app/api/polyhaven/`
+- `app/api/ai/assets/recommend/`
 - `frontend/api/externalAssets.ts`
+- `frontend/api/ai.ts`
+- `lib/ai/asset-recommendation/`
 - `lib/externalAssets/`
 - `components/editor/externalAssets/`
+- `components/editor/aiComposer/useAiAssetRecommendationComposer.ts`
 
 ## Current Status
 
@@ -319,6 +344,7 @@ The project now has a usable authenticated persistence path, but it is still evo
 - The current AI 3D flow is aimed at low-poly sketching and structural previews, not production-grade high-resolution mesh generation
 - AI PBR texture generation uses a single atlas image and existing material texture UV transforms; it does not currently split maps into six separate image files
 - AI panorama generation applies a generated `2048x1024` JPEG as the scene environment; it is persisted as an environment image when the project is saved
+- AI Poly Haven asset recommendation currently uses LLM intent parsing plus keyword search/ranking and route-level memory cache; it does not yet use embeddings or a vector database
 - If `DATABASE_URL` is missing in local development, auth falls back to in-memory mode and will not persist after restart
 - If `BLOB_READ_WRITE_TOKEN` is missing, editor save cannot persist binary assets and will fail clearly
 
@@ -330,6 +356,7 @@ The project now has a usable authenticated persistence path, but it is still evo
 - Experiments that connect AI image generation with interactive material editing
 - Experiments with AI-generated PBR material atlases for editable browser scenes
 - Experiments with AI-generated panorama environments for browser-based scene lighting and backgrounds
+- Experiments with AI-curated external asset kits using Poly Haven HDRIs, PBR textures, and models
 
 ## License
 
