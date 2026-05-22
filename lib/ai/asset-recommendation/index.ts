@@ -10,7 +10,8 @@ import type {
   ExternalAssetListItem,
   ExternalHdriAssetDetail,
   ExternalModelAssetDetail,
-  ExternalTextureAssetDetail
+  ExternalTextureAssetDetail,
+  SupportedMaterialTextureField
 } from "@/lib/externalAssets/types";
 import {
   buildAssetRecommendationCacheKey,
@@ -35,7 +36,12 @@ import { toRecommendationFile } from "./types";
 
 const BUNDLE_COUNT = 3;
 const CANDIDATE_LIMIT = 12;
-const REQUIRED_TEXTURE_FIELDS = ["diffuseMap", "normalMap", "roughnessMap", "aoMap"] as const;
+const REQUIRED_TEXTURE_FIELDS: SupportedMaterialTextureField[] = [
+  "diffuseMap",
+  "normalMap",
+  "roughnessMap",
+  "aoMap"
+];
 
 function toRecommendationAsset(item: ExternalAssetListItem): AiExternalAssetRecommendationAsset {
   return {
@@ -131,8 +137,8 @@ function selectTextureMaps(detail: ExternalTextureAssetDetail) {
   });
 
   return maps.sort((left, right) => {
-    const leftIndex = REQUIRED_TEXTURE_FIELDS.indexOf(left.materialField as any);
-    const rightIndex = REQUIRED_TEXTURE_FIELDS.indexOf(right.materialField as any);
+    const leftIndex = REQUIRED_TEXTURE_FIELDS.indexOf(left.materialField);
+    const rightIndex = REQUIRED_TEXTURE_FIELDS.indexOf(right.materialField);
     const normalizedLeft = leftIndex === -1 ? Number.MAX_SAFE_INTEGER : leftIndex;
     const normalizedRight = rightIndex === -1 ? Number.MAX_SAFE_INTEGER : rightIndex;
     return normalizedLeft - normalizedRight;

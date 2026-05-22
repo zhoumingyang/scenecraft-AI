@@ -28,6 +28,7 @@ import { useAiPanoramaComposer } from "@/components/editor/aiComposer/useAiPanor
 import { useAi3dComposer } from "@/components/editor/aiComposer/useAi3dComposer";
 import { useAiAssetRecommendationComposer } from "@/components/editor/aiComposer/useAiAssetRecommendationComposer";
 import { usePromptTransform } from "@/components/editor/aiComposer/usePromptTransform";
+import { isPolyhavenProviderEnabled } from "@/lib/externalAssets/config";
 import { useI18n } from "@/lib/i18n";
 import { GROUND_HELPER_NODE_ID, SCENE_NODE_ID } from "@/render/editor";
 import { useEditorStore } from "@/stores/editorStore";
@@ -94,6 +95,7 @@ export default function AiImageComposer() {
   const appendPendingAiAsset = useEditorStore((state) => state.appendPendingAiAsset);
   const registerLocalProjectAsset = useEditorStore((state) => state.registerLocalProjectAsset);
   const theme = getEditorThemeTokens(editorThemeMode);
+  const isPolyhavenEnabled = isPolyhavenProviderEnabled();
   const ai3d = useMemo(
     () => ({
       prompt: ai3dPrompt,
@@ -384,7 +386,9 @@ export default function AiImageComposer() {
         return;
       }
       if (aiMode === "assets") {
-        void handleAssetRecommendationSubmit();
+        if (isPolyhavenEnabled) {
+          void handleAssetRecommendationSubmit();
+        }
         return;
       }
 
@@ -630,6 +634,7 @@ export default function AiImageComposer() {
                         : aiMode === "assets"
                           ? aiAssetRecommendations.isGenerating ||
                             aiAssetRecommendations.isApplying ||
+                            !isPolyhavenEnabled ||
                             isPromptActionPending ||
                             !aiAssetRecommendations.prompt.trim()
                           : isAi3dBusy || !ai3dPrompt.trim()
@@ -667,6 +672,7 @@ export default function AiImageComposer() {
                             ? activePrompt.trim() &&
                               !aiAssetRecommendations.isGenerating &&
                               !aiAssetRecommendations.isApplying &&
+                              isPolyhavenEnabled &&
                               !isPromptActionPending
                             : ai3dPrompt.trim() && !isAi3dBusy)
                       ? editorThemeMode === "dark"
@@ -718,7 +724,11 @@ export default function AiImageComposer() {
                 selectedItemIds={aiAssetRecommendations.selectedItemIds}
                 isGenerating={aiAssetRecommendations.isGenerating}
                 isApplying={aiAssetRecommendations.isApplying}
-                errorMessage={aiAssetRecommendations.errorMessage}
+                errorMessage={
+                  isPolyhavenEnabled
+                    ? aiAssetRecommendations.errorMessage
+                    : t("editor.aiAssets.polyhavenDisabled")
+                }
                 applyMessage={aiAssetRecommendations.applyMessage}
                 onItemSelected={setAiAssetRecommendationItemSelected}
                 onApply={handleAssetRecommendationApply}
