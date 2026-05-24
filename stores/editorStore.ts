@@ -17,7 +17,8 @@ import type {
   EditorProjectMetaJSON,
   ProjectAiAssetKindJSON,
   ProjectAiLibraryJSON,
-  ProjectAiLibraryV2JSON
+  ProjectAiLibraryV2JSON,
+  StudioSceneState
 } from "@/render/editor";
 
 export type AiImageProviderId = "siliconflow" | "openrouter";
@@ -183,6 +184,7 @@ type EditorStoreState = {
   saveStatus: ProjectSaveStatus;
   sceneLoadingStatus: SceneLoadingStatus;
   lightingConflictNotice: LightingConflictNotice;
+  studioScene: StudioSceneState;
   hasUnsavedChanges: boolean;
   projectListDialogOpen: boolean;
   projectSaveDialogOpen: boolean;
@@ -221,6 +223,7 @@ type EditorStoreState = {
   syncLightingConflictNotice: (state: LightingConflictState) => void;
   dismissLightingConflictNotice: () => void;
   resetLightingConflictNotice: () => void;
+  setStudioSceneState: (state: StudioSceneState) => void;
   beginSceneLoading: (message?: string | null) => void;
   endSceneLoading: () => void;
   setProjectListDialogOpen: (open: boolean) => void;
@@ -344,6 +347,18 @@ function createInitialLightingConflictNotice(): LightingConflictNotice {
   };
 }
 
+function createInitialStudioSceneState(): StudioSceneState {
+  return {
+    active: false,
+    presetId: null,
+    targetEntityId: null,
+    targetScale: 1,
+    targetRotationY: 0,
+    hdriStatus: "idle",
+    hdriError: null
+  };
+}
+
 function revokeLocalAssetSourceUrl(sourceUrl: string) {
   if (!sourceUrl.startsWith("blob:") || typeof URL === "undefined") {
     return;
@@ -368,6 +383,7 @@ export const useEditorStore = create<EditorStoreState>((set) => ({
   saveStatus: createInitialSaveStatus(),
   sceneLoadingStatus: createInitialSceneLoadingStatus(),
   lightingConflictNotice: createInitialLightingConflictNotice(),
+  studioScene: createInitialStudioSceneState(),
   hasUnsavedChanges: false,
   projectListDialogOpen: false,
   projectSaveDialogOpen: false,
@@ -518,6 +534,7 @@ export const useEditorStore = create<EditorStoreState>((set) => ({
     set({
       lightingConflictNotice: createInitialLightingConflictNotice()
     }),
+  setStudioSceneState: (studioScene) => set({ studioScene }),
   beginSceneLoading: (message = null) =>
     set((state) => ({
       sceneLoadingStatus: {

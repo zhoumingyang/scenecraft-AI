@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Box, CircularProgress, IconButton, Stack, Tooltip, Typography } from "@mui/material";
 import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import CenterFocusStrongRoundedIcon from "@mui/icons-material/CenterFocusStrongRounded";
+import PhotoCameraRoundedIcon from "@mui/icons-material/PhotoCameraRounded";
 import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
 import {
   ExternalAssetBrowserDialog,
@@ -58,6 +59,7 @@ export default function PropertyPanel() {
   const pendingAiAssets = useEditorStore((state) =>
     open ? state.pendingAiAssets : CLOSED_PENDING_AI_ASSETS
   );
+  const studioScene = useEditorStore((state) => (open ? state.studioScene : null));
   const [activeTextureField, setActiveTextureField] = useState<TextureFieldKey | null>(null);
   const [materialLibraryOpen, setMaterialLibraryOpen] = useState(false);
   const [aiLibraryOpen, setAiLibraryOpen] = useState(false);
@@ -124,6 +126,10 @@ export default function PropertyPanel() {
       : null;
   const isCurrentEntityIsolated = Boolean(
     canIsolateCurrentEntity && currentIsolatableEntityId && isolatedEntityId === currentIsolatableEntityId
+  );
+  const canPreviewCurrentEntityInStudio = Boolean(canIsolateCurrentEntity && currentIsolatableEntityId);
+  const isCurrentEntityInStudio = Boolean(
+    studioScene?.active && currentIsolatableEntityId && studioScene.targetEntityId === currentIsolatableEntityId
   );
 
   const handleApplyTextureSet = ({ asset, selections }: ExternalTextureApplyPayload) => {
@@ -367,6 +373,33 @@ export default function PropertyPanel() {
                             }}
                           >
                             <CenterFocusStrongRoundedIcon sx={{ fontSize: 15 }} />
+                          </IconButton>
+                        </Tooltip>
+                      ) : null}
+                      {canPreviewCurrentEntityInStudio && currentIsolatableEntityId ? (
+                        <Tooltip
+                          title={
+                            isCurrentEntityInStudio
+                              ? t("editor.studioScene.title")
+                              : t("editor.studioScene.enter")
+                          }
+                          arrow
+                        >
+                          <IconButton
+                            size="small"
+                            onClick={() => {
+                              void app?.enterStudioScene(currentIsolatableEntityId);
+                            }}
+                            sx={{
+                              color: isCurrentEntityInStudio ? theme.pillText : theme.mutedText,
+                              border: theme.sectionBorder,
+                              background: isCurrentEntityInStudio ? theme.iconButtonBg : "transparent",
+                              "&:hover": {
+                                background: theme.iconButtonBg
+                              }
+                            }}
+                          >
+                            <PhotoCameraRoundedIcon sx={{ fontSize: 15 }} />
                           </IconButton>
                         </Tooltip>
                       ) : null}

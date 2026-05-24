@@ -14,6 +14,7 @@ import type {
   EditorPostProcessPassId,
   EditorPostProcessingPassParamsMap,
   EditorProjectJSON,
+  StudioSceneState,
   EditorViewportCaptureMode,
   SyncSource,
   TransformPatch
@@ -22,6 +23,7 @@ import { EditorRuntime } from "./runtime/editorRuntime";
 import { EditorSession } from "./session/editorSession";
 import { PICK_POINTER_MOVE_THRESHOLD_PX } from "./constants/input";
 import { SCENE_NODE_ID as SCENE_SELECTION_ID } from "./constants/scene";
+import type { StudioScenePresetId } from "./studioScenes";
 
 export type EditorMeshListItem = {
   id: string;
@@ -165,6 +167,10 @@ export class EditorApp {
 
   getIsolatedEntityId(): string | null {
     return this.session.getIsolatedEntityId();
+  }
+
+  getStudioSceneState(): StudioSceneState {
+    return this.session.getStudioSceneState();
   }
 
   getRenderObject(entityId: string): THREE.Object3D | null {
@@ -356,6 +362,30 @@ export class EditorApp {
     this.session.toggleEntityIsolation(entityId, source);
   }
 
+  async enterStudioScene(
+    entityId: string,
+    presetId?: StudioScenePresetId,
+    source: SyncSource = "ui"
+  ) {
+    return this.session.enterStudioScene(entityId, presetId, source);
+  }
+
+  setStudioScenePreset(presetId: StudioScenePresetId) {
+    this.session.setStudioScenePreset(presetId);
+  }
+
+  updateStudioSceneTargetTransform(input: { scale?: number; rotationY?: number }) {
+    this.session.updateStudioSceneTargetTransform(input);
+  }
+
+  resetStudioSceneTargetTransform() {
+    this.session.resetStudioSceneTargetTransform();
+  }
+
+  exitStudioScene(source: SyncSource = "ui") {
+    this.session.exitStudioScene(source);
+  }
+
   updateCamera(update: Partial<EditorCameraJSON>, source: SyncSource = "ui") {
     void this.dispatch({
       type: "camera.patch",
@@ -523,6 +553,11 @@ export class EditorApp {
       return;
     }
 
+    if (event.type === "studioSceneChanged") {
+      this.runtime.invalidatePathTraceScene();
+      return;
+    }
+
     if (event.type === "cameraUpdated") {
       this.runtime.invalidatePathTraceCamera();
       return;
@@ -558,6 +593,7 @@ export class EditorApp {
   private onPointerDown = (event: PointerEvent) => {
     if (event.button !== 0) return;
     this.pendingPick = null;
+    if (this.session.getStudioSceneState().active) return;
     if (this.runtime.beginTransformInteraction(event.clientX, event.clientY)) return;
     if (this.runtime.isFirstPersonCamera()) return;
 

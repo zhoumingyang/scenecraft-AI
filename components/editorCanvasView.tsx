@@ -8,6 +8,7 @@ import {
   PropertyPanel,
   SceneLoadingOverlay,
   SceneTreePanel,
+  StudioSceneControls,
   TopBar,
   ViewportControls
 } from "@/components/editor";
@@ -53,6 +54,7 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
   const bumpCameraVersion = useEditorStore((state) => state.bumpCameraVersion);
   const bumpViewStateVersion = useEditorStore((state) => state.bumpViewStateVersion);
   const setAiInspectorMode = useEditorStore((state) => state.setAiInspectorMode);
+  const setStudioSceneState = useEditorStore((state) => state.setStudioSceneState);
   const theme = getEditorThemeTokens(editorThemeMode);
 
   useEffect(() => {
@@ -105,6 +107,7 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
         bumpMeshListVersion();
         bumpCameraVersion();
         bumpViewStateVersion();
+        setStudioSceneState(app.getStudioSceneState());
         markUnsavedChanges(false);
         syncLightingConflictState(true);
         return;
@@ -152,6 +155,10 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
 
       if (event.type === "viewStateUpdated") {
         bumpViewStateVersion();
+      }
+
+      if (event.type === "studioSceneChanged") {
+        setStudioSceneState(event.state);
       }
     });
 
@@ -216,6 +223,15 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
       app.dispose();
       setApp(null);
       setSelectedEntityId(null);
+      setStudioSceneState({
+        active: false,
+        presetId: null,
+        targetEntityId: null,
+        targetScale: 1,
+        targetRotationY: 0,
+        hdriStatus: "idle",
+        hdriError: null
+      });
     };
   }, [
     clearLocalProjectAssets,
@@ -238,6 +254,7 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
     setSaveStatus,
     setSelectedEntityId,
     setAiInspectorMode,
+    setStudioSceneState,
     beginSceneLoading,
     endSceneLoading
   ]);
@@ -286,6 +303,7 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
       <SceneTreePanel />
       <ViewportControls />
       <PropertyPanel />
+      <StudioSceneControls />
       <AiImageComposer />
       <SceneLoadingOverlay />
     </Box>
