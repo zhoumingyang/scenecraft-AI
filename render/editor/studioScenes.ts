@@ -9,6 +9,7 @@ export const STUDIO_SCENE_PRESET_IDS = [
 ] as const;
 
 export type StudioScenePresetId = (typeof STUDIO_SCENE_PRESET_IDS)[number];
+export type StudioSceneHdriStatus = "idle" | "loading" | "ready" | "error";
 
 export type StudioSceneHdriConfig = {
   provider: "polyhaven";

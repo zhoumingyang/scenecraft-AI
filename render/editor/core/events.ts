@@ -1,4 +1,4 @@
-import type { EntityKind, SyncSource } from "./types";
+import type { EntityKind, StudioSceneState, SyncSource } from "./types";
 
 export type EntityUpdatedEvent = {
   type: "entityUpdated";
@@ -35,12 +35,18 @@ export type ViewStateUpdatedEvent = {
   type: "viewStateUpdated";
 };
 
+export type StudioSceneChangedEvent = {
+  type: "studioSceneChanged";
+  state: StudioSceneState;
+};
+
 export type EditorAppEvent =
   | EntityUpdatedEvent
   | CameraUpdatedEvent
   | SceneUpdatedEvent
   | SelectionChangedEvent
   | ProjectLoadedEvent
-  | ViewStateUpdatedEvent;
+  | ViewStateUpdatedEvent
+  | StudioSceneChangedEvent;
 
 export type EditorAppListener = (event: EditorAppEvent) => void;

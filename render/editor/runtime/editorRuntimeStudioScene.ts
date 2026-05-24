@@ -3,10 +3,12 @@ import { EXRLoader } from "three/examples/jsm/loaders/EXRLoader.js";
 import { HDRLoader } from "three/examples/jsm/loaders/HDRLoader.js";
 import type { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
-import type { StudioScenePresetDefinition, StudioScenePresetId } from "../studioScenes";
+import type {
+  StudioSceneHdriStatus,
+  StudioScenePresetDefinition,
+  StudioScenePresetId
+} from "../studioScenes";
 import { applyTextureColorSpace } from "./colorManagement";
-
-export type StudioSceneHdriStatus = "idle" | "loading" | "ready" | "error";
 
 export type StudioSceneFrame = {
   center: THREE.Vector3;

@@ -35,6 +35,7 @@ export {
   STUDIO_SCENE_PRESETS
 } from "./studioScenes";
 export type {
+  StudioSceneHdriStatus,
   StudioSceneHdriConfig,
   StudioSceneLightConfig,
   StudioScenePresetDefinition,
