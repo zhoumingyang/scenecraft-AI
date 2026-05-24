@@ -2,7 +2,6 @@ import * as THREE from "three";
 
 import { getExternalAssetIncludedFiles } from "@/lib/externalAssets/source";
 import type { ExternalAssetSourceJSON } from "@/lib/externalAssets/types";
-import type { GetExternalAssetDetailResponse } from "@/lib/externalAssets/contracts";
 import type { Ai3DPlan, Ai3DMeshDraft } from "../ai3d/plan";
 import { buildAi3DMeshDrafts } from "../ai3d/plan";
 import type { EditorCommand, MeshMaterialPatch } from "../core/commands";
@@ -25,12 +24,7 @@ import { updateMeshBindingMaterial } from "../bindings/meshBinding";
 import { pickEntityId } from "../interaction/picker";
 import { getLightPresetDefinition } from "../lightPresets";
 import type { LightPresetId } from "../lightPresets";
-import {
-  DEFAULT_STUDIO_SCENE_PRESET_ID,
-  getStudioScenePreset,
-  type StudioSceneHdriStatus,
-  type StudioScenePresetId
-} from "../studioScenes";
+import { DEFAULT_STUDIO_SCENE_PRESET_ID, type StudioScenePresetId } from "../studioScenes";
 import { EditorProjectModel, MeshEntityModel, ModelEntityModel } from "../models";
 import { createEmptyEditorProjectJSON } from "../factories/projectFactory";
 import { mergeEditorPostProcessingConfig } from "../postProcessing";
@@ -42,119 +36,15 @@ import {
   GROUND_HELPER_NODE_ID,
   SCENE_NODE_ID as SCENE_SELECTION_ID
 } from "../core/types";
+import { StudioSceneSessionController } from "./studioSceneSession";
 
 type Emit = (event: EditorAppEvent) => void;
 
 type EntityVisibilitySnapshot = Map<string, boolean>;
 
-type StudioObjectVisibilitySnapshot = Array<{
-  entityId: string;
-  visible: boolean;
-}>;
-
-type StudioViewHelperSnapshot = {
-  gridHelper: boolean;
-  transformGizmo: boolean;
-  lightHelper: boolean;
-  shadow: boolean;
-};
-
-type StudioTargetTransformSnapshot = {
-  position: THREE.Vector3;
-  quaternion: THREE.Quaternion;
-  scale: THREE.Vector3;
-};
-
-type StudioSceneSession = {
-  targetEntityId: string;
-  presetId: StudioScenePresetId;
-  targetScale: number;
-  targetRotationY: number;
-  hdriStatus: StudioSceneHdriStatus;
-  hdriError: string | null;
-  objectVisibilitySnapshot: StudioObjectVisibilitySnapshot;
-  viewHelperSnapshot: StudioViewHelperSnapshot;
-  targetTransformSnapshot: StudioTargetTransformSnapshot;
-};
-
 function getEnvConfigPathTraceInvalidation(patch: Partial<EditorEnvConfigJSON>) {
   const nonPostProcessingKeys = Object.keys(patch).filter((key) => key !== "postProcessing");
   return nonPostProcessingKeys.length > 0 ? "environment" : "none";
-}
-
-function createDefaultStudioSceneState(): StudioSceneState {
-  return {
-    active: false,
-    presetId: null,
-    targetEntityId: null,
-    targetScale: 1,
-    targetRotationY: 0,
-    hdriStatus: "idle",
-    hdriError: null
-  };
-}
-
-function cloneObjectTransform(object: THREE.Object3D): StudioTargetTransformSnapshot {
-  return {
-    position: object.position.clone(),
-    quaternion: object.quaternion.clone(),
-    scale: object.scale.clone()
-  };
-}
-
-function restoreObjectTransform(object: THREE.Object3D, snapshot: StudioTargetTransformSnapshot) {
-  object.position.copy(snapshot.position);
-  object.quaternion.copy(snapshot.quaternion);
-  object.scale.copy(snapshot.scale);
-  object.updateMatrixWorld(true);
-}
-
-function createStudioFrameFromObject(object: THREE.Object3D) {
-  object.updateMatrixWorld(true);
-  const box = new THREE.Box3().setFromObject(object);
-  const center = new THREE.Vector3();
-  const size = new THREE.Vector3();
-
-  if (box.isEmpty()) {
-    object.getWorldPosition(center);
-    return {
-      center,
-      radius: 1,
-      height: 1,
-      floorY: center.y - 0.5
-    };
-  }
-
-  box.getCenter(center);
-  box.getSize(size);
-  return {
-    center,
-    radius: Math.max(size.x, size.y, size.z) * 0.5,
-    height: Math.max(size.y, 0.1),
-    floorY: box.min.y
-  };
-}
-
-function selectPreferredHdriFile(
-  detail: GetExternalAssetDetailResponse["asset"],
-  preferredResolution: string,
-  preferredFormat: string
-) {
-  if (detail.assetType !== "hdri") return null;
-  const preferred = detail.fileOptions.find(
-    (file) =>
-      file.resolution.toLowerCase() === preferredResolution.toLowerCase() &&
-      file.format.toLowerCase() === preferredFormat.toLowerCase()
-  );
-  if (preferred) return preferred;
-
-  return (
-    detail.fileOptions.find(
-      (file) => file.format.toLowerCase() === preferredFormat.toLowerCase()
-    ) ??
-    detail.fileOptions[0] ??
-    null
-  );
 }
 
 type PreviewMeshRecord = {
@@ -417,11 +307,10 @@ export class EditorSession {
   private readonly emit: Emit;
   private readonly ownedModelUrls = new Set<string>();
   private readonly aiPreviewRecords = new Map<string, PreviewMeshRecord>();
+  private readonly studioScene: StudioSceneSessionController;
   private selectedEntityId: string | null = null;
   private isolatedEntityId: string | null = null;
   private isolatedVisibilitySnapshot: EntityVisibilitySnapshot | null = null;
-  private studioSceneSession: StudioSceneSession | null = null;
-  private studioHdriRequestId = 0;
 
   projectModel: EditorProjectModel | null = null;
 
@@ -434,6 +323,16 @@ export class EditorSession {
       textureLoader: runtime.textureLoader,
       invalidateScene: () => runtime.invalidatePathTraceScene(),
       invalidateMaterials: () => runtime.invalidatePathTraceMaterials()
+    });
+    this.studioScene = new StudioSceneSessionController({
+      runtime,
+      registry: this.registry,
+      emit,
+      getProjectModel: () => this.projectModel,
+      getSelectedEntityId: () => this.selectedEntityId,
+      hasEntityIsolation: () => Boolean(this.isolatedVisibilitySnapshot),
+      clearEntityIsolation: (source) => this.clearEntityIsolation(source),
+      setSelectedEntity: (entityId, source) => this.setSelectedEntity(entityId, source)
     });
   }
 
@@ -572,19 +471,7 @@ export class EditorSession {
   }
 
   getStudioSceneState(): StudioSceneState {
-    if (!this.studioSceneSession) {
-      return createDefaultStudioSceneState();
-    }
-
-    return {
-      active: true,
-      presetId: this.studioSceneSession.presetId,
-      targetEntityId: this.studioSceneSession.targetEntityId,
-      targetScale: this.studioSceneSession.targetScale,
-      targetRotationY: this.studioSceneSession.targetRotationY,
-      hdriStatus: this.studioSceneSession.hdriStatus,
-      hdriError: this.studioSceneSession.hdriError
-    };
+    return this.studioScene.getState();
   }
 
   getRenderObject(entityId: string) {
@@ -675,134 +562,26 @@ export class EditorSession {
     presetId: StudioScenePresetId = DEFAULT_STUDIO_SCENE_PRESET_ID,
     source: SyncSource = "ui"
   ) {
-    if (!this.projectModel) return false;
-    const record = this.projectModel.getEntityById(entityId);
-    const binding = this.registry.get(entityId);
-    if (
-      !record ||
-      !binding ||
-      record.kind === "light" ||
-      record.item.locked ||
-      !this.projectModel.isEntityEffectivelyVisible(entityId)
-    ) {
-      return false;
-    }
-
-    if (this.studioSceneSession) {
-      this.exitStudioScene(source);
-    }
-
-    if (this.isolatedVisibilitySnapshot) {
-      this.clearEntityIsolation(source);
-    }
-
-    const preset = getStudioScenePreset(presetId);
-    const objectVisibilitySnapshot = this.captureStudioObjectVisibilitySnapshot();
-    const viewHelperSnapshot = this.captureStudioViewHelperSnapshot();
-    const targetTransformSnapshot = cloneObjectTransform(binding.object);
-    const keepVisibleIds = this.collectStudioVisibleIds(entityId);
-
-    this.registry.list().forEach((entry) => {
-      entry.object.visible =
-        entry.kind === "light"
-          ? false
-          : keepVisibleIds.has(entry.model.id) &&
-            (objectVisibilitySnapshot.find((item) => item.entityId === entry.model.id)?.visible ?? true);
-    });
-
-    this.runtime.setGridHelperVisible(false);
-    this.runtime.setTransformGizmoVisible(false);
-    this.runtime.setLightHelpersVisible(false);
-    this.runtime.setShadowEnabled(true);
-
-    this.studioSceneSession = {
-      targetEntityId: entityId,
-      presetId,
-      targetScale: 1,
-      targetRotationY: 0,
-      hdriStatus: "loading",
-      hdriError: null,
-      objectVisibilitySnapshot,
-      viewHelperSnapshot,
-      targetTransformSnapshot
-    };
-
-    this.runtime.studioScene.activate(preset, createStudioFrameFromObject(binding.object));
-    this.setSelectedEntity(entityId, source);
-    this.emitStudioSceneChanged();
-    void this.loadStudioHdriForPreset(presetId);
-    return true;
+    return this.studioScene.enter(entityId, presetId, source);
   }
 
   setStudioScenePreset(presetId: StudioScenePresetId) {
-    const session = this.studioSceneSession;
-    if (!session) return;
-    const binding = this.registry.get(session.targetEntityId);
-    if (!binding) {
-      this.exitStudioScene("ui");
-      return;
-    }
-
-    const preset = getStudioScenePreset(presetId);
-    session.presetId = presetId;
-    session.hdriStatus = "loading";
-    session.hdriError = null;
-    this.runtime.studioScene.applyPreset(preset, createStudioFrameFromObject(binding.object));
-    this.emitStudioSceneChanged();
-    void this.loadStudioHdriForPreset(presetId);
+    this.studioScene.setPreset(presetId);
   }
 
   updateStudioSceneTargetTransform(input: {
     scale?: number;
     rotationY?: number;
   }) {
-    const session = this.studioSceneSession;
-    if (!session) return;
-    const binding = this.registry.get(session.targetEntityId);
-    if (!binding) {
-      this.exitStudioScene("ui");
-      return;
-    }
-
-    const nextScale =
-      typeof input.scale === "number" && Number.isFinite(input.scale)
-        ? THREE.MathUtils.clamp(input.scale, 0.2, 3)
-        : session.targetScale;
-    const nextRotationY =
-      typeof input.rotationY === "number" && Number.isFinite(input.rotationY)
-        ? input.rotationY
-        : session.targetRotationY;
-    const rotation = new THREE.Quaternion().setFromAxisAngle(
-      new THREE.Vector3(0, 1, 0),
-      nextRotationY
-    );
-
-    binding.object.position.copy(session.targetTransformSnapshot.position);
-    binding.object.scale.copy(session.targetTransformSnapshot.scale).multiplyScalar(nextScale);
-    binding.object.quaternion.copy(session.targetTransformSnapshot.quaternion).multiply(rotation);
-    binding.object.updateMatrixWorld(true);
-    session.targetScale = nextScale;
-    session.targetRotationY = nextRotationY;
-    this.emitStudioSceneChanged();
+    this.studioScene.updateTargetTransform(input);
   }
 
   resetStudioSceneTargetTransform() {
-    const session = this.studioSceneSession;
-    if (!session) return;
-    const binding = this.registry.get(session.targetEntityId);
-    if (!binding) {
-      this.exitStudioScene("ui");
-      return;
-    }
-
-    restoreObjectTransform(binding.object, session.targetTransformSnapshot);
-    session.targetScale = 1;
-    session.targetRotationY = 0;
-    this.emitStudioSceneChanged();
+    this.studioScene.resetTargetTransform();
   }
 
   exitStudioScene(source: SyncSource = "ui") {
-    this.clearStudioScene(source, true);
+    this.studioScene.exit(source);
   }
 
   async dispatch(command: EditorCommand) {
@@ -1257,7 +1036,7 @@ export class EditorSession {
     let sceneChanged = false;
     if (
       this.projectModel &&
-      !this.studioSceneSession &&
+      !this.studioScene.isActive() &&
       this.runtime.syncCameraModel(this.projectModel.camera)
     ) {
       this.emit({ type: "cameraUpdated", source: "render" });
@@ -1267,7 +1046,7 @@ export class EditorSession {
     sceneChanged = this.registry.refresh(deltaSeconds) || sceneChanged;
 
     const renderTransformedBinding =
-      !this.studioSceneSession && this.selectedEntityId && this.selectedEntityId !== SCENE_SELECTION_ID
+      !this.studioScene.isActive() && this.selectedEntityId && this.selectedEntityId !== SCENE_SELECTION_ID
         ? this.registry.syncObjectTransformToModel(this.selectedEntityId)
         : null;
 
@@ -1403,7 +1182,7 @@ export class EditorSession {
 
   removeEntity(entityId: string, source: SyncSource = "ui") {
     if (!this.projectModel) return;
-    if (this.studioSceneSession?.targetEntityId === entityId) {
+    if (this.studioScene.isTargetEntity(entityId)) {
       this.exitStudioScene(source);
     }
     if (this.isolatedVisibilitySnapshot) {
@@ -1703,160 +1482,12 @@ export class EditorSession {
   }
 
   private clearProjectObjects() {
-    this.clearStudioScene("load", false);
+    this.studioScene.clear("load", false);
     this.registry.clear();
     this.projectModel = null;
     this.isolatedEntityId = null;
     this.isolatedVisibilitySnapshot = null;
     this.setSelectedEntity(null, "load");
-  }
-
-  private async loadStudioHdriForPreset(presetId: StudioScenePresetId) {
-    const requestId = ++this.studioHdriRequestId;
-    const session = this.studioSceneSession;
-    if (!session || session.presetId !== presetId) return;
-    const preset = getStudioScenePreset(presetId);
-
-    try {
-      const response = await fetch(`/api/polyhaven/assets/${encodeURIComponent(preset.hdri.assetId)}?type=hdri`, {
-        headers: {
-          Accept: "application/json"
-        }
-      });
-      if (!response.ok) {
-        throw new Error(`HDRI detail request failed: ${response.status}`);
-      }
-      const payload = (await response.json()) as GetExternalAssetDetailResponse;
-      const file = selectPreferredHdriFile(
-        payload.asset,
-        preset.hdri.preferredResolution,
-        preset.hdri.preferredFormat
-      );
-      if (!file) {
-        throw new Error("No HDRI file was returned for this studio preset.");
-      }
-      await this.runtime.studioScene.loadHdri(file.url, file.fileName);
-      if (
-        requestId !== this.studioHdriRequestId ||
-        !this.studioSceneSession ||
-        this.studioSceneSession.presetId !== presetId
-      ) {
-        return;
-      }
-      const runtimeState = this.runtime.studioScene.getState();
-      this.studioSceneSession.hdriStatus = runtimeState.hdriStatus;
-      this.studioSceneSession.hdriError = runtimeState.hdriError;
-      this.emitStudioSceneChanged();
-    } catch (error) {
-      if (
-        requestId !== this.studioHdriRequestId ||
-        !this.studioSceneSession ||
-        this.studioSceneSession.presetId !== presetId
-      ) {
-        return;
-      }
-      this.runtime.studioScene.clearHdri();
-      this.studioSceneSession.hdriStatus = "error";
-      this.studioSceneSession.hdriError =
-        error instanceof Error ? error.message : "Failed to load studio HDRI.";
-      this.emitStudioSceneChanged();
-    }
-  }
-
-  private emitStudioSceneChanged() {
-    this.emit({
-      type: "studioSceneChanged",
-      state: this.getStudioSceneState()
-    });
-    this.emit({ type: "viewStateUpdated" });
-  }
-
-  private clearStudioScene(source: SyncSource, emitEvent: boolean) {
-    const session = this.studioSceneSession;
-    if (!session) return;
-
-    this.studioHdriRequestId += 1;
-    const binding = this.registry.get(session.targetEntityId);
-    if (binding) {
-      restoreObjectTransform(binding.object, session.targetTransformSnapshot);
-      this.registry.syncModelTransformToObject(session.targetEntityId);
-    }
-
-    session.objectVisibilitySnapshot.forEach(({ entityId, visible }) => {
-      const entry = this.registry.get(entityId);
-      if (entry) {
-        entry.object.visible = visible;
-      }
-    });
-    this.runtime.studioScene.deactivate();
-    this.runtime.setGridHelperVisible(session.viewHelperSnapshot.gridHelper);
-    this.runtime.setTransformGizmoVisible(session.viewHelperSnapshot.transformGizmo);
-    this.runtime.setLightHelpersVisible(session.viewHelperSnapshot.lightHelper);
-    this.runtime.setShadowEnabled(session.viewHelperSnapshot.shadow);
-    if (this.projectModel) {
-      this.runtime.applyCameraModel(this.projectModel.camera);
-    }
-
-    this.studioSceneSession = null;
-    if (emitEvent) {
-      this.emit({
-        type: "studioSceneChanged",
-        state: createDefaultStudioSceneState()
-      });
-      this.emit({ type: "viewStateUpdated" });
-    }
-
-    if (source === "ui" && this.selectedEntityId === session.targetEntityId) {
-      this.setSelectedEntity(session.targetEntityId, source);
-    }
-  }
-
-  private captureStudioObjectVisibilitySnapshot(): StudioObjectVisibilitySnapshot {
-    return this.registry.list().map((binding) => ({
-      entityId: binding.model.id,
-      visible: binding.object.visible
-    }));
-  }
-
-  private captureStudioViewHelperSnapshot(): StudioViewHelperSnapshot {
-    return {
-      gridHelper: this.runtime.getGridHelperVisible(),
-      transformGizmo: this.runtime.getTransformGizmoVisible(),
-      lightHelper: this.runtime.getLightHelpersVisible(),
-      shadow: this.runtime.getShadowEnabled()
-    };
-  }
-
-  private collectStudioVisibleIds(entityId: string) {
-    const keepVisibleIds = new Set<string>([entityId]);
-    if (!this.projectModel) return keepVisibleIds;
-
-    let currentEntityId = entityId;
-    let parentGroupId = this.projectModel.getParentGroupId(currentEntityId);
-    while (parentGroupId) {
-      keepVisibleIds.add(parentGroupId);
-      currentEntityId = parentGroupId;
-      parentGroupId = this.projectModel.getParentGroupId(currentEntityId);
-    }
-
-    const record = this.projectModel.getEntityById(entityId);
-    if (record?.kind === "group") {
-      this.collectStudioGroupDescendantIds(entityId, keepVisibleIds);
-    }
-
-    return keepVisibleIds;
-  }
-
-  private collectStudioGroupDescendantIds(groupId: string, keepVisibleIds: Set<string>) {
-    if (!this.projectModel) return;
-    this.projectModel.listDirectChildren(groupId).forEach((childId) => {
-      const childRecord = this.projectModel?.getEntityById(childId);
-      if (!childRecord || childRecord.kind === "light") return;
-      keepVisibleIds.add(childId);
-      if (childRecord.kind === "group") {
-        this.collectStudioGroupDescendantIds(childId, keepVisibleIds);
-      }
-    });
   }
 
   private captureEntityVisibilitySnapshot(): EntityVisibilitySnapshot {
