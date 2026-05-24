@@ -31,23 +31,54 @@ const TREE_PALETTES = {
 
 const TREE_CANOPY_STYLES = ["rounded", "layered", "cone"] as const;
 
+function toFiniteNumber(value: unknown) {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : value;
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : value;
+  }
+
+  return value;
+}
+
+function clampedNumberSchema(min: number, max: number) {
+  return z.preprocess((value) => {
+    const numeric = toFiniteNumber(value);
+    return typeof numeric === "number" && Number.isFinite(numeric)
+      ? clamp(numeric, min, max)
+      : numeric;
+  }, z.number().finite());
+}
+
+function clampedIntegerSchema(min: number, max: number) {
+  return z.preprocess((value) => {
+    const numeric = toFiniteNumber(value);
+    return typeof numeric === "number" && Number.isFinite(numeric)
+      ? Math.round(clamp(numeric, min, max))
+      : numeric;
+  }, z.number().int());
+}
+
 export const treeRuleParamsSchema = z
   .object({
-    trunkHeightScale: z.number().finite().min(0.85).max(1.45),
-    trunkThicknessScale: z.number().finite().min(0.8).max(1.3),
-    trunkLean: z.number().finite().min(-0.22).max(0.22),
-    branchCount: z.number().int().min(2).max(5),
-    branchLengthScale: z.number().finite().min(0.7).max(1.3),
-    branchLift: z.number().finite().min(0.25).max(0.9),
-    canopyWidthScale: z.number().finite().min(0.8).max(1.5),
-    canopyHeightScale: z.number().finite().min(0.7).max(1.35),
-    canopyClusterCount: z.number().int().min(2).max(5),
-    canopySpread: z.number().finite().min(0.18).max(0.9),
-    canopyOffsetX: z.number().finite().min(-0.42).max(0.42),
-    canopyOffsetZ: z.number().finite().min(-0.32).max(0.32),
+    trunkHeightScale: clampedNumberSchema(0.85, 1.45),
+    trunkThicknessScale: clampedNumberSchema(0.8, 1.3),
+    trunkLean: clampedNumberSchema(-0.22, 0.22),
+    branchCount: clampedIntegerSchema(2, 5),
+    branchLengthScale: clampedNumberSchema(0.7, 1.3),
+    branchLift: clampedNumberSchema(0.25, 0.9),
+    canopyWidthScale: clampedNumberSchema(0.8, 1.5),
+    canopyHeightScale: clampedNumberSchema(0.7, 1.35),
+    canopyClusterCount: clampedIntegerSchema(2, 5),
+    canopySpread: clampedNumberSchema(0.18, 0.9),
+    canopyOffsetX: clampedNumberSchema(-0.42, 0.42),
+    canopyOffsetZ: clampedNumberSchema(-0.32, 0.32),
     canopyStyle: z.enum(TREE_CANOPY_STYLES),
-    rootFlare: z.number().finite().min(0.8).max(1.3),
-    asymmetry: z.number().finite().min(0).max(0.45),
+    rootFlare: clampedNumberSchema(0.8, 1.3),
+    asymmetry: clampedNumberSchema(0, 0.45),
     palette: z.enum(
       Object.keys(TREE_PALETTES) as [keyof typeof TREE_PALETTES, ...Array<keyof typeof TREE_PALETTES>]
     )
