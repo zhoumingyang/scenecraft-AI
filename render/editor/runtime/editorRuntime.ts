@@ -21,6 +21,7 @@ import { configureRendererColorManagement } from "./colorManagement";
 import { EditorRuntimeEnvironment } from "./editorRuntimeEnvironment";
 import { EditorRuntimePathTracer } from "./editorRuntimePathTracer";
 import { EditorRuntimePostProcessing } from "./editorRuntimePostProcessing";
+import { EditorRuntimeStudioScene } from "./editorRuntimeStudioScene";
 import { FirstPersonController } from "./firstPersonController";
 import { ModelLoaderFactory } from "./modelLoaderFactory";
 
@@ -44,6 +45,7 @@ export class EditorRuntime {
   readonly orbitControls: OrbitControls;
   readonly firstPersonController: FirstPersonController;
   readonly transformGizmo: CustomTransformGizmo;
+  readonly studioScene: EditorRuntimeStudioScene;
 
   private rafId = 0;
   private readonly clock = new THREE.Clock();
@@ -113,6 +115,13 @@ export class EditorRuntime {
       onChange: this.requestFrame
     });
     this.transformGizmo = new CustomTransformGizmo(this.camera, this.renderer.domElement, this.raycaster);
+    this.studioScene = new EditorRuntimeStudioScene({
+      scene: this.scene,
+      camera: this.camera,
+      renderer: this.renderer,
+      orbitControls: this.orbitControls,
+      requestFrame: this.requestFrame
+    });
     this.scene.add(this.transformGizmo.root);
   }
 
@@ -148,6 +157,7 @@ export class EditorRuntime {
     if (this.disposed) return;
     this.disposed = true;
     this.stop();
+    this.studioScene.dispose();
     this.transformGizmo.dispose();
     this.scene.remove(this.transformGizmo.root);
     this.orbitControls.dispose();
