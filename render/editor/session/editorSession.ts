@@ -1,5 +1,4 @@
-import type { Ai3DPlan, Ai3DMeshDraft } from "../ai3d/plan";
-import { buildAi3DMeshDrafts } from "../ai3d/plan";
+import type { Ai3DPlan } from "../ai3d/plan";
 import type { EditorCommand, MeshMaterialPatch } from "../core/commands";
 import type {
   EditorCameraJSON,
@@ -8,51 +7,35 @@ import type {
   EditorLightJSON,
   LightingConflictState,
   EditorProjectJSON,
-  ResolvedEditorEnvConfigJSON,
   StudioSceneState,
   SyncSource,
   TransformPatch
 } from "../core/types";
 import type { EditorAppEvent } from "../core/events";
 import { BindingRegistry } from "../bindings/bindingRegistry";
-import { updateLightBinding } from "../bindings/lightBinding";
 import { updateMeshBindingMaterial } from "../bindings/meshBinding";
 import { pickEntityId } from "../interaction/picker";
-import { getLightPresetDefinition } from "../lightPresets";
 import type { LightPresetId } from "../lightPresets";
 import { DEFAULT_STUDIO_SCENE_PRESET_ID, type StudioScenePresetId } from "../studioScenes";
 import { EditorProjectModel } from "../models";
 import { createEmptyEditorProjectJSON } from "../factories/projectFactory";
-import { mergeEditorPostProcessingConfig } from "../postProcessing";
-import { hasTextureMaterialPatch, normalizeMeshMaterial } from "../materials/meshMaterial";
 import { EditorRuntime } from "../runtime/editorRuntime";
 import {
   GROUND_HELPER_NODE_ID,
   SCENE_NODE_ID as SCENE_SELECTION_ID
 } from "../core/types";
+import { Ai3DPlanSessionController } from "./ai3dPlanSession";
 import { Ai3DPreviewSession } from "./ai3dPreviewSession";
-import { cloneEditorEntity } from "./entityDuplicator";
 import { EntityIsolationSessionController } from "./entityIsolationSession";
-import {
-  createDefaultGroupLabel,
-  createDefaultLightLabel,
-  createDefaultMeshLabel,
-  createGroupEntityId,
-  createLightEntityId,
-  createLightPayload,
-  createMeshEntityId,
-  createMeshPayload
-} from "./entityFactories";
+import { EntityMutationSessionController } from "./entityMutationSession";
+import { createMeshEntityId, createMeshPayload } from "./entityFactories";
+import { LightSessionController } from "./lightSession";
 import { ModelImportSessionController } from "./modelImportSession";
 import { ModelAnimationSessionController } from "./modelAnimationSession";
+import { SceneEnvironmentSessionController } from "./sceneEnvironmentSession";
 import { StudioSceneSessionController } from "./studioSceneSession";
 
 type Emit = (event: EditorAppEvent) => void;
-
-function getEnvConfigPathTraceInvalidation(patch: Partial<EditorEnvConfigJSON>) {
-  const nonPostProcessingKeys = Object.keys(patch).filter((key) => key !== "postProcessing");
-  return nonPostProcessingKeys.length > 0 ? "environment" : "none";
-}
 
 function resolveCanvasPickedEntityId(projectModel: EditorProjectModel | null, entityId: string | null) {
   if (!projectModel || !entityId) return entityId;
@@ -72,8 +55,12 @@ export class EditorSession {
   private readonly runtime: EditorRuntime;
   private readonly registry: BindingRegistry;
   private readonly emit: Emit;
+  private readonly ai3dPlan: Ai3DPlanSessionController;
   private readonly ai3dPreview: Ai3DPreviewSession;
   private readonly entityIsolation: EntityIsolationSessionController;
+  private readonly entityMutation: EntityMutationSessionController;
+  private readonly lightSession: LightSessionController;
+  private readonly sceneEnvironment: SceneEnvironmentSessionController;
   private readonly modelImport: ModelImportSessionController;
   private readonly modelAnimation: ModelAnimationSessionController;
   private readonly studioScene: StudioSceneSessionController;
@@ -92,12 +79,36 @@ export class EditorSession {
       invalidateMaterials: () => runtime.invalidatePathTraceMaterials()
     });
     this.ai3dPreview = new Ai3DPreviewSession(runtime, this.registry);
+    this.ai3dPlan = new Ai3DPlanSessionController({
+      registry: this.registry,
+      emit,
+      getProjectModel: () => this.projectModel,
+      ensureProject: () => this.ensureProject(),
+      rebuildGroupHierarchy: () => this.rebuildGroupHierarchy(),
+      setSelectedEntity: (entityId, source) => this.setSelectedEntity(entityId, source),
+      clearPreview: () => this.clearAi3DPreview()
+    });
     this.entityIsolation = new EntityIsolationSessionController({
       registry: this.registry,
       emit,
       getProjectModel: () => this.projectModel,
       getSelectedEntityId: () => this.selectedEntityId,
       setSelectedEntity: (entityId, source) => this.setSelectedEntity(entityId, source)
+    });
+    this.entityMutation = new EntityMutationSessionController({
+      runtime,
+      registry: this.registry,
+      emit,
+      getProjectModel: () => this.projectModel,
+      getSelectedEntityId: () => this.selectedEntityId,
+      setSelectedEntity: (entityId, source) => this.setSelectedEntity(entityId, source),
+      rebuildGroupHierarchy: () => this.rebuildGroupHierarchy(),
+      clearEntityIsolation: (source) => this.entityIsolation.clear(source),
+      exitStudioSceneIfTarget: (entityId, source) => {
+        if (this.studioScene.isTargetEntity(entityId)) {
+          this.exitStudioScene(source);
+        }
+      }
     });
     this.modelImport = new ModelImportSessionController({
       runtime,
@@ -108,6 +119,22 @@ export class EditorSession {
       setSelectedEntity: (entityId, source) => this.setSelectedEntity(entityId, source)
     });
     this.modelAnimation = new ModelAnimationSessionController(this.registry, emit);
+    this.lightSession = new LightSessionController({
+      runtime,
+      registry: this.registry,
+      emit,
+      getProjectModel: () => this.projectModel,
+      ensureProject: () => this.ensureProject(),
+      rebuildGroupHierarchy: () => this.rebuildGroupHierarchy(),
+      setSelectedEntity: (entityId, source) => this.setSelectedEntity(entityId, source)
+    });
+    this.sceneEnvironment = new SceneEnvironmentSessionController({
+      runtime,
+      emit,
+      getProjectModel: () => this.projectModel,
+      getSelectedEntityId: () => this.selectedEntityId,
+      setSelectedEntity: (entityId, source) => this.setSelectedEntity(entityId, source)
+    });
     this.studioScene = new StudioSceneSessionController({
       runtime,
       registry: this.registry,
@@ -200,43 +227,11 @@ export class EditorSession {
   }
 
   getGroundConfig() {
-    return this.projectModel?.envConfig.ground ?? null;
+    return this.sceneEnvironment.getGroundConfig();
   }
 
   getLightingConflictState(): LightingConflictState {
-    if (!this.projectModel) {
-      return {
-        hasConflict: false,
-        hasAmbientLight: false,
-        hasHemisphereLight: false
-      };
-    }
-
-    const hasActiveEnvironmentMap =
-      this.projectModel.envConfig.environment === 1 && this.runtime.hasEnvironmentTexture();
-    if (!hasActiveEnvironmentMap) {
-      return {
-        hasConflict: false,
-        hasAmbientLight: false,
-        hasHemisphereLight: false
-      };
-    }
-
-    let hasAmbientLight = false;
-    let hasHemisphereLight = false;
-    this.projectModel.lights.forEach((light) => {
-      if (light.lightType === 1) {
-        hasAmbientLight = true;
-      } else if (light.lightType === 6) {
-        hasHemisphereLight = true;
-      }
-    });
-
-    return {
-      hasConflict: hasAmbientLight || hasHemisphereLight,
-      hasAmbientLight,
-      hasHemisphereLight
-    };
+    return this.sceneEnvironment.getLightingConflictState();
   }
 
   getIsolatedEntityId(): string | null {
@@ -264,30 +259,7 @@ export class EditorSession {
   }
 
   async applyAi3DPlan(plan: Ai3DPlan, source: SyncSource = "ui") {
-    const drafts = buildAi3DMeshDrafts(plan);
-
-    if (!this.projectModel) {
-      await this.loadProject(createEmptyEditorProjectJSON());
-    }
-    if (!this.projectModel) return;
-
-    if (drafts.length > 1) {
-      const groupId = this.createGroupFromAiDrafts(drafts, source);
-      this.clearAi3DPreview();
-      this.setSelectedEntity(groupId, source);
-      return;
-    }
-
-    let lastCreatedEntityId: string | null = null;
-    drafts.forEach((draft) => {
-      lastCreatedEntityId = this.createMeshFromDraft(draft, source);
-    });
-
-    this.clearAi3DPreview();
-
-    if (lastCreatedEntityId) {
-      this.setSelectedEntity(lastCreatedEntityId, source);
-    }
+    await this.ai3dPlan.applyPlan(plan, source);
   }
 
   async enterStudioScene(
@@ -405,42 +377,15 @@ export class EditorSession {
   }
 
   updateEntityTransform(entityId: string, patch: TransformPatch, source: SyncSource = "ui") {
-    const binding = this.registry.get(entityId);
-    if (!binding || binding.model.locked) return;
-
-    binding.model.patchTransform(patch);
-    this.registry.syncModelTransformToObject(entityId);
-    this.emit({
-      type: "entityUpdated",
-      entityId,
-      entityKind: binding.kind,
-      source,
-      affectsSceneTree: false
-    });
+    this.entityMutation.updateTransform(entityId, patch, source);
   }
 
   updateEntityLabel(entityId: string, label: string, source: SyncSource = "ui") {
-    if (!this.projectModel) return;
-    const record = this.projectModel.getEntityById(entityId);
-    if (!record) return;
-
-    record.item.patchLabel(label);
-    this.emit({
-      type: "entityUpdated",
-      entityId,
-      entityKind: record.kind,
-      source
-    });
+    this.entityMutation.updateLabel(entityId, label, source);
   }
 
   updateCamera(update: Partial<EditorCameraJSON>, source: SyncSource = "ui") {
-    if (!this.projectModel) return;
-    if (update.type === 2 && this.projectModel.camera.cameraType !== 2) {
-      this.runtime.alignCameraModelToFirstPerson(this.projectModel.camera);
-    }
-    this.projectModel.camera.patch(update);
-    this.runtime.applyCameraModel(this.projectModel.camera);
-    this.emit({ type: "cameraUpdated", source });
+    this.sceneEnvironment.updateCamera(update, source);
   }
 
   async updateSceneEnvConfig(
@@ -448,39 +393,7 @@ export class EditorSession {
     source: SyncSource = "ui",
     options?: { panoAssetName?: string }
   ) {
-    if (!this.projectModel) return;
-
-    const nextEnvConfig: ResolvedEditorEnvConfigJSON = {
-      ...this.projectModel.envConfig,
-      ...patch,
-      postProcessing: patch.postProcessing
-        ? mergeEditorPostProcessingConfig(this.projectModel.envConfig.postProcessing, patch.postProcessing)
-        : this.projectModel.envConfig.postProcessing,
-      ground: this.projectModel.envConfig.ground
-    };
-
-    const shouldReloadEnvironment =
-      patch.panoUrl !== undefined && patch.panoUrl !== this.projectModel.envConfig.panoUrl;
-
-    if (shouldReloadEnvironment) {
-      if (nextEnvConfig.panoUrl) {
-        await this.runtime.setEnvironmentFromUrl(
-          nextEnvConfig.panoUrl,
-          options?.panoAssetName ?? nextEnvConfig.panoUrl
-        );
-      } else {
-        this.runtime.clearEnvironment();
-      }
-    }
-
-    this.projectModel.envConfig = nextEnvConfig;
-    this.runtime.applyEnvConfig(this.projectModel.envConfig);
-    this.emit({
-      type: "sceneUpdated",
-      source,
-      pathTraceInvalidation: getEnvConfigPathTraceInvalidation(patch)
-    });
-    this.emit({ type: "viewStateUpdated" });
+    await this.sceneEnvironment.updateSceneEnvConfig(patch, source, options);
   }
 
   updateMeshMaterial(
@@ -508,71 +421,11 @@ export class EditorSession {
   }
 
   updateGroundConfig(patch: Partial<EditorGroundConfigJSON>, source: SyncSource = "ui") {
-    if (!this.projectModel) return;
-
-    this.projectModel.envConfig = {
-      ...this.projectModel.envConfig,
-      ground: {
-        ...this.projectModel.envConfig.ground,
-        ...patch,
-        scale: patch.scale
-          ? [
-              patch.scale[0] ?? this.projectModel.envConfig.ground.scale[0],
-              this.projectModel.envConfig.ground.scale[1],
-              patch.scale[2] ?? this.projectModel.envConfig.ground.scale[2]
-            ]
-          : this.projectModel.envConfig.ground.scale,
-        material: this.projectModel.envConfig.ground.material
-      }
-    };
-
-    this.runtime.applyEnvConfig(this.projectModel.envConfig);
-
-    if (!this.projectModel.envConfig.ground.visible && this.selectedEntityId === GROUND_HELPER_NODE_ID) {
-      this.setSelectedEntity(null, source);
-    }
-
-    this.emit({ type: "sceneUpdated", source, pathTraceInvalidation: "scene" });
-    this.emit({ type: "viewStateUpdated" });
+    this.sceneEnvironment.updateGroundConfig(patch, source);
   }
 
   updateGroundMaterial(patch: MeshMaterialPatch, source: SyncSource = "ui") {
-    if (!this.projectModel) return;
-
-    const material = this.projectModel.envConfig.ground.material;
-    this.projectModel.envConfig = {
-      ...this.projectModel.envConfig,
-      ground: {
-        ...this.projectModel.envConfig.ground,
-        material: normalizeMeshMaterial({
-          ...material,
-          ...patch,
-          diffuseMap: patch.diffuseMap
-            ? { ...material.diffuseMap, ...patch.diffuseMap }
-            : material.diffuseMap,
-          metalnessMap: patch.metalnessMap
-            ? { ...material.metalnessMap, ...patch.metalnessMap }
-            : material.metalnessMap,
-          roughnessMap: patch.roughnessMap
-            ? { ...material.roughnessMap, ...patch.roughnessMap }
-            : material.roughnessMap,
-          normalMap: patch.normalMap
-            ? { ...material.normalMap, ...patch.normalMap }
-            : material.normalMap,
-          aoMap: patch.aoMap ? { ...material.aoMap, ...patch.aoMap } : material.aoMap,
-          emissiveMap: patch.emissiveMap
-            ? { ...material.emissiveMap, ...patch.emissiveMap }
-            : material.emissiveMap
-        })
-      }
-    };
-
-    if (hasTextureMaterialPatch(patch)) {
-      this.runtime.applyEnvConfig(this.projectModel.envConfig);
-    } else {
-      this.runtime.updateGroundMaterial(this.projectModel.envConfig.ground.material);
-    }
-    this.emit({ type: "sceneUpdated", source, pathTraceInvalidation: "materials" });
+    this.sceneEnvironment.updateGroundMaterial(patch, source);
   }
 
   async createMesh(geometryName: string, source: SyncSource = "ui") {
@@ -581,7 +434,7 @@ export class EditorSession {
     }
     if (!this.projectModel) return;
 
-    const meshId = this.createMeshFromDraft(
+    const meshId = this.ai3dPlan.createMeshFromDraft(
       {
         nodeId: createMeshEntityId(),
         label: geometryName,
@@ -593,84 +446,15 @@ export class EditorSession {
   }
 
   updateLight(entityId: string, patch: Partial<EditorLightJSON>, source: SyncSource = "ui") {
-    const binding = this.registry.get(entityId);
-    if (!binding || binding.kind !== "light" || binding.model.locked) return;
-
-    updateLightBinding(binding, patch);
-    this.emit({
-      type: "entityUpdated",
-      entityId,
-      entityKind: "light",
-      source,
-      affectsSceneTree: false
-    });
+    this.lightSession.updateLight(entityId, patch, source);
   }
 
   createLight(lightType: EditorLightJSON["type"], source: SyncSource = "ui") {
-    if (!this.projectModel) return;
-
-    const light = this.projectModel.addLight({
-      ...createLightPayload(lightType),
-      label: createDefaultLightLabel(lightType, this.projectModel.lights.size)
-    });
-    this.registry.create(light);
-    this.runtime.syncLightHelperVisibility();
-    this.emit({
-      type: "entityUpdated",
-      entityId: light.id,
-      entityKind: "light",
-      source
-    });
-    this.setSelectedEntity(light.id, source);
+    this.lightSession.createLight(lightType, source);
   }
 
   async createLightPreset(presetId: LightPresetId, source: SyncSource = "ui") {
-    if (!this.projectModel) {
-      await this.loadProject(createEmptyEditorProjectJSON());
-    }
-    if (!this.projectModel) return;
-
-    const preset = getLightPresetDefinition(presetId);
-    const group = this.projectModel.addGroup({
-      id: createGroupEntityId(),
-      label: preset.label,
-      children: [],
-      locked: false,
-      visible: true,
-      position: [0, 0, 0],
-      quaternion: [0, 0, 0, 1],
-      scale: [1, 1, 1]
-    });
-
-    this.registry.create(group);
-
-    const childIds = preset.lights.map((presetLight) => {
-      const light = this.projectModel!.addLight({
-        id: createLightEntityId(),
-        label: presetLight.label,
-        locked: false,
-        ...presetLight.light
-      });
-      this.registry.create(light);
-      this.emit({
-        type: "entityUpdated",
-        entityId: light.id,
-        entityKind: "light",
-        source
-      });
-      return light.id;
-    });
-
-    group.children = childIds;
-    this.rebuildGroupHierarchy();
-    this.runtime.syncLightHelperVisibility();
-    this.emit({
-      type: "entityUpdated",
-      entityId: group.id,
-      entityKind: "group",
-      source
-    });
-    this.setSelectedEntity(group.id, source);
+    await this.lightSession.createLightPreset(presetId, source);
   }
 
   syncEntityModelFromRenderObject(entityId: string) {
@@ -752,176 +536,16 @@ export class EditorSession {
     this.emit({ type: "selectionChanged", selectedEntityId: entityId, source });
   }
 
-  private createMeshFromDraft(draft: Ai3DMeshDraft, source: SyncSource) {
-    if (!this.projectModel) {
-      throw new Error("Project model is not initialized.");
-    }
-
-    const mesh = this.projectModel.addMesh({
-      ...draft.mesh,
-      label:
-        draft.mesh.label ||
-        draft.label ||
-        createDefaultMeshLabel(draft.mesh.geometryName ?? "", this.projectModel.meshes.size),
-      id: createMeshEntityId()
-    });
-    this.registry.create(mesh);
-    this.rebuildGroupHierarchy();
-    this.emit({
-      type: "entityUpdated",
-      entityId: mesh.id,
-      entityKind: "mesh",
-      source
-    });
-    return mesh.id;
-  }
-
-  private createGroupFromAiDrafts(drafts: Ai3DMeshDraft[], source: SyncSource) {
-    if (!this.projectModel) {
-      throw new Error("Project model is not initialized.");
-    }
-
-    const center = drafts.reduce<[number, number, number]>(
-      (acc, draft) => {
-        acc[0] += draft.mesh.position?.[0] ?? 0;
-        acc[1] += draft.mesh.position?.[1] ?? 0;
-        acc[2] += draft.mesh.position?.[2] ?? 0;
-        return acc;
-      },
-      [0, 0, 0]
-    );
-
-    center[0] /= drafts.length;
-    center[1] /= drafts.length;
-    center[2] /= drafts.length;
-
-    const childIds = drafts.map((draft) =>
-      this.createMeshFromDraft(
-        {
-          ...draft,
-          mesh: {
-            ...draft.mesh,
-            position: [
-              (draft.mesh.position?.[0] ?? 0) - center[0],
-              (draft.mesh.position?.[1] ?? 0) - center[1],
-              (draft.mesh.position?.[2] ?? 0) - center[2]
-            ]
-          }
-        },
-        source
-      )
-    );
-
-    const group = this.projectModel.addGroup({
-      id: createGroupEntityId(),
-      label: createDefaultGroupLabel(this.projectModel.groups.size),
-      children: childIds,
-      locked: false,
-      visible: true,
-      position: center,
-      quaternion: [0, 0, 0, 1],
-      scale: [1, 1, 1]
-    });
-
-    this.registry.create(group);
-    this.rebuildGroupHierarchy();
-    this.emit({
-      type: "entityUpdated",
-      entityId: group.id,
-      entityKind: "group",
-      source
-    });
-    return group.id;
-  }
-
   removeEntity(entityId: string, source: SyncSource = "ui") {
-    if (!this.projectModel) return;
-    if (this.studioScene.isTargetEntity(entityId)) {
-      this.exitStudioScene(source);
-    }
-    this.entityIsolation.clear(source);
-    const binding = this.registry.get(entityId);
-    if (!binding || binding.model.locked || !this.projectModel.isEntityEffectivelyVisible(entityId)) return;
-
-    if (binding.kind === "group") {
-      const childIds = this.projectModel.listDirectChildren(entityId);
-      const shouldRemoveChildren =
-        childIds.length > 0 &&
-        childIds.every((childId) => this.projectModel?.getEntityById(childId)?.kind === "light");
-
-      if (shouldRemoveChildren) {
-        childIds.forEach((childId) => {
-          this.projectModel?.removeEntity(childId);
-          this.registry.remove(childId);
-          this.emit({
-            type: "entityUpdated",
-            entityId: childId,
-            entityKind: "light",
-            source
-          });
-        });
-      } else {
-        const parentGroupId = this.projectModel.getParentGroupId(entityId);
-        childIds.forEach((childId) => {
-          this.registry.attach(childId, parentGroupId, this.runtime.scene);
-        });
-      }
-    }
-
-    const removedKind = this.projectModel.removeEntity(entityId);
-    if (!removedKind) return;
-    this.registry.remove(entityId);
-    this.rebuildGroupHierarchy();
-    this.runtime.syncLightHelperVisibility();
-
-    if (this.selectedEntityId === entityId) {
-      this.setSelectedEntity(null, source);
-    }
-
-    this.emit({
-      type: "entityUpdated",
-      entityId,
-      entityKind: removedKind,
-      source
-    });
+    this.entityMutation.remove(entityId, source);
   }
 
   duplicateEntity(entityId: string, source: SyncSource = "ui") {
-    if (!this.projectModel) return;
-    this.entityIsolation.clear(source);
-    const record = this.projectModel.getEntityById(entityId);
-    if (!record || record.item.locked || !this.projectModel.isEntityEffectivelyVisible(entityId)) return;
-
-    const duplicate = cloneEditorEntity({
-      projectModel: this.projectModel,
-      registry: this.registry,
-      entityId,
-      source,
-      emit: this.emit
-    });
-    if (!duplicate) return;
-
-    this.rebuildGroupHierarchy();
-    this.runtime.syncLightHelperVisibility();
-    this.setSelectedEntity(duplicate.id, source);
+    this.entityMutation.duplicate(entityId, source);
   }
 
   setEntityLocked(entityId: string, locked: boolean, source: SyncSource = "ui") {
-    if (!this.projectModel) return;
-    const record = this.projectModel.getEntityById(entityId);
-    if (!record || record.item.locked === locked || !this.projectModel.isEntityEffectivelyVisible(entityId)) return;
-
-    record.item.locked = locked;
-    if (locked && this.selectedEntityId === entityId) {
-      this.setSelectedEntity(null, source);
-    }
-
-    this.emit({
-      type: "entityUpdated",
-      entityId,
-      entityKind: record.kind,
-      source
-    });
+    this.entityMutation.setLocked(entityId, locked, source);
   }
 
   toggleEntityIsolation(entityId: string, source: SyncSource = "ui") {
