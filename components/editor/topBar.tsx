@@ -22,12 +22,14 @@ export default function TopBar() {
   const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
   const projectLoadVersion = useEditorStore((state) => state.projectLoadVersion);
   const lightingConflictNotice = useEditorStore((state) => state.lightingConflictNotice);
+  const isStudioSceneActive = useEditorStore((state) => state.studioScene.active);
   const dismissLightingConflictNotice = useEditorStore((state) => state.dismissLightingConflictNotice);
   const theme = getEditorThemeTokens(editorThemeMode);
 
   const actions = useTopBarProjectActions(t);
   const menu = useTopBarMenu({
     app: actions.app,
+    disabled: isStudioSceneActive,
     isPolyhavenEnabled: actions.isPolyhavenEnabled,
     onCreateProject: actions.onCreateProject,
     onImportLibraryHdri: actions.onImportLibraryHdri,
@@ -74,6 +76,7 @@ export default function TopBar() {
 
       <TopBarActionBar
         aiLibraryAssetCount={actions.aiLibraryAssetCount}
+        disabled={isStudioSceneActive}
         dropdownConfigs={dropdownConfigs}
         onClearProject={actions.onClearProject}
         onOpenAiLibrary={actions.openAiLibraryDialog}

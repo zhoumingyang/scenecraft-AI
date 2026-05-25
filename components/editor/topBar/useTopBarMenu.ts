@@ -6,6 +6,7 @@ import type { DropdownConfig, LightPresetOption, SelectOption, TopBarTranslate }
 
 type UseTopBarMenuOptions = {
   app: EditorApp | null;
+  disabled?: boolean;
   isPolyhavenEnabled: boolean;
   onCreateProject: () => Promise<void>;
   onImportLibraryHdri: () => void;
@@ -21,6 +22,7 @@ type MenuOption = SelectOption | LightPresetOption;
 
 export function useTopBarMenu({
   app,
+  disabled = false,
   isPolyhavenEnabled,
   onCreateProject,
   onImportLibraryHdri,
@@ -42,6 +44,7 @@ export function useTopBarMenu({
   };
 
   const openMenu = (id: DropdownConfig["id"], anchor: HTMLElement) => {
+    if (disabled) return;
     setActiveMenuId(id);
     setAnchorEl(anchor);
   };
@@ -49,6 +52,12 @@ export function useTopBarMenu({
   useEffect(() => {
     closeMenu();
   }, [projectLoadVersion]);
+
+  useEffect(() => {
+    if (disabled) {
+      closeMenu();
+    }
+  }, [disabled]);
 
   const createMenuItem = (
     option: MenuOption,
@@ -155,7 +164,7 @@ export function useTopBarMenu({
           (option.value === "libraryHdri" || option.value === "libraryModel") && !isPolyhavenEnabled
       })
     );
-  }, [activeConfig, app, isPolyhavenEnabled, t]);
+  }, [activeConfig, app, disabled, isPolyhavenEnabled, t]);
 
   return {
     activeItems,

@@ -1,6 +1,6 @@
 "use client";
 
-import { MouseEvent, useMemo, useState } from "react";
+import { MouseEvent, useEffect, useMemo, useState } from "react";
 import { Box, Button, ClickAwayListener, Stack, Typography } from "@mui/material";
 import VisibilityRoundedIcon from "@mui/icons-material/VisibilityRounded";
 import BlurOnRoundedIcon from "@mui/icons-material/BlurOnRounded";
@@ -20,10 +20,11 @@ type HelperKey = "gridHelper" | "transformGizmo" | "lightHelper" | "shadow";
 
 type ViewControlProps = {
   app: EditorApp | null;
+  disabled?: boolean;
   viewStateVersion: number;
 };
 
-export default function ViewControl({ app, viewStateVersion }: ViewControlProps) {
+export default function ViewControl({ app, disabled = false, viewStateVersion }: ViewControlProps) {
   const { t } = useI18n();
   const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
   const currentProjectId = useEditorStore((state) => state.currentProjectId);
@@ -77,10 +78,17 @@ export default function ViewControl({ app, viewStateVersion }: ViewControlProps)
 
   const onToggle = (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
+    if (disabled) return;
     setOpen((value) => !value);
   };
 
   const nextRenderMode: EditorRenderMode = renderMode === "webgl" ? "pathTrace" : "webgl";
+
+  useEffect(() => {
+    if (disabled) {
+      setOpen(false);
+    }
+  }, [disabled]);
 
   return (
     <ClickAwayListener onClickAway={() => setOpen(false)}>
@@ -116,7 +124,7 @@ export default function ViewControl({ app, viewStateVersion }: ViewControlProps)
               </Typography>
               <Button
                 color="inherit"
-                disabled={!app}
+                disabled={!app || disabled}
                 onClick={() => {
                   app?.setRenderMode(nextRenderMode);
                 }}
@@ -148,7 +156,7 @@ export default function ViewControl({ app, viewStateVersion }: ViewControlProps)
                   color="inherit"
                   disabled={item.disabled}
                   onClick={() => {
-                    if (!app) return;
+                    if (!app || disabled) return;
                     app.setViewHelperVisibility(item.key, !item.visible);
                     persistViewHelperVisibility(currentProjectId, app.getViewHelperVisibility());
                   }}
@@ -180,10 +188,18 @@ export default function ViewControl({ app, viewStateVersion }: ViewControlProps)
         <Button
           size="small"
           color="inherit"
+          disabled={disabled}
           onClick={onToggle}
           startIcon={<VisibilityRoundedIcon />}
           endIcon={<KeyboardArrowUpRoundedIcon />}
-          sx={getViewportPillSx(editorThemeMode)}
+          sx={{
+            ...getViewportPillSx(editorThemeMode),
+            "&.Mui-disabled": {
+              color: theme.mutedText,
+              background: theme.itemBg,
+              opacity: 0.58
+            }
+          }}
         >
           {t("editor.view.title")}
         </Button>

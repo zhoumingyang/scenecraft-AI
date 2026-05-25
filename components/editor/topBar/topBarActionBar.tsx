@@ -8,6 +8,7 @@ import type { DropdownConfig, TopBarTranslate } from "./types";
 
 type TopBarActionBarProps = {
   aiLibraryAssetCount: number;
+  disabled?: boolean;
   dropdownConfigs: DropdownConfig[];
   onClearProject: () => void;
   onOpenAiLibrary: () => void;
@@ -19,6 +20,7 @@ type TopBarActionBarProps = {
 
 export default function TopBarActionBar({
   aiLibraryAssetCount,
+  disabled = false,
   dropdownConfigs,
   onClearProject,
   onOpenAiLibrary,
@@ -54,6 +56,7 @@ export default function TopBarActionBar({
         <Button
           size="small"
           color="inherit"
+          disabled={disabled}
           startIcon={<projectConfig.icon />}
           endIcon={<KeyboardArrowDownRoundedIcon />}
           onClick={(event) => onOpenMenu(projectConfig.id, event.currentTarget)}
@@ -62,11 +65,23 @@ export default function TopBarActionBar({
         </Button>
       ) : null}
 
-      <Button size="small" color="inherit" startIcon={<SaveRoundedIcon />} onClick={onSaveScene}>
+      <Button
+        size="small"
+        color="inherit"
+        disabled={disabled}
+        startIcon={<SaveRoundedIcon />}
+        onClick={onSaveScene}
+      >
         {t("editor.top.save")}
       </Button>
 
-      <Button size="small" color="inherit" startIcon={<DeleteSweepRoundedIcon />} onClick={onClearProject}>
+      <Button
+        size="small"
+        color="inherit"
+        disabled={disabled}
+        startIcon={<DeleteSweepRoundedIcon />}
+        onClick={onClearProject}
+      >
         {t("editor.top.clear")}
       </Button>
 
@@ -74,6 +89,7 @@ export default function TopBarActionBar({
         <Button
           size="small"
           color="inherit"
+          disabled={disabled}
           startIcon={<CollectionsRoundedIcon />}
           onClick={onOpenAiLibrary}
           sx={{
@@ -110,6 +126,7 @@ export default function TopBarActionBar({
           key={config.id}
           size="small"
           color="inherit"
+          disabled={disabled}
           startIcon={<config.icon />}
           endIcon={<KeyboardArrowDownRoundedIcon />}
           onClick={(event) => onOpenMenu(config.id, event.currentTarget)}

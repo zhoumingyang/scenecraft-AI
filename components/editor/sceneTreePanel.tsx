@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Box, Button, Stack, Typography } from "@mui/material";
 import AccountTreeRoundedIcon from "@mui/icons-material/AccountTreeRounded";
 import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
@@ -19,10 +19,19 @@ export default function SceneTreePanel() {
   const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
   const selectedEntityId = useEditorStore((state) => state.selectedEntityId);
   const sceneTreeVersion = useEditorStore((state) => state.sceneTreeVersion);
+  const isStudioSceneActive = useEditorStore((state) => state.studioScene.active);
   const [open, setOpen] = useState(false);
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
   const [draftLabel, setDraftLabel] = useState("");
   const theme = getEditorThemeTokens(editorThemeMode);
+
+  useEffect(() => {
+    if (isStudioSceneActive) {
+      setOpen(false);
+      setEditingNodeId(null);
+      setDraftLabel("");
+    }
+  }, [isStudioSceneActive]);
 
   const sections = useMemo(
     () => buildSceneTreeSections(app?.projectModel, t, SCENE_NODE_ID),
@@ -134,6 +143,7 @@ export default function SceneTreePanel() {
         startIcon={<AccountTreeRoundedIcon />}
         endIcon={open ? <KeyboardArrowDownRoundedIcon /> : <KeyboardArrowUpRoundedIcon />}
         onClick={() => setOpen((value) => !value)}
+        disabled={isStudioSceneActive}
         sx={{
           position: "absolute",
           left: 20,
@@ -144,7 +154,12 @@ export default function SceneTreePanel() {
           background: theme.pillBg,
           backdropFilter: "blur(10px)",
           boxShadow: theme.pillShadow,
-          color: theme.pillText
+          color: theme.pillText,
+          "&.Mui-disabled": {
+            color: theme.mutedText,
+            background: theme.itemBg,
+            opacity: 0.58
+          }
         }}
       >
         {t("editor.sceneTree.button")}
