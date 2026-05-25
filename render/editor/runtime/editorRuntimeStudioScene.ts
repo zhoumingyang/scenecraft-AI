@@ -49,6 +49,7 @@ type RuntimeAssetRecord = {
 
 const MIN_FRAME_RADIUS = 1.2;
 const WALL_HEIGHT_MULTIPLIER = 2.4;
+const ROOM_HALF_EXTENT_RATIO = 0.48;
 
 function createMaterial(
   color: string,
@@ -381,14 +382,17 @@ export class EditorRuntimeStudioScene {
     const depth = radius * 6.5;
     const wallHeight = Math.max(frame.height * WALL_HEIGHT_MULTIPLIER, radius * 4);
     const floorY = frame.floorY - preset.targetLift * radius;
+    const ceilingY = floorY + wallHeight;
     const center = frame.center;
-    const wallZ = center.z - depth * 0.42;
-    const sideX = center.x - width * 0.42;
+    const backZ = center.z - depth * ROOM_HALF_EXTENT_RATIO;
+    const frontZ = center.z + depth * ROOM_HALF_EXTENT_RATIO;
+    const leftX = center.x - width * ROOM_HALF_EXTENT_RATIO;
+    const rightX = center.x + width * ROOM_HALF_EXTENT_RATIO;
     const plinthHeight = Math.max(radius * 0.32, 0.18);
     const plinthRadius = Math.max(radius * 0.78, 0.72);
 
-    const floorMaterial = createMaterial(preset.floorColor);
-    const wallMaterial = createMaterial(preset.wallColor);
+    const floorMaterial = createMaterial(preset.floorColor, { side: THREE.DoubleSide });
+    const wallMaterial = createMaterial(preset.wallColor, { side: THREE.DoubleSide });
     const accentMaterial = createMaterial(preset.accentColor, {
       roughness: 0.72,
       metalness: preset.id === "darkTechStudio" ? 0.25 : 0
@@ -413,18 +417,48 @@ export class EditorRuntimeStudioScene {
         name: "studio-back-wall",
         width,
         height: wallHeight,
-        position: new THREE.Vector3(center.x, floorY + wallHeight / 2, wallZ),
+        position: new THREE.Vector3(center.x, floorY + wallHeight / 2, backZ),
         rotation: new THREE.Euler(0, 0, 0),
         material: wallMaterial.clone()
       })
     );
     this.addRuntimeObject(
       createPlaneMesh({
-        name: "studio-side-wall",
+        name: "studio-left-wall",
         width: depth,
         height: wallHeight,
-        position: new THREE.Vector3(sideX, floorY + wallHeight / 2, center.z),
+        position: new THREE.Vector3(leftX, floorY + wallHeight / 2, center.z),
         rotation: new THREE.Euler(0, Math.PI / 2, 0),
+        material: wallMaterial.clone()
+      })
+    );
+    this.addRuntimeObject(
+      createPlaneMesh({
+        name: "studio-right-wall",
+        width: depth,
+        height: wallHeight,
+        position: new THREE.Vector3(rightX, floorY + wallHeight / 2, center.z),
+        rotation: new THREE.Euler(0, -Math.PI / 2, 0),
+        material: wallMaterial.clone()
+      })
+    );
+    this.addRuntimeObject(
+      createPlaneMesh({
+        name: "studio-front-wall",
+        width,
+        height: wallHeight,
+        position: new THREE.Vector3(center.x, floorY + wallHeight / 2, frontZ),
+        rotation: new THREE.Euler(0, Math.PI, 0),
+        material: wallMaterial.clone()
+      })
+    );
+    this.addRuntimeObject(
+      createPlaneMesh({
+        name: "studio-ceiling",
+        width,
+        height: depth,
+        position: new THREE.Vector3(center.x, ceilingY, center.z),
+        rotation: new THREE.Euler(Math.PI / 2, 0, 0),
         material: wallMaterial.clone()
       })
     );

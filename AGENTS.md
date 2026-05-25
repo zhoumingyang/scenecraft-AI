@@ -151,7 +151,7 @@ It includes:
 - data models and factories
 - bindings between data and Three.js objects
 - session logic and AI 3D plan application
-- temporary studio preview mode for selected objects, including runtime-only product-stage geometry, HDRI lighting, camera framing, and non-persisted model transform adjustments
+- temporary studio preview mode for selected objects, including runtime-only enclosed studio-room geometry, HDRI lighting, camera framing, and non-persisted model transform adjustments
 - scene snapshot serialization used by project persistence
 
 Treat this area as high-risk. Small changes can easily break selection, transforms, preview behavior, imported assets, or runtime synchronization.
