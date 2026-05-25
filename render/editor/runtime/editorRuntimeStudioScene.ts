@@ -47,9 +47,36 @@ type RuntimeAssetRecord = {
   dispose: () => void;
 };
 
+type StudioRoomBounds = {
+  center: THREE.Vector3;
+  radius: number;
+  width: number;
+  depth: number;
+  wallHeight: number;
+  floorY: number;
+  ceilingY: number;
+  leftX: number;
+  rightX: number;
+  backZ: number;
+  frontZ: number;
+};
+
+type OrbitControlsSnapshot = {
+  minDistance: number;
+  maxDistance: number;
+  minPolarAngle: number;
+  maxPolarAngle: number;
+  minAzimuthAngle: number;
+  maxAzimuthAngle: number;
+  enablePan: boolean;
+};
+
 const MIN_FRAME_RADIUS = 1.2;
 const WALL_HEIGHT_MULTIPLIER = 2.4;
 const ROOM_HALF_EXTENT_RATIO = 0.48;
+const ROOM_INTERIOR_MARGIN_RATIO = 0.16;
+const ROOM_CAMERA_MARGIN_RATIO = 0.45;
+const ROOM_TARGET_MARGIN_RATIO = 0.22;
 
 function createMaterial(
   color: string,
@@ -195,20 +222,66 @@ function toWorldPoint(frame: StudioSceneFrame, offset: [number, number, number])
   );
 }
 
+function createRoomBounds(preset: StudioScenePresetDefinition, frame: StudioSceneFrame): StudioRoomBounds {
+  const radius = Math.max(frame.radius, MIN_FRAME_RADIUS);
+  const width = radius * 7;
+  const depth = radius * 6.5;
+  const wallHeight = Math.max(frame.height * WALL_HEIGHT_MULTIPLIER, radius * 4);
+  const floorY = frame.floorY - preset.targetLift * radius;
+  const center = frame.center.clone();
+
+  return {
+    center,
+    radius,
+    width,
+    depth,
+    wallHeight,
+    floorY,
+    ceilingY: floorY + wallHeight,
+    leftX: center.x - width * ROOM_HALF_EXTENT_RATIO,
+    rightX: center.x + width * ROOM_HALF_EXTENT_RATIO,
+    backZ: center.z - depth * ROOM_HALF_EXTENT_RATIO,
+    frontZ: center.z + depth * ROOM_HALF_EXTENT_RATIO
+  };
+}
+
+function clampPointToRoom(point: THREE.Vector3, bounds: StudioRoomBounds, margin: number) {
+  point.x = THREE.MathUtils.clamp(point.x, bounds.leftX + margin, bounds.rightX - margin);
+  point.y = THREE.MathUtils.clamp(point.y, bounds.floorY + margin, bounds.ceilingY - margin);
+  point.z = THREE.MathUtils.clamp(point.z, bounds.backZ + margin, bounds.frontZ - margin);
+  return point;
+}
+
+function getRoomInteriorMargin(bounds: StudioRoomBounds, ratio = ROOM_INTERIOR_MARGIN_RATIO) {
+  return Math.max(bounds.radius * ratio, 0.15);
+}
+
+function toRoomPoint(
+  frame: StudioSceneFrame,
+  bounds: StudioRoomBounds,
+  offset: [number, number, number],
+  marginRatio = ROOM_INTERIOR_MARGIN_RATIO
+) {
+  return clampPointToRoom(toWorldPoint(frame, offset), bounds, getRoomInteriorMargin(bounds, marginRatio));
+}
+
 function createRectAreaLight(
   preset: StudioScenePresetDefinition,
   key: "keyLight" | "fillLight",
-  frame: StudioSceneFrame
+  frame: StudioSceneFrame,
+  bounds: StudioRoomBounds
 ) {
   const config = preset[key];
   const radius = Math.max(frame.radius, MIN_FRAME_RADIUS);
-  const position = toWorldPoint(frame, config.position);
-  const target = toWorldPoint(frame, config.target);
+  const position = toRoomPoint(frame, bounds, config.position);
+  const target = toRoomPoint(frame, bounds, config.target, ROOM_TARGET_MARGIN_RATIO);
+  const width = Math.min((config.width ?? 2.5) * radius, bounds.width * 0.48);
+  const height = Math.min((config.height ?? 2) * radius, bounds.wallHeight * 0.55);
   const light = new THREE.RectAreaLight(
     new THREE.Color(config.color),
     config.intensity,
-    (config.width ?? 2.5) * radius,
-    (config.height ?? 2) * radius
+    width,
+    height
   );
   light.name = `studio-${key}`;
   light.position.copy(position);
@@ -216,10 +289,14 @@ function createRectAreaLight(
   return light;
 }
 
-function createRimSpotLight(preset: StudioScenePresetDefinition, frame: StudioSceneFrame) {
+function createRimSpotLight(
+  preset: StudioScenePresetDefinition,
+  frame: StudioSceneFrame,
+  bounds: StudioRoomBounds
+) {
   const config = preset.rimLight;
-  const position = toWorldPoint(frame, config.position);
-  const target = toWorldPoint(frame, config.target);
+  const position = toRoomPoint(frame, bounds, config.position);
+  const target = toRoomPoint(frame, bounds, config.target, ROOM_TARGET_MARGIN_RATIO);
   const light = new THREE.SpotLight(
     new THREE.Color(config.color),
     config.intensity,
@@ -257,6 +334,9 @@ export class EditorRuntimeStudioScene {
   private hdriStatus: StudioSceneHdriStatus = "idle";
   private hdriError: string | null = null;
   private hdriRequestId = 0;
+  private roomBounds: StudioRoomBounds | null = null;
+  private orbitControlsSnapshot: OrbitControlsSnapshot | null = null;
+  private constrainingOrbit = false;
 
   constructor({
     scene,
@@ -290,6 +370,10 @@ export class EditorRuntimeStudioScene {
     if (!this.environmentSnapshot) {
       this.environmentSnapshot = this.captureEnvironmentSnapshot();
     }
+    if (!this.orbitControlsSnapshot) {
+      this.orbitControlsSnapshot = this.captureOrbitControlsSnapshot();
+      this.orbitControls.addEventListener("change", this.constrainOrbitToRoom);
+    }
     this.active = true;
     this.root.visible = true;
     this.applyPreset(preset, frame);
@@ -304,10 +388,13 @@ export class EditorRuntimeStudioScene {
       floorY: frame.floorY
     };
     this.root.userData.studioScenePresetId = preset.id;
+    this.roomBounds = createRoomBounds(preset, this.frame);
     this.disposeRuntimeAssets();
-    this.createStudioObjects(preset, this.frame);
+    this.createStudioObjects(preset, this.frame, this.roomBounds);
     this.applyBackgroundColor(preset);
-    this.frameCamera(preset, this.frame);
+    this.frameCamera(preset, this.frame, this.roomBounds);
+    this.applyOrbitControlsBounds(preset, this.roomBounds);
+    this.constrainOrbitToRoom();
     this.requestFrame();
   }
 
@@ -363,10 +450,12 @@ export class EditorRuntimeStudioScene {
     this.active = false;
     this.preset = null;
     this.frame = null;
+    this.roomBounds = null;
     this.root.visible = false;
     this.disposeRuntimeAssets();
     this.clearHdri();
     this.restoreEnvironmentSnapshot();
+    this.restoreOrbitControlsSnapshot();
     this.requestFrame();
   }
 
@@ -376,18 +465,14 @@ export class EditorRuntimeStudioScene {
     this.pmremGenerator.dispose();
   }
 
-  private createStudioObjects(preset: StudioScenePresetDefinition, frame: StudioSceneFrame) {
-    const radius = Math.max(frame.radius, MIN_FRAME_RADIUS);
-    const width = radius * 7;
-    const depth = radius * 6.5;
-    const wallHeight = Math.max(frame.height * WALL_HEIGHT_MULTIPLIER, radius * 4);
-    const floorY = frame.floorY - preset.targetLift * radius;
-    const ceilingY = floorY + wallHeight;
-    const center = frame.center;
-    const backZ = center.z - depth * ROOM_HALF_EXTENT_RATIO;
-    const frontZ = center.z + depth * ROOM_HALF_EXTENT_RATIO;
-    const leftX = center.x - width * ROOM_HALF_EXTENT_RATIO;
-    const rightX = center.x + width * ROOM_HALF_EXTENT_RATIO;
+  private createStudioObjects(
+    preset: StudioScenePresetDefinition,
+    frame: StudioSceneFrame,
+    bounds: StudioRoomBounds
+  ) {
+    const radius = bounds.radius;
+    const { width, depth, wallHeight, floorY, ceilingY, center, backZ, frontZ, leftX, rightX } =
+      bounds;
     const plinthHeight = Math.max(radius * 0.32, 0.18);
     const plinthRadius = Math.max(radius * 0.78, 0.72);
 
@@ -419,7 +504,7 @@ export class EditorRuntimeStudioScene {
         height: wallHeight,
         position: new THREE.Vector3(center.x, floorY + wallHeight / 2, backZ),
         rotation: new THREE.Euler(0, 0, 0),
-        material: wallMaterial.clone()
+        material: wallMaterial
       })
     );
     this.addRuntimeObject(
@@ -482,7 +567,7 @@ export class EditorRuntimeStudioScene {
       this.addSeamlessDetails(frame, floorY, accentMaterial);
     }
 
-    this.addLighting(preset, frame);
+    this.addLighting(preset, frame, bounds);
   }
 
   private addSeamlessDetails(frame: StudioSceneFrame, floorY: number, material: THREE.Material) {
@@ -559,10 +644,14 @@ export class EditorRuntimeStudioScene {
     );
   }
 
-  private addLighting(preset: StudioScenePresetDefinition, frame: StudioSceneFrame) {
-    const keyLight = createRectAreaLight(preset, "keyLight", frame);
-    const fillLight = createRectAreaLight(preset, "fillLight", frame);
-    const rimLight = createRimSpotLight(preset, frame);
+  private addLighting(
+    preset: StudioScenePresetDefinition,
+    frame: StudioSceneFrame,
+    bounds: StudioRoomBounds
+  ) {
+    const keyLight = createRectAreaLight(preset, "keyLight", frame, bounds);
+    const fillLight = createRectAreaLight(preset, "fillLight", frame, bounds);
+    const rimLight = createRimSpotLight(preset, frame, bounds);
     const radius = Math.max(frame.radius, MIN_FRAME_RADIUS);
 
     this.addRuntimeObject(keyLight);
@@ -603,7 +692,7 @@ export class EditorRuntimeStudioScene {
       name: "studio-bounce-card",
       width: radius * 1.1,
       height: radius * 1.7,
-      position: toWorldPoint(frame, [-2.2, 1.2, 1.2]),
+      position: toRoomPoint(frame, bounds, [-2.2, 1.2, 1.2]),
       rotation: new THREE.Euler(0, -Math.PI / 5, 0),
       material: createMaterial("#f6f3ea")
     });
@@ -619,7 +708,11 @@ export class EditorRuntimeStudioScene {
     });
   }
 
-  private frameCamera(preset: StudioScenePresetDefinition, frame: StudioSceneFrame) {
+  private frameCamera(
+    preset: StudioScenePresetDefinition,
+    frame: StudioSceneFrame,
+    bounds: StudioRoomBounds
+  ) {
     const radius = Math.max(frame.radius, MIN_FRAME_RADIUS);
     const target = frame.center.clone();
     target.y = frame.floorY + Math.max(frame.height * 0.48, radius * 0.65);
@@ -631,6 +724,8 @@ export class EditorRuntimeStudioScene {
       target.y + Math.sin(pitch) * distance + radius * 0.35,
       target.z + Math.cos(yaw) * Math.cos(pitch) * distance
     );
+    clampPointToRoom(target, bounds, getRoomInteriorMargin(bounds, ROOM_TARGET_MARGIN_RATIO));
+    clampPointToRoom(cameraPosition, bounds, getRoomInteriorMargin(bounds, ROOM_CAMERA_MARGIN_RATIO));
 
     this.camera.fov = preset.cameraFov;
     this.camera.position.copy(cameraPosition);
@@ -649,6 +744,73 @@ export class EditorRuntimeStudioScene {
     this.scene.environmentIntensity = 1;
     this.scene.environmentRotation.set(0, preset.hdri.environmentRotationY, 0);
   }
+
+  private captureOrbitControlsSnapshot(): OrbitControlsSnapshot {
+    return {
+      minDistance: this.orbitControls.minDistance,
+      maxDistance: this.orbitControls.maxDistance,
+      minPolarAngle: this.orbitControls.minPolarAngle,
+      maxPolarAngle: this.orbitControls.maxPolarAngle,
+      minAzimuthAngle: this.orbitControls.minAzimuthAngle,
+      maxAzimuthAngle: this.orbitControls.maxAzimuthAngle,
+      enablePan: this.orbitControls.enablePan
+    };
+  }
+
+  private applyOrbitControlsBounds(preset: StudioScenePresetDefinition, bounds: StudioRoomBounds) {
+    this.orbitControls.minDistance = Math.max(bounds.radius * 0.36, 0.45);
+    this.orbitControls.maxDistance = Math.max(
+      bounds.radius * 1.8,
+      Math.min(bounds.width, bounds.depth) * 0.48
+    );
+    this.orbitControls.minPolarAngle = 0.12;
+    this.orbitControls.maxPolarAngle = Math.PI * 0.49;
+    this.orbitControls.minAzimuthAngle = preset.cameraYaw - Math.PI * 0.42;
+    this.orbitControls.maxAzimuthAngle = preset.cameraYaw + Math.PI * 0.42;
+    this.orbitControls.enablePan = false;
+  }
+
+  private restoreOrbitControlsSnapshot() {
+    if (!this.orbitControlsSnapshot) return;
+    this.orbitControls.removeEventListener("change", this.constrainOrbitToRoom);
+    this.orbitControls.minDistance = this.orbitControlsSnapshot.minDistance;
+    this.orbitControls.maxDistance = this.orbitControlsSnapshot.maxDistance;
+    this.orbitControls.minPolarAngle = this.orbitControlsSnapshot.minPolarAngle;
+    this.orbitControls.maxPolarAngle = this.orbitControlsSnapshot.maxPolarAngle;
+    this.orbitControls.minAzimuthAngle = this.orbitControlsSnapshot.minAzimuthAngle;
+    this.orbitControls.maxAzimuthAngle = this.orbitControlsSnapshot.maxAzimuthAngle;
+    this.orbitControls.enablePan = this.orbitControlsSnapshot.enablePan;
+    this.orbitControlsSnapshot = null;
+  }
+
+  private constrainOrbitToRoom = () => {
+    if (!this.active || !this.roomBounds || this.constrainingOrbit) return;
+
+    const bounds = this.roomBounds;
+    const targetBefore = this.orbitControls.target.clone();
+    const cameraBefore = this.camera.position.clone();
+    const targetMargin = getRoomInteriorMargin(bounds, ROOM_TARGET_MARGIN_RATIO);
+    const cameraMargin = getRoomInteriorMargin(bounds, ROOM_CAMERA_MARGIN_RATIO);
+    const nextTarget = clampPointToRoom(this.orbitControls.target.clone(), bounds, targetMargin);
+    const targetDelta = nextTarget.clone().sub(this.orbitControls.target);
+
+    if (targetDelta.lengthSq() > 1e-10) {
+      this.orbitControls.target.copy(nextTarget);
+      this.camera.position.add(targetDelta);
+    }
+
+    clampPointToRoom(this.camera.position, bounds, cameraMargin);
+
+    if (
+      targetBefore.distanceToSquared(this.orbitControls.target) > 1e-10 ||
+      cameraBefore.distanceToSquared(this.camera.position) > 1e-10
+    ) {
+      this.constrainingOrbit = true;
+      this.orbitControls.update();
+      this.constrainingOrbit = false;
+      this.requestFrame();
+    }
+  };
 
   private captureEnvironmentSnapshot(): SceneEnvironmentSnapshot {
     return {
