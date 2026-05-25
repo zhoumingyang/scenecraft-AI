@@ -7,6 +7,7 @@ import type { StudioSceneState, SyncSource } from "../core/types";
 import type { EditorProjectModel } from "../models";
 import type { EditorRuntime } from "../runtime/editorRuntime";
 import {
+  DEFAULT_STUDIO_SCENE_VARIANT_ID,
   DEFAULT_STUDIO_SCENE_PRESET_ID,
   getStudioScenePreset,
   type StudioSceneHdriStatus,
@@ -69,6 +70,7 @@ export function createDefaultStudioSceneState(): StudioSceneState {
   return {
     active: false,
     presetId: null,
+    variantId: null,
     targetEntityId: null,
     targetScale: 1,
     targetRotationY: 0,
@@ -232,6 +234,7 @@ export class StudioSceneSessionController {
     return {
       active: true,
       presetId: this.activeSession.presetId,
+      variantId: DEFAULT_STUDIO_SCENE_VARIANT_ID,
       targetEntityId: this.activeSession.targetEntityId,
       targetScale: this.activeSession.targetScale,
       targetRotationY: this.activeSession.targetRotationY,

@@ -226,6 +226,7 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
       setStudioSceneState({
         active: false,
         presetId: null,
+        variantId: null,
         targetEntityId: null,
         targetScale: 1,
         targetRotationY: 0,

@@ -28,9 +28,14 @@ export { createDefaultEditorProjectJSON, createEmptyEditorProjectJSON } from "./
 export { getLightPresetDefinition, LIGHT_PRESET_DEFINITIONS, LIGHT_PRESET_IDS } from "./lightPresets";
 export type { LightPresetDefinition, LightPresetId, LightPresetLightDefinition } from "./lightPresets";
 export {
+  DEFAULT_STUDIO_SCENE_VARIANT_ID,
   DEFAULT_STUDIO_SCENE_PRESET_ID,
+  getStudioSceneVariant,
   getStudioScenePreset,
+  isStudioSceneVariantId,
   isStudioScenePresetId,
+  STUDIO_SCENE_VARIANT_IDS,
+  STUDIO_SCENE_VARIANTS,
   STUDIO_SCENE_PRESET_IDS,
   STUDIO_SCENE_PRESETS
 } from "./studioScenes";
@@ -39,8 +44,12 @@ export type {
   StudioSceneHdriStatus,
   StudioSceneHdriConfig,
   StudioSceneLightConfig,
+  StudioSceneLightingPresetDefinition,
+  StudioSceneLightingPresetId,
   StudioScenePresetDefinition,
-  StudioScenePresetId
+  StudioScenePresetId,
+  StudioSceneVariantDefinition,
+  StudioSceneVariantId
 } from "./studioScenes";
 export {
   createPbrAtlasMaterialPatch,

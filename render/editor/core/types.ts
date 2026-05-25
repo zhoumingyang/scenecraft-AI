@@ -4,7 +4,11 @@ import type {
   ModelFileFormat
 } from "../constants/model";
 import type { ExternalAssetSourceJSON } from "@/lib/externalAssets/types";
-import type { StudioSceneHdriStatus, StudioScenePresetId } from "../studioScenes";
+import type {
+  StudioSceneHdriStatus,
+  StudioScenePresetId,
+  StudioSceneVariantId
+} from "../studioScenes";
 
 export type { AssetUnit, ModelAnimationPlaybackState, ModelFileFormat } from "../constants/model";
 export { GROUND_HELPER_NODE_ID, SCENE_NODE_ID } from "../constants/scene";
@@ -461,6 +465,7 @@ export type LightingConflictState = {
 export type StudioSceneState = {
   active: boolean;
   presetId: StudioScenePresetId | null;
+  variantId: StudioSceneVariantId | null;
   targetEntityId: string | null;
   targetScale: number;
   targetRotationY: number;

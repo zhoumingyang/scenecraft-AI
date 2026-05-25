@@ -351,6 +351,7 @@ function createInitialStudioSceneState(): StudioSceneState {
   return {
     active: false,
     presetId: null,
+    variantId: null,
     targetEntityId: null,
     targetScale: 1,
     targetRotationY: 0,

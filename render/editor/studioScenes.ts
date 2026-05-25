@@ -8,7 +8,16 @@ export const STUDIO_SCENE_PRESET_IDS = [
   "galleryPlinth"
 ] as const;
 
+export const STUDIO_SCENE_VARIANT_IDS = [
+  "roundPlinth",
+  "tieredStage",
+  "wallNiche",
+  "windowTable"
+] as const;
+
 export type StudioScenePresetId = (typeof STUDIO_SCENE_PRESET_IDS)[number];
+export type StudioSceneLightingPresetId = StudioScenePresetId;
+export type StudioSceneVariantId = (typeof STUDIO_SCENE_VARIANT_IDS)[number];
 export type StudioSceneHdriStatus = "idle" | "loading" | "ready" | "error";
 
 export type StudioSceneHdriConfig = {
@@ -52,7 +61,38 @@ export type StudioScenePresetDefinition = {
   rimLight: StudioSceneLightConfig;
 };
 
+export type StudioSceneLightingPresetDefinition = StudioScenePresetDefinition;
+
+export type StudioSceneVariantDefinition = {
+  id: StudioSceneVariantId;
+  labelKey: TranslationKey;
+  descriptionKey: TranslationKey;
+};
+
 const STUDIO_PLINTH_CLEARANCE_LIFT = 0.325;
+
+export const STUDIO_SCENE_VARIANTS: Record<StudioSceneVariantId, StudioSceneVariantDefinition> = {
+  roundPlinth: {
+    id: "roundPlinth",
+    labelKey: "editor.studioScene.variant.roundPlinth",
+    descriptionKey: "editor.studioScene.variant.roundPlinth.description"
+  },
+  tieredStage: {
+    id: "tieredStage",
+    labelKey: "editor.studioScene.variant.tieredStage",
+    descriptionKey: "editor.studioScene.variant.tieredStage.description"
+  },
+  wallNiche: {
+    id: "wallNiche",
+    labelKey: "editor.studioScene.variant.wallNiche",
+    descriptionKey: "editor.studioScene.variant.wallNiche.description"
+  },
+  windowTable: {
+    id: "windowTable",
+    labelKey: "editor.studioScene.variant.windowTable",
+    descriptionKey: "editor.studioScene.variant.windowTable.description"
+  }
+};
 
 export const STUDIO_SCENE_PRESETS: Record<StudioScenePresetId, StudioScenePresetDefinition> = {
   seamlessWhite: {
@@ -250,6 +290,7 @@ export const STUDIO_SCENE_PRESETS: Record<StudioScenePresetId, StudioScenePreset
 };
 
 export const DEFAULT_STUDIO_SCENE_PRESET_ID: StudioScenePresetId = "seamlessWhite";
+export const DEFAULT_STUDIO_SCENE_VARIANT_ID: StudioSceneVariantId = "roundPlinth";
 
 export function getStudioScenePreset(id: StudioScenePresetId) {
   return STUDIO_SCENE_PRESETS[id];
@@ -257,4 +298,12 @@ export function getStudioScenePreset(id: StudioScenePresetId) {
 
 export function isStudioScenePresetId(value: string): value is StudioScenePresetId {
   return STUDIO_SCENE_PRESET_IDS.some((id) => id === value);
+}
+
+export function getStudioSceneVariant(id: StudioSceneVariantId) {
+  return STUDIO_SCENE_VARIANTS[id];
+}
+
+export function isStudioSceneVariantId(value: string): value is StudioSceneVariantId {
+  return STUDIO_SCENE_VARIANT_IDS.some((id) => id === value);
 }
