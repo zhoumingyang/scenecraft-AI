@@ -6,6 +6,8 @@ import type { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js
 import type {
   StudioSceneHdriStatus,
   StudioScenePresetDefinition,
+  StudioSceneVariantId,
+  StudioSceneVariantDefinition,
   StudioScenePresetId
 } from "../studioScenes";
 import { applyTextureColorSpace } from "./colorManagement";
@@ -21,6 +23,7 @@ export type StudioSceneFrame = {
 export type StudioSceneRuntimeState = {
   active: boolean;
   presetId: StudioScenePresetId | null;
+  variantId: StudioSceneVariantId | null;
   hdriStatus: StudioSceneHdriStatus;
   hdriError: string | null;
 };
@@ -327,6 +330,7 @@ export class EditorRuntimeStudioScene {
   private readonly pmremGenerator: THREE.PMREMGenerator;
   private active = false;
   private preset: StudioScenePresetDefinition | null = null;
+  private variant: StudioSceneVariantDefinition | null = null;
   private frame: StudioSceneFrame | null = null;
   private environmentSnapshot: SceneEnvironmentSnapshot | null = null;
   private runtimeAssets: RuntimeAssetRecord[] = [];
@@ -362,12 +366,17 @@ export class EditorRuntimeStudioScene {
     return {
       active: this.active,
       presetId: this.preset?.id ?? null,
+      variantId: this.variant?.id ?? null,
       hdriStatus: this.hdriStatus,
       hdriError: this.hdriError
     };
   }
 
-  activate(preset: StudioScenePresetDefinition, frame: StudioSceneFrame) {
+  activate(
+    preset: StudioScenePresetDefinition,
+    variant: StudioSceneVariantDefinition,
+    frame: StudioSceneFrame
+  ) {
     if (!this.environmentSnapshot) {
       this.environmentSnapshot = this.captureEnvironmentSnapshot();
     }
@@ -377,11 +386,16 @@ export class EditorRuntimeStudioScene {
     }
     this.active = true;
     this.root.visible = true;
-    this.applyPreset(preset, frame);
+    this.applyPreset(preset, variant, frame);
   }
 
-  applyPreset(preset: StudioScenePresetDefinition, frame: StudioSceneFrame) {
+  applyPreset(
+    preset: StudioScenePresetDefinition,
+    variant: StudioSceneVariantDefinition,
+    frame: StudioSceneFrame
+  ) {
     this.preset = preset;
+    this.variant = variant;
     this.frame = {
       center: frame.center.clone(),
       radius: Math.max(frame.radius, MIN_FRAME_RADIUS),
@@ -390,9 +404,10 @@ export class EditorRuntimeStudioScene {
       floorY: frame.floorY
     };
     this.root.userData.studioScenePresetId = preset.id;
+    this.root.userData.studioSceneVariantId = variant.id;
     this.roomBounds = createRoomBounds(preset, this.frame);
     this.disposeRuntimeAssets();
-    this.createStudioObjects(preset, this.frame, this.roomBounds);
+    this.createStudioObjects(preset, variant, this.frame, this.roomBounds);
     this.applyBackgroundColor(preset);
     this.frameCamera(preset, this.frame, this.roomBounds);
     this.applyOrbitControlsBounds(this.roomBounds);
@@ -451,6 +466,7 @@ export class EditorRuntimeStudioScene {
   deactivate() {
     this.active = false;
     this.preset = null;
+    this.variant = null;
     this.frame = null;
     this.roomBounds = null;
     this.root.visible = false;
@@ -469,6 +485,7 @@ export class EditorRuntimeStudioScene {
 
   private createStudioObjects(
     preset: StudioScenePresetDefinition,
+    variant: StudioSceneVariantDefinition,
     frame: StudioSceneFrame,
     bounds: StudioRoomBounds
   ) {
@@ -559,89 +576,220 @@ export class EditorRuntimeStudioScene {
       })
     );
 
-    if (preset.id === "warmHomeCorner") {
-      this.addWarmHomeDetails(frame, floorY, accentMaterial);
-    } else if (preset.id === "darkTechStudio") {
-      this.addDarkTechDetails(frame, floorY, accentMaterial);
-    } else if (preset.id === "galleryPlinth") {
-      this.addGalleryDetails(frame, floorY, accentMaterial);
-    } else {
-      this.addSeamlessDetails(frame, floorY, accentMaterial);
-    }
+    this.addVariantDetails(variant, frame, bounds, floorY, plinthRadius, accentMaterial, plinthMaterial);
 
     this.addLighting(preset, frame, bounds);
   }
 
-  private addSeamlessDetails(frame: StudioSceneFrame, floorY: number, material: THREE.Material) {
+  private addVariantDetails(
+    variant: StudioSceneVariantDefinition,
+    frame: StudioSceneFrame,
+    bounds: StudioRoomBounds,
+    floorY: number,
+    plinthRadius: number,
+    accentMaterial: THREE.Material,
+    plinthMaterial: THREE.Material
+  ) {
+    if (variant.id === "tieredStage") {
+      this.addTieredStageDetails(frame, floorY, plinthRadius, accentMaterial, plinthMaterial);
+    } else if (variant.id === "wallNiche") {
+      this.addWallNicheDetails(frame, bounds, floorY, plinthRadius, accentMaterial);
+    } else if (variant.id === "windowTable") {
+      this.addWindowTableDetails(frame, bounds, floorY, plinthRadius, accentMaterial, plinthMaterial);
+    } else {
+      this.addRoundPlinthDetails(frame, floorY, accentMaterial);
+    }
+  }
+
+  private addRoundPlinthDetails(frame: StudioSceneFrame, floorY: number, material: THREE.Material) {
     const radius = Math.max(frame.radius, MIN_FRAME_RADIUS);
     this.addRuntimeObject(
       createBoxMesh({
-        name: "studio-white-reflector",
+        name: "studio-round-reflector",
         size: new THREE.Vector3(radius * 0.08, radius * 2.2, radius * 1.7),
-        position: new THREE.Vector3(frame.center.x + radius * 2.4, floorY + radius * 1.1, frame.center.z + radius * 0.8),
+        position: new THREE.Vector3(
+          frame.center.x + radius * 2.35,
+          floorY + radius * 1.1,
+          frame.center.z + radius * 0.75
+        ),
+        material
+      })
+    );
+    this.addRuntimeObject(
+      createBoxMesh({
+        name: "studio-round-low-shelf",
+        size: new THREE.Vector3(radius * 1.55, radius * 0.16, radius * 0.34),
+        position: new THREE.Vector3(
+          frame.center.x - radius * 1.55,
+          floorY + radius * 0.08,
+          frame.center.z - radius * 1.2
+        ),
         material
       })
     );
   }
 
-  private addWarmHomeDetails(frame: StudioSceneFrame, floorY: number, material: THREE.Material) {
+  private addTieredStageDetails(
+    frame: StudioSceneFrame,
+    floorY: number,
+    plinthRadius: number,
+    accentMaterial: THREE.Material,
+    plinthMaterial: THREE.Material
+  ) {
     const radius = Math.max(frame.radius, MIN_FRAME_RADIUS);
     this.addRuntimeObject(
       createBoxMesh({
-        name: "studio-side-console",
-        size: new THREE.Vector3(radius * 1.5, radius * 0.45, radius * 0.45),
-        position: new THREE.Vector3(frame.center.x - radius * 2.1, floorY + radius * 0.22, frame.center.z - radius * 1.05),
-        material
+        name: "studio-tiered-back-step",
+        size: new THREE.Vector3(plinthRadius * 2.9, radius * 0.28, radius * 0.72),
+        position: new THREE.Vector3(
+          frame.center.x,
+          floorY + radius * 0.14,
+          frame.center.z - plinthRadius * 1.35
+        ),
+        material: plinthMaterial.clone()
       })
     );
     this.addRuntimeObject(
       createBoxMesh({
-        name: "studio-wall-panel",
-        size: new THREE.Vector3(radius * 1.9, radius * 1.55, radius * 0.07),
-        position: new THREE.Vector3(frame.center.x + radius * 1.6, floorY + radius * 1.55, frame.center.z - radius * 2.45),
-        material
+        name: "studio-tiered-side-step-left",
+        size: new THREE.Vector3(radius * 0.68, radius * 0.2, plinthRadius * 1.75),
+        position: new THREE.Vector3(
+          frame.center.x - plinthRadius * 1.45,
+          floorY + radius * 0.1,
+          frame.center.z + radius * 0.25
+        ),
+        material: accentMaterial.clone()
+      })
+    );
+    this.addRuntimeObject(
+      createBoxMesh({
+        name: "studio-tiered-side-step-right",
+        size: new THREE.Vector3(radius * 0.5, radius * 0.14, plinthRadius * 1.25),
+        position: new THREE.Vector3(
+          frame.center.x + plinthRadius * 1.55,
+          floorY + radius * 0.07,
+          frame.center.z + radius * 0.1
+        ),
+        material: accentMaterial.clone()
       })
     );
   }
 
-  private addDarkTechDetails(frame: StudioSceneFrame, floorY: number, material: THREE.Material) {
+  private addWallNicheDetails(
+    frame: StudioSceneFrame,
+    bounds: StudioRoomBounds,
+    floorY: number,
+    plinthRadius: number,
+    material: THREE.Material
+  ) {
     const radius = Math.max(frame.radius, MIN_FRAME_RADIUS);
-    const emissive = createEmissiveMaterial("#287fff", 2.8);
+    const nicheZ = bounds.backZ + radius * 0.04;
+    const nicheY = floorY + Math.min(bounds.wallHeight * 0.5, radius * 2.1);
+    const frameWidth = Math.max(plinthRadius * 2.6, radius * 2.4);
+    const frameHeight = Math.max(radius * 2.4, frame.height * 1.35);
+    const railThickness = radius * 0.12;
+
     this.addRuntimeObject(
       createBoxMesh({
-        name: "studio-tech-light-strip-left",
-        size: new THREE.Vector3(radius * 0.08, radius * 2.6, radius * 0.05),
-        position: new THREE.Vector3(frame.center.x - radius * 2.4, floorY + radius * 1.7, frame.center.z - radius * 2.48),
-        material: emissive
+        name: "studio-niche-left-frame",
+        size: new THREE.Vector3(railThickness, frameHeight, radius * 0.12),
+        position: new THREE.Vector3(frame.center.x - frameWidth / 2, nicheY, nicheZ),
+        material
       })
     );
     this.addRuntimeObject(
       createBoxMesh({
-        name: "studio-tech-step",
-        size: new THREE.Vector3(radius * 2.8, radius * 0.18, radius * 1.1),
-        position: new THREE.Vector3(frame.center.x, floorY + radius * 0.09, frame.center.z - radius * 1.35),
-        material
+        name: "studio-niche-right-frame",
+        size: new THREE.Vector3(railThickness, frameHeight, radius * 0.12),
+        position: new THREE.Vector3(frame.center.x + frameWidth / 2, nicheY, nicheZ),
+        material: material.clone()
+      })
+    );
+    this.addRuntimeObject(
+      createBoxMesh({
+        name: "studio-niche-top-frame",
+        size: new THREE.Vector3(frameWidth + railThickness, railThickness, radius * 0.12),
+        position: new THREE.Vector3(frame.center.x, nicheY + frameHeight / 2, nicheZ),
+        material: material.clone()
+      })
+    );
+    this.addRuntimeObject(
+      createBoxMesh({
+        name: "studio-niche-bottom-frame",
+        size: new THREE.Vector3(frameWidth + railThickness, railThickness, radius * 0.12),
+        position: new THREE.Vector3(frame.center.x, nicheY - frameHeight / 2, nicheZ),
+        material: material.clone()
+      })
+    );
+    this.addRuntimeObject(
+      createBoxMesh({
+        name: "studio-niche-side-panel",
+        size: new THREE.Vector3(radius * 0.08, frameHeight * 0.86, radius * 0.1),
+        position: new THREE.Vector3(frame.center.x - frameWidth * 0.68, nicheY, nicheZ + radius * 0.04),
+        material: material.clone()
       })
     );
   }
 
-  private addGalleryDetails(frame: StudioSceneFrame, floorY: number, material: THREE.Material) {
+  private addWindowTableDetails(
+    frame: StudioSceneFrame,
+    bounds: StudioRoomBounds,
+    floorY: number,
+    plinthRadius: number,
+    accentMaterial: THREE.Material,
+    plinthMaterial: THREE.Material
+  ) {
     const radius = Math.max(frame.radius, MIN_FRAME_RADIUS);
+    const windowX = bounds.rightX - radius * 0.04;
+    const windowY = floorY + Math.min(bounds.wallHeight * 0.55, radius * 2.15);
+    const windowZ = frame.center.z - radius * 1.2;
+    const glowMaterial = createEmissiveMaterial("#dceeff", 1.65);
+
+    this.addRuntimeObject(
+      createPlaneMesh({
+        name: "studio-window-glow",
+        width: radius * 1.65,
+        height: radius * 1.95,
+        position: new THREE.Vector3(windowX, windowY, windowZ),
+        rotation: new THREE.Euler(0, -Math.PI / 2, 0),
+        material: glowMaterial
+      })
+    );
     this.addRuntimeObject(
       createBoxMesh({
-        name: "studio-gallery-rail",
-        size: new THREE.Vector3(radius * 3.4, radius * 0.08, radius * 0.08),
-        position: new THREE.Vector3(frame.center.x, floorY + radius * 2.15, frame.center.z - radius * 2.48),
-        material
+        name: "studio-window-vertical-frame",
+        size: new THREE.Vector3(radius * 0.08, radius * 2.1, radius * 0.08),
+        position: new THREE.Vector3(windowX - radius * 0.02, windowY, windowZ),
+        material: accentMaterial.clone()
+      })
+    );
+    this.addRuntimeObject(
+      createBoxMesh({
+        name: "studio-window-horizontal-frame",
+        size: new THREE.Vector3(radius * 0.08, radius * 0.08, radius * 1.9),
+        position: new THREE.Vector3(windowX - radius * 0.02, windowY, windowZ),
+        material: accentMaterial.clone()
+      })
+    );
+    this.addRuntimeObject(
+      createBoxMesh({
+        name: "studio-window-table",
+        size: new THREE.Vector3(plinthRadius * 2.7, radius * 0.16, radius * 0.82),
+        position: new THREE.Vector3(frame.center.x, floorY + radius * 0.08, frame.center.z + plinthRadius * 1.25),
+        material: plinthMaterial.clone()
       })
     );
     this.addRuntimeObject(
       createCylinderMesh({
-        name: "studio-gallery-side-plinth",
-        radius: radius * 0.35,
-        height: radius * 0.58,
-        position: new THREE.Vector3(frame.center.x - radius * 2.2, floorY + radius * 0.29, frame.center.z + radius * 0.7),
-        material
+        name: "studio-window-side-plinth",
+        radius: radius * 0.32,
+        height: radius * 0.5,
+        position: new THREE.Vector3(
+          frame.center.x - plinthRadius * 1.35,
+          floorY + radius * 0.25,
+          frame.center.z - radius * 0.75
+        ),
+        material: accentMaterial.clone()
       })
     );
   }

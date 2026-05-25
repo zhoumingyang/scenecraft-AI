@@ -10,6 +10,7 @@ import {
   DEFAULT_STUDIO_SCENE_VARIANT_ID,
   DEFAULT_STUDIO_SCENE_PRESET_ID,
   getStudioScenePreset,
+  getStudioSceneVariant,
   type StudioSceneHdriStatus,
   type StudioScenePresetId,
   type StudioSceneVariantId
@@ -315,7 +316,11 @@ export class StudioSceneSessionController {
       defaultTargetScale,
       0
     );
-    this.runtime.studioScene.activate(preset, studioFrame);
+    this.runtime.studioScene.activate(
+      preset,
+      getStudioSceneVariant(DEFAULT_STUDIO_SCENE_VARIANT_ID),
+      studioFrame
+    );
     this.setSelectedEntity(entityId, source);
     this.emitChanged();
     void this.loadHdriForPreset(presetId);
@@ -335,7 +340,11 @@ export class StudioSceneSessionController {
     session.presetId = presetId;
     session.hdriStatus = "loading";
     session.hdriError = null;
-    this.runtime.studioScene.applyPreset(preset, createStudioFrameFromObject(binding.object));
+    this.runtime.studioScene.applyPreset(
+      preset,
+      getStudioSceneVariant(session.variantId),
+      createStudioFrameFromObject(binding.object)
+    );
     this.emitChanged();
     void this.loadHdriForPreset(presetId);
   }
@@ -352,6 +361,7 @@ export class StudioSceneSessionController {
     session.variantId = variantId;
     this.runtime.studioScene.applyPreset(
       getStudioScenePreset(session.presetId),
+      getStudioSceneVariant(variantId),
       createStudioFrameFromObject(binding.object)
     );
     this.emitChanged();
@@ -386,7 +396,11 @@ export class StudioSceneSessionController {
     );
     session.targetScale = nextScale;
     session.targetRotationY = nextRotationY;
-    this.runtime.studioScene.applyPreset(getStudioScenePreset(session.presetId), nextFrame);
+    this.runtime.studioScene.applyPreset(
+      getStudioScenePreset(session.presetId),
+      getStudioSceneVariant(session.variantId),
+      nextFrame
+    );
     this.emitChanged();
   }
 
@@ -408,7 +422,11 @@ export class StudioSceneSessionController {
     );
     session.targetScale = session.defaultTargetScale;
     session.targetRotationY = 0;
-    this.runtime.studioScene.applyPreset(getStudioScenePreset(session.presetId), resetFrame);
+    this.runtime.studioScene.applyPreset(
+      getStudioScenePreset(session.presetId),
+      getStudioSceneVariant(session.variantId),
+      resetFrame
+    );
     this.emitChanged();
   }
 
