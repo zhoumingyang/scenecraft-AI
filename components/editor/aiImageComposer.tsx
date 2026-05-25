@@ -40,6 +40,7 @@ export default function AiImageComposer() {
   const app = useEditorStore((state) => state.app);
   const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
   const aiMode = useEditorStore((state) => state.aiMode);
+  const isStudioSceneActive = useEditorStore((state) => state.studioScene.active);
   const selectedEntityId = useEditorStore((state) => state.selectedEntityId);
   const lastAiClearedEntityId = useEditorStore((state) => state.lastAiClearedEntityId);
   const imagePrompt = useEditorStore((state) => state.aiImage.prompt);
@@ -134,6 +135,12 @@ export default function AiImageComposer() {
     if (!aiPanoramaErrorMessage) return;
     setIsAi3dErrorToastOpen(true);
   }, [aiPanoramaErrorMessage]);
+
+  useEffect(() => {
+    if (isStudioSceneActive && isComposerOpen) {
+      setAiComposerOpen(false);
+    }
+  }, [isComposerOpen, isStudioSceneActive, setAiComposerOpen]);
 
   const utilityIconButtonSx = useMemo(
     () =>
@@ -396,13 +403,13 @@ export default function AiImageComposer() {
     }
   };
 
-  if (!isComposerOpen) {
+  if (!isComposerOpen || isStudioSceneActive) {
     return (
       <Box
         sx={{
           position: "absolute",
           left: "50%",
-          bottom: 32,
+          bottom: isStudioSceneActive ? 178 : 32,
           transform: "translateX(-50%)",
           zIndex: 22
         }}
@@ -410,6 +417,7 @@ export default function AiImageComposer() {
         <Paper
           elevation={0}
           onClick={() => {
+            if (isStudioSceneActive) return;
             setAiComposerOpen(true);
             focusAiMode();
           }}
@@ -427,7 +435,9 @@ export default function AiImageComposer() {
                 : "linear-gradient(135deg, rgba(255,255,255,0.94), rgba(237,245,255,0.92) 55%, rgba(189,220,255,0.88))",
             boxShadow: theme.panelShadow,
             color: theme.pillText,
-            cursor: "pointer"
+            cursor: isStudioSceneActive ? "not-allowed" : "pointer",
+            opacity: isStudioSceneActive ? 0.48 : 1,
+            pointerEvents: isStudioSceneActive ? "none" : "auto"
           }}
         >
           <AutoAwesomeRoundedIcon sx={{ fontSize: 20 }} />
