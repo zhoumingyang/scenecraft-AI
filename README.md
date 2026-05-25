@@ -45,7 +45,7 @@ This is not just a text-to-image demo, and it is not a full desktop-grade DCC to
 - Poly Haven HDRI browsing from the editor top bar for authenticated users
 - Poly Haven texture browsing from the mesh material panel for authenticated users
 - AI-recommended Poly Haven asset kits with HDRI, ground material, and 3D prop suggestions
-- Temporary studio preview mode for selected models, meshes, and groups, with procedural enclosed studio-room geometry, cylindrical plinth auto-fit, orbit camera inspection, temporary model scale/rotation controls, and remote Poly Haven HDRI lighting that does not persist into saved projects
+- Temporary studio preview mode for selected models, meshes, and groups, with switchable lighting atmospheres, procedural scene variants, cylindrical plinth auto-fit, orbit camera inspection, temporary model scale/rotation controls, and remote Poly Haven HDRI lighting that does not persist into saved projects
 - Tone mapping and exposure controls
 - Light creation and editing for ambient, hemisphere, directional, point, spot, and rect area lights
 - Built-in lighting presets for faster scene setup
@@ -232,7 +232,7 @@ Optional external asset settings:
 - `POLYHAVEN_ATTRIBUTION_ENABLED`
 - `POLYHAVEN_REQUEST_IDENTITY`
 
-Studio preview uses the same authenticated Poly Haven provider path to resolve remote HDRI URLs for image-based lighting. If Poly Haven is disabled, unavailable, or the HDRI URL fails to load, the studio preview remains usable with procedural studio lights and does not write the HDRI URL into project data.
+Studio preview uses the same authenticated Poly Haven provider path to resolve remote HDRI URLs for image-based lighting. Its lighting atmospheres, procedural scene variants, cylindrical plinth auto-fit, and camera framing are runtime-only. If Poly Haven is disabled, unavailable, or the HDRI URL fails to load, the studio preview remains usable with procedural studio lights and does not write the HDRI URL into project data.
 
 For social login support:
 
