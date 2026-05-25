@@ -52,6 +52,8 @@ export type StudioScenePresetDefinition = {
   rimLight: StudioSceneLightConfig;
 };
 
+const STUDIO_PLINTH_CLEARANCE_LIFT = 0.325;
+
 export const STUDIO_SCENE_PRESETS: Record<StudioScenePresetId, StudioScenePresetDefinition> = {
   seamlessWhite: {
     id: "seamlessWhite",
@@ -62,7 +64,7 @@ export const STUDIO_SCENE_PRESETS: Record<StudioScenePresetId, StudioScenePreset
     wallColor: "#f3f1eb",
     accentColor: "#d8d2c5",
     plinthColor: "#f7f5ef",
-    targetLift: 0.04,
+    targetLift: STUDIO_PLINTH_CLEARANCE_LIFT,
     cameraFov: 42,
     cameraPitch: 0.18,
     cameraYaw: Math.PI / 4,
@@ -110,7 +112,7 @@ export const STUDIO_SCENE_PRESETS: Record<StudioScenePresetId, StudioScenePreset
     wallColor: "#c9b49b",
     accentColor: "#73513a",
     plinthColor: "#d9c3a3",
-    targetLift: 0.05,
+    targetLift: STUDIO_PLINTH_CLEARANCE_LIFT,
     cameraFov: 44,
     cameraPitch: 0.15,
     cameraYaw: Math.PI / 5,
@@ -158,7 +160,7 @@ export const STUDIO_SCENE_PRESETS: Record<StudioScenePresetId, StudioScenePreset
     wallColor: "#171b24",
     accentColor: "#2e88ff",
     plinthColor: "#191f2b",
-    targetLift: 0.06,
+    targetLift: STUDIO_PLINTH_CLEARANCE_LIFT,
     cameraFov: 40,
     cameraPitch: 0.12,
     cameraYaw: Math.PI / 4.5,
@@ -206,7 +208,7 @@ export const STUDIO_SCENE_PRESETS: Record<StudioScenePresetId, StudioScenePreset
     wallColor: "#ddd5c8",
     accentColor: "#9c8f7b",
     plinthColor: "#f2eee6",
-    targetLift: 0.08,
+    targetLift: STUDIO_PLINTH_CLEARANCE_LIFT,
     cameraFov: 38,
     cameraPitch: 0.1,
     cameraYaw: Math.PI / 6,
