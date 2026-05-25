@@ -45,7 +45,7 @@ This is not just a text-to-image demo, and it is not a full desktop-grade DCC to
 - Poly Haven HDRI browsing from the editor top bar for authenticated users
 - Poly Haven texture browsing from the mesh material panel for authenticated users
 - AI-recommended Poly Haven asset kits with HDRI, ground material, and 3D prop suggestions
-- Temporary studio preview mode for selected models, meshes, and groups, with procedural enclosed studio-room geometry, orbit camera inspection, temporary model scale/rotation controls, and remote Poly Haven HDRI lighting that does not persist into saved projects
+- Temporary studio preview mode for selected models, meshes, and groups, with procedural enclosed studio-room geometry, cylindrical plinth auto-fit, orbit camera inspection, temporary model scale/rotation controls, and remote Poly Haven HDRI lighting that does not persist into saved projects
 - Tone mapping and exposure controls
 - Light creation and editing for ambient, hemisphere, directional, point, spot, and rect area lights
 - Built-in lighting presets for faster scene setup

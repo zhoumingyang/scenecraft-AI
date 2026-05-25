@@ -32,6 +32,14 @@ type StudioTargetTransformSnapshot = {
   scale: THREE.Vector3;
 };
 
+type StudioTargetFrame = {
+  center: THREE.Vector3;
+  radius: number;
+  footprintRadius: number;
+  height: number;
+  floorY: number;
+};
+
 type ActiveStudioSceneSession = {
   targetEntityId: string;
   presetId: StudioScenePresetId;
@@ -42,6 +50,8 @@ type ActiveStudioSceneSession = {
   objectVisibilitySnapshot: StudioObjectVisibilitySnapshot;
   viewHelperSnapshot: StudioViewHelperSnapshot;
   targetTransformSnapshot: StudioTargetTransformSnapshot;
+  targetFrame: StudioTargetFrame;
+  defaultTargetScale: number;
 };
 
 type StudioSceneSessionControllerOptions = {
@@ -82,7 +92,12 @@ function restoreObjectTransform(object: THREE.Object3D, snapshot: StudioTargetTr
   object.updateMatrixWorld(true);
 }
 
-function createStudioFrameFromObject(object: THREE.Object3D) {
+const STUDIO_TARGET_FOOTPRINT_RADIUS = 0.82;
+const STUDIO_TARGET_MAX_HEIGHT = 1.8;
+const STUDIO_TARGET_MIN_SCALE = 0.2;
+const STUDIO_TARGET_MAX_SCALE = 3;
+
+function createStudioFrameFromObject(object: THREE.Object3D): StudioTargetFrame {
   object.updateMatrixWorld(true);
   const box = new THREE.Box3().setFromObject(object);
   const center = new THREE.Vector3();
@@ -93,6 +108,7 @@ function createStudioFrameFromObject(object: THREE.Object3D) {
     return {
       center,
       radius: 1,
+      footprintRadius: 0.5,
       height: 1,
       floorY: center.y - 0.5
     };
@@ -103,9 +119,47 @@ function createStudioFrameFromObject(object: THREE.Object3D) {
   return {
     center,
     radius: Math.max(size.x, size.y, size.z) * 0.5,
+    footprintRadius: Math.max(Math.hypot(size.x, size.z) * 0.5, 0.05),
     height: Math.max(size.y, 0.1),
     floorY: box.min.y
   };
+}
+
+function computeStudioFitScale(frame: StudioTargetFrame) {
+  const footprintScale = STUDIO_TARGET_FOOTPRINT_RADIUS / Math.max(frame.footprintRadius, 0.05);
+  const heightScale = STUDIO_TARGET_MAX_HEIGHT / Math.max(frame.height, 0.05);
+  return THREE.MathUtils.clamp(
+    Math.min(footprintScale, heightScale),
+    STUDIO_TARGET_MIN_SCALE,
+    STUDIO_TARGET_MAX_SCALE
+  );
+}
+
+function applyStudioTargetTransform(
+  object: THREE.Object3D,
+  snapshot: StudioTargetTransformSnapshot,
+  targetFrame: StudioTargetFrame,
+  scale: number,
+  rotationY: number
+) {
+  const rotation = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), rotationY);
+
+  object.position.copy(snapshot.position);
+  object.scale.copy(snapshot.scale).multiplyScalar(scale);
+  object.quaternion.copy(snapshot.quaternion).multiply(rotation);
+  object.updateMatrixWorld(true);
+
+  const frame = createStudioFrameFromObject(object);
+  object.position.add(
+    new THREE.Vector3(
+      targetFrame.center.x - frame.center.x,
+      targetFrame.floorY - frame.floorY,
+      targetFrame.center.z - frame.center.z
+    )
+  );
+  object.updateMatrixWorld(true);
+
+  return createStudioFrameFromObject(object);
 }
 
 function selectPreferredHdriFile(
@@ -217,6 +271,8 @@ export class StudioSceneSessionController {
     const objectVisibilitySnapshot = this.captureObjectVisibilitySnapshot();
     const viewHelperSnapshot = this.captureViewHelperSnapshot();
     const targetTransformSnapshot = cloneObjectTransform(binding.object);
+    const targetFrame = createStudioFrameFromObject(binding.object);
+    const defaultTargetScale = computeStudioFitScale(targetFrame);
     const keepVisibleIds = this.collectVisibleIds(entityId);
 
     this.registry.list().forEach((entry) => {
@@ -235,16 +291,25 @@ export class StudioSceneSessionController {
     this.activeSession = {
       targetEntityId: entityId,
       presetId,
-      targetScale: 1,
+      targetScale: defaultTargetScale,
       targetRotationY: 0,
       hdriStatus: "loading",
       hdriError: null,
       objectVisibilitySnapshot,
       viewHelperSnapshot,
-      targetTransformSnapshot
+      targetTransformSnapshot,
+      targetFrame,
+      defaultTargetScale
     };
 
-    this.runtime.studioScene.activate(preset, createStudioFrameFromObject(binding.object));
+    const studioFrame = applyStudioTargetTransform(
+      binding.object,
+      targetTransformSnapshot,
+      targetFrame,
+      defaultTargetScale,
+      0
+    );
+    this.runtime.studioScene.activate(preset, studioFrame);
     this.setSelectedEntity(entityId, source);
     this.emitChanged();
     void this.loadHdriForPreset(presetId);
@@ -283,23 +348,22 @@ export class StudioSceneSessionController {
 
     const nextScale =
       typeof input.scale === "number" && Number.isFinite(input.scale)
-        ? THREE.MathUtils.clamp(input.scale, 0.2, 3)
+        ? THREE.MathUtils.clamp(input.scale, STUDIO_TARGET_MIN_SCALE, STUDIO_TARGET_MAX_SCALE)
         : session.targetScale;
     const nextRotationY =
       typeof input.rotationY === "number" && Number.isFinite(input.rotationY)
         ? input.rotationY
         : session.targetRotationY;
-    const rotation = new THREE.Quaternion().setFromAxisAngle(
-      new THREE.Vector3(0, 1, 0),
+    const nextFrame = applyStudioTargetTransform(
+      binding.object,
+      session.targetTransformSnapshot,
+      session.targetFrame,
+      nextScale,
       nextRotationY
     );
-
-    binding.object.position.copy(session.targetTransformSnapshot.position);
-    binding.object.scale.copy(session.targetTransformSnapshot.scale).multiplyScalar(nextScale);
-    binding.object.quaternion.copy(session.targetTransformSnapshot.quaternion).multiply(rotation);
-    binding.object.updateMatrixWorld(true);
     session.targetScale = nextScale;
     session.targetRotationY = nextRotationY;
+    this.runtime.studioScene.applyPreset(getStudioScenePreset(session.presetId), nextFrame);
     this.emitChanged();
   }
 
@@ -312,9 +376,16 @@ export class StudioSceneSessionController {
       return;
     }
 
-    restoreObjectTransform(binding.object, session.targetTransformSnapshot);
-    session.targetScale = 1;
+    const resetFrame = applyStudioTargetTransform(
+      binding.object,
+      session.targetTransformSnapshot,
+      session.targetFrame,
+      session.defaultTargetScale,
+      0
+    );
+    session.targetScale = session.defaultTargetScale;
     session.targetRotationY = 0;
+    this.runtime.studioScene.applyPreset(getStudioScenePreset(session.presetId), resetFrame);
     this.emitChanged();
   }
 

@@ -13,6 +13,7 @@ import { applyTextureColorSpace } from "./colorManagement";
 export type StudioSceneFrame = {
   center: THREE.Vector3;
   radius: number;
+  footprintRadius: number;
   height: number;
   floorY: number;
 };
@@ -75,7 +76,7 @@ const MIN_FRAME_RADIUS = 1.2;
 const WALL_HEIGHT_MULTIPLIER = 2.4;
 const ROOM_HALF_EXTENT_RATIO = 0.48;
 const ROOM_INTERIOR_MARGIN_RATIO = 0.16;
-const ROOM_CAMERA_MARGIN_RATIO = 0.45;
+const ROOM_CAMERA_MARGIN_RATIO = 0.32;
 const ROOM_TARGET_MARGIN_RATIO = 0.22;
 
 function createMaterial(
@@ -384,6 +385,7 @@ export class EditorRuntimeStudioScene {
     this.frame = {
       center: frame.center.clone(),
       radius: Math.max(frame.radius, MIN_FRAME_RADIUS),
+      footprintRadius: Math.max(frame.footprintRadius, 0.1),
       height: Math.max(frame.height, MIN_FRAME_RADIUS),
       floorY: frame.floorY
     };
@@ -393,7 +395,7 @@ export class EditorRuntimeStudioScene {
     this.createStudioObjects(preset, this.frame, this.roomBounds);
     this.applyBackgroundColor(preset);
     this.frameCamera(preset, this.frame, this.roomBounds);
-    this.applyOrbitControlsBounds(preset, this.roomBounds);
+    this.applyOrbitControlsBounds(this.roomBounds);
     this.constrainOrbitToRoom();
     this.requestFrame();
   }
@@ -474,7 +476,7 @@ export class EditorRuntimeStudioScene {
     const { width, depth, wallHeight, floorY, ceilingY, center, backZ, frontZ, leftX, rightX } =
       bounds;
     const plinthHeight = Math.max(radius * 0.32, 0.18);
-    const plinthRadius = Math.max(radius * 0.78, 0.72);
+    const plinthRadius = Math.max(frame.footprintRadius * 1.16, radius * 0.72, 0.72);
 
     const floorMaterial = createMaterial(preset.floorColor, { side: THREE.DoubleSide });
     const wallMaterial = createMaterial(preset.wallColor, { side: THREE.DoubleSide });
@@ -757,16 +759,16 @@ export class EditorRuntimeStudioScene {
     };
   }
 
-  private applyOrbitControlsBounds(preset: StudioScenePresetDefinition, bounds: StudioRoomBounds) {
+  private applyOrbitControlsBounds(bounds: StudioRoomBounds) {
     this.orbitControls.minDistance = Math.max(bounds.radius * 0.36, 0.45);
     this.orbitControls.maxDistance = Math.max(
-      bounds.radius * 1.8,
-      Math.min(bounds.width, bounds.depth) * 0.48
+      bounds.radius * 2.15,
+      Math.min(bounds.width, bounds.depth) * 0.58
     );
-    this.orbitControls.minPolarAngle = 0.12;
-    this.orbitControls.maxPolarAngle = Math.PI * 0.49;
-    this.orbitControls.minAzimuthAngle = preset.cameraYaw - Math.PI * 0.42;
-    this.orbitControls.maxAzimuthAngle = preset.cameraYaw + Math.PI * 0.42;
+    this.orbitControls.minPolarAngle = 0.08;
+    this.orbitControls.maxPolarAngle = Math.PI * 0.56;
+    this.orbitControls.minAzimuthAngle = -Infinity;
+    this.orbitControls.maxAzimuthAngle = Infinity;
     this.orbitControls.enablePan = false;
   }
 

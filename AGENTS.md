@@ -151,7 +151,7 @@ It includes:
 - data models and factories
 - bindings between data and Three.js objects
 - session logic and AI 3D plan application
-- temporary studio preview mode for selected objects, including runtime-only enclosed studio-room geometry, HDRI lighting, camera framing, and non-persisted model transform adjustments
+- temporary studio preview mode for selected objects, including runtime-only enclosed studio-room geometry, cylindrical plinth auto-fit, HDRI lighting, camera framing, and non-persisted model transform adjustments
 - scene snapshot serialization used by project persistence
 
 Treat this area as high-risk. Small changes can easily break selection, transforms, preview behavior, imported assets, or runtime synchronization.
@@ -341,7 +341,7 @@ If the task is about temporary studio preview / 棚拍场景:
 - inspect `render/editor/runtime/editorRuntimeStudioScene.ts`
 - inspect `render/editor/session/editorSession.ts`
 - inspect `components/editor/studioSceneControls.tsx`
-- keep studio scene geometry, HDRI URLs, camera changes, and target scale/rotation runtime-only; do not persist them into project snapshots
+- keep studio scene geometry, HDRI URLs, camera changes, cylindrical plinth auto-fit, and target scale/rotation runtime-only; do not persist them into project snapshots
 - preserve graceful fallback when remote HDRI loading fails or Poly Haven is unavailable
 
 If the task is about AI generation:
