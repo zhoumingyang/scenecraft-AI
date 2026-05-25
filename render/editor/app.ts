@@ -23,7 +23,7 @@ import { EditorRuntime } from "./runtime/editorRuntime";
 import { EditorSession } from "./session/editorSession";
 import { PICK_POINTER_MOVE_THRESHOLD_PX } from "./constants/input";
 import { SCENE_NODE_ID as SCENE_SELECTION_ID } from "./constants/scene";
-import type { StudioScenePresetId } from "./studioScenes";
+import type { StudioScenePresetId, StudioSceneVariantId } from "./studioScenes";
 
 export type EditorMeshListItem = {
   id: string;
@@ -372,6 +372,10 @@ export class EditorApp {
 
   setStudioScenePreset(presetId: StudioScenePresetId) {
     this.session.setStudioScenePreset(presetId);
+  }
+
+  setStudioSceneVariant(variantId: StudioSceneVariantId) {
+    this.session.setStudioSceneVariant(variantId);
   }
 
   updateStudioSceneTargetTransform(input: { scale?: number; rotationY?: number }) {

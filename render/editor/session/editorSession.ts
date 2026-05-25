@@ -16,7 +16,11 @@ import { BindingRegistry } from "../bindings/bindingRegistry";
 import { updateMeshBindingMaterial } from "../bindings/meshBinding";
 import { pickEntityId } from "../interaction/picker";
 import type { LightPresetId } from "../lightPresets";
-import { DEFAULT_STUDIO_SCENE_PRESET_ID, type StudioScenePresetId } from "../studioScenes";
+import {
+  DEFAULT_STUDIO_SCENE_PRESET_ID,
+  type StudioScenePresetId,
+  type StudioSceneVariantId
+} from "../studioScenes";
 import { EditorProjectModel } from "../models";
 import { createEmptyEditorProjectJSON } from "../factories/projectFactory";
 import { EditorRuntime } from "../runtime/editorRuntime";
@@ -272,6 +276,10 @@ export class EditorSession {
 
   setStudioScenePreset(presetId: StudioScenePresetId) {
     this.studioScene.setPreset(presetId);
+  }
+
+  setStudioSceneVariant(variantId: StudioSceneVariantId) {
+    this.studioScene.setVariant(variantId);
   }
 
   updateStudioSceneTargetTransform(input: {

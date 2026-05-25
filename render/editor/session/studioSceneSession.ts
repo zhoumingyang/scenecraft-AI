@@ -11,7 +11,8 @@ import {
   DEFAULT_STUDIO_SCENE_PRESET_ID,
   getStudioScenePreset,
   type StudioSceneHdriStatus,
-  type StudioScenePresetId
+  type StudioScenePresetId,
+  type StudioSceneVariantId
 } from "../studioScenes";
 import { isStudioScenePreviewEntity } from "../studioSceneEligibility";
 
@@ -44,6 +45,7 @@ type StudioTargetFrame = {
 type ActiveStudioSceneSession = {
   targetEntityId: string;
   presetId: StudioScenePresetId;
+  variantId: StudioSceneVariantId;
   targetScale: number;
   targetRotationY: number;
   hdriStatus: StudioSceneHdriStatus;
@@ -234,7 +236,7 @@ export class StudioSceneSessionController {
     return {
       active: true,
       presetId: this.activeSession.presetId,
-      variantId: DEFAULT_STUDIO_SCENE_VARIANT_ID,
+      variantId: this.activeSession.variantId,
       targetEntityId: this.activeSession.targetEntityId,
       targetScale: this.activeSession.targetScale,
       targetRotationY: this.activeSession.targetRotationY,
@@ -294,6 +296,7 @@ export class StudioSceneSessionController {
     this.activeSession = {
       targetEntityId: entityId,
       presetId,
+      variantId: DEFAULT_STUDIO_SCENE_VARIANT_ID,
       targetScale: defaultTargetScale,
       targetRotationY: 0,
       hdriStatus: "loading",
@@ -335,6 +338,23 @@ export class StudioSceneSessionController {
     this.runtime.studioScene.applyPreset(preset, createStudioFrameFromObject(binding.object));
     this.emitChanged();
     void this.loadHdriForPreset(presetId);
+  }
+
+  setVariant(variantId: StudioSceneVariantId) {
+    const session = this.activeSession;
+    if (!session) return;
+    const binding = this.registry.get(session.targetEntityId);
+    if (!binding) {
+      this.exit("ui");
+      return;
+    }
+
+    session.variantId = variantId;
+    this.runtime.studioScene.applyPreset(
+      getStudioScenePreset(session.presetId),
+      createStudioFrameFromObject(binding.object)
+    );
+    this.emitChanged();
   }
 
   updateTargetTransform(input: {

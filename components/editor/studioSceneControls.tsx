@@ -5,9 +5,13 @@ import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import RestartAltRoundedIcon from "@mui/icons-material/RestartAltRounded";
 import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
 import {
+  DEFAULT_STUDIO_SCENE_VARIANT_ID,
   STUDIO_SCENE_PRESET_IDS,
   STUDIO_SCENE_PRESETS,
-  type StudioScenePresetId
+  STUDIO_SCENE_VARIANT_IDS,
+  STUDIO_SCENE_VARIANTS,
+  type StudioScenePresetId,
+  type StudioSceneVariantId
 } from "@/render/editor";
 import { useI18n } from "@/lib/i18n";
 import { useEditorStore } from "@/stores/editorStore";
@@ -32,6 +36,7 @@ export default function StudioSceneControls() {
     return null;
   }
 
+  const activeVariantId = studioScene.variantId ?? DEFAULT_STUDIO_SCENE_VARIANT_ID;
   const rotationDegrees = THREE_RAD_TO_DEG * studioScene.targetRotationY;
   const hdriLabel =
     studioScene.hdriStatus === "ready"
@@ -96,34 +101,75 @@ export default function StudioSceneControls() {
           spacing={1.2}
           alignItems={{ xs: "stretch", sm: "center" }}
         >
-          <FormControl size="small" sx={{ minWidth: 180 }}>
-            <Select
-              value={studioScene.presetId}
-              onChange={(event) => {
-                app?.setStudioScenePreset(event.target.value as StudioScenePresetId);
-              }}
-              sx={{
-                height: 34,
-                fontSize: 12,
-                color: theme.pillText,
-                ".MuiOutlinedInput-notchedOutline": {
-                  borderColor: "rgba(150,190,255,0.34)"
-                },
-                ".MuiSvgIcon-root": {
-                  color: theme.pillText
-                }
-              }}
-            >
-              {STUDIO_SCENE_PRESET_IDS.map((presetId) => {
-                const preset = STUDIO_SCENE_PRESETS[presetId];
-                return (
-                  <MenuItem key={presetId} value={presetId}>
-                    {t(preset.labelKey)}
-                  </MenuItem>
-                );
-              })}
-            </Select>
-          </FormControl>
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ minWidth: 260 }}>
+            <Stack spacing={0.25} sx={{ flex: 1, minWidth: 130 }}>
+              <Typography sx={{ fontSize: 11, color: theme.mutedText }}>
+                {t("editor.studioScene.lighting")}
+              </Typography>
+              <FormControl size="small">
+                <Select
+                  value={studioScene.presetId}
+                  onChange={(event) => {
+                    app?.setStudioScenePreset(event.target.value as StudioScenePresetId);
+                  }}
+                  sx={{
+                    height: 34,
+                    fontSize: 12,
+                    color: theme.pillText,
+                    ".MuiOutlinedInput-notchedOutline": {
+                      borderColor: "rgba(150,190,255,0.34)"
+                    },
+                    ".MuiSvgIcon-root": {
+                      color: theme.pillText
+                    }
+                  }}
+                >
+                  {STUDIO_SCENE_PRESET_IDS.map((presetId) => {
+                    const preset = STUDIO_SCENE_PRESETS[presetId];
+                    return (
+                      <MenuItem key={presetId} value={presetId}>
+                        {t(preset.labelKey)}
+                      </MenuItem>
+                    );
+                  })}
+                </Select>
+              </FormControl>
+            </Stack>
+
+            <Stack spacing={0.25} sx={{ flex: 1, minWidth: 130 }}>
+              <Typography sx={{ fontSize: 11, color: theme.mutedText }}>
+                {t("editor.studioScene.variant")}
+              </Typography>
+              <FormControl size="small">
+                <Select
+                  value={activeVariantId}
+                  onChange={(event) => {
+                    app?.setStudioSceneVariant(event.target.value as StudioSceneVariantId);
+                  }}
+                  sx={{
+                    height: 34,
+                    fontSize: 12,
+                    color: theme.pillText,
+                    ".MuiOutlinedInput-notchedOutline": {
+                      borderColor: "rgba(150,190,255,0.34)"
+                    },
+                    ".MuiSvgIcon-root": {
+                      color: theme.pillText
+                    }
+                  }}
+                >
+                  {STUDIO_SCENE_VARIANT_IDS.map((variantId) => {
+                    const variant = STUDIO_SCENE_VARIANTS[variantId];
+                    return (
+                      <MenuItem key={variantId} value={variantId}>
+                        {t(variant.labelKey)}
+                      </MenuItem>
+                    );
+                  })}
+                </Select>
+              </FormControl>
+            </Stack>
+          </Stack>
 
           <Stack spacing={0.25} sx={{ flex: 1, minWidth: 130 }}>
             <Typography sx={{ fontSize: 11, color: theme.mutedText }}>
