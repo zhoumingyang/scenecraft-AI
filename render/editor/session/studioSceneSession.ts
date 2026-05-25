@@ -12,6 +12,7 @@ import {
   type StudioSceneHdriStatus,
   type StudioScenePresetId
 } from "../studioScenes";
+import { isStudioScenePreviewEntity } from "../studioSceneEligibility";
 
 type StudioObjectVisibilitySnapshot = Array<{
   entityId: string;
@@ -197,7 +198,7 @@ export class StudioSceneSessionController {
     if (
       !record ||
       !binding ||
-      record.kind === "light" ||
+      !isStudioScenePreviewEntity(projectModel, entityId) ||
       record.item.locked ||
       !projectModel.isEntityEffectivelyVisible(entityId)
     ) {

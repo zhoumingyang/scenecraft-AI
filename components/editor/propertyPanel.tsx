@@ -16,6 +16,7 @@ import { createExternalAssetSource } from "@/lib/externalAssets/source";
 import {
   createPbrAtlasMaterialPatch,
   GROUND_HELPER_NODE_ID,
+  isStudioScenePreviewEntity,
   SCENE_NODE_ID,
   type ProjectAiLibraryV2JSON
 } from "@/render/editor";
@@ -50,6 +51,7 @@ export default function PropertyPanel() {
   const selectedEntityVersion = useEditorStore((state) =>
     open && selectedEntityId ? state.entityVersions[selectedEntityId] ?? 0 : 0
   );
+  const sceneTreeVersion = useEditorStore((state) => (open ? state.sceneTreeVersion : 0));
   const inspectorMode = useEditorStore((state) => (open ? state.aiImage.inspectorMode : "entity"));
   const aiMode = useEditorStore((state) => (open ? state.aiMode : "image"));
   const aiTexture = useEditorStore((state) => (open ? state.aiTexture : null));
@@ -91,7 +93,7 @@ export default function PropertyPanel() {
     return {
       ...record
     };
-  }, [app, open, selectedEntityId, selectedEntityVersion, viewStateVersion]);
+  }, [app, open, sceneTreeVersion, selectedEntityId, selectedEntityVersion, viewStateVersion]);
 
   const panelTitle =
     inspectorMode === "ai"
@@ -127,7 +129,13 @@ export default function PropertyPanel() {
   const isCurrentEntityIsolated = Boolean(
     canIsolateCurrentEntity && currentIsolatableEntityId && isolatedEntityId === currentIsolatableEntityId
   );
-  const canPreviewCurrentEntityInStudio = Boolean(canIsolateCurrentEntity && currentIsolatableEntityId);
+  const canPreviewCurrentEntityInStudio =
+    inspectorMode !== "ai" &&
+    Boolean(
+      app?.projectModel &&
+        currentIsolatableEntityId &&
+        isStudioScenePreviewEntity(app.projectModel, currentIsolatableEntityId)
+    );
   const isCurrentEntityInStudio = Boolean(
     studioScene?.active && currentIsolatableEntityId && studioScene.targetEntityId === currentIsolatableEntityId
   );

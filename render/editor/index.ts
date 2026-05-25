@@ -34,6 +34,7 @@ export {
   STUDIO_SCENE_PRESET_IDS,
   STUDIO_SCENE_PRESETS
 } from "./studioScenes";
+export { isStudioScenePreviewEntity } from "./studioSceneEligibility";
 export type {
   StudioSceneHdriStatus,
   StudioSceneHdriConfig,
