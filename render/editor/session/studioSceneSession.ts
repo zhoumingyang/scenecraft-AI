@@ -3,7 +3,7 @@ import * as THREE from "three";
 import type { GetExternalAssetDetailResponse } from "@/lib/externalAssets/contracts";
 import type { BindingRegistry } from "../bindings/bindingRegistry";
 import type { EditorAppEvent } from "../core/events";
-import type { StudioSceneState, SyncSource } from "../core/types";
+import type { EditorProjectJSON, StudioSceneState, SyncSource } from "../core/types";
 import type { EditorProjectModel } from "../models";
 import type { EditorRuntime } from "../runtime/editorRuntime";
 import {
@@ -43,6 +43,14 @@ type StudioTargetFrame = {
   floorY: number;
 };
 
+export type StudioTransientEntityRole =
+  | "root"
+  | "floor"
+  | "backWall"
+  | "sideWall"
+  | "plinth"
+  | "light";
+
 type ActiveStudioSceneSession = {
   targetEntityId: string;
   presetId: StudioScenePresetId;
@@ -56,6 +64,9 @@ type ActiveStudioSceneSession = {
   targetTransformSnapshot: StudioTargetTransformSnapshot;
   targetFrame: StudioTargetFrame;
   defaultTargetScale: number;
+  transientEntityIds: Set<string>;
+  transientRootGroupId: string | null;
+  transientEntityRoles: Map<string, StudioTransientEntityRole>;
 };
 
 type StudioSceneSessionControllerOptions = {
@@ -229,6 +240,39 @@ export class StudioSceneSessionController {
     return this.activeSession?.targetEntityId === entityId;
   }
 
+  isTransientStudioEntity(entityId: string) {
+    return this.activeSession?.transientEntityIds.has(entityId) ?? false;
+  }
+
+  getTransientStudioEntityRole(entityId: string) {
+    return this.activeSession?.transientEntityRoles.get(entityId) ?? null;
+  }
+
+  getTransientStudioEntityIds() {
+    return this.activeSession ? Array.from(this.activeSession.transientEntityIds) : [];
+  }
+
+  filterTransientEntitiesFromProjectJSON(projectJson: EditorProjectJSON): EditorProjectJSON {
+    const session = this.activeSession;
+    if (!session || session.transientEntityIds.size === 0) {
+      return projectJson;
+    }
+
+    const transientIds = session.transientEntityIds;
+    return {
+      ...projectJson,
+      groups: projectJson.groups
+        ?.filter((group) => !transientIds.has(group.id))
+        .map((group) => ({
+          ...group,
+          children: group.children.filter((childId) => !transientIds.has(childId))
+        })),
+      mesh: projectJson.mesh?.filter((mesh) => !transientIds.has(mesh.id)),
+      light: projectJson.light?.filter((light) => !transientIds.has(light.id)),
+      model: projectJson.model?.filter((model) => !transientIds.has(model.id))
+    };
+  }
+
   getState(): StudioSceneState {
     if (!this.activeSession) {
       return createDefaultStudioSceneState();
@@ -306,7 +350,10 @@ export class StudioSceneSessionController {
       viewHelperSnapshot,
       targetTransformSnapshot,
       targetFrame,
-      defaultTargetScale
+      defaultTargetScale,
+      transientEntityIds: new Set(),
+      transientRootGroupId: null,
+      transientEntityRoles: new Map()
     };
 
     const studioFrame = applyStudioTargetTransform(
