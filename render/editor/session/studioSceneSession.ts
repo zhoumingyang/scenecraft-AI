@@ -1,6 +1,5 @@
 import * as THREE from "three";
 
-import type { GetExternalAssetDetailResponse } from "@/lib/externalAssets/contracts";
 import type { BindingRegistry } from "../bindings/bindingRegistry";
 import type { EditorAppEvent } from "../core/events";
 import type {
@@ -18,7 +17,6 @@ import {
   DEFAULT_STUDIO_SCENE_VARIANT_ID,
   DEFAULT_STUDIO_SCENE_PRESET_ID,
   getStudioScenePreset,
-  getStudioSceneVariant,
   type StudioSceneHdriStatus,
   type StudioScenePresetId,
   type StudioSceneVariantId
@@ -349,28 +347,6 @@ function createStudioLight(input: {
   };
 }
 
-function selectPreferredHdriFile(
-  detail: GetExternalAssetDetailResponse["asset"],
-  preferredResolution: string,
-  preferredFormat: string
-) {
-  if (detail.assetType !== "hdri") return null;
-  const preferred = detail.fileOptions.find(
-    (file) =>
-      file.resolution.toLowerCase() === preferredResolution.toLowerCase() &&
-      file.format.toLowerCase() === preferredFormat.toLowerCase()
-  );
-  if (preferred) return preferred;
-
-  return (
-    detail.fileOptions.find(
-      (file) => file.format.toLowerCase() === preferredFormat.toLowerCase()
-    ) ??
-    detail.fileOptions[0] ??
-    null
-  );
-}
-
 export class StudioSceneSessionController {
   private readonly runtime: EditorRuntime;
   private readonly registry: BindingRegistry;
@@ -382,7 +358,6 @@ export class StudioSceneSessionController {
   private readonly setSelectedEntity: (entityId: string | null, source: SyncSource) => void;
   private readonly rebuildGroupHierarchy: () => void;
   private activeSession: ActiveStudioSceneSession | null = null;
-  private hdriRequestId = 0;
 
   constructor({
     runtime,
@@ -518,7 +493,7 @@ export class StudioSceneSessionController {
       variantId: DEFAULT_STUDIO_SCENE_VARIANT_ID,
       targetScale: defaultTargetScale,
       targetRotationY: 0,
-      hdriStatus: "loading",
+      hdriStatus: "idle",
       hdriError: null,
       objectVisibilitySnapshot,
       viewHelperSnapshot,
@@ -779,6 +754,20 @@ export class StudioSceneSessionController {
     });
   }
 
+  private rebuildTransientStudioEntities(
+    session: ActiveStudioSceneSession,
+    preset: ReturnType<typeof getStudioScenePreset>,
+    frame: StudioTargetFrame
+  ) {
+    const selectedEntityId = this.getSelectedEntityId();
+    if (selectedEntityId && session.transientEntityIds.has(selectedEntityId)) {
+      this.setSelectedEntity(null, "ui");
+    }
+    this.removeTransientStudioEntities(session);
+    this.createTransientStudioEntities(session, preset, frame);
+    this.frameCamera(preset, frame);
+  }
+
   setPreset(presetId: StudioScenePresetId) {
     const session = this.activeSession;
     if (!session) return;
@@ -790,15 +779,10 @@ export class StudioSceneSessionController {
 
     const preset = getStudioScenePreset(presetId);
     session.presetId = presetId;
-    session.hdriStatus = "loading";
+    session.hdriStatus = "idle";
     session.hdriError = null;
-    this.runtime.studioScene.applyPreset(
-      preset,
-      getStudioSceneVariant(session.variantId),
-      createStudioFrameFromObject(binding.object)
-    );
+    this.rebuildTransientStudioEntities(session, preset, createStudioFrameFromObject(binding.object));
     this.emitChanged();
-    void this.loadHdriForPreset(presetId);
   }
 
   setVariant(variantId: StudioSceneVariantId) {
@@ -811,11 +795,6 @@ export class StudioSceneSessionController {
     }
 
     session.variantId = variantId;
-    this.runtime.studioScene.applyPreset(
-      getStudioScenePreset(session.presetId),
-      getStudioSceneVariant(variantId),
-      createStudioFrameFromObject(binding.object)
-    );
     this.emitChanged();
   }
 
@@ -848,11 +827,7 @@ export class StudioSceneSessionController {
     );
     session.targetScale = nextScale;
     session.targetRotationY = nextRotationY;
-    this.runtime.studioScene.applyPreset(
-      getStudioScenePreset(session.presetId),
-      getStudioSceneVariant(session.variantId),
-      nextFrame
-    );
+    this.rebuildTransientStudioEntities(session, getStudioScenePreset(session.presetId), nextFrame);
     this.emitChanged();
   }
 
@@ -874,11 +849,7 @@ export class StudioSceneSessionController {
     );
     session.targetScale = session.defaultTargetScale;
     session.targetRotationY = 0;
-    this.runtime.studioScene.applyPreset(
-      getStudioScenePreset(session.presetId),
-      getStudioSceneVariant(session.variantId),
-      resetFrame
-    );
+    this.rebuildTransientStudioEntities(session, getStudioScenePreset(session.presetId), resetFrame);
     this.emitChanged();
   }
 
@@ -890,7 +861,6 @@ export class StudioSceneSessionController {
     const session = this.activeSession;
     if (!session) return;
 
-    this.hdriRequestId += 1;
     const binding = this.registry.get(session.targetEntityId);
     if (binding) {
       restoreObjectTransform(binding.object, session.targetTransformSnapshot);
@@ -909,7 +879,6 @@ export class StudioSceneSessionController {
         entry.object.visible = visible;
       }
     });
-    this.runtime.studioScene.deactivate();
     this.runtime.setGridHelperVisible(session.viewHelperSnapshot.gridHelper);
     this.runtime.setTransformGizmoVisible(session.viewHelperSnapshot.transformGizmo);
     this.runtime.setLightHelpersVisible(session.viewHelperSnapshot.lightHelper);
@@ -931,58 +900,6 @@ export class StudioSceneSessionController {
 
     if (source === "ui" && this.getSelectedEntityId() === session.targetEntityId) {
       this.setSelectedEntity(session.targetEntityId, source);
-    }
-  }
-
-  private async loadHdriForPreset(presetId: StudioScenePresetId) {
-    const requestId = ++this.hdriRequestId;
-    const session = this.activeSession;
-    if (!session || session.presetId !== presetId) return;
-    const preset = getStudioScenePreset(presetId);
-
-    try {
-      const response = await fetch(`/api/polyhaven/assets/${encodeURIComponent(preset.hdri.assetId)}?type=hdri`, {
-        headers: {
-          Accept: "application/json"
-        }
-      });
-      if (!response.ok) {
-        throw new Error(`HDRI detail request failed: ${response.status}`);
-      }
-      const payload = (await response.json()) as GetExternalAssetDetailResponse;
-      const file = selectPreferredHdriFile(
-        payload.asset,
-        preset.hdri.preferredResolution,
-        preset.hdri.preferredFormat
-      );
-      if (!file) {
-        throw new Error("No HDRI file was returned for this studio preset.");
-      }
-      await this.runtime.studioScene.loadHdri(file.url, file.fileName);
-      if (
-        requestId !== this.hdriRequestId ||
-        !this.activeSession ||
-        this.activeSession.presetId !== presetId
-      ) {
-        return;
-      }
-      const runtimeState = this.runtime.studioScene.getState();
-      this.activeSession.hdriStatus = runtimeState.hdriStatus;
-      this.activeSession.hdriError = runtimeState.hdriError;
-      this.emitChanged();
-    } catch (error) {
-      if (
-        requestId !== this.hdriRequestId ||
-        !this.activeSession ||
-        this.activeSession.presetId !== presetId
-      ) {
-        return;
-      }
-      this.runtime.studioScene.clearHdri();
-      this.activeSession.hdriStatus = "error";
-      this.activeSession.hdriError =
-        error instanceof Error ? error.message : "Failed to load studio HDRI.";
-      this.emitChanged();
     }
   }
 
