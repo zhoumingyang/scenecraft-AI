@@ -215,6 +215,14 @@ export class EditorSession {
   flushRuntimeStateToProjectModel(deltaSeconds = 0) {
     if (!this.projectModel) return;
 
+    if (this.studioScene.isActive()) {
+      this.registry.refresh(deltaSeconds);
+      this.studioScene.getTransientStudioEntityIds().forEach((entityId) => {
+        this.registry.syncObjectTransformToModel(entityId);
+      });
+      return;
+    }
+
     this.runtime.syncCameraModel(this.projectModel.camera);
     this.registry.refresh(deltaSeconds);
     this.registry.syncAllObjectTransformsToModel();
@@ -224,7 +232,9 @@ export class EditorSession {
     if (!this.projectModel) return null;
 
     const projectJson = this.projectModel.toJSON();
-    return this.entityIsolation.applyVisibilityToProjectJSON(projectJson);
+    return this.studioScene.filterTransientEntitiesFromProjectJSON(
+      this.entityIsolation.applyVisibilityToProjectJSON(projectJson)
+    );
   }
 
   getSelectedEntityId(): string | null {
@@ -481,6 +491,28 @@ export class EditorSession {
 
   syncRenderChangesToModel(deltaSeconds = 0) {
     let sceneChanged = false;
+    if (this.projectModel && this.studioScene.isActive()) {
+      sceneChanged = this.registry.refresh(deltaSeconds) || sceneChanged;
+
+      const renderTransformedBinding =
+        this.selectedEntityId && this.studioScene.isTransientStudioEntity(this.selectedEntityId)
+          ? this.registry.syncObjectTransformToModel(this.selectedEntityId)
+          : null;
+
+      if (renderTransformedBinding) {
+        this.emit({
+          type: "entityUpdated",
+          entityId: renderTransformedBinding.model.id,
+          entityKind: renderTransformedBinding.kind,
+          source: "render",
+          affectsSceneTree: false
+        });
+        sceneChanged = true;
+      }
+
+      return sceneChanged;
+    }
+
     if (
       this.projectModel &&
       !this.studioScene.isActive() &&

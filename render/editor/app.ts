@@ -597,7 +597,6 @@ export class EditorApp {
   private onPointerDown = (event: PointerEvent) => {
     if (event.button !== 0) return;
     this.pendingPick = null;
-    if (this.session.getStudioSceneState().active) return;
     if (this.runtime.beginTransformInteraction(event.clientX, event.clientY)) return;
     if (this.runtime.isFirstPersonCamera()) return;
 
