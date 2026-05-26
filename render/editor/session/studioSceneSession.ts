@@ -538,6 +538,7 @@ export class StudioSceneSessionController {
       0
     );
     this.createTransientStudioEntities(this.activeSession, preset, studioFrame);
+    this.frameCamera(preset, studioFrame);
     this.setSelectedEntity(entityId, source);
     this.emitChanged();
     return true;
@@ -744,6 +745,40 @@ export class StudioSceneSessionController {
     });
   }
 
+  private removeTransientStudioEntities(session: ActiveStudioSceneSession) {
+    const projectModel = this.getProjectModel();
+    const transientIds = Array.from(session.transientEntityIds);
+    const rootGroupId = session.transientRootGroupId;
+    const idsForRemoval = [
+      ...transientIds.filter((entityId) => entityId !== rootGroupId).reverse(),
+      ...(rootGroupId ? [rootGroupId] : [])
+    ];
+
+    idsForRemoval.forEach((entityId) => {
+      this.registry.remove(entityId);
+      projectModel?.removeEntity(entityId);
+    });
+
+    session.transientEntityIds.clear();
+    session.transientEntityRoles.clear();
+    session.transientRootGroupId = null;
+    this.rebuildGroupHierarchy();
+    this.runtime.syncLightHelperVisibility();
+  }
+
+  private frameCamera(preset: ReturnType<typeof getStudioScenePreset>, frame: StudioTargetFrame) {
+    this.runtime.frameStudioCamera({
+      center: frame.center,
+      floorY: frame.floorY,
+      height: frame.height,
+      radius: frame.radius,
+      fov: preset.cameraFov,
+      pitch: preset.cameraPitch,
+      yaw: preset.cameraYaw,
+      distanceMultiplier: preset.cameraDistanceMultiplier
+    });
+  }
+
   setPreset(presetId: StudioScenePresetId) {
     const session = this.activeSession;
     if (!session) return;
@@ -861,6 +896,12 @@ export class StudioSceneSessionController {
       restoreObjectTransform(binding.object, session.targetTransformSnapshot);
       this.registry.syncModelTransformToObject(session.targetEntityId);
     }
+
+    const selectedEntityId = this.getSelectedEntityId();
+    if (selectedEntityId && session.transientEntityIds.has(selectedEntityId)) {
+      this.setSelectedEntity(null, source);
+    }
+    this.removeTransientStudioEntities(session);
 
     session.objectVisibilitySnapshot.forEach(({ entityId, visible }) => {
       const entry = this.registry.get(entityId);

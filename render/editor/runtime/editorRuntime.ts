@@ -238,6 +238,41 @@ export class EditorRuntime {
     ];
   }
 
+  frameStudioCamera(input: {
+    center: THREE.Vector3;
+    floorY: number;
+    height: number;
+    radius: number;
+    fov: number;
+    pitch: number;
+    yaw: number;
+    distanceMultiplier: number;
+  }) {
+    const radius = Math.max(input.radius, 1.2);
+    const target = input.center.clone();
+    target.y = input.floorY + Math.max(input.height * 0.48, radius * 0.65);
+    const distance = Math.max(radius * input.distanceMultiplier, 2.8);
+    const cameraPosition = new THREE.Vector3(
+      target.x + Math.sin(input.yaw) * Math.cos(input.pitch) * distance,
+      target.y + Math.sin(input.pitch) * distance + radius * 0.35,
+      target.z + Math.cos(input.yaw) * Math.cos(input.pitch) * distance
+    );
+
+    this.currentCameraType = 1;
+    this.firstPersonController.setEnabled(false);
+    this.orbitControls.enabled = !this.transformDragging;
+    this.orbitControls.target.copy(target);
+    this.camera.fov = input.fov;
+    this.camera.position.copy(cameraPosition);
+    this.camera.lookAt(target);
+    this.camera.updateProjectionMatrix();
+    this.orbitControls.update();
+    updateObjectTransformState(this.lastCameraTransformState, this.camera);
+    this.postProcessing.syncCameraState();
+    this.pathTracer.invalidateCamera();
+    this.requestFrame();
+  }
+
   attachTransformTarget(object: THREE.Object3D | null) {
     this.transformGizmo.setTarget(object);
   }
