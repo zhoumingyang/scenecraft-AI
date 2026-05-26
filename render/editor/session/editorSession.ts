@@ -147,7 +147,8 @@ export class EditorSession {
       getSelectedEntityId: () => this.selectedEntityId,
       hasEntityIsolation: () => this.entityIsolation.hasIsolation(),
       clearEntityIsolation: (source) => this.entityIsolation.clear(source),
-      setSelectedEntity: (entityId, source) => this.setSelectedEntity(entityId, source)
+      setSelectedEntity: (entityId, source) => this.setSelectedEntity(entityId, source),
+      rebuildGroupHierarchy: () => this.rebuildGroupHierarchy()
     });
   }
 
