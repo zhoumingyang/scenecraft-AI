@@ -5,6 +5,8 @@ import {
   STUDIO_SCENE_STYLE_PROFILE_IDS,
   STUDIO_SCENE_STYLE_PROFILES,
   createStudioPresetFromStyleProfile,
+  type StudioLayoutProfile,
+  type StudioMaterialProfile,
   type StudioSceneStyleProfileId
 } from "./studioSceneProfiles";
 
@@ -47,6 +49,8 @@ export type StudioScenePresetDefinition = {
   id: StudioScenePresetId;
   labelKey: TranslationKey;
   descriptionKey: TranslationKey;
+  layout: StudioLayoutProfile;
+  materials: StudioMaterialProfile;
   backgroundColor: string;
   floorColor: string;
   wallColor: string;

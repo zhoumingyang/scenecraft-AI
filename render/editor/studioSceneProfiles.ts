@@ -241,6 +241,8 @@ export type StudioScenePresetFromStyleProfile = {
   id: StudioSceneStyleProfileId;
   labelKey: TranslationKey;
   descriptionKey: TranslationKey;
+  layout: StudioLayoutProfile;
+  materials: StudioMaterialProfile;
   backgroundColor: string;
   floorColor: string;
   wallColor: string;
@@ -698,6 +700,8 @@ export function createStudioPresetFromStyleProfile(
     id: profile.id,
     labelKey: profile.labelKey,
     descriptionKey: profile.descriptionKey,
+    layout: profile.layout,
+    materials: profile.materials,
     backgroundColor: profile.materials.palette.background,
     floorColor: profile.materials.palette.floor,
     wallColor: profile.materials.palette.wall,

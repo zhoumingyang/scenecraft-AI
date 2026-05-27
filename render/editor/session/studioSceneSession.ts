@@ -26,6 +26,7 @@ import {
   createStudioEnvPatchFromStyleProfile,
   inferStudioProductProfile,
   resolveStudioSceneStyleProfile,
+  type PbrSurfaceConfig,
   type StudioProductProfile,
   type StudioSceneStyleProfileId,
   type StudioSceneStyleSelectionMode
@@ -261,14 +262,26 @@ function createStudioMaterial(
   };
 }
 
+function createStudioMaterialFromSurface(surface: PbrSurfaceConfig): EditorMeshMaterialJSON {
+  return createStudioMaterial(surface.color, {
+    roughness: surface.roughness,
+    metalness: surface.metalness,
+    emissive: surface.emissive,
+    emissiveIntensity: surface.emissiveIntensity
+  });
+}
+
 function createStudioRoomBounds(
   preset: ReturnType<typeof getStudioScenePreset>,
   frame: StudioTargetFrame
 ): StudioRoomBounds {
   const radius = Math.max(frame.radius, MIN_STUDIO_FRAME_RADIUS);
-  const width = radius * 7;
-  const depth = radius * 6.5;
-  const wallHeight = Math.max(frame.height * STUDIO_WALL_HEIGHT_MULTIPLIER, radius * 4);
+  const width = radius * preset.layout.background.widthMultiplier;
+  const depth = radius * preset.layout.background.depthMultiplier;
+  const wallHeight = Math.max(
+    frame.height * STUDIO_WALL_HEIGHT_MULTIPLIER,
+    radius * preset.layout.background.heightMultiplier
+  );
   const floorY = frame.floorY - preset.targetLift * radius;
   const center = frame.center.clone();
 
@@ -666,8 +679,11 @@ export class StudioSceneSessionController {
     if (!projectModel) return;
 
     const bounds = createStudioRoomBounds(preset, frame);
-    const plinthHeight = Math.max(bounds.radius * 0.32, 0.18);
-    const plinthRadius = Math.max(frame.footprintRadius * 1.16, bounds.radius * 0.72, 0.72);
+    const plinthHeight = Math.max(bounds.radius * preset.layout.plinth.heightRatio, 0.18);
+    const plinthRadius = Math.max(
+      frame.footprintRadius * preset.layout.plinth.fitPaddingRatio,
+      preset.layout.plinth.minRadius
+    );
     const wallThickness = Math.max(bounds.radius * 0.04, 0.05);
     const rootGroupId = createStudioEntityId("root");
     const rootGroup = projectModel.addGroup({
@@ -707,10 +723,10 @@ export class StudioSceneSessionController {
       createBoxStudioMesh({
         id: createStudioEntityId("floor"),
         label: "Studio Floor",
-        color: preset.floorColor,
+        color: preset.materials.surfaces.floor.color,
         position: [bounds.center.x, bounds.floorY - wallThickness / 2, bounds.center.z],
         scale: [bounds.width, wallThickness, bounds.depth],
-        material: { roughness: 0.86 }
+        material: createStudioMaterialFromSurface(preset.materials.surfaces.floor)
       }),
       "floor"
     );
@@ -718,10 +734,10 @@ export class StudioSceneSessionController {
       createBoxStudioMesh({
         id: createStudioEntityId("back-wall"),
         label: "Studio Back Wall",
-        color: preset.wallColor,
+        color: preset.materials.surfaces.wall.color,
         position: [bounds.center.x, bounds.floorY + bounds.wallHeight / 2, bounds.backZ],
         scale: [bounds.width, bounds.wallHeight, wallThickness],
-        material: { roughness: 0.82 }
+        material: createStudioMaterialFromSurface(preset.materials.surfaces.wall)
       }),
       "backWall"
     );
@@ -729,10 +745,10 @@ export class StudioSceneSessionController {
       createBoxStudioMesh({
         id: createStudioEntityId("left-wall"),
         label: "Studio Left Wall",
-        color: preset.wallColor,
+        color: preset.materials.surfaces.wall.color,
         position: [bounds.leftX, bounds.floorY + bounds.wallHeight / 2, bounds.center.z],
         scale: [wallThickness, bounds.wallHeight, bounds.depth],
-        material: { roughness: 0.82 }
+        material: createStudioMaterialFromSurface(preset.materials.surfaces.wall)
       }),
       "sideWall"
     );
@@ -740,10 +756,10 @@ export class StudioSceneSessionController {
       createBoxStudioMesh({
         id: createStudioEntityId("right-wall"),
         label: "Studio Right Wall",
-        color: preset.wallColor,
+        color: preset.materials.surfaces.wall.color,
         position: [bounds.rightX, bounds.floorY + bounds.wallHeight / 2, bounds.center.z],
         scale: [wallThickness, bounds.wallHeight, bounds.depth],
-        material: { roughness: 0.82 }
+        material: createStudioMaterialFromSurface(preset.materials.surfaces.wall)
       }),
       "sideWall"
     );
@@ -751,14 +767,11 @@ export class StudioSceneSessionController {
       createPlinthMesh({
         id: createStudioEntityId("plinth"),
         label: "Studio Plinth",
-        color: preset.plinthColor,
+        color: preset.materials.surfaces.plinth.color,
         radius: plinthRadius,
         height: plinthHeight,
         position: [bounds.center.x, bounds.floorY + plinthHeight / 2, bounds.center.z],
-        material: {
-          metalness: preset.id === "darkTech" ? 0.15 : 0,
-          roughness: preset.id === "darkTech" ? 0.45 : 0.68
-        }
+        material: createStudioMaterialFromSurface(preset.materials.surfaces.plinth)
       }),
       "plinth"
     );
