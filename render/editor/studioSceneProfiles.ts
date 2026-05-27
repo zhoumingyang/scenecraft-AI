@@ -625,16 +625,17 @@ export function resolveStudioSceneStyleProfile(
   productProfile: StudioProductProfile,
   manualStyleId?: StudioSceneStyleProfileId | null
 ) {
-  if (manualStyleId) {
-    return getStudioSceneStyleProfile(manualStyleId);
-  }
+  const baseProfile = manualStyleId
+    ? getStudioSceneStyleProfile(manualStyleId)
+    : productProfile.productType === "tech" || productProfile.material === "metallic"
+      ? getStudioSceneStyleProfile("darkTech")
+      : productProfile.productType === "beauty" || productProfile.productType === "jewelry"
+        ? getStudioSceneStyleProfile("premiumBeauty")
+        : resolveAutomaticStyleProfile(productProfile);
+  return applyBrandColorToStyleProfile(baseProfile, productProfile.brandColor);
+}
 
-  if (productProfile.productType === "tech" || productProfile.material === "metallic") {
-    return getStudioSceneStyleProfile("darkTech");
-  }
-  if (productProfile.productType === "beauty" || productProfile.productType === "jewelry") {
-    return getStudioSceneStyleProfile("premiumBeauty");
-  }
+function resolveAutomaticStyleProfile(productProfile: StudioProductProfile) {
   if (
     productProfile.productType === "fashion" ||
     productProfile.productType === "footwear" ||
@@ -652,6 +653,38 @@ export function resolveStudioSceneStyleProfile(
     return getStudioSceneStyleProfile("playfulBright");
   }
   return getStudioSceneStyleProfile(DEFAULT_STUDIO_SCENE_STYLE_PROFILE_ID);
+}
+
+function applyBrandColorToStyleProfile(
+  profile: StudioSceneStyleProfile,
+  brandColor: string | null
+): StudioSceneStyleProfile {
+  if (!brandColor || profile.productRules.brandColorUsage === "none") {
+    return profile;
+  }
+
+  const next = structuredClone(profile) as StudioSceneStyleProfile;
+  const normalizedBrandColor = `#${new THREE.Color(brandColor).getHexString()}`;
+
+  if (
+    profile.productRules.brandColorUsage === "accent" ||
+    profile.productRules.brandColorUsage === "subtleBoth"
+  ) {
+    next.materials.palette.accent = normalizedBrandColor;
+    next.materials.surfaces.decoration.color = normalizedBrandColor;
+  }
+
+  if (
+    profile.productRules.brandColorUsage === "lightTint" ||
+    profile.productRules.brandColorUsage === "subtleBoth"
+  ) {
+    const rimLight = next.lighting.lights.find((light) => light.role === "rim");
+    if (rimLight) {
+      rimLight.color = normalizedBrandColor;
+    }
+  }
+
+  return next;
 }
 
 export function createStudioPresetFromStyleProfile(

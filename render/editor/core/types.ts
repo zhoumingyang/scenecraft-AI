@@ -9,6 +9,11 @@ import type {
   StudioScenePresetId,
   StudioSceneVariantId
 } from "../studioScenes";
+import type {
+  StudioProductProfile,
+  StudioSceneStyleProfileId,
+  StudioSceneStyleSelectionMode
+} from "../studioSceneProfiles";
 
 export type { AssetUnit, ModelAnimationPlaybackState, ModelFileFormat } from "../constants/model";
 export { GROUND_HELPER_NODE_ID, SCENE_NODE_ID } from "../constants/scene";
@@ -467,6 +472,9 @@ export type StudioSceneState = {
   presetId: StudioScenePresetId | null;
   variantId: StudioSceneVariantId | null;
   targetEntityId: string | null;
+  productProfile: StudioProductProfile | null;
+  styleProfileId: StudioSceneStyleProfileId | null;
+  styleSelectionMode: StudioSceneStyleSelectionMode | null;
   targetScale: number;
   targetRotationY: number;
   hdriStatus: StudioSceneHdriStatus;

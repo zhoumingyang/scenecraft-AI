@@ -17,7 +17,6 @@ import { updateMeshBindingMaterial } from "../bindings/meshBinding";
 import { pickEntityId } from "../interaction/picker";
 import type { LightPresetId } from "../lightPresets";
 import {
-  DEFAULT_STUDIO_SCENE_PRESET_ID,
   type StudioScenePresetId,
   type StudioSceneVariantId
 } from "../studioScenes";
@@ -298,7 +297,7 @@ export class EditorSession {
 
   async enterStudioScene(
     entityId: string,
-    presetId: StudioScenePresetId = DEFAULT_STUDIO_SCENE_PRESET_ID,
+    presetId: StudioScenePresetId | null = null,
     source: SyncSource = "ui"
   ) {
     return this.studioScene.enter(entityId, presetId, source);
@@ -306,6 +305,10 @@ export class EditorSession {
 
   setStudioScenePreset(presetId: StudioScenePresetId) {
     this.studioScene.setPreset(presetId);
+  }
+
+  autoMatchStudioSceneStyle() {
+    this.studioScene.autoMatchStyle();
   }
 
   setStudioSceneVariant(variantId: StudioSceneVariantId) {

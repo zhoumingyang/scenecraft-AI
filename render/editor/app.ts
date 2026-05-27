@@ -373,7 +373,7 @@ export class EditorApp {
 
   async enterStudioScene(
     entityId: string,
-    presetId?: StudioScenePresetId,
+    presetId?: StudioScenePresetId | null,
     source: SyncSource = "ui"
   ) {
     return this.session.enterStudioScene(entityId, presetId, source);
@@ -381,6 +381,10 @@ export class EditorApp {
 
   setStudioScenePreset(presetId: StudioScenePresetId) {
     this.session.setStudioScenePreset(presetId);
+  }
+
+  autoMatchStudioSceneStyle() {
+    this.session.autoMatchStudioSceneStyle();
   }
 
   setStudioSceneVariant(variantId: StudioSceneVariantId) {

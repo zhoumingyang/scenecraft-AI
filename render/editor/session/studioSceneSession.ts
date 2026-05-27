@@ -16,13 +16,21 @@ import type { EditorProjectModel } from "../models";
 import type { EditorRuntime } from "../runtime/editorRuntime";
 import {
   DEFAULT_STUDIO_SCENE_VARIANT_ID,
-  DEFAULT_STUDIO_SCENE_PRESET_ID,
   getStudioScenePreset,
   type StudioSceneHdriStatus,
   type StudioScenePresetId,
   type StudioSceneVariantId
 } from "../studioScenes";
 import { isStudioScenePreviewEntity } from "../studioSceneEligibility";
+import {
+  createStudioEnvPatchFromStyleProfile,
+  inferStudioProductProfile,
+  resolveStudioSceneStyleProfile,
+  type StudioProductProfile,
+  type StudioSceneStyleProfileId,
+  type StudioSceneStyleSelectionMode
+} from "../studioSceneProfiles";
+import { mergeEditorPostProcessingConfig } from "../postProcessing";
 
 type StudioObjectVisibilitySnapshot = Array<{
   entityId: string;
@@ -83,6 +91,9 @@ type ActiveStudioSceneSession = {
   targetEntityId: string;
   presetId: StudioScenePresetId;
   variantId: StudioSceneVariantId;
+  productProfile: StudioProductProfile;
+  styleProfileId: StudioSceneStyleProfileId;
+  styleSelectionMode: StudioSceneStyleSelectionMode;
   targetScale: number;
   targetRotationY: number;
   hdriStatus: StudioSceneHdriStatus;
@@ -117,6 +128,9 @@ export function createDefaultStudioSceneState(): StudioSceneState {
     presetId: null,
     variantId: null,
     targetEntityId: null,
+    productProfile: null,
+    styleProfileId: null,
+    styleSelectionMode: null,
     targetScale: 1,
     targetRotationY: 0,
     hdriStatus: "idle",
@@ -543,6 +557,9 @@ export class StudioSceneSessionController {
       presetId: this.activeSession.presetId,
       variantId: this.activeSession.variantId,
       targetEntityId: this.activeSession.targetEntityId,
+      productProfile: this.activeSession.productProfile,
+      styleProfileId: this.activeSession.styleProfileId,
+      styleSelectionMode: this.activeSession.styleSelectionMode,
       targetScale: this.activeSession.targetScale,
       targetRotationY: this.activeSession.targetRotationY,
       hdriStatus: this.activeSession.hdriStatus,
@@ -552,7 +569,7 @@ export class StudioSceneSessionController {
 
   async enter(
     entityId: string,
-    presetId: StudioScenePresetId = DEFAULT_STUDIO_SCENE_PRESET_ID,
+    presetId: StudioScenePresetId | null = null,
     source: SyncSource = "ui"
   ) {
     const projectModel = this.getProjectModel();
@@ -577,7 +594,10 @@ export class StudioSceneSessionController {
       this.clearEntityIsolation(source);
     }
 
-    const preset = getStudioScenePreset(presetId);
+    const productProfile = inferStudioProductProfile(projectModel, this.registry, entityId);
+    const styleProfile = resolveStudioSceneStyleProfile(productProfile, presetId);
+    const resolvedPresetId = styleProfile.id;
+    const preset = getStudioScenePreset(resolvedPresetId);
     const objectVisibilitySnapshot = this.captureObjectVisibilitySnapshot();
     const viewHelperSnapshot = this.captureViewHelperSnapshot();
     const targetTransformSnapshot = cloneObjectTransform(binding.object);
@@ -601,8 +621,11 @@ export class StudioSceneSessionController {
 
     this.activeSession = {
       targetEntityId: entityId,
-      presetId,
+      presetId: resolvedPresetId,
       variantId: DEFAULT_STUDIO_SCENE_VARIANT_ID,
+      productProfile,
+      styleProfileId: resolvedPresetId,
+      styleSelectionMode: presetId ? "manual" : "auto",
       targetScale: defaultTargetScale,
       targetRotationY: 0,
       hdriStatus: "idle",
@@ -626,6 +649,7 @@ export class StudioSceneSessionController {
       defaultTargetScale,
       0
     );
+    this.applyStyleProfileToSceneEnv(styleProfile, source);
     this.createTransientStudioEntities(this.activeSession, preset, studioFrame);
     this.frameCamera(preset, studioFrame);
     this.setSelectedEntity(entityId, source);
@@ -909,6 +933,26 @@ export class StudioSceneSessionController {
     });
   }
 
+  private applyStyleProfileToSceneEnv(
+    styleProfile: ReturnType<typeof resolveStudioSceneStyleProfile>,
+    source: SyncSource
+  ) {
+    const projectModel = this.getProjectModel();
+    if (!projectModel) return;
+
+    const patch = createStudioEnvPatchFromStyleProfile(styleProfile);
+    projectModel.envConfig = {
+      ...projectModel.envConfig,
+      ...patch,
+      postProcessing: patch.postProcessing
+        ? mergeEditorPostProcessingConfig(projectModel.envConfig.postProcessing, patch.postProcessing)
+        : projectModel.envConfig.postProcessing,
+      ground: projectModel.envConfig.ground
+    };
+    this.runtime.applyEnvConfig(projectModel.envConfig);
+    this.emit({ type: "sceneUpdated", source, pathTraceInvalidation: "environment" });
+  }
+
   private rebuildTransientStudioEntities(
     session: ActiveStudioSceneSession,
     preset: ReturnType<typeof getStudioScenePreset>,
@@ -934,8 +978,39 @@ export class StudioSceneSessionController {
 
     const preset = getStudioScenePreset(presetId);
     session.presetId = presetId;
+    session.styleProfileId = presetId;
+    session.styleSelectionMode = "manual";
     session.hdriStatus = "idle";
     session.hdriError = null;
+    this.applyStyleProfileToSceneEnv(
+      resolveStudioSceneStyleProfile(session.productProfile, presetId),
+      "ui"
+    );
+    this.rebuildTransientStudioEntities(session, preset, createStudioFrameFromObject(binding.object));
+    this.emitChanged();
+  }
+
+  autoMatchStyle() {
+    const session = this.activeSession;
+    if (!session) return;
+    const projectModel = this.getProjectModel();
+    const binding = this.registry.get(session.targetEntityId);
+    if (!projectModel || !binding) {
+      this.exit("ui");
+      return;
+    }
+
+    const productProfile = inferStudioProductProfile(projectModel, this.registry, session.targetEntityId);
+    const styleProfile = resolveStudioSceneStyleProfile(productProfile);
+    const preset = getStudioScenePreset(styleProfile.id);
+
+    session.productProfile = productProfile;
+    session.presetId = styleProfile.id;
+    session.styleProfileId = styleProfile.id;
+    session.styleSelectionMode = "auto";
+    session.hdriStatus = "idle";
+    session.hdriError = null;
+    this.applyStyleProfileToSceneEnv(styleProfile, "ui");
     this.rebuildTransientStudioEntities(session, preset, createStudioFrameFromObject(binding.object));
     this.emitChanged();
   }

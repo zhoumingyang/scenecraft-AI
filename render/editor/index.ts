@@ -52,6 +52,29 @@ export type {
   StudioSceneVariantId
 } from "./studioScenes";
 export {
+  DEFAULT_STUDIO_SCENE_STYLE_PROFILE_ID,
+  STUDIO_PRODUCT_MATERIALS,
+  STUDIO_PRODUCT_TYPES,
+  STUDIO_SCENE_STYLE_PROFILE_IDS,
+  STUDIO_SCENE_STYLE_PROFILES,
+  getStudioSceneStyleProfile,
+  isStudioSceneStyleProfileId
+} from "./studioSceneProfiles";
+export type {
+  PbrSurfaceConfig,
+  StudioCameraProfile,
+  StudioLayoutProfile,
+  StudioLightingProfile,
+  StudioMaterialProfile,
+  StudioPostProcessingProfile,
+  StudioProductMaterial,
+  StudioProductProfile,
+  StudioProductType,
+  StudioSceneStyleProfile,
+  StudioSceneStyleProfileId,
+  StudioSceneStyleSelectionMode
+} from "./studioSceneProfiles";
+export {
   createPbrAtlasMaterialPatch,
   PBR_ATLAS_FIELDS,
   PBR_ATLAS_LAYOUT_VERSION
