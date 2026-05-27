@@ -344,6 +344,7 @@ If the task is about temporary studio preview / 棚拍场景:
 - inspect `components/editor/studioSceneControls.tsx`
 - keep studio scene geometry, temporary lights, camera changes, cylindrical plinth auto-fit, scene env/post edits, and target scale/rotation session-only; transient studio entities may exist in `EditorProjectModel` while studio mode is active but must be filtered from saved project snapshots and removed on exit
 - TopBar-added/imported mesh, light, light preset, and model entities in studio mode are also transient studio entities under the studio root; they may be selected and edited but must not register persistent project assets or survive studio exit
+- studio product profiles and studio style profiles are session-only generation inputs; they may drive temporary layout, material, lighting, camera, and post-processing defaults but must not be added to the persisted project JSON schema unless explicitly requested
 - preserve graceful fallback when remote HDRI loading fails or Poly Haven is unavailable
 
 If the task is about AI generation:
