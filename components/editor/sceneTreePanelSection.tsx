@@ -26,6 +26,10 @@ type SceneTreePanelSectionProps = {
   onStopRenaming: () => void;
   onSubmitRenaming: (node: SceneTreeNode) => void;
   isNodeInteractive?: (node: SceneTreeNode) => boolean;
+  canUseNodeAction?: (
+    node: SceneTreeNode,
+    action: "select" | "delete" | "duplicate" | "rename" | "lock" | "visibility"
+  ) => boolean;
 };
 
 export default function SceneTreePanelSection({
@@ -44,7 +48,8 @@ export default function SceneTreePanelSection({
   onStartRenaming,
   onStopRenaming,
   onSubmitRenaming,
-  isNodeInteractive
+  isNodeInteractive,
+  canUseNodeAction
 }: SceneTreePanelSectionProps) {
   const [open, setOpen] = useState(true);
   const [collapsedNodeIds, setCollapsedNodeIds] = useState<Set<string>>(() => new Set());
@@ -122,6 +127,9 @@ export default function SceneTreePanelSection({
   const renderNode = (node: SceneTreeNode, depth = 0): ReactNode => {
     const expanded = !collapsedNodeIds.has(node.id);
     const interactive = isNodeInteractive ? isNodeInteractive(node) : true;
+    const canUseAction = (
+      action: "select" | "delete" | "duplicate" | "rename" | "lock" | "visibility"
+    ) => (canUseNodeAction ? canUseNodeAction(node, action) : interactive);
 
     return (
       <Stack key={node.id} spacing={0.5}>
@@ -135,6 +143,12 @@ export default function SceneTreePanelSection({
           draftLabel={draftLabel}
           theme={theme}
           interactive={interactive}
+          canSelect={canUseAction("select")}
+          canDelete={canUseAction("delete")}
+          canDuplicate={canUseAction("duplicate")}
+          canRename={canUseAction("rename")}
+          canToggleLock={canUseAction("lock")}
+          canToggleVisible={canUseAction("visibility")}
           onDraftLabelChange={onDraftLabelChange}
           onSelectEntity={onSelectEntity}
           onDeleteEntity={onDeleteEntity}

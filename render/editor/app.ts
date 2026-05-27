@@ -24,6 +24,7 @@ import { EditorSession } from "./session/editorSession";
 import { PICK_POINTER_MOVE_THRESHOLD_PX } from "./constants/input";
 import { SCENE_NODE_ID as SCENE_SELECTION_ID } from "./constants/scene";
 import type { StudioScenePresetId, StudioSceneVariantId } from "./studioScenes";
+import type { StudioSceneEntityAction } from "./session/studioSceneSession";
 
 export type EditorMeshListItem = {
   id: string;
@@ -175,6 +176,10 @@ export class EditorApp {
 
   isStudioSceneEntityInteractive(entityId: string) {
     return this.session.isStudioSceneEntityInteractive(entityId);
+  }
+
+  canUseStudioSceneEntityAction(entityId: string, action: StudioSceneEntityAction) {
+    return this.session.canUseStudioSceneEntityAction(entityId, action);
   }
 
   getRenderObject(entityId: string): THREE.Object3D | null {

@@ -37,7 +37,10 @@ import { LightSessionController } from "./lightSession";
 import { ModelImportSessionController } from "./modelImportSession";
 import { ModelAnimationSessionController } from "./modelAnimationSession";
 import { SceneEnvironmentSessionController } from "./sceneEnvironmentSession";
-import { StudioSceneSessionController } from "./studioSceneSession";
+import {
+  StudioSceneSessionController,
+  type StudioSceneEntityAction
+} from "./studioSceneSession";
 
 type Emit = (event: EditorAppEvent) => void;
 
@@ -259,6 +262,17 @@ export class EditorSession {
 
   isStudioSceneEntityInteractive(entityId: string) {
     return this.studioScene.isStudioSceneEntityInteractive(entityId);
+  }
+
+  canUseStudioSceneEntityAction(entityId: string, action: StudioSceneEntityAction) {
+    if (!this.studioScene.isActive()) return true;
+    if (entityId === SCENE_SELECTION_ID) {
+      return action === "select";
+    }
+    if (entityId === GROUND_HELPER_NODE_ID) {
+      return false;
+    }
+    return this.studioScene.canUseStudioSceneEntityAction(entityId, action);
   }
 
   getRenderObject(entityId: string) {

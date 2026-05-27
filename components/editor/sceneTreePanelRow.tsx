@@ -20,6 +20,12 @@ type SceneTreePanelRowProps = {
   draftLabel: string;
   theme: ReturnType<typeof getEditorThemeTokens>;
   interactive?: boolean;
+  canSelect?: boolean;
+  canDelete?: boolean;
+  canDuplicate?: boolean;
+  canRename?: boolean;
+  canToggleLock?: boolean;
+  canToggleVisible?: boolean;
   depth?: number;
   expanded?: boolean;
   onToggleExpand?: (nodeId: string) => void;
@@ -41,6 +47,12 @@ export default function SceneTreePanelRow({
   draftLabel,
   theme,
   interactive = true,
+  canSelect = interactive,
+  canDelete: canDeleteAction = interactive,
+  canDuplicate: canDuplicateAction = interactive,
+  canRename = interactive,
+  canToggleLock: canToggleLockAction = interactive,
+  canToggleVisible: canToggleVisibleAction = interactive,
   depth = 0,
   expanded = true,
   onToggleExpand,
@@ -55,14 +67,14 @@ export default function SceneTreePanelRow({
   onSubmitRenaming
 }: SceneTreePanelRowProps) {
   const selectionDisabled =
-    !interactive || (node.type !== "scene" && (!node.effectivelyVisible || node.locked));
+    !canSelect || (node.type !== "scene" && (!node.effectivelyVisible || node.locked));
   const isGridHelper = node.type === "gridHelper";
-  const lockDisabled = !interactive || node.type === "scene" || isGridHelper || !node.effectivelyVisible;
-  const canToggleVisible = interactive && node.type !== "light" && node.type !== "scene" && !isGridHelper;
+  const lockDisabled = !canToggleLockAction || node.type === "scene" || isGridHelper || !node.effectivelyVisible;
+  const canToggleVisible = canToggleVisibleAction && node.type !== "light" && node.type !== "scene" && !isGridHelper;
   const canDuplicate =
-    interactive && node.type !== "scene" && !isGridHelper && !node.locked && node.effectivelyVisible;
+    canDuplicateAction && node.type !== "scene" && !isGridHelper && !node.locked && node.effectivelyVisible;
   const canDelete =
-    interactive && node.type !== "scene" && !isGridHelper && !node.locked && node.effectivelyVisible;
+    canDeleteAction && node.type !== "scene" && !isGridHelper && !node.locked && node.effectivelyVisible;
   const canToggleLock = !lockDisabled;
   const rowColor = !interactive || node.locked ? theme.mutedText : selected ? theme.pillText : theme.text;
   const canExpand = node.children.length > 0;
@@ -181,7 +193,7 @@ export default function SceneTreePanelRow({
             onDoubleClick={(event) => {
               event.stopPropagation();
               if (isGridHelper) return;
-              if (!interactive) return;
+              if (!canRename) return;
               onStartRenaming(node);
             }}
             sx={{

@@ -66,6 +66,17 @@ type StudioTransientAdoptOptions = {
   attachToRoot?: boolean;
 };
 
+export type StudioSceneEntityAction =
+  | "select"
+  | "transform"
+  | "material"
+  | "light"
+  | "delete"
+  | "duplicate"
+  | "rename"
+  | "lock"
+  | "visibility";
+
 type ActiveStudioSceneSession = {
   targetEntityId: string;
   presetId: StudioScenePresetId;
@@ -407,6 +418,42 @@ export class StudioSceneSessionController {
     const session = this.activeSession;
     if (!session) return true;
     return session.transientEntityIds.has(entityId) || session.visibleOriginalEntityIds.has(entityId);
+  }
+
+  canUseStudioSceneEntityAction(entityId: string, action: StudioSceneEntityAction) {
+    const session = this.activeSession;
+    if (!session) return true;
+
+    if (session.visibleOriginalEntityIds.has(entityId)) {
+      return action === "select";
+    }
+
+    if (!session.transientEntityIds.has(entityId)) {
+      return false;
+    }
+
+    const role = session.transientEntityRoles.get(entityId);
+    if (role === "root") {
+      return action === "select" || action === "transform";
+    }
+
+    if (role === "plinth") {
+      return action === "select" || action === "transform" || action === "material" || action === "rename" || action === "lock";
+    }
+
+    if (role === "floor" || role === "backWall" || role === "sideWall") {
+      return action === "select" || action === "transform" || action === "material" || action === "rename" || action === "lock" || action === "visibility";
+    }
+
+    if (role === "light") {
+      return action === "select" || action === "transform" || action === "light" || action === "rename" || action === "lock" || action === "visibility";
+    }
+
+    if (role === "userLight") {
+      return action === "select" || action === "transform" || action === "light" || action === "delete" || action === "duplicate" || action === "rename" || action === "lock" || action === "visibility";
+    }
+
+    return true;
   }
 
   getTransientStudioEntityRole(entityId: string) {

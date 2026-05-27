@@ -39,7 +39,7 @@ export default function SceneTreePanel() {
 
   const onSelectEntity = (entityId: string) => {
     if (!app) return;
-    if (isStudioSceneActive && !app.isStudioSceneEntityInteractive(entityId)) return;
+    if (isStudioSceneActive && !app.canUseStudioSceneEntityAction(entityId, "select")) return;
     void app.dispatch({
       type: "selection.set",
       entityId,
@@ -48,28 +48,28 @@ export default function SceneTreePanel() {
   };
 
   const onDeleteEntity = (entityId: string) => {
-    if (isStudioSceneActive && !app?.isStudioSceneEntityInteractive(entityId)) return;
+    if (isStudioSceneActive && !app?.canUseStudioSceneEntityAction(entityId, "delete")) return;
     app?.removeEntity(entityId);
   };
 
   const onDuplicateEntity = (entityId: string) => {
-    if (isStudioSceneActive && !app?.isStudioSceneEntityInteractive(entityId)) return;
+    if (isStudioSceneActive && !app?.canUseStudioSceneEntityAction(entityId, "duplicate")) return;
     app?.duplicateEntity(entityId);
   };
 
   const onToggleLock = (entityId: string, locked: boolean) => {
-    if (isStudioSceneActive && !app?.isStudioSceneEntityInteractive(entityId)) return;
+    if (isStudioSceneActive && !app?.canUseStudioSceneEntityAction(entityId, "lock")) return;
     app?.setEntityLocked(entityId, !locked);
   };
 
   const onToggleVisible = (entityId: string, visible: boolean) => {
-    if (isStudioSceneActive && !app?.isStudioSceneEntityInteractive(entityId)) return;
+    if (isStudioSceneActive && !app?.canUseStudioSceneEntityAction(entityId, "visibility")) return;
     app?.setEntityVisible(entityId, !visible);
   };
 
   const startRenaming = (node: SceneTreeNode) => {
     if (node.type === "scene" || node.type === "gridHelper") return;
-    if (isStudioSceneActive && !app?.isStudioSceneEntityInteractive(node.id)) return;
+    if (isStudioSceneActive && !app?.canUseStudioSceneEntityAction(node.id, "rename")) return;
     setEditingNodeId(node.id);
     setDraftLabel(node.label);
   };
@@ -81,6 +81,7 @@ export default function SceneTreePanel() {
 
   const submitRenaming = (node: SceneTreeNode) => {
     if (node.type === "scene" || node.type === "gridHelper") return;
+    if (isStudioSceneActive && !app?.canUseStudioSceneEntityAction(node.id, "rename")) return;
     const nextLabel = draftLabel.trim() || node.fallbackLabel;
     app?.updateEntityLabel(node.id, nextLabel);
     stopRenaming();
@@ -88,8 +89,17 @@ export default function SceneTreePanel() {
 
   const isNodeInteractive = (node: SceneTreeNode) => {
     if (!isStudioSceneActive) return true;
-    if (node.type === "scene" || node.type === "gridHelper") return false;
+    if (node.type === "scene") return true;
+    if (node.type === "gridHelper") return false;
     return app?.isStudioSceneEntityInteractive(node.id) ?? false;
+  };
+
+  const canUseNodeAction = (
+    node: SceneTreeNode,
+    action: "select" | "delete" | "duplicate" | "rename" | "lock" | "visibility"
+  ) => {
+    if (!isStudioSceneActive) return true;
+    return app?.canUseStudioSceneEntityAction(node.id, action) ?? false;
   };
 
   return (
@@ -143,6 +153,7 @@ export default function SceneTreePanel() {
                 onStopRenaming={stopRenaming}
                 onSubmitRenaming={submitRenaming}
                 isNodeInteractive={isNodeInteractive}
+                canUseNodeAction={canUseNodeAction}
               />
             ))}
           </Stack>
