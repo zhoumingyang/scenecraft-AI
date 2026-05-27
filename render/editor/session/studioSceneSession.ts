@@ -7,6 +7,7 @@ import type {
   EditorMeshJSON,
   EditorMeshMaterialJSON,
   EditorProjectJSON,
+  ResolvedEditorEnvConfigJSON,
   StudioSceneState,
   SyncSource,
   Vec3Tuple
@@ -88,6 +89,7 @@ type ActiveStudioSceneSession = {
   objectVisibilitySnapshot: StudioObjectVisibilitySnapshot;
   viewHelperSnapshot: StudioViewHelperSnapshot;
   targetTransformSnapshot: StudioTargetTransformSnapshot;
+  sceneEnvConfigSnapshot: ResolvedEditorEnvConfigJSON;
   targetFrame: StudioTargetFrame;
   defaultTargetScale: number;
   visibleOriginalEntityIds: Set<string>;
@@ -134,6 +136,10 @@ function restoreObjectTransform(object: THREE.Object3D, snapshot: StudioTargetTr
   object.quaternion.copy(snapshot.quaternion);
   object.scale.copy(snapshot.scale);
   object.updateMatrixWorld(true);
+}
+
+function cloneResolvedEnvConfig(envConfig: ResolvedEditorEnvConfigJSON): ResolvedEditorEnvConfigJSON {
+  return structuredClone(envConfig) as ResolvedEditorEnvConfigJSON;
 }
 
 const STUDIO_TARGET_FOOTPRINT_RADIUS = 0.82;
@@ -510,6 +516,7 @@ export class StudioSceneSessionController {
     const transientIds = session.transientEntityIds;
     return {
       ...projectJson,
+      envConfig: cloneResolvedEnvConfig(session.sceneEnvConfigSnapshot),
       groups: projectJson.groups
         ?.filter((group) => !transientIds.has(group.id))
         .map((group) => ({
@@ -570,6 +577,7 @@ export class StudioSceneSessionController {
     const objectVisibilitySnapshot = this.captureObjectVisibilitySnapshot();
     const viewHelperSnapshot = this.captureViewHelperSnapshot();
     const targetTransformSnapshot = cloneObjectTransform(binding.object);
+    const sceneEnvConfigSnapshot = cloneResolvedEnvConfig(projectModel.envConfig);
     const targetFrame = createStudioFrameFromObject(binding.object);
     const defaultTargetScale = computeStudioFitScale(targetFrame);
     const keepVisibleIds = this.collectVisibleIds(entityId);
@@ -598,6 +606,7 @@ export class StudioSceneSessionController {
       objectVisibilitySnapshot,
       viewHelperSnapshot,
       targetTransformSnapshot,
+      sceneEnvConfigSnapshot,
       targetFrame,
       defaultTargetScale,
       visibleOriginalEntityIds: keepVisibleIds,
@@ -1011,6 +1020,22 @@ export class StudioSceneSessionController {
 
     const projectModel = this.getProjectModel();
     if (projectModel) {
+      projectModel.envConfig = cloneResolvedEnvConfig(session.sceneEnvConfigSnapshot);
+      if (projectModel.envConfig.panoUrl) {
+        void this.runtime
+          .setEnvironmentFromUrl(
+            projectModel.envConfig.panoUrl,
+            projectModel.envConfig.panoAssetName || projectModel.envConfig.panoUrl
+          )
+          .finally(() => {
+            this.runtime.applyEnvConfig(projectModel.envConfig);
+            this.emit({ type: "sceneUpdated", source, pathTraceInvalidation: "environment" });
+            this.emit({ type: "viewStateUpdated" });
+          });
+      } else {
+        this.runtime.clearEnvironment();
+      }
+      this.runtime.applyEnvConfig(projectModel.envConfig);
       this.runtime.applyCameraModel(projectModel.camera);
     }
 
