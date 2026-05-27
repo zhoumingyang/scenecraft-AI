@@ -960,7 +960,11 @@ export class StudioSceneSessionController {
       postProcessing: patch.postProcessing
         ? mergeEditorPostProcessingConfig(projectModel.envConfig.postProcessing, patch.postProcessing)
         : projectModel.envConfig.postProcessing,
-      ground: projectModel.envConfig.ground
+      ground: {
+        ...projectModel.envConfig.ground,
+        visible: false,
+        mode: "plane"
+      }
     };
     this.runtime.applyEnvConfig(projectModel.envConfig);
     this.emit({ type: "sceneUpdated", source, pathTraceInvalidation: "environment" });
