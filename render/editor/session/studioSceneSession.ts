@@ -65,6 +65,7 @@ export type StudioTransientEntityRole =
 type StudioTransientAdoptOptions = {
   childRole?: StudioTransientEntityRole;
   attachToRoot?: boolean;
+  placeAtSpawn?: boolean;
 };
 
 export type StudioSceneEntityAction =
@@ -495,6 +496,9 @@ export class StudioSceneSessionController {
 
     this.registerTransientEntity(session, entityId, role);
     this.markTransientObject(entityId, role);
+    if (options.placeAtSpawn) {
+      this.placeTransientEntityAtSpawn(session, entityId);
+    }
 
     if (record.kind === "group") {
       const childRole = options.childRole ?? role;
@@ -829,6 +833,23 @@ export class StudioSceneSessionController {
       target.userData.studioScene = true;
       target.userData.studioSceneRole = role;
     });
+  }
+
+  private placeTransientEntityAtSpawn(session: ActiveStudioSceneSession, entityId: string) {
+    const targetBinding = this.registry.get(session.targetEntityId);
+    const binding = this.registry.get(entityId);
+    if (!targetBinding || !binding) return;
+
+    const frame = createStudioFrameFromObject(targetBinding.object);
+    const offset = Math.max(frame.radius * 0.7, 0.7);
+    binding.model.patchTransform({
+      position: [
+        frame.center.x,
+        frame.floorY + Math.max(frame.radius * 0.35, 0.3),
+        frame.center.z + offset
+      ]
+    });
+    this.registry.syncModelTransformToObject(entityId);
   }
 
   private registerTransientGroupChildren(

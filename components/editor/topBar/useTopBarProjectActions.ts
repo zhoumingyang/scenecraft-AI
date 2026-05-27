@@ -66,6 +66,7 @@ export function useTopBarProjectActions(t: TopBarTranslate) {
   const localProjectAssets = useEditorStore((state) => state.localProjectAssets);
   const saveStatus = useEditorStore((state) => state.saveStatus);
   const hasUnsavedChanges = useEditorStore((state) => state.hasUnsavedChanges);
+  const isStudioSceneActive = useEditorStore((state) => state.studioScene.active);
   const projectListDialogOpen = useEditorStore((state) => state.projectListDialogOpen);
   const projectSaveDialogOpen = useEditorStore((state) => state.projectSaveDialogOpen);
   const registerLocalProjectAsset = useEditorStore((state) => state.registerLocalProjectAsset);
@@ -190,13 +191,15 @@ export function useTopBarProjectActions(t: TopBarTranslate) {
       return;
     }
 
-    registerLocalProjectAsset({
-      sourceUrl: imported.sourceUrl,
-      file,
-      kind: "model_source",
-      targetPath: `model:${imported.entityId}`,
-      entityId: imported.entityId
-    });
+    if (!isStudioSceneActive) {
+      registerLocalProjectAsset({
+        sourceUrl: imported.sourceUrl,
+        file,
+        kind: "model_source",
+        targetPath: `model:${imported.entityId}`,
+        entityId: imported.entityId
+      });
+    }
   };
 
   const onImportPanoFile = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -207,7 +210,7 @@ export function useTopBarProjectActions(t: TopBarTranslate) {
     if (isHighDynamicRangeEnvironmentAssetName(file.name)) {
       try {
         const imported = await app.importPanorama(file);
-        if (imported?.sourceUrl) {
+        if (imported?.sourceUrl && !isStudioSceneActive) {
           registerLocalProjectAsset({
             sourceUrl: imported.sourceUrl,
             file,
@@ -231,7 +234,7 @@ export function useTopBarProjectActions(t: TopBarTranslate) {
       }
 
       const imported = await app.importPanorama(file);
-      if (imported?.sourceUrl) {
+      if (imported?.sourceUrl && !isStudioSceneActive) {
         registerLocalProjectAsset({
           sourceUrl: imported.sourceUrl,
           file,

@@ -39,7 +39,8 @@ import { ModelAnimationSessionController } from "./modelAnimationSession";
 import { SceneEnvironmentSessionController } from "./sceneEnvironmentSession";
 import {
   StudioSceneSessionController,
-  type StudioSceneEntityAction
+  type StudioSceneEntityAction,
+  type StudioTransientEntityRole
 } from "./studioSceneSession";
 
 type Emit = (event: EditorAppEvent) => void;
@@ -398,7 +399,12 @@ export class EditorSession {
   }
 
   async importModel(file: File, source: SyncSource = "ui") {
-    return this.modelImport.importFile(file, source);
+    const imported = await this.modelImport.importFile(file, source);
+    if (imported && this.studioScene.isActive()) {
+      this.adoptStudioEntity(imported.entityId, "userModel", { placeAtSpawn: true, source });
+      this.setSelectedEntity(imported.entityId, source);
+    }
+    return imported;
   }
 
   async importModelFromSource(
@@ -410,7 +416,12 @@ export class EditorSession {
     },
     source: SyncSource = "ui"
   ) {
-    return this.modelImport.importFromSource(input, source);
+    const imported = await this.modelImport.importFromSource(input, source);
+    if (imported && this.studioScene.isActive()) {
+      this.adoptStudioEntity(imported.entityId, "userModel", { placeAtSpawn: true, source });
+      this.setSelectedEntity(imported.entityId, source);
+    }
+    return imported;
   }
 
   updateEntityTransform(entityId: string, patch: TransformPatch, source: SyncSource = "ui") {
@@ -479,6 +490,9 @@ export class EditorSession {
       },
       source
     );
+    if (this.studioScene.isActive()) {
+      this.adoptStudioEntity(meshId, "userMesh", { placeAtSpawn: true, source });
+    }
     this.setSelectedEntity(meshId, source);
   }
 
@@ -487,11 +501,38 @@ export class EditorSession {
   }
 
   createLight(lightType: EditorLightJSON["type"], source: SyncSource = "ui") {
-    this.lightSession.createLight(lightType, source);
+    const lightId = this.lightSession.createLight(lightType, source);
+    if (lightId && this.studioScene.isActive()) {
+      this.adoptStudioEntity(lightId, "userLight", { source });
+      this.setSelectedEntity(lightId, source);
+    }
   }
 
   async createLightPreset(presetId: LightPresetId, source: SyncSource = "ui") {
-    await this.lightSession.createLightPreset(presetId, source);
+    const preset = await this.lightSession.createLightPreset(presetId, source);
+    if (preset && this.studioScene.isActive()) {
+      this.adoptStudioEntity(preset.groupId, "userLightGroup", {
+        childRole: "userLightGroup",
+        source
+      });
+      this.setSelectedEntity(preset.groupId, source);
+    }
+  }
+
+  private adoptStudioEntity(
+    entityId: string,
+    role: StudioTransientEntityRole,
+    options: {
+      childRole?: StudioTransientEntityRole;
+      placeAtSpawn?: boolean;
+      source?: SyncSource;
+    } = {}
+  ) {
+    if (!this.studioScene.isActive()) return false;
+    return this.studioScene.adoptTransientStudioEntity(entityId, role, {
+      childRole: options.childRole,
+      placeAtSpawn: options.placeAtSpawn
+    });
   }
 
   syncEntityModelFromRenderObject(entityId: string) {

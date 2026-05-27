@@ -58,7 +58,7 @@ export class LightSessionController {
 
   createLight(lightType: EditorLightJSON["type"], source: SyncSource = "ui") {
     const projectModel = this.getProjectModel();
-    if (!projectModel) return;
+    if (!projectModel) return null;
 
     const light = projectModel.addLight({
       ...createLightPayload(lightType),
@@ -73,12 +73,13 @@ export class LightSessionController {
       source
     });
     this.setSelectedEntity(light.id, source);
+    return light.id;
   }
 
   async createLightPreset(presetId: LightPresetId, source: SyncSource = "ui") {
     await this.ensureProject();
     const projectModel = this.getProjectModel();
-    if (!projectModel) return;
+    if (!projectModel) return null;
 
     const preset = getLightPresetDefinition(presetId);
     const group = projectModel.addGroup({
@@ -121,5 +122,9 @@ export class LightSessionController {
       source
     });
     this.setSelectedEntity(group.id, source);
+    return {
+      groupId: group.id,
+      childIds
+    };
   }
 }
