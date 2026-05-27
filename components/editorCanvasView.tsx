@@ -159,6 +159,7 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
 
       if (event.type === "studioSceneChanged") {
         setStudioSceneState(event.state);
+        bumpSceneTreeVersion();
       }
     });
 

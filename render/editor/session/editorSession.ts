@@ -557,6 +557,10 @@ export class EditorSession {
       clientY
     });
 
+    if (pickedEntityId && this.studioScene.isTransientStudioEntity(pickedEntityId)) {
+      return pickedEntityId;
+    }
+
     return resolveCanvasPickedEntityId(this.projectModel, pickedEntityId);
   }
 
