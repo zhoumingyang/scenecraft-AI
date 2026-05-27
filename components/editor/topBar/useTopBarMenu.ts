@@ -7,6 +7,7 @@ import type { DropdownConfig, LightPresetOption, SelectOption, TopBarTranslate }
 type UseTopBarMenuOptions = {
   app: EditorApp | null;
   disabled?: boolean;
+  disabledMenuIds?: DropdownConfig["id"][];
   isPolyhavenEnabled: boolean;
   onCreateProject: () => Promise<void>;
   onImportLibraryHdri: () => void;
@@ -23,6 +24,7 @@ type MenuOption = SelectOption | LightPresetOption;
 export function useTopBarMenu({
   app,
   disabled = false,
+  disabledMenuIds = [],
   isPolyhavenEnabled,
   onCreateProject,
   onImportLibraryHdri,
@@ -37,6 +39,7 @@ export function useTopBarMenu({
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
 
   const activeConfig = dropdownConfigs.find((item) => item.id === activeMenuId) ?? null;
+  const disabledMenuIdSet = useMemo(() => new Set(disabledMenuIds), [disabledMenuIds]);
 
   const closeMenu = () => {
     setActiveMenuId(null);
@@ -44,7 +47,7 @@ export function useTopBarMenu({
   };
 
   const openMenu = (id: DropdownConfig["id"], anchor: HTMLElement) => {
-    if (disabled) return;
+    if (disabled || disabledMenuIdSet.has(id)) return;
     setActiveMenuId(id);
     setAnchorEl(anchor);
   };
@@ -58,6 +61,12 @@ export function useTopBarMenu({
       closeMenu();
     }
   }, [disabled]);
+
+  useEffect(() => {
+    if (activeMenuId && disabledMenuIdSet.has(activeMenuId)) {
+      closeMenu();
+    }
+  }, [activeMenuId, disabledMenuIdSet]);
 
   const createMenuItem = (
     option: MenuOption,

@@ -25,11 +25,13 @@ export default function TopBar() {
   const isStudioSceneActive = useEditorStore((state) => state.studioScene.active);
   const dismissLightingConflictNotice = useEditorStore((state) => state.dismissLightingConflictNotice);
   const theme = getEditorThemeTokens(editorThemeMode);
+  const studioDisabledMenuIds = isStudioSceneActive ? (["project", "camera"] as const) : [];
 
   const actions = useTopBarProjectActions(t);
   const menu = useTopBarMenu({
     app: actions.app,
-    disabled: isStudioSceneActive,
+    disabled: false,
+    disabledMenuIds: [...studioDisabledMenuIds],
     isPolyhavenEnabled: actions.isPolyhavenEnabled,
     onCreateProject: actions.onCreateProject,
     onImportLibraryHdri: actions.onImportLibraryHdri,
@@ -76,7 +78,10 @@ export default function TopBar() {
 
       <TopBarActionBar
         aiLibraryAssetCount={actions.aiLibraryAssetCount}
-        disabled={isStudioSceneActive}
+        disabled={false}
+        disabledMenuIds={[...studioDisabledMenuIds]}
+        saveDisabled={isStudioSceneActive}
+        clearDisabled={isStudioSceneActive}
         dropdownConfigs={dropdownConfigs}
         onClearProject={actions.onClearProject}
         onOpenAiLibrary={actions.openAiLibraryDialog}

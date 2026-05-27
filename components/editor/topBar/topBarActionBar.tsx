@@ -9,6 +9,9 @@ import type { DropdownConfig, TopBarTranslate } from "./types";
 type TopBarActionBarProps = {
   aiLibraryAssetCount: number;
   disabled?: boolean;
+  disabledMenuIds?: DropdownConfig["id"][];
+  saveDisabled?: boolean;
+  clearDisabled?: boolean;
   dropdownConfigs: DropdownConfig[];
   onClearProject: () => void;
   onOpenAiLibrary: () => void;
@@ -21,6 +24,9 @@ type TopBarActionBarProps = {
 export default function TopBarActionBar({
   aiLibraryAssetCount,
   disabled = false,
+  disabledMenuIds = [],
+  saveDisabled = disabled,
+  clearDisabled = disabled,
   dropdownConfigs,
   onClearProject,
   onOpenAiLibrary,
@@ -31,6 +37,7 @@ export default function TopBarActionBar({
 }: TopBarActionBarProps) {
   const projectConfig = dropdownConfigs.find((config) => config.id === "project") ?? null;
   const actionConfigs = dropdownConfigs.filter((config) => config.id !== "project");
+  const disabledMenuIdSet = new Set(disabledMenuIds);
 
   return (
     <Stack
@@ -56,7 +63,7 @@ export default function TopBarActionBar({
         <Button
           size="small"
           color="inherit"
-          disabled={disabled}
+          disabled={disabled || disabledMenuIdSet.has(projectConfig.id)}
           startIcon={<projectConfig.icon />}
           endIcon={<KeyboardArrowDownRoundedIcon />}
           onClick={(event) => onOpenMenu(projectConfig.id, event.currentTarget)}
@@ -68,7 +75,7 @@ export default function TopBarActionBar({
       <Button
         size="small"
         color="inherit"
-        disabled={disabled}
+        disabled={saveDisabled}
         startIcon={<SaveRoundedIcon />}
         onClick={onSaveScene}
       >
@@ -78,7 +85,7 @@ export default function TopBarActionBar({
       <Button
         size="small"
         color="inherit"
-        disabled={disabled}
+        disabled={clearDisabled}
         startIcon={<DeleteSweepRoundedIcon />}
         onClick={onClearProject}
       >
@@ -126,7 +133,7 @@ export default function TopBarActionBar({
           key={config.id}
           size="small"
           color="inherit"
-          disabled={disabled}
+          disabled={disabled || disabledMenuIdSet.has(config.id)}
           startIcon={<config.icon />}
           endIcon={<KeyboardArrowDownRoundedIcon />}
           onClick={(event) => onOpenMenu(config.id, event.currentTarget)}
