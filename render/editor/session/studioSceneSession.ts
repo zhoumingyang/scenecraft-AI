@@ -457,10 +457,10 @@ export class StudioSceneSessionController {
     }
 
     if (role === "userLight") {
-      return action === "select" || action === "transform" || action === "light" || action === "delete" || action === "duplicate" || action === "rename" || action === "lock" || action === "visibility";
+      return action === "select" || action === "transform" || action === "light" || action === "delete" || action === "rename" || action === "lock" || action === "visibility";
     }
 
-    return true;
+    return action !== "duplicate";
   }
 
   getTransientStudioEntityRole(entityId: string) {

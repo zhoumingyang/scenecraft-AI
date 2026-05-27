@@ -387,12 +387,15 @@ export class EditorSession {
         await this.createLightPreset(command.presetId, command.source ?? "ui");
         return;
       case "model.animation.select":
+        if (this.studioScene.isActive() && !this.canUseStudioSceneEntityAction(command.entityId, "select")) return;
         this.modelAnimation.selectAnimation(command.entityId, command.animationId, command.source ?? "ui");
         return;
       case "model.animation.timeScale":
+        if (this.studioScene.isActive() && !this.canUseStudioSceneEntityAction(command.entityId, "select")) return;
         this.modelAnimation.updateTimeScale(command.entityId, command.timeScale, command.source ?? "ui");
         return;
       case "model.animation.control":
+        if (this.studioScene.isActive() && !this.canUseStudioSceneEntityAction(command.entityId, "select")) return;
         this.modelAnimation.control(command.entityId, command.action, command.source ?? "ui");
         return;
     }
@@ -425,14 +428,17 @@ export class EditorSession {
   }
 
   updateEntityTransform(entityId: string, patch: TransformPatch, source: SyncSource = "ui") {
+    if (this.studioScene.isActive() && !this.canUseStudioSceneEntityAction(entityId, "transform")) return;
     this.entityMutation.updateTransform(entityId, patch, source);
   }
 
   updateEntityLabel(entityId: string, label: string, source: SyncSource = "ui") {
+    if (this.studioScene.isActive() && !this.canUseStudioSceneEntityAction(entityId, "rename")) return;
     this.entityMutation.updateLabel(entityId, label, source);
   }
 
   updateCamera(update: Partial<EditorCameraJSON>, source: SyncSource = "ui") {
+    if (this.studioScene.isActive()) return;
     this.sceneEnvironment.updateCamera(update, source);
   }
 
@@ -449,6 +455,7 @@ export class EditorSession {
     patch: MeshMaterialPatch,
     source: SyncSource = "ui"
   ) {
+    if (this.studioScene.isActive() && !this.canUseStudioSceneEntityAction(entityId, "material")) return;
     const binding = this.registry.get(entityId);
     if (!binding || binding.kind !== "mesh" || binding.model.locked) return;
 
@@ -469,10 +476,12 @@ export class EditorSession {
   }
 
   updateGroundConfig(patch: Partial<EditorGroundConfigJSON>, source: SyncSource = "ui") {
+    if (this.studioScene.isActive()) return;
     this.sceneEnvironment.updateGroundConfig(patch, source);
   }
 
   updateGroundMaterial(patch: MeshMaterialPatch, source: SyncSource = "ui") {
+    if (this.studioScene.isActive()) return;
     this.sceneEnvironment.updateGroundMaterial(patch, source);
   }
 
@@ -497,6 +506,7 @@ export class EditorSession {
   }
 
   updateLight(entityId: string, patch: Partial<EditorLightJSON>, source: SyncSource = "ui") {
+    if (this.studioScene.isActive() && !this.canUseStudioSceneEntityAction(entityId, "light")) return;
     this.lightSession.updateLight(entityId, patch, source);
   }
 
@@ -620,6 +630,10 @@ export class EditorSession {
   }
 
   setSelectedEntity(entityId: string | null, source: SyncSource = "ui") {
+    if (this.studioScene.isActive() && entityId && !this.canUseStudioSceneEntityAction(entityId, "select")) {
+      return;
+    }
+
     if (entityId === GROUND_HELPER_NODE_ID) {
       if (!this.projectModel?.envConfig.ground.visible) return;
       if (this.selectedEntityId === entityId) return;
@@ -644,14 +658,17 @@ export class EditorSession {
   }
 
   removeEntity(entityId: string, source: SyncSource = "ui") {
+    if (this.studioScene.isActive() && !this.canUseStudioSceneEntityAction(entityId, "delete")) return;
     this.entityMutation.remove(entityId, source);
   }
 
   duplicateEntity(entityId: string, source: SyncSource = "ui") {
+    if (this.studioScene.isActive() && !this.canUseStudioSceneEntityAction(entityId, "duplicate")) return;
     this.entityMutation.duplicate(entityId, source);
   }
 
   setEntityLocked(entityId: string, locked: boolean, source: SyncSource = "ui") {
+    if (this.studioScene.isActive() && !this.canUseStudioSceneEntityAction(entityId, "lock")) return;
     this.entityMutation.setLocked(entityId, locked, source);
   }
 
@@ -660,6 +677,7 @@ export class EditorSession {
   }
 
   setEntityVisible(entityId: string, visible: boolean, source: SyncSource = "ui") {
+    if (this.studioScene.isActive() && !this.canUseStudioSceneEntityAction(entityId, "visibility")) return;
     this.entityIsolation.setVisible(entityId, visible, source);
   }
 
