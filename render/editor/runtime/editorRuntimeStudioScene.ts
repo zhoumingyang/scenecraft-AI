@@ -499,11 +499,11 @@ export class EditorRuntimeStudioScene {
     const wallMaterial = createMaterial(preset.wallColor, { side: THREE.DoubleSide });
     const accentMaterial = createMaterial(preset.accentColor, {
       roughness: 0.72,
-      metalness: preset.id === "darkTechStudio" ? 0.25 : 0
+      metalness: preset.id === "darkTech" ? 0.25 : 0
     });
     const plinthMaterial = createMaterial(preset.plinthColor, {
-      roughness: preset.id === "darkTechStudio" ? 0.45 : 0.68,
-      metalness: preset.id === "darkTechStudio" ? 0.15 : 0
+      roughness: preset.id === "darkTech" ? 0.45 : 0.68,
+      metalness: preset.id === "darkTech" ? 0.15 : 0
     });
 
     this.addRuntimeObject(
@@ -833,7 +833,7 @@ export class EditorRuntimeStudioScene {
     const ambient = new THREE.HemisphereLight(
       new THREE.Color(preset.keyLight.color),
       new THREE.Color(preset.floorColor),
-      preset.id === "darkTechStudio" ? 0.25 : 0.38
+      preset.id === "darkTech" ? 0.25 : 0.38
     );
     ambient.name = "studio-ambient-fill";
     this.addRuntimeObject(ambient);

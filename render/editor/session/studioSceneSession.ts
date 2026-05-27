@@ -732,8 +732,8 @@ export class StudioSceneSessionController {
         height: plinthHeight,
         position: [bounds.center.x, bounds.floorY + plinthHeight / 2, bounds.center.z],
         material: {
-          metalness: preset.id === "darkTechStudio" ? 0.15 : 0,
-          roughness: preset.id === "darkTechStudio" ? 0.45 : 0.68
+          metalness: preset.id === "darkTech" ? 0.15 : 0,
+          roughness: preset.id === "darkTech" ? 0.45 : 0.68
         }
       }),
       "plinth"
