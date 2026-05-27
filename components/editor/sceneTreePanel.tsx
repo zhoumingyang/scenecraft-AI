@@ -27,7 +27,6 @@ export default function SceneTreePanel() {
 
   useEffect(() => {
     if (isStudioSceneActive) {
-      setOpen(false);
       setEditingNodeId(null);
       setDraftLabel("");
     }
@@ -40,6 +39,7 @@ export default function SceneTreePanel() {
 
   const onSelectEntity = (entityId: string) => {
     if (!app) return;
+    if (isStudioSceneActive && !app.isStudioSceneEntityInteractive(entityId)) return;
     void app.dispatch({
       type: "selection.set",
       entityId,
@@ -48,23 +48,28 @@ export default function SceneTreePanel() {
   };
 
   const onDeleteEntity = (entityId: string) => {
+    if (isStudioSceneActive && !app?.isStudioSceneEntityInteractive(entityId)) return;
     app?.removeEntity(entityId);
   };
 
   const onDuplicateEntity = (entityId: string) => {
+    if (isStudioSceneActive && !app?.isStudioSceneEntityInteractive(entityId)) return;
     app?.duplicateEntity(entityId);
   };
 
   const onToggleLock = (entityId: string, locked: boolean) => {
+    if (isStudioSceneActive && !app?.isStudioSceneEntityInteractive(entityId)) return;
     app?.setEntityLocked(entityId, !locked);
   };
 
   const onToggleVisible = (entityId: string, visible: boolean) => {
+    if (isStudioSceneActive && !app?.isStudioSceneEntityInteractive(entityId)) return;
     app?.setEntityVisible(entityId, !visible);
   };
 
   const startRenaming = (node: SceneTreeNode) => {
     if (node.type === "scene" || node.type === "gridHelper") return;
+    if (isStudioSceneActive && !app?.isStudioSceneEntityInteractive(node.id)) return;
     setEditingNodeId(node.id);
     setDraftLabel(node.label);
   };
@@ -79,6 +84,12 @@ export default function SceneTreePanel() {
     const nextLabel = draftLabel.trim() || node.fallbackLabel;
     app?.updateEntityLabel(node.id, nextLabel);
     stopRenaming();
+  };
+
+  const isNodeInteractive = (node: SceneTreeNode) => {
+    if (!isStudioSceneActive) return true;
+    if (node.type === "scene" || node.type === "gridHelper") return false;
+    return app?.isStudioSceneEntityInteractive(node.id) ?? false;
   };
 
   return (
@@ -131,6 +142,7 @@ export default function SceneTreePanel() {
                 onStartRenaming={startRenaming}
                 onStopRenaming={stopRenaming}
                 onSubmitRenaming={submitRenaming}
+                isNodeInteractive={isNodeInteractive}
               />
             ))}
           </Stack>
@@ -143,7 +155,6 @@ export default function SceneTreePanel() {
         startIcon={<AccountTreeRoundedIcon />}
         endIcon={open ? <KeyboardArrowDownRoundedIcon /> : <KeyboardArrowUpRoundedIcon />}
         onClick={() => setOpen((value) => !value)}
-        disabled={isStudioSceneActive}
         sx={{
           position: "absolute",
           left: 20,
@@ -155,11 +166,6 @@ export default function SceneTreePanel() {
           backdropFilter: "blur(10px)",
           boxShadow: theme.pillShadow,
           color: theme.pillText,
-          "&.Mui-disabled": {
-            color: theme.mutedText,
-            background: theme.itemBg,
-            opacity: 0.58
-          }
         }}
       >
         {t("editor.sceneTree.button")}

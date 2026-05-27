@@ -25,6 +25,7 @@ type SceneTreePanelSectionProps = {
   onStartRenaming: (node: SceneTreeNode) => void;
   onStopRenaming: () => void;
   onSubmitRenaming: (node: SceneTreeNode) => void;
+  isNodeInteractive?: (node: SceneTreeNode) => boolean;
 };
 
 export default function SceneTreePanelSection({
@@ -42,7 +43,8 @@ export default function SceneTreePanelSection({
   onToggleVisible,
   onStartRenaming,
   onStopRenaming,
-  onSubmitRenaming
+  onSubmitRenaming,
+  isNodeInteractive
 }: SceneTreePanelSectionProps) {
   const [open, setOpen] = useState(true);
   const [collapsedNodeIds, setCollapsedNodeIds] = useState<Set<string>>(() => new Set());
@@ -119,6 +121,7 @@ export default function SceneTreePanelSection({
 
   const renderNode = (node: SceneTreeNode, depth = 0): ReactNode => {
     const expanded = !collapsedNodeIds.has(node.id);
+    const interactive = isNodeInteractive ? isNodeInteractive(node) : true;
 
     return (
       <Stack key={node.id} spacing={0.5}>
@@ -131,6 +134,7 @@ export default function SceneTreePanelSection({
           isEditing={editingNodeId === node.id}
           draftLabel={draftLabel}
           theme={theme}
+          interactive={interactive}
           onDraftLabelChange={onDraftLabelChange}
           onSelectEntity={onSelectEntity}
           onDeleteEntity={onDeleteEntity}

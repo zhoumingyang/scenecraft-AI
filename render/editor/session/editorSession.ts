@@ -257,6 +257,10 @@ export class EditorSession {
     return this.studioScene.getState();
   }
 
+  isStudioSceneEntityInteractive(entityId: string) {
+    return this.studioScene.isStudioSceneEntityInteractive(entityId);
+  }
+
   getRenderObject(entityId: string) {
     return this.registry.getObject(entityId);
   }
@@ -567,6 +571,9 @@ export class EditorSession {
     }
 
     if (entityId && entityId !== SCENE_SELECTION_ID) {
+      if (this.studioScene.isActive() && !this.studioScene.isStudioSceneEntityInteractive(entityId)) {
+        return;
+      }
       const binding = this.registry.get(entityId);
       if (!binding || binding.model.locked || !this.projectModel?.isEntityEffectivelyVisible(entityId)) return;
     }

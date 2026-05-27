@@ -19,6 +19,7 @@ type SceneTreePanelRowProps = {
   isEditing: boolean;
   draftLabel: string;
   theme: ReturnType<typeof getEditorThemeTokens>;
+  interactive?: boolean;
   depth?: number;
   expanded?: boolean;
   onToggleExpand?: (nodeId: string) => void;
@@ -39,6 +40,7 @@ export default function SceneTreePanelRow({
   isEditing,
   draftLabel,
   theme,
+  interactive = true,
   depth = 0,
   expanded = true,
   onToggleExpand,
@@ -52,14 +54,17 @@ export default function SceneTreePanelRow({
   onStopRenaming,
   onSubmitRenaming
 }: SceneTreePanelRowProps) {
-  const selectionDisabled = node.type !== "scene" && (!node.effectivelyVisible || node.locked);
+  const selectionDisabled =
+    !interactive || (node.type !== "scene" && (!node.effectivelyVisible || node.locked));
   const isGridHelper = node.type === "gridHelper";
-  const lockDisabled = node.type === "scene" || isGridHelper || !node.effectivelyVisible;
-  const canToggleVisible = node.type !== "light" && node.type !== "scene" && !isGridHelper;
-  const canDuplicate = node.type !== "scene" && !isGridHelper && !node.locked && node.effectivelyVisible;
-  const canDelete = node.type !== "scene" && !isGridHelper && !node.locked && node.effectivelyVisible;
+  const lockDisabled = !interactive || node.type === "scene" || isGridHelper || !node.effectivelyVisible;
+  const canToggleVisible = interactive && node.type !== "light" && node.type !== "scene" && !isGridHelper;
+  const canDuplicate =
+    interactive && node.type !== "scene" && !isGridHelper && !node.locked && node.effectivelyVisible;
+  const canDelete =
+    interactive && node.type !== "scene" && !isGridHelper && !node.locked && node.effectivelyVisible;
   const canToggleLock = !lockDisabled;
-  const rowColor = node.locked ? theme.mutedText : selected ? theme.pillText : theme.text;
+  const rowColor = !interactive || node.locked ? theme.mutedText : selected ? theme.pillText : theme.text;
   const canExpand = node.children.length > 0;
 
   const iconButtonSx = {
@@ -86,7 +91,7 @@ export default function SceneTreePanelRow({
         borderRadius: 1.6,
         border: selected ? theme.itemSelectedBorder : "1px solid transparent",
         background: selected ? theme.itemSelectedBg : theme.itemBg,
-        opacity: node.effectivelyVisible ? 1 : 0.6,
+        opacity: interactive && node.effectivelyVisible ? 1 : 0.5,
         cursor: selectionDisabled ? "default" : "pointer"
       }}
       onClick={() => {
@@ -176,6 +181,7 @@ export default function SceneTreePanelRow({
             onDoubleClick={(event) => {
               event.stopPropagation();
               if (isGridHelper) return;
+              if (!interactive) return;
               onStartRenaming(node);
             }}
             sx={{

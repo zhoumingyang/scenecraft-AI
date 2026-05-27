@@ -173,6 +173,10 @@ export class EditorApp {
     return this.session.getStudioSceneState();
   }
 
+  isStudioSceneEntityInteractive(entityId: string) {
+    return this.session.isStudioSceneEntityInteractive(entityId);
+  }
+
   getRenderObject(entityId: string): THREE.Object3D | null {
     return this.session.getRenderObject(entityId);
   }

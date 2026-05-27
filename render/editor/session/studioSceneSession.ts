@@ -70,6 +70,7 @@ type ActiveStudioSceneSession = {
   targetTransformSnapshot: StudioTargetTransformSnapshot;
   targetFrame: StudioTargetFrame;
   defaultTargetScale: number;
+  visibleOriginalEntityIds: Set<string>;
   transientEntityIds: Set<string>;
   transientRootGroupId: string | null;
   transientEntityRoles: Map<string, StudioTransientEntityRole>;
@@ -393,6 +394,12 @@ export class StudioSceneSessionController {
     return this.activeSession?.transientEntityIds.has(entityId) ?? false;
   }
 
+  isStudioSceneEntityInteractive(entityId: string) {
+    const session = this.activeSession;
+    if (!session) return true;
+    return session.transientEntityIds.has(entityId) || session.visibleOriginalEntityIds.has(entityId);
+  }
+
   getTransientStudioEntityRole(entityId: string) {
     return this.activeSession?.transientEntityRoles.get(entityId) ?? null;
   }
@@ -500,6 +507,7 @@ export class StudioSceneSessionController {
       targetTransformSnapshot,
       targetFrame,
       defaultTargetScale,
+      visibleOriginalEntityIds: keepVisibleIds,
       transientEntityIds: new Set(),
       transientRootGroupId: null,
       transientEntityRoles: new Map()
