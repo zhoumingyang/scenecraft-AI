@@ -55,7 +55,16 @@ export type StudioTransientEntityRole =
   | "backWall"
   | "sideWall"
   | "plinth"
-  | "light";
+  | "light"
+  | "userMesh"
+  | "userLight"
+  | "userLightGroup"
+  | "userModel";
+
+type StudioTransientAdoptOptions = {
+  childRole?: StudioTransientEntityRole;
+  attachToRoot?: boolean;
+};
 
 type ActiveStudioSceneSession = {
   targetEntityId: string;
@@ -408,6 +417,43 @@ export class StudioSceneSessionController {
     return this.activeSession ? Array.from(this.activeSession.transientEntityIds) : [];
   }
 
+  adoptTransientStudioEntity(
+    entityId: string,
+    role: StudioTransientEntityRole,
+    options: StudioTransientAdoptOptions = {}
+  ) {
+    const session = this.activeSession;
+    const projectModel = this.getProjectModel();
+    if (!session || !projectModel) return false;
+
+    const record = projectModel.getEntityById(entityId);
+    if (!record) return false;
+
+    const attachToRoot = options.attachToRoot ?? role !== "root";
+    if (attachToRoot && session.transientRootGroupId && entityId !== session.transientRootGroupId) {
+      projectModel.groups.forEach((group) => {
+        group.children = group.children.filter((childId) => childId !== entityId);
+      });
+      const rootGroup = projectModel.groups.get(session.transientRootGroupId);
+      if (rootGroup && !rootGroup.children.includes(entityId)) {
+        rootGroup.children.push(entityId);
+      }
+    }
+
+    this.registerTransientEntity(session, entityId, role);
+    this.markTransientObject(entityId, role);
+
+    if (record.kind === "group") {
+      const childRole = options.childRole ?? role;
+      this.registerTransientGroupChildren(session, entityId, childRole);
+    }
+
+    this.rebuildGroupHierarchy();
+    this.runtime.syncLightHelperVisibility();
+    this.emitChanged();
+    return true;
+  }
+
   filterTransientEntitiesFromProjectJSON(projectJson: EditorProjectJSON): EditorProjectJSON {
     const session = this.activeSession;
     if (!session || session.transientEntityIds.size === 0) {
@@ -552,6 +598,7 @@ export class StudioSceneSessionController {
     });
     this.registry.create(rootGroup);
     this.registerTransientEntity(session, rootGroupId, "root");
+    this.markTransientObject(rootGroupId, "root");
     session.transientRootGroupId = rootGroupId;
 
     const addMesh = (mesh: EditorMeshJSON, role: StudioTransientEntityRole) => {
@@ -725,6 +772,29 @@ export class StudioSceneSessionController {
     binding.pickTargets?.forEach((target) => {
       target.userData.studioScene = true;
       target.userData.studioSceneRole = role;
+    });
+  }
+
+  private registerTransientGroupChildren(
+    session: ActiveStudioSceneSession,
+    groupId: string,
+    role: StudioTransientEntityRole
+  ) {
+    const projectModel = this.getProjectModel();
+    if (!projectModel) return;
+
+    projectModel.listDirectChildren(groupId).forEach((childId) => {
+      const childRecord = projectModel.getEntityById(childId);
+      if (!childRecord) return;
+
+      const childRole =
+        childRecord.kind === "light" && role === "userLightGroup" ? "userLight" : role;
+      this.registerTransientEntity(session, childId, childRole);
+      this.markTransientObject(childId, childRole);
+
+      if (childRecord.kind === "group") {
+        this.registerTransientGroupChildren(session, childId, childRole);
+      }
     });
   }
 
