@@ -10,10 +10,12 @@ import {
   STUDIO_SCENE_PRESETS,
   STUDIO_SCENE_VARIANT_IDS,
   STUDIO_SCENE_VARIANTS,
+  type StudioProductMaterial,
+  type StudioProductType,
   type StudioScenePresetId,
   type StudioSceneVariantId
 } from "@/render/editor";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, type TranslationKey } from "@/lib/i18n";
 import { useEditorStore } from "@/stores/editorStore";
 import { getEditorThemeTokens } from "@/components/editor/theme";
 
@@ -24,6 +26,33 @@ function formatScale(value: number) {
 function formatDegrees(value: number) {
   return `${Math.round(value)}°`;
 }
+
+const productLabelKeys: Record<StudioProductType, TranslationKey> = {
+  generic: "editor.studioScene.product.generic",
+  tech: "editor.studioScene.product.tech",
+  beauty: "editor.studioScene.product.beauty",
+  jewelry: "editor.studioScene.product.jewelry",
+  fashion: "editor.studioScene.product.fashion",
+  footwear: "editor.studioScene.product.footwear",
+  food: "editor.studioScene.product.food",
+  home: "editor.studioScene.product.home",
+  furniture: "editor.studioScene.product.furniture",
+  toy: "editor.studioScene.product.toy"
+};
+
+const materialLabelKeys: Record<StudioProductMaterial, TranslationKey> = {
+  unknown: "editor.studioScene.material.unknown",
+  matte: "editor.studioScene.material.matte",
+  glossy: "editor.studioScene.material.glossy",
+  metallic: "editor.studioScene.material.metallic",
+  glass: "editor.studioScene.material.glass",
+  plastic: "editor.studioScene.material.plastic",
+  fabric: "editor.studioScene.material.fabric",
+  leather: "editor.studioScene.material.leather",
+  ceramic: "editor.studioScene.material.ceramic",
+  wood: "editor.studioScene.material.wood",
+  mixed: "editor.studioScene.material.mixed"
+};
 
 export default function StudioSceneControls() {
   const { t } = useI18n();
@@ -37,6 +66,7 @@ export default function StudioSceneControls() {
   }
 
   const activeVariantId = studioScene.variantId ?? DEFAULT_STUDIO_SCENE_VARIANT_ID;
+  const productProfile = studioScene.productProfile;
   const rotationDegrees = THREE_RAD_TO_DEG * studioScene.targetRotationY;
   const hdriLabel =
     studioScene.hdriStatus === "ready"
@@ -54,7 +84,7 @@ export default function StudioSceneControls() {
         left: "50%",
         bottom: 20,
         zIndex: 24,
-        width: "min(560px, calc(100vw - 28px))",
+        width: "min(680px, calc(100vw - 28px))",
         transform: "translateX(-50%)",
         pointerEvents: "auto",
         borderRadius: 2,
@@ -71,6 +101,20 @@ export default function StudioSceneControls() {
           <Typography sx={{ flex: 1, fontSize: 13, fontWeight: 700, color: theme.pillText }}>
             {t("editor.studioScene.title")}
           </Typography>
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<RestartAltRoundedIcon />}
+            onClick={() => app?.autoMatchStudioSceneStyle()}
+            sx={{
+              minWidth: 0,
+              px: 1,
+              color: theme.pillText,
+              borderColor: "rgba(150,190,255,0.34)"
+            }}
+          >
+            {t("editor.studioScene.autoMatch")}
+          </Button>
           <Button
             size="small"
             variant="outlined"
@@ -95,6 +139,72 @@ export default function StudioSceneControls() {
             {t("editor.studioScene.exit")}
           </Button>
         </Stack>
+
+        {productProfile ? (
+          <Stack
+            direction="row"
+            spacing={0.8}
+            alignItems="center"
+            sx={{
+              flexWrap: "wrap",
+              rowGap: 0.6
+            }}
+          >
+            {[
+              t(productLabelKeys[productProfile.productType]),
+              t(materialLabelKeys[productProfile.material]),
+              t(
+                studioScene.styleSelectionMode === "manual"
+                  ? "editor.studioScene.styleSource.manual"
+                  : "editor.studioScene.styleSource.auto"
+              )
+            ].map((label) => (
+              <Box
+                key={label}
+                sx={{
+                  px: 0.8,
+                  py: 0.35,
+                  borderRadius: 999,
+                  border: theme.sectionBorder,
+                  color: theme.text,
+                  background: theme.itemBg,
+                  fontSize: 11,
+                  lineHeight: 1
+                }}
+              >
+                {label}
+              </Box>
+            ))}
+            {productProfile.brandColor ? (
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 0.5,
+                  px: 0.75,
+                  py: 0.35,
+                  borderRadius: 999,
+                  border: theme.sectionBorder,
+                  color: theme.text,
+                  background: theme.itemBg,
+                  fontSize: 11,
+                  lineHeight: 1
+                }}
+              >
+                <Box
+                  sx={{
+                    width: 12,
+                    height: 12,
+                    borderRadius: 999,
+                    border: "1px solid rgba(255,255,255,0.35)",
+                    background: productProfile.brandColor
+                  }}
+                />
+                {productProfile.brandColor}
+              </Box>
+            ) : null}
+          </Stack>
+        ) : null}
 
         <Stack
           direction={{ xs: "column", sm: "row" }}
