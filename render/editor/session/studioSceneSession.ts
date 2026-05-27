@@ -595,7 +595,7 @@ export class StudioSceneSessionController {
     });
 
     this.runtime.setGridHelperVisible(false);
-    this.runtime.setTransformGizmoVisible(false);
+    this.runtime.setTransformGizmoVisible(true);
     this.runtime.setLightHelpersVisible(false);
     this.runtime.setShadowEnabled(true);
 
