@@ -31,6 +31,11 @@ import {
   type StudioSceneStyleSelectionMode
 } from "../studioSceneProfiles";
 import { mergeEditorPostProcessingConfig } from "../postProcessing";
+import {
+  createStudioBackgroundDescriptors,
+  type StudioLayoutBounds,
+  type StudioLayoutMeshDescriptor
+} from "../studioSceneLayoutGenerator";
 
 type StudioObjectVisibilitySnapshot = Array<{
   entityId: string;
@@ -171,7 +176,6 @@ const STUDIO_TARGET_MAX_HEIGHT = 1.8;
 const STUDIO_TARGET_MIN_SCALE = 0.2;
 const STUDIO_TARGET_MAX_SCALE = 3;
 const MIN_STUDIO_FRAME_RADIUS = 1.2;
-const STUDIO_WALL_HEIGHT_MULTIPLIER = 2.4;
 const STUDIO_PLINTH_BASE_RADIUS = 0.7;
 const STUDIO_PLINTH_BASE_HEIGHT = 1.4;
 
@@ -279,55 +283,48 @@ function createStudioMaterialFromSurface(surface: PbrSurfaceConfig): EditorMeshM
   });
 }
 
-function createStudioRoomBounds(
-  preset: ReturnType<typeof getStudioScenePreset>,
-  frame: StudioTargetFrame
-): StudioRoomBounds {
-  const radius = Math.max(frame.radius, MIN_STUDIO_FRAME_RADIUS);
-  const width = radius * preset.layout.background.widthMultiplier;
-  const depth = radius * preset.layout.background.depthMultiplier;
-  const wallHeight = Math.max(
-    frame.height * STUDIO_WALL_HEIGHT_MULTIPLIER,
-    radius * preset.layout.background.heightMultiplier
-  );
-  const floorY = frame.floorY - preset.targetLift * radius;
-  const center = frame.center.clone();
-
+function createStudioRoomBounds(bounds: StudioLayoutBounds): StudioRoomBounds {
+  const center = new THREE.Vector3(bounds.center[0], bounds.center[1], bounds.center[2]);
   return {
     center,
-    radius,
-    width,
-    depth,
-    wallHeight,
-    floorY,
-    leftX: center.x - width * 0.48,
-    rightX: center.x + width * 0.48,
-    backZ: center.z - depth * 0.48
+    radius: Math.max(bounds.radius, MIN_STUDIO_FRAME_RADIUS),
+    width: bounds.width,
+    depth: bounds.depth,
+    wallHeight: bounds.wallHeight,
+    floorY: bounds.floorY,
+    leftX: bounds.leftX,
+    rightX: bounds.rightX,
+    backZ: bounds.backZ
   };
 }
 
-function createBoxStudioMesh(input: {
+function createStudioMeshFromDescriptor(input: {
   id: string;
-  label: string;
-  color: string;
-  position: Vec3Tuple;
-  scale: Vec3Tuple;
-  material?: Partial<EditorMeshMaterialJSON>;
+  descriptor: StudioLayoutMeshDescriptor;
 }): EditorMeshJSON {
+  const material: EditorMeshMaterialJSON = {
+    color: input.descriptor.material.color,
+    opacity: input.descriptor.material.opacity,
+    metalness: input.descriptor.material.metalness,
+    roughness: input.descriptor.material.roughness,
+    emissive: input.descriptor.material.emissive,
+    emissiveIntensity: input.descriptor.material.emissiveIntensity
+  };
   return {
     id: input.id,
-    label: input.label,
-    type: 1,
-    geometryName: "Box",
-    material: {
-      ...createStudioMaterial(input.color),
-      ...input.material
-    },
-    position: input.position,
-    quaternion: [0, 0, 0, 1],
-    scale: input.scale,
-    visible: true,
-    locked: false
+    label: input.descriptor.label,
+    ...(input.descriptor.geometry.mode === "custom"
+      ? input.descriptor.geometry.geometry
+      : {
+          type: 1,
+          geometryName: input.descriptor.geometry.geometryName
+        }),
+    material,
+    position: input.descriptor.position,
+    quaternion: input.descriptor.quaternion,
+    scale: input.descriptor.scale,
+    visible: input.descriptor.visible,
+    locked: input.descriptor.locked
   };
 }
 
@@ -483,7 +480,7 @@ export class StudioSceneSessionController {
       return action === "select" || action === "transform" || action === "material" || action === "rename" || action === "lock";
     }
 
-    if (role === "floor" || role === "backWall" || role === "sideWall") {
+    if (role === "floor" || role === "backWall" || role === "sideWall" || role === "cove" || role === "background") {
       return action === "select" || action === "transform" || action === "material" || action === "rename" || action === "lock" || action === "visibility";
     }
 
@@ -686,13 +683,25 @@ export class StudioSceneSessionController {
     const projectModel = this.getProjectModel();
     if (!projectModel) return;
 
-    const bounds = createStudioRoomBounds(preset, frame);
+    const styleProfile = resolveStudioSceneStyleProfile(session.productProfile, session.presetId);
+    const backgroundLayout = createStudioBackgroundDescriptors({
+      styleProfile,
+      variantId: session.variantId,
+      productProfile: session.productProfile,
+      targetFrame: {
+        center: [frame.center.x, frame.center.y, frame.center.z],
+        radius: frame.radius,
+        footprintRadius: frame.footprintRadius,
+        height: frame.height,
+        floorY: frame.floorY
+      }
+    });
+    const bounds = createStudioRoomBounds(backgroundLayout.bounds);
     const plinthHeight = Math.max(bounds.radius * preset.layout.plinth.heightRatio, 0.18);
     const plinthRadius = Math.max(
       frame.footprintRadius * preset.layout.plinth.fitPaddingRatio,
       preset.layout.plinth.minRadius
     );
-    const wallThickness = Math.max(bounds.radius * 0.04, 0.05);
     const rootGroupId = createStudioEntityId("root");
     const rootGroup = projectModel.addGroup({
       id: rootGroupId,
@@ -727,50 +736,15 @@ export class StudioSceneSessionController {
       return binding;
     };
 
-    addMesh(
-      createBoxStudioMesh({
-        id: createStudioEntityId("floor"),
-        label: "Studio Floor",
-        color: preset.materials.surfaces.floor.color,
-        position: [bounds.center.x, bounds.floorY - wallThickness / 2, bounds.center.z],
-        scale: [bounds.width, wallThickness, bounds.depth],
-        material: createStudioMaterialFromSurface(preset.materials.surfaces.floor)
-      }),
-      "floor"
-    );
-    addMesh(
-      createBoxStudioMesh({
-        id: createStudioEntityId("back-wall"),
-        label: "Studio Back Wall",
-        color: preset.materials.surfaces.wall.color,
-        position: [bounds.center.x, bounds.floorY + bounds.wallHeight / 2, bounds.backZ],
-        scale: [bounds.width, bounds.wallHeight, wallThickness],
-        material: createStudioMaterialFromSurface(preset.materials.surfaces.wall)
-      }),
-      "backWall"
-    );
-    addMesh(
-      createBoxStudioMesh({
-        id: createStudioEntityId("left-wall"),
-        label: "Studio Left Wall",
-        color: preset.materials.surfaces.wall.color,
-        position: [bounds.leftX, bounds.floorY + bounds.wallHeight / 2, bounds.center.z],
-        scale: [wallThickness, bounds.wallHeight, bounds.depth],
-        material: createStudioMaterialFromSurface(preset.materials.surfaces.wall)
-      }),
-      "sideWall"
-    );
-    addMesh(
-      createBoxStudioMesh({
-        id: createStudioEntityId("right-wall"),
-        label: "Studio Right Wall",
-        color: preset.materials.surfaces.wall.color,
-        position: [bounds.rightX, bounds.floorY + bounds.wallHeight / 2, bounds.center.z],
-        scale: [wallThickness, bounds.wallHeight, bounds.depth],
-        material: createStudioMaterialFromSurface(preset.materials.surfaces.wall)
-      }),
-      "sideWall"
-    );
+    backgroundLayout.descriptors.forEach((descriptor) => {
+      addMesh(
+        createStudioMeshFromDescriptor({
+          id: createStudioEntityId(descriptor.subRole),
+          descriptor
+        }),
+        descriptor.role
+      );
+    });
     addMesh(
       createPlinthMesh({
         id: createStudioEntityId("plinth"),

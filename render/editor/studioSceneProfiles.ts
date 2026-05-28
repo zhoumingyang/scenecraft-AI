@@ -348,7 +348,7 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<StudioSceneStyleProfileId, Stud
       materials: ["unknown", "matte", "plastic", "ceramic"],
       brandColorUsage: "accent"
     },
-    layout: defaultLayout("minimalBox", "cylinder", { widthMultiplier: 7, depthMultiplier: 6.5, heightMultiplier: 2.4 }, { fitPaddingRatio: 1.16, minRadius: 0.72, heightRatio: 0.32, clearance: 0.325 }),
+    layout: defaultLayout("coveStudio", "cylinder", { widthMultiplier: 7, depthMultiplier: 6.5, heightMultiplier: 2.4 }, { fitPaddingRatio: 1.16, minRadius: 0.72, heightRatio: 0.32, clearance: 0.325 }),
     materials: {
       palette: {
         background: "#f8f7f3",
