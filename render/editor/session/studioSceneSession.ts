@@ -32,6 +32,7 @@ import {
 import { mergeEditorPostProcessingConfig } from "../postProcessing";
 import {
   createStudioBackgroundDescriptors,
+  createStudioDecorationDescriptors,
   createStudioPlinthDescriptors,
   resolveStudioPlinthKind,
   type StudioLayoutBounds,
@@ -429,6 +430,10 @@ export class StudioSceneSessionController {
       return action === "select" || action === "transform" || action === "material" || action === "rename" || action === "lock";
     }
 
+    if (role === "decoration") {
+      return action === "select" || action === "transform" || action === "material" || action === "delete" || action === "rename" || action === "lock" || action === "visibility";
+    }
+
     if (role === "floor" || role === "backWall" || role === "sideWall" || role === "cove" || role === "background") {
       return action === "select" || action === "transform" || action === "material" || action === "rename" || action === "lock" || action === "visibility";
     }
@@ -692,7 +697,7 @@ export class StudioSceneSessionController {
         descriptor.role
       );
     });
-    createStudioPlinthDescriptors({
+    const plinthLayout = createStudioPlinthDescriptors({
       styleProfile,
       variantId: session.variantId,
       targetFrame: {
@@ -704,13 +709,36 @@ export class StudioSceneSessionController {
       },
       bounds: backgroundLayout.bounds,
       plinthKind: session.plinthKind
-    }).descriptors.forEach((descriptor) => {
+    });
+    plinthLayout.descriptors.forEach((descriptor) => {
       addMesh(
         createStudioMeshFromDescriptor({
           id: createStudioEntityId(descriptor.resetKey),
           descriptor
         }),
         "plinth"
+      );
+    });
+    createStudioDecorationDescriptors({
+      styleProfile,
+      variantId: session.variantId,
+      productProfile: session.productProfile,
+      targetFrame: {
+        center: [frame.center.x, frame.center.y, frame.center.z],
+        radius: frame.radius,
+        footprintRadius: frame.footprintRadius,
+        height: frame.height,
+        floorY: frame.floorY
+      },
+      bounds: backgroundLayout.bounds,
+      plinthTopY: plinthLayout.topY
+    }).forEach((descriptor) => {
+      addMesh(
+        createStudioMeshFromDescriptor({
+          id: createStudioEntityId(descriptor.resetKey),
+          descriptor
+        }),
+        "decoration"
       );
     });
 
