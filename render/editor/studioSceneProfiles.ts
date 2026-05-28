@@ -968,7 +968,7 @@ function inferBrandColor(samples: MaterialSample[]) {
   return color ? `#${new THREE.Color(color).getHexString()}` : null;
 }
 
-export function inferStudioProductProfile(
+export function suggestStudioProductProfile(
   projectModel: EditorProjectModel,
   registry: BindingRegistry,
   targetEntityId: string
@@ -986,3 +986,5 @@ export function inferStudioProductProfile(
     brandColor: inferBrandColor(input.samples)
   };
 }
+
+export const inferStudioProductProfile = suggestStudioProductProfile;

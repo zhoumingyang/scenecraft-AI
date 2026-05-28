@@ -58,7 +58,8 @@ export {
   STUDIO_SCENE_STYLE_PROFILE_IDS,
   STUDIO_SCENE_STYLE_PROFILES,
   getStudioSceneStyleProfile,
-  isStudioSceneStyleProfileId
+  isStudioSceneStyleProfileId,
+  suggestStudioProductProfile
 } from "./studioSceneProfiles";
 export type {
   PbrSurfaceConfig,
@@ -74,6 +75,7 @@ export type {
   StudioSceneStyleProfileId,
   StudioSceneStyleSelectionMode
 } from "./studioSceneProfiles";
+export type { StudioSceneEnterOptions } from "./session/studioSceneSession";
 export {
   createPbrAtlasMaterialPatch,
   PBR_ATLAS_FIELDS,

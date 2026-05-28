@@ -24,7 +24,6 @@ import {
 import { isStudioScenePreviewEntity } from "../studioSceneEligibility";
 import {
   createStudioEnvPatchFromStyleProfile,
-  inferStudioProductProfile,
   resolveStudioSceneStyleProfile,
   type PbrSurfaceConfig,
   type StudioProductProfile,
@@ -75,6 +74,11 @@ type StudioTransientAdoptOptions = {
   childRole?: StudioTransientEntityRole;
   attachToRoot?: boolean;
   placeAtSpawn?: boolean;
+};
+
+export type StudioSceneEnterOptions = {
+  productProfile: StudioProductProfile;
+  styleProfileId?: StudioScenePresetId | null;
 };
 
 export type StudioSceneEntityAction =
@@ -582,7 +586,7 @@ export class StudioSceneSessionController {
 
   async enter(
     entityId: string,
-    presetId: StudioScenePresetId | null = null,
+    options: StudioSceneEnterOptions,
     source: SyncSource = "ui"
   ) {
     const projectModel = this.getProjectModel();
@@ -607,8 +611,8 @@ export class StudioSceneSessionController {
       this.clearEntityIsolation(source);
     }
 
-    const productProfile = inferStudioProductProfile(projectModel, this.registry, entityId);
-    const styleProfile = resolveStudioSceneStyleProfile(productProfile, presetId);
+    const productProfile = options.productProfile;
+    const styleProfile = resolveStudioSceneStyleProfile(productProfile, options.styleProfileId ?? null);
     const resolvedPresetId = styleProfile.id;
     const preset = getStudioScenePreset(resolvedPresetId);
     const objectVisibilitySnapshot = this.captureObjectVisibilitySnapshot();
@@ -638,7 +642,7 @@ export class StudioSceneSessionController {
       variantId: DEFAULT_STUDIO_SCENE_VARIANT_ID,
       productProfile,
       styleProfileId: resolvedPresetId,
-      styleSelectionMode: presetId ? "manual" : "auto",
+      styleSelectionMode: options.styleProfileId ? "manual" : "auto",
       targetScale: defaultTargetScale,
       targetRotationY: 0,
       hdriStatus: "idle",
@@ -1010,18 +1014,15 @@ export class StudioSceneSessionController {
   autoMatchStyle() {
     const session = this.activeSession;
     if (!session) return;
-    const projectModel = this.getProjectModel();
     const binding = this.registry.get(session.targetEntityId);
-    if (!projectModel || !binding) {
+    if (!binding) {
       this.exit("ui");
       return;
     }
 
-    const productProfile = inferStudioProductProfile(projectModel, this.registry, session.targetEntityId);
-    const styleProfile = resolveStudioSceneStyleProfile(productProfile);
+    const styleProfile = resolveStudioSceneStyleProfile(session.productProfile);
     const preset = getStudioScenePreset(styleProfile.id);
 
-    session.productProfile = productProfile;
     session.presetId = styleProfile.id;
     session.styleProfileId = styleProfile.id;
     session.styleSelectionMode = "auto";

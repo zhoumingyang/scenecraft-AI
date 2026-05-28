@@ -24,7 +24,7 @@ import { EditorSession } from "./session/editorSession";
 import { PICK_POINTER_MOVE_THRESHOLD_PX } from "./constants/input";
 import { SCENE_NODE_ID as SCENE_SELECTION_ID } from "./constants/scene";
 import type { StudioScenePresetId, StudioSceneVariantId } from "./studioScenes";
-import type { StudioSceneEntityAction } from "./session/studioSceneSession";
+import type { StudioSceneEntityAction, StudioSceneEnterOptions } from "./session/studioSceneSession";
 
 export type EditorMeshListItem = {
   id: string;
@@ -373,10 +373,14 @@ export class EditorApp {
 
   async enterStudioScene(
     entityId: string,
-    presetId?: StudioScenePresetId | null,
+    options: StudioSceneEnterOptions,
     source: SyncSource = "ui"
   ) {
-    return this.session.enterStudioScene(entityId, presetId, source);
+    return this.session.enterStudioScene(entityId, options, source);
+  }
+
+  suggestStudioProductProfile(entityId: string) {
+    return this.session.suggestStudioProductProfile(entityId);
   }
 
   setStudioScenePreset(presetId: StudioScenePresetId) {

@@ -39,8 +39,10 @@ import { SceneEnvironmentSessionController } from "./sceneEnvironmentSession";
 import {
   StudioSceneSessionController,
   type StudioSceneEntityAction,
+  type StudioSceneEnterOptions,
   type StudioTransientEntityRole
 } from "./studioSceneSession";
+import { suggestStudioProductProfile } from "../studioSceneProfiles";
 
 type Emit = (event: EditorAppEvent) => void;
 
@@ -297,10 +299,15 @@ export class EditorSession {
 
   async enterStudioScene(
     entityId: string,
-    presetId: StudioScenePresetId | null = null,
+    options: StudioSceneEnterOptions,
     source: SyncSource = "ui"
   ) {
-    return this.studioScene.enter(entityId, presetId, source);
+    return this.studioScene.enter(entityId, options, source);
+  }
+
+  suggestStudioProductProfile(entityId: string) {
+    if (!this.projectModel) return null;
+    return suggestStudioProductProfile(this.projectModel, this.registry, entityId);
   }
 
   setStudioScenePreset(presetId: StudioScenePresetId) {

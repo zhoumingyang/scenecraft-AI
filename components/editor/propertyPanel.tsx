@@ -33,8 +33,10 @@ import {
 } from "@/components/editor/propertyPanelSections";
 import AiImagePropertyPanel from "@/components/editor/aiImagePropertyPanel";
 import ProjectAiLibraryDialog from "@/components/editor/projectAiLibraryDialog";
+import StudioSceneEntryDialog from "@/components/editor/studioSceneEntryDialog";
 import { getLightTypeLabel, getTextureDialogTitle } from "@/components/editor/propertyPanelSections/util";
 import { getEditorThemeTokens } from "@/components/editor/theme";
+import type { StudioProductProfile } from "@/render/editor";
 
 const PANEL_WIDTH = 272;
 const COLLAPSED_VISIBLE_WIDTH = 44;
@@ -65,6 +67,8 @@ export default function PropertyPanel() {
   const [activeTextureField, setActiveTextureField] = useState<TextureFieldKey | null>(null);
   const [materialLibraryOpen, setMaterialLibraryOpen] = useState(false);
   const [aiLibraryOpen, setAiLibraryOpen] = useState(false);
+  const [studioEntryTargetId, setStudioEntryTargetId] = useState<string | null>(null);
+  const [studioEntryProfile, setStudioEntryProfile] = useState<StudioProductProfile | null>(null);
   const theme = getEditorThemeTokens(editorThemeMode);
   const isPolyhavenEnabled = isPolyhavenProviderEnabled();
 
@@ -396,7 +400,9 @@ export default function PropertyPanel() {
                           <IconButton
                             size="small"
                             onClick={() => {
-                              void app?.enterStudioScene(currentIsolatableEntityId);
+                              if (!app || !currentIsolatableEntityId) return;
+                              setStudioEntryTargetId(currentIsolatableEntityId);
+                              setStudioEntryProfile(app.suggestStudioProductProfile(currentIsolatableEntityId));
                             }}
                             sx={{
                               color: isCurrentEntityInStudio ? theme.pillText : theme.mutedText,
@@ -535,6 +541,21 @@ export default function PropertyPanel() {
           allowedKinds={entityRecord?.kind === "scene" ? ["panorama"] : undefined}
           onClose={() => setAiLibraryOpen(false)}
           onApplyPanorama={handleApplyPanorama}
+        />
+        <StudioSceneEntryDialog
+          open={Boolean(studioEntryTargetId)}
+          initialProfile={studioEntryProfile}
+          onClose={() => {
+            setStudioEntryTargetId(null);
+            setStudioEntryProfile(null);
+          }}
+          onConfirm={(productProfile) => {
+            if (app && studioEntryTargetId) {
+              void app.enterStudioScene(studioEntryTargetId, { productProfile });
+            }
+            setStudioEntryTargetId(null);
+            setStudioEntryProfile(null);
+          }}
         />
       </Box>
     </Box>
