@@ -60,10 +60,14 @@ type StudioTargetFrame = {
 
 export type StudioTransientEntityRole =
   | "root"
+  | "layoutGroup"
+  | "background"
+  | "cove"
   | "floor"
   | "backWall"
   | "sideWall"
   | "plinth"
+  | "decoration"
   | "light"
   | "userMesh"
   | "userLight"
