@@ -25,6 +25,7 @@ import { PICK_POINTER_MOVE_THRESHOLD_PX } from "./constants/input";
 import { SCENE_NODE_ID as SCENE_SELECTION_ID } from "./constants/scene";
 import type { StudioScenePresetId, StudioSceneVariantId } from "./studioScenes";
 import type { StudioSceneEntityAction, StudioSceneEnterOptions } from "./session/studioSceneSession";
+import type { StudioDecorationKind, StudioPlinthKind } from "./studioSceneLayoutGenerator";
 
 export type EditorMeshListItem = {
   id: string;
@@ -389,6 +390,26 @@ export class EditorApp {
 
   autoMatchStudioSceneStyle() {
     this.session.autoMatchStudioSceneStyle();
+  }
+
+  getTransientStudioEntityRole(entityId: string | null) {
+    return this.session.getTransientStudioEntityRole(entityId);
+  }
+
+  setStudioScenePlinthKind(plinthKind: StudioPlinthKind) {
+    this.session.setStudioScenePlinthKind(plinthKind);
+  }
+
+  resetStudioSceneGeneratedLayout() {
+    this.session.resetStudioSceneGeneratedLayout();
+  }
+
+  addStudioSceneDecoration(kind: StudioDecorationKind) {
+    return this.session.addStudioSceneDecoration(kind);
+  }
+
+  replaceStudioSceneDecoration(entityId: string, kind: StudioDecorationKind) {
+    return this.session.replaceStudioSceneDecoration(entityId, kind);
   }
 
   setStudioSceneVariant(variantId: StudioSceneVariantId) {

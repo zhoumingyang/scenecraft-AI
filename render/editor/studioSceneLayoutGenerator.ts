@@ -525,9 +525,8 @@ export function createStudioPlinthDescriptors(input: {
   }
 
   const geometryName = kind === "cylinder" || kind === "floating" ? "Cylinder" : "Box";
-  const floatingOffset = kind === "floating" ? Math.max(input.bounds.radius * 0.12, 0.16) : 0;
   const finalHeight = kind === "floating" ? height * 0.82 : height;
-  const finalTopY = topY + floatingOffset;
+  const finalTopY = topY;
   return {
     topY: finalTopY,
     descriptors: [
@@ -666,7 +665,7 @@ function getDefaultDecorationKinds(input: StudioLayoutGeneratorInput): StudioDec
   return ["verticalPanel", "sphere"];
 }
 
-function getDecorationScale(kind: StudioDecorationKind, radius: number): Vec3Tuple {
+export function getStudioDecorationScale(kind: StudioDecorationKind, radius: number): Vec3Tuple {
   if (kind === "sphere") return [radius * 0.42, radius * 0.42, radius * 0.42];
   if (kind === "cylinder") return [radius * 0.38, radius * 0.74, radius * 0.38];
   if (kind === "ring") return [radius * 0.72, radius * 0.72, radius * 0.72];
@@ -680,11 +679,38 @@ function getDecorationScale(kind: StudioDecorationKind, radius: number): Vec3Tup
   return [radius * 0.72, radius * 0.4, radius * 0.72];
 }
 
-export function createStudioDecorationDescriptors(input: StudioLayoutGeneratorInput & {
-  bounds: StudioLayoutBounds;
-  plinthTopY: number;
-}): StudioLayoutMeshDescriptor[] {
-  const material = createStudioLayoutMaterial(input.styleProfile.materials.surfaces.decoration);
+export function createStudioDecorationDescriptorForKind(input: {
+  styleProfile: StudioSceneStyleProfile;
+  kind: StudioDecorationKind;
+  index: number;
+  position: Vec3Tuple;
+  scale: Vec3Tuple;
+}): StudioLayoutMeshDescriptor {
+  return {
+    kind: "mesh",
+    role: "decoration",
+    subRole: "decoration",
+    label: `Studio ${input.kind}`,
+    geometry: createDecorationGeometry(input.kind),
+    material: createStudioLayoutMaterial(input.styleProfile.materials.surfaces.decoration),
+    position: input.position,
+    quaternion: IDENTITY_QUATERNION,
+    scale: input.scale,
+    visible: true,
+    locked: false,
+    allowDelete: true,
+    allowHide: true,
+    resetKey: `decoration:${input.index}:${input.kind}`,
+    decorationKind: input.kind
+  };
+}
+
+export function createStudioDecorationDescriptors(
+  input: StudioLayoutGeneratorInput & {
+    bounds: StudioLayoutBounds;
+    plinthTopY: number;
+  }
+): StudioLayoutMeshDescriptor[] {
   const kinds = getDefaultDecorationKinds(input).slice(0, 5);
   const [centerX, , centerZ] = input.bounds.center;
   const positions: Vec3Tuple[] = [
@@ -695,21 +721,13 @@ export function createStudioDecorationDescriptors(input: StudioLayoutGeneratorIn
     [centerX, input.plinthTopY + input.bounds.radius * 1.1, input.bounds.backZ + input.bounds.radius * 0.5]
   ];
 
-  return kinds.map((kind, index) => ({
-    kind: "mesh",
-    role: "decoration",
-    subRole: "decoration",
-    label: `Studio ${kind}`,
-    geometry: createDecorationGeometry(kind),
-    material,
-    position: positions[index],
-    quaternion: IDENTITY_QUATERNION,
-    scale: getDecorationScale(kind, input.bounds.radius),
-    visible: true,
-    locked: false,
-    allowDelete: true,
-    allowHide: true,
-    resetKey: `decoration:${index}:${kind}`,
-    decorationKind: kind
-  }));
+  return kinds.map((kind, index) =>
+    createStudioDecorationDescriptorForKind({
+      styleProfile: input.styleProfile,
+      kind,
+      index,
+      position: positions[index],
+      scale: getStudioDecorationScale(kind, input.bounds.radius)
+    })
+  );
 }

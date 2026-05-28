@@ -43,6 +43,7 @@ import {
   type StudioTransientEntityRole
 } from "./studioSceneSession";
 import { suggestStudioProductProfile } from "../studioSceneProfiles";
+import type { StudioDecorationKind, StudioPlinthKind } from "../studioSceneLayoutGenerator";
 
 type Emit = (event: EditorAppEvent) => void;
 
@@ -316,6 +317,26 @@ export class EditorSession {
 
   autoMatchStudioSceneStyle() {
     this.studioScene.autoMatchStyle();
+  }
+
+  getTransientStudioEntityRole(entityId: string | null) {
+    return entityId ? this.studioScene.getTransientStudioEntityRole(entityId) : null;
+  }
+
+  setStudioScenePlinthKind(plinthKind: StudioPlinthKind) {
+    this.studioScene.setPlinthKind(plinthKind);
+  }
+
+  resetStudioSceneGeneratedLayout() {
+    this.studioScene.resetGeneratedLayout();
+  }
+
+  addStudioSceneDecoration(kind: StudioDecorationKind) {
+    return this.studioScene.addDecoration(kind);
+  }
+
+  replaceStudioSceneDecoration(entityId: string, kind: StudioDecorationKind) {
+    return this.studioScene.replaceDecoration(entityId, kind);
   }
 
   setStudioSceneVariant(variantId: StudioSceneVariantId) {

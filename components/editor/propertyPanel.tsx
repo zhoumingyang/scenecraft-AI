@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Box, CircularProgress, IconButton, Stack, Tooltip, Typography } from "@mui/material";
+import { Box, Button, CircularProgress, FormControl, IconButton, MenuItem, Select, Stack, Tooltip, Typography } from "@mui/material";
 import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import CenterFocusStrongRoundedIcon from "@mui/icons-material/CenterFocusStrongRounded";
 import PhotoCameraRoundedIcon from "@mui/icons-material/PhotoCameraRounded";
@@ -11,14 +11,17 @@ import {
   type ExternalTextureApplyPayload
 } from "@/components/editor/externalAssetBrowserDialog";
 import { isPolyhavenProviderEnabled } from "@/lib/externalAssets/config";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, type TranslationKey } from "@/lib/i18n";
 import { createExternalAssetSource } from "@/lib/externalAssets/source";
 import {
   createPbrAtlasMaterialPatch,
   GROUND_HELPER_NODE_ID,
   isStudioScenePreviewEntity,
   SCENE_NODE_ID,
-  type ProjectAiLibraryV2JSON
+  type ProjectAiLibraryV2JSON,
+  type StudioDecorationKind,
+  type StudioPlinthKind,
+  type StudioProductProfile
 } from "@/render/editor";
 import { useEditorStore, type PendingAiAsset } from "@/stores/editorStore";
 import {
@@ -36,12 +39,36 @@ import ProjectAiLibraryDialog from "@/components/editor/projectAiLibraryDialog";
 import StudioSceneEntryDialog from "@/components/editor/studioSceneEntryDialog";
 import { getLightTypeLabel, getTextureDialogTitle } from "@/components/editor/propertyPanelSections/util";
 import { getEditorThemeTokens } from "@/components/editor/theme";
-import type { StudioProductProfile } from "@/render/editor";
 
 const PANEL_WIDTH = 272;
 const COLLAPSED_VISIBLE_WIDTH = 44;
 const CLOSED_AI_LIBRARY: ProjectAiLibraryV2JSON = { version: 2, assets: [] };
 const CLOSED_PENDING_AI_ASSETS: PendingAiAsset[] = [];
+const STUDIO_PLINTH_KIND_OPTIONS: StudioPlinthKind[] = [
+  "cylinder",
+  "roundedBox",
+  "box",
+  "square",
+  "tiered",
+  "multiLevel",
+  "beveled",
+  "floating",
+  "extrudedShape"
+];
+const STUDIO_DECORATION_KIND_OPTIONS: StudioDecorationKind[] = [
+  "sphere",
+  "cylinder",
+  "ring",
+  "box",
+  "roundedBox",
+  "arch",
+  "semiDisc",
+  "verticalPanel",
+  "curvedPanel",
+  "wavePanel",
+  "floatingGeometry",
+  "extrudedShape"
+];
 
 export default function PropertyPanel() {
   const { t } = useI18n();
@@ -69,6 +96,7 @@ export default function PropertyPanel() {
   const [aiLibraryOpen, setAiLibraryOpen] = useState(false);
   const [studioEntryTargetId, setStudioEntryTargetId] = useState<string | null>(null);
   const [studioEntryProfile, setStudioEntryProfile] = useState<StudioProductProfile | null>(null);
+  const [decorationKind, setDecorationKind] = useState<StudioDecorationKind>("sphere");
   const theme = getEditorThemeTokens(editorThemeMode);
   const isPolyhavenEnabled = isPolyhavenProviderEnabled();
 
@@ -142,6 +170,10 @@ export default function PropertyPanel() {
     );
   const isCurrentEntityInStudio = Boolean(
     studioScene?.active && currentIsolatableEntityId && studioScene.targetEntityId === currentIsolatableEntityId
+  );
+  const studioEntityRole = useMemo(
+    () => (studioScene?.active && selectedEntityId ? app?.getTransientStudioEntityRole(selectedEntityId) ?? null : null),
+    [app, selectedEntityId, studioScene?.active, viewStateVersion]
   );
 
   const handleApplyTextureSet = ({ asset, selections }: ExternalTextureApplyPayload) => {
@@ -434,6 +466,65 @@ export default function PropertyPanel() {
                         scaleValues={entityRecord.item.scale}
                       />
                     )}
+
+                    {studioEntityRole === "plinth" && studioScene?.plinthKind ? (
+                      <Stack spacing={0.75} sx={{ p: 0.85, borderRadius: 1.2, border: theme.sectionBorder, background: theme.sectionBg }}>
+                        <Typography sx={{ fontSize: 12, fontWeight: 700, color: theme.pillText }}>
+                          {t("editor.studioScene.plinthControls")}
+                        </Typography>
+                        <FormControl size="small" fullWidth>
+                          <Select
+                            value={studioScene.plinthKind}
+                            onChange={(event) => app?.setStudioScenePlinthKind(event.target.value as StudioPlinthKind)}
+                            sx={{ height: 34, fontSize: 12 }}
+                          >
+                            {STUDIO_PLINTH_KIND_OPTIONS.map((kind) => (
+                              <MenuItem key={kind} value={kind}>
+                                {t(`editor.studioScene.plinth.${kind}` as TranslationKey)}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                        <Button size="small" variant="outlined" onClick={() => app?.resetStudioSceneGeneratedLayout()}>
+                          {t("editor.studioScene.restoreLayout")}
+                        </Button>
+                      </Stack>
+                    ) : null}
+
+                    {studioEntityRole === "decoration" && selectedEntityId ? (
+                      <Stack spacing={0.75} sx={{ p: 0.85, borderRadius: 1.2, border: theme.sectionBorder, background: theme.sectionBg }}>
+                        <Typography sx={{ fontSize: 12, fontWeight: 700, color: theme.pillText }}>
+                          {t("editor.studioScene.decorationControls")}
+                        </Typography>
+                        <FormControl size="small" fullWidth>
+                          <Select
+                            value={decorationKind}
+                            onChange={(event) => setDecorationKind(event.target.value as StudioDecorationKind)}
+                            sx={{ height: 34, fontSize: 12 }}
+                          >
+                            {STUDIO_DECORATION_KIND_OPTIONS.map((kind) => (
+                              <MenuItem key={kind} value={kind}>
+                                {t(`editor.studioScene.decoration.${kind}` as TranslationKey)}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                        <Stack direction="row" spacing={0.6} sx={{ flexWrap: "wrap", rowGap: 0.6 }}>
+                          <Button size="small" variant="outlined" onClick={() => app?.replaceStudioSceneDecoration(selectedEntityId, decorationKind)}>
+                            {t("editor.studioScene.replaceDecoration")}
+                          </Button>
+                          <Button size="small" variant="outlined" onClick={() => app?.addStudioSceneDecoration(decorationKind)}>
+                            {t("editor.studioScene.addDecoration")}
+                          </Button>
+                          <Button size="small" variant="outlined" onClick={() => app?.setEntityVisible(selectedEntityId, false)}>
+                            {t("editor.studioScene.hideDecoration")}
+                          </Button>
+                          <Button size="small" variant="outlined" color="error" onClick={() => app?.removeEntity(selectedEntityId)}>
+                            {t("editor.studioScene.deleteDecoration")}
+                          </Button>
+                        </Stack>
+                      </Stack>
+                    ) : null}
 
                     {entityRecord.kind === "mesh" ? (
                       <MeshAppearanceSection

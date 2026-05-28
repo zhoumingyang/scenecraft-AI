@@ -32,11 +32,14 @@ import {
 import { mergeEditorPostProcessingConfig } from "../postProcessing";
 import {
   createStudioBackgroundDescriptors,
+  createStudioDecorationDescriptorForKind,
   createStudioDecorationDescriptors,
   createStudioPlinthDescriptors,
+  getStudioDecorationScale,
   resolveStudioPlinthKind,
   type StudioLayoutBounds,
   type StudioLayoutMeshDescriptor,
+  type StudioDecorationKind,
   type StudioPlinthKind
 } from "../studioSceneLayoutGenerator";
 
@@ -453,6 +456,10 @@ export class StudioSceneSessionController {
     return this.activeSession?.transientEntityRoles.get(entityId) ?? null;
   }
 
+  getSelectedStudioEntityRole(entityId: string | null) {
+    return entityId ? this.getTransientStudioEntityRole(entityId) : null;
+  }
+
   getTransientStudioEntityIds() {
     return this.activeSession ? Array.from(this.activeSession.transientEntityIds) : [];
   }
@@ -838,6 +845,32 @@ export class StudioSceneSessionController {
     });
   }
 
+  private addTransientMeshDescriptor(
+    session: ActiveStudioSceneSession,
+    descriptor: StudioLayoutMeshDescriptor,
+    source: SyncSource
+  ) {
+    const projectModel = this.getProjectModel();
+    if (!projectModel || !session.transientRootGroupId) return null;
+    const rootGroup = projectModel.groups.get(session.transientRootGroupId);
+    if (!rootGroup) return null;
+
+    const model = projectModel.addMesh(
+      createStudioMeshFromDescriptor({
+        id: createStudioEntityId(descriptor.resetKey),
+        descriptor
+      })
+    );
+    rootGroup.children.push(model.id);
+    this.registry.create(model);
+    this.registerTransientEntity(session, model.id, descriptor.role);
+    this.markTransientObject(model.id, descriptor.role);
+    this.rebuildGroupHierarchy();
+    this.emit({ type: "sceneUpdated", source, pathTraceInvalidation: "scene" });
+    this.emitChanged();
+    return model.id;
+  }
+
   private placeTransientEntityAtSpawn(session: ActiveStudioSceneSession, entityId: string) {
     const targetBinding = this.registry.get(session.targetEntityId);
     const binding = this.registry.get(entityId);
@@ -1008,6 +1041,102 @@ export class StudioSceneSessionController {
     session.plinthKind = resolveStudioPlinthKind(getStudioScenePreset(session.presetId).layout.plinth.type, variantId);
     this.rebuildTransientStudioEntities(session, getStudioScenePreset(session.presetId), createStudioFrameFromObject(binding.object));
     this.emitChanged();
+  }
+
+  setPlinthKind(plinthKind: StudioPlinthKind) {
+    const session = this.activeSession;
+    if (!session) return;
+    const binding = this.registry.get(session.targetEntityId);
+    if (!binding) {
+      this.exit("ui");
+      return;
+    }
+
+    session.plinthKind = plinthKind;
+    this.rebuildTransientStudioEntities(session, getStudioScenePreset(session.presetId), createStudioFrameFromObject(binding.object));
+    this.emitChanged();
+  }
+
+  resetGeneratedLayout() {
+    const session = this.activeSession;
+    if (!session) return;
+    const binding = this.registry.get(session.targetEntityId);
+    if (!binding) {
+      this.exit("ui");
+      return;
+    }
+
+    session.plinthKind = resolveStudioPlinthKind(getStudioScenePreset(session.presetId).layout.plinth.type, session.variantId);
+    this.rebuildTransientStudioEntities(session, getStudioScenePreset(session.presetId), createStudioFrameFromObject(binding.object));
+    this.emitChanged();
+  }
+
+  addDecoration(kind: StudioDecorationKind) {
+    const session = this.activeSession;
+    if (!session) return null;
+    const binding = this.registry.get(session.targetEntityId);
+    if (!binding) {
+      this.exit("ui");
+      return null;
+    }
+    const decorationCount = Array.from(session.transientEntityRoles.values()).filter((role) => role === "decoration").length;
+    if (decorationCount >= 5) return null;
+
+    const frame = createStudioFrameFromObject(binding.object);
+    const styleProfile = resolveStudioSceneStyleProfile(session.productProfile, session.presetId);
+    const backgroundLayout = createStudioBackgroundDescriptors({
+      styleProfile,
+      variantId: session.variantId,
+      productProfile: session.productProfile,
+      targetFrame: {
+        center: [frame.center.x, frame.center.y, frame.center.z],
+        radius: frame.radius,
+        footprintRadius: frame.footprintRadius,
+        height: frame.height,
+        floorY: frame.floorY
+      }
+    });
+    const bounds = backgroundLayout.bounds;
+    const position: Vec3Tuple = [
+      bounds.center[0] + bounds.radius * (decorationCount % 2 === 0 ? -1.25 : 1.25),
+      frame.floorY + bounds.radius * (0.48 + decorationCount * 0.08),
+      bounds.backZ + bounds.radius * (0.32 + decorationCount * 0.1)
+    ];
+    const descriptor = createStudioDecorationDescriptorForKind({
+      styleProfile,
+      kind,
+      index: decorationCount,
+      position,
+      scale: getStudioDecorationScale(kind, bounds.radius)
+    });
+    return this.addTransientMeshDescriptor(session, descriptor, "ui");
+  }
+
+  replaceDecoration(entityId: string, kind: StudioDecorationKind) {
+    const session = this.activeSession;
+    const projectModel = this.getProjectModel();
+    if (!session || !projectModel || this.getTransientStudioEntityRole(entityId) !== "decoration") return false;
+    const binding = this.registry.get(entityId);
+    const record = projectModel.getEntityById(entityId);
+    if (!binding || !record || record.kind !== "mesh") return false;
+
+    this.registry.syncObjectTransformToModel(entityId);
+    const styleProfile = resolveStudioSceneStyleProfile(session.productProfile, session.presetId);
+    const descriptor = createStudioDecorationDescriptorForKind({
+      styleProfile,
+      kind,
+      index: 0,
+      position: record.item.position,
+      scale: record.item.scale
+    });
+
+    this.registry.remove(entityId);
+    projectModel.removeEntity(entityId);
+    session.transientEntityIds.delete(entityId);
+    session.transientEntityRoles.delete(entityId);
+    const nextId = this.addTransientMeshDescriptor(session, descriptor, "ui");
+    if (nextId) this.setSelectedEntity(nextId, "ui");
+    return Boolean(nextId);
   }
 
   updateTargetTransform(input: {
