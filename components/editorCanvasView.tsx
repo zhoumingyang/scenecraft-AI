@@ -232,6 +232,7 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
         productProfile: null,
         styleProfileId: null,
         styleSelectionMode: null,
+        plinthKind: null,
         targetScale: 1,
         targetRotationY: 0,
         hdriStatus: "idle",

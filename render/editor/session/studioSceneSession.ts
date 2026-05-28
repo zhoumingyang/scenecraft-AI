@@ -25,7 +25,6 @@ import { isStudioScenePreviewEntity } from "../studioSceneEligibility";
 import {
   createStudioEnvPatchFromStyleProfile,
   resolveStudioSceneStyleProfile,
-  type PbrSurfaceConfig,
   type StudioProductProfile,
   type StudioSceneStyleProfileId,
   type StudioSceneStyleSelectionMode
@@ -33,8 +32,11 @@ import {
 import { mergeEditorPostProcessingConfig } from "../postProcessing";
 import {
   createStudioBackgroundDescriptors,
+  createStudioPlinthDescriptors,
+  resolveStudioPlinthKind,
   type StudioLayoutBounds,
-  type StudioLayoutMeshDescriptor
+  type StudioLayoutMeshDescriptor,
+  type StudioPlinthKind
 } from "../studioSceneLayoutGenerator";
 
 type StudioObjectVisibilitySnapshot = Array<{
@@ -108,6 +110,7 @@ type ActiveStudioSceneSession = {
   productProfile: StudioProductProfile;
   styleProfileId: StudioSceneStyleProfileId;
   styleSelectionMode: StudioSceneStyleSelectionMode;
+  plinthKind: StudioPlinthKind;
   targetScale: number;
   targetRotationY: number;
   hdriStatus: StudioSceneHdriStatus;
@@ -145,6 +148,7 @@ export function createDefaultStudioSceneState(): StudioSceneState {
     productProfile: null,
     styleProfileId: null,
     styleSelectionMode: null,
+    plinthKind: null,
     targetScale: 1,
     targetRotationY: 0,
     hdriStatus: "idle",
@@ -176,8 +180,6 @@ const STUDIO_TARGET_MAX_HEIGHT = 1.8;
 const STUDIO_TARGET_MIN_SCALE = 0.2;
 const STUDIO_TARGET_MAX_SCALE = 3;
 const MIN_STUDIO_FRAME_RADIUS = 1.2;
-const STUDIO_PLINTH_BASE_RADIUS = 0.7;
-const STUDIO_PLINTH_BASE_HEIGHT = 1.4;
 
 type StudioRoomBounds = {
   center: THREE.Vector3;
@@ -260,29 +262,6 @@ function createStudioEntityId(prefix: string) {
   return `studio-${prefix}-${globalThis.crypto?.randomUUID?.() ?? Date.now().toString(36)}`;
 }
 
-function createStudioMaterial(
-  color: string,
-  options: Pick<EditorMeshMaterialJSON, "metalness" | "roughness" | "emissive" | "emissiveIntensity"> = {}
-): EditorMeshMaterialJSON {
-  return {
-    color,
-    opacity: 1,
-    metalness: options.metalness ?? 0,
-    roughness: options.roughness ?? 0.82,
-    emissive: options.emissive ?? "#000000",
-    emissiveIntensity: options.emissiveIntensity ?? 1
-  };
-}
-
-function createStudioMaterialFromSurface(surface: PbrSurfaceConfig): EditorMeshMaterialJSON {
-  return createStudioMaterial(surface.color, {
-    roughness: surface.roughness,
-    metalness: surface.metalness,
-    emissive: surface.emissive,
-    emissiveIntensity: surface.emissiveIntensity
-  });
-}
-
 function createStudioRoomBounds(bounds: StudioLayoutBounds): StudioRoomBounds {
   const center = new THREE.Vector3(bounds.center[0], bounds.center[1], bounds.center[2]);
   return {
@@ -325,36 +304,6 @@ function createStudioMeshFromDescriptor(input: {
     scale: input.descriptor.scale,
     visible: input.descriptor.visible,
     locked: input.descriptor.locked
-  };
-}
-
-function createPlinthMesh(input: {
-  id: string;
-  label: string;
-  color: string;
-  radius: number;
-  height: number;
-  position: Vec3Tuple;
-  material?: Partial<EditorMeshMaterialJSON>;
-}): EditorMeshJSON {
-  return {
-    id: input.id,
-    label: input.label,
-    type: 1,
-    geometryName: "Cylinder",
-    material: {
-      ...createStudioMaterial(input.color, { roughness: 0.68 }),
-      ...input.material
-    },
-    position: input.position,
-    quaternion: [0, 0, 0, 1],
-    scale: [
-      input.radius / STUDIO_PLINTH_BASE_RADIUS,
-      input.height / STUDIO_PLINTH_BASE_HEIGHT,
-      input.radius / STUDIO_PLINTH_BASE_RADIUS
-    ],
-    visible: true,
-    locked: false
   };
 }
 
@@ -578,6 +527,7 @@ export class StudioSceneSessionController {
       productProfile: this.activeSession.productProfile,
       styleProfileId: this.activeSession.styleProfileId,
       styleSelectionMode: this.activeSession.styleSelectionMode,
+      plinthKind: this.activeSession.plinthKind,
       targetScale: this.activeSession.targetScale,
       targetRotationY: this.activeSession.targetRotationY,
       hdriStatus: this.activeSession.hdriStatus,
@@ -616,6 +566,7 @@ export class StudioSceneSessionController {
     const styleProfile = resolveStudioSceneStyleProfile(productProfile, options.styleProfileId ?? null);
     const resolvedPresetId = styleProfile.id;
     const preset = getStudioScenePreset(resolvedPresetId);
+    const plinthKind = resolveStudioPlinthKind(styleProfile.layout.plinth.type, DEFAULT_STUDIO_SCENE_VARIANT_ID);
     const objectVisibilitySnapshot = this.captureObjectVisibilitySnapshot();
     const viewHelperSnapshot = this.captureViewHelperSnapshot();
     const targetTransformSnapshot = cloneObjectTransform(binding.object);
@@ -644,6 +595,7 @@ export class StudioSceneSessionController {
       productProfile,
       styleProfileId: resolvedPresetId,
       styleSelectionMode: options.styleProfileId ? "manual" : "auto",
+      plinthKind,
       targetScale: defaultTargetScale,
       targetRotationY: 0,
       hdriStatus: "idle",
@@ -697,11 +649,6 @@ export class StudioSceneSessionController {
       }
     });
     const bounds = createStudioRoomBounds(backgroundLayout.bounds);
-    const plinthHeight = Math.max(bounds.radius * preset.layout.plinth.heightRatio, 0.18);
-    const plinthRadius = Math.max(
-      frame.footprintRadius * preset.layout.plinth.fitPaddingRatio,
-      preset.layout.plinth.minRadius
-    );
     const rootGroupId = createStudioEntityId("root");
     const rootGroup = projectModel.addGroup({
       id: rootGroupId,
@@ -745,18 +692,27 @@ export class StudioSceneSessionController {
         descriptor.role
       );
     });
-    addMesh(
-      createPlinthMesh({
-        id: createStudioEntityId("plinth"),
-        label: "Studio Plinth",
-        color: preset.materials.surfaces.plinth.color,
-        radius: plinthRadius,
-        height: plinthHeight,
-        position: [bounds.center.x, bounds.floorY + plinthHeight / 2, bounds.center.z],
-        material: createStudioMaterialFromSurface(preset.materials.surfaces.plinth)
-      }),
-      "plinth"
-    );
+    createStudioPlinthDescriptors({
+      styleProfile,
+      variantId: session.variantId,
+      targetFrame: {
+        center: [frame.center.x, frame.center.y, frame.center.z],
+        radius: frame.radius,
+        footprintRadius: frame.footprintRadius,
+        height: frame.height,
+        floorY: frame.floorY
+      },
+      bounds: backgroundLayout.bounds,
+      plinthKind: session.plinthKind
+    }).descriptors.forEach((descriptor) => {
+      addMesh(
+        createStudioMeshFromDescriptor({
+          id: createStudioEntityId(descriptor.resetKey),
+          descriptor
+        }),
+        "plinth"
+      );
+    });
 
     const keyPosition = new THREE.Vector3(
       bounds.center.x + bounds.radius * preset.keyLight.position[0],
@@ -976,15 +932,14 @@ export class StudioSceneSessionController {
     }
 
     const preset = getStudioScenePreset(presetId);
+    const styleProfile = resolveStudioSceneStyleProfile(session.productProfile, presetId);
     session.presetId = presetId;
     session.styleProfileId = presetId;
     session.styleSelectionMode = "manual";
+    session.plinthKind = resolveStudioPlinthKind(styleProfile.layout.plinth.type, session.variantId);
     session.hdriStatus = "idle";
     session.hdriError = null;
-    this.applyStyleProfileToSceneEnv(
-      resolveStudioSceneStyleProfile(session.productProfile, presetId),
-      "ui"
-    );
+    this.applyStyleProfileToSceneEnv(styleProfile, "ui");
     this.rebuildTransientStudioEntities(session, preset, createStudioFrameFromObject(binding.object));
     this.emitChanged();
   }
@@ -1004,6 +959,7 @@ export class StudioSceneSessionController {
     session.presetId = styleProfile.id;
     session.styleProfileId = styleProfile.id;
     session.styleSelectionMode = "auto";
+    session.plinthKind = resolveStudioPlinthKind(styleProfile.layout.plinth.type, session.variantId);
     session.hdriStatus = "idle";
     session.hdriError = null;
     this.applyStyleProfileToSceneEnv(styleProfile, "ui");
@@ -1021,6 +977,8 @@ export class StudioSceneSessionController {
     }
 
     session.variantId = variantId;
+    session.plinthKind = resolveStudioPlinthKind(getStudioScenePreset(session.presetId).layout.plinth.type, variantId);
+    this.rebuildTransientStudioEntities(session, getStudioScenePreset(session.presetId), createStudioFrameFromObject(binding.object));
     this.emitChanged();
   }
 

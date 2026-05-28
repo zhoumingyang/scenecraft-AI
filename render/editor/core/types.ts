@@ -475,6 +475,7 @@ export type StudioSceneState = {
   productProfile: StudioProductProfile | null;
   styleProfileId: StudioSceneStyleProfileId | null;
   styleSelectionMode: StudioSceneStyleSelectionMode | null;
+  plinthKind: import("../studioSceneLayoutGenerator").StudioPlinthKind | null;
   targetScale: number;
   targetRotationY: number;
   hdriStatus: StudioSceneHdriStatus;
