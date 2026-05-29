@@ -37,11 +37,15 @@ import {
   createStudioPlinthDescriptors,
   getStudioDecorationScale,
   resolveStudioPlinthKind,
-  type StudioLayoutBounds,
   type StudioLayoutMeshDescriptor,
   type StudioDecorationKind,
   type StudioPlinthKind
 } from "../studioSceneLayoutGenerator";
+import {
+  createStudioLightingDescriptors,
+  type StudioLightingLightDescriptor,
+  type StudioLightingModifierDescriptor
+} from "../studioSceneLightingGenerator";
 
 type StudioObjectVisibilitySnapshot = Array<{
   entityId: string;
@@ -138,6 +142,8 @@ type ActiveStudioSceneSession = {
   defaultTargetScale: number;
   visibleOriginalEntityIds: Set<string>;
   transientEntityIds: Set<string>;
+  transientLayoutEntityIds: Set<string>;
+  transientLightingEntityIds: Set<string>;
   transientRootGroupId: string | null;
   transientEntityRoles: Map<string, StudioTransientEntityRole>;
 };
@@ -194,19 +200,6 @@ const STUDIO_TARGET_FOOTPRINT_RADIUS = 0.82;
 const STUDIO_TARGET_MAX_HEIGHT = 1.8;
 const STUDIO_TARGET_MIN_SCALE = 0.2;
 const STUDIO_TARGET_MAX_SCALE = 3;
-const MIN_STUDIO_FRAME_RADIUS = 1.2;
-
-type StudioRoomBounds = {
-  center: THREE.Vector3;
-  radius: number;
-  width: number;
-  depth: number;
-  wallHeight: number;
-  floorY: number;
-  leftX: number;
-  rightX: number;
-  backZ: number;
-};
 
 function createStudioFrameFromObject(object: THREE.Object3D): StudioTargetFrame {
   object.updateMatrixWorld(true);
@@ -277,21 +270,6 @@ function createStudioEntityId(prefix: string) {
   return `studio-${prefix}-${globalThis.crypto?.randomUUID?.() ?? Date.now().toString(36)}`;
 }
 
-function createStudioRoomBounds(bounds: StudioLayoutBounds): StudioRoomBounds {
-  const center = new THREE.Vector3(bounds.center[0], bounds.center[1], bounds.center[2]);
-  return {
-    center,
-    radius: Math.max(bounds.radius, MIN_STUDIO_FRAME_RADIUS),
-    width: bounds.width,
-    depth: bounds.depth,
-    wallHeight: bounds.wallHeight,
-    floorY: bounds.floorY,
-    leftX: bounds.leftX,
-    rightX: bounds.rightX,
-    backZ: bounds.backZ
-  };
-}
-
 function createStudioMeshFromDescriptor(input: {
   id: string;
   descriptor: StudioLayoutMeshDescriptor;
@@ -322,52 +300,23 @@ function createStudioMeshFromDescriptor(input: {
   };
 }
 
-function createLookAtQuaternion(position: THREE.Vector3, target: THREE.Vector3) {
-  const helper = new THREE.Object3D();
-  helper.position.copy(position);
-  helper.lookAt(target);
-  return helper.quaternion;
-}
-
-function toQuaternionTuple(quaternion: THREE.Quaternion): [number, number, number, number] {
-  return [quaternion.x, quaternion.y, quaternion.z, quaternion.w];
-}
-
-function toVec3Tuple(vector: THREE.Vector3): Vec3Tuple {
-  return [vector.x, vector.y, vector.z];
-}
-
-function createStudioLight(input: {
+function createStudioLightFromDescriptor(input: {
   id: string;
-  label: string;
-  type: EditorLightJSON["type"];
-  color: string;
-  intensity: number;
-  position: THREE.Vector3;
-  target: THREE.Vector3;
-  width?: number;
-  height?: number;
-  distance?: number;
-  angle?: number;
-  penumbra?: number;
+  descriptor: StudioLightingLightDescriptor;
 }): EditorLightJSON {
   return {
     id: input.id,
-    label: input.label,
-    type: input.type,
-    locked: false,
-    position: toVec3Tuple(input.position),
-    quaternion: toQuaternionTuple(createLookAtQuaternion(input.position, input.target)),
-    scale: [1, 1, 1],
-    color: input.color,
-    groundColor: "#2a3548",
-    intensity: input.intensity,
-    distance: input.distance ?? 0,
-    decay: 2,
-    angle: input.angle ?? Math.PI / 3,
-    penumbra: input.penumbra ?? 0,
-    width: input.width ?? 1,
-    height: input.height ?? 1
+    ...input.descriptor.light
+  };
+}
+
+function createStudioModifierMeshFromDescriptor(input: {
+  id: string;
+  descriptor: StudioLightingModifierDescriptor;
+}): EditorMeshJSON {
+  return {
+    id: input.id,
+    ...input.descriptor.mesh
   };
 }
 
@@ -454,6 +403,27 @@ export class StudioSceneSessionController {
 
     if (role === "light") {
       return action === "select" || action === "transform" || action === "light" || action === "rename" || action === "lock" || action === "visibility";
+    }
+
+    if (
+      role === "studioLight" ||
+      role === "keyLight" ||
+      role === "keyShadowLight" ||
+      role === "fillLight" ||
+      role === "rimLight" ||
+      role === "topLight" ||
+      role === "accentLight"
+    ) {
+      return action === "select" || action === "transform" || action === "light" || action === "delete" || action === "rename" || action === "lock" || action === "visibility";
+    }
+
+    if (
+      role === "lightModifier" ||
+      role === "reflector" ||
+      role === "negativeFill" ||
+      role === "stripPanel"
+    ) {
+      return action === "select" || action === "transform" || action === "material" || action === "delete" || action === "rename" || action === "lock" || action === "visibility";
     }
 
     if (role === "userLight") {
@@ -631,6 +601,8 @@ export class StudioSceneSessionController {
       defaultTargetScale,
       visibleOriginalEntityIds: keepVisibleIds,
       transientEntityIds: new Set(),
+      transientLayoutEntityIds: new Set(),
+      transientLightingEntityIds: new Set(),
       transientRootGroupId: null,
       transientEntityRoles: new Map()
     };
@@ -643,7 +615,7 @@ export class StudioSceneSessionController {
       0
     );
     this.applyStyleProfileToSceneEnv(styleProfile, source);
-    this.createTransientStudioEntities(this.activeSession, preset, studioFrame);
+    this.createTransientStudioEntities(this.activeSession, studioFrame);
     this.frameCamera(preset, studioFrame);
     this.setSelectedEntity(entityId, source);
     this.emitChanged();
@@ -652,7 +624,6 @@ export class StudioSceneSessionController {
 
   private createTransientStudioEntities(
     session: ActiveStudioSceneSession,
-    preset: ReturnType<typeof getStudioScenePreset>,
     frame: StudioTargetFrame
   ) {
     const projectModel = this.getProjectModel();
@@ -671,7 +642,6 @@ export class StudioSceneSessionController {
         floorY: frame.floorY
       }
     });
-    const bounds = createStudioRoomBounds(backgroundLayout.bounds);
     const rootGroupId = createStudioEntityId("root");
     const rootGroup = projectModel.addGroup({
       id: rootGroupId,
@@ -693,16 +663,38 @@ export class StudioSceneSessionController {
       rootGroup.children.push(model.id);
       const binding = this.registry.create(model);
       this.registerTransientEntity(session, model.id, role);
+      session.transientLayoutEntityIds.add(model.id);
       this.markTransientObject(model.id, role);
       return binding;
     };
 
-    const addLight = (light: EditorLightJSON) => {
+    const addLight = (light: EditorLightJSON, descriptor: StudioLightingLightDescriptor) => {
       const model = projectModel.addLight(light);
       rootGroup.children.push(model.id);
       const binding = this.registry.create(model);
-      this.registerTransientEntity(session, model.id, "light");
-      this.markTransientObject(model.id, "light");
+      this.registerTransientEntity(session, model.id, descriptor.role);
+      session.transientLightingEntityIds.add(model.id);
+      this.markTransientObject(model.id, descriptor.role);
+      binding.object.userData.studioSceneLightRole = descriptor.lightRole;
+      binding.pickTargets?.forEach((target) => {
+        target.userData.studioSceneLightRole = descriptor.lightRole;
+      });
+      return binding;
+    };
+
+    const addModifier = (mesh: EditorMeshJSON, descriptor: StudioLightingModifierDescriptor) => {
+      const model = projectModel.addMesh(mesh);
+      rootGroup.children.push(model.id);
+      const binding = this.registry.create(model);
+      this.registerTransientEntity(session, model.id, descriptor.role);
+      session.transientLightingEntityIds.add(model.id);
+      this.markTransientObject(model.id, descriptor.role);
+      binding.object.userData.studioSceneModifierRole = descriptor.modifierRole;
+      binding.object.userData.studioSceneModifierVisibleInRender = descriptor.visibleInRender;
+      binding.pickTargets?.forEach((target) => {
+        target.userData.studioSceneModifierRole = descriptor.modifierRole;
+        target.userData.studioSceneModifierVisibleInRender = descriptor.visibleInRender;
+      });
       return binding;
     };
 
@@ -760,77 +752,36 @@ export class StudioSceneSessionController {
       );
     });
 
-    const keyPosition = new THREE.Vector3(
-      bounds.center.x + bounds.radius * preset.keyLight.position[0],
-      bounds.floorY + bounds.radius * preset.keyLight.position[1],
-      bounds.center.z + bounds.radius * preset.keyLight.position[2]
-    );
-    const keyTarget = new THREE.Vector3(
-      bounds.center.x + bounds.radius * preset.keyLight.target[0],
-      bounds.floorY + bounds.radius * preset.keyLight.target[1],
-      bounds.center.z + bounds.radius * preset.keyLight.target[2]
-    );
-    const fillPosition = new THREE.Vector3(
-      bounds.center.x + bounds.radius * preset.fillLight.position[0],
-      bounds.floorY + bounds.radius * preset.fillLight.position[1],
-      bounds.center.z + bounds.radius * preset.fillLight.position[2]
-    );
-    const fillTarget = new THREE.Vector3(
-      bounds.center.x + bounds.radius * preset.fillLight.target[0],
-      bounds.floorY + bounds.radius * preset.fillLight.target[1],
-      bounds.center.z + bounds.radius * preset.fillLight.target[2]
-    );
-    const rimPosition = new THREE.Vector3(
-      bounds.center.x + bounds.radius * preset.rimLight.position[0],
-      bounds.floorY + bounds.radius * preset.rimLight.position[1],
-      bounds.center.z + bounds.radius * preset.rimLight.position[2]
-    );
-    const rimTarget = new THREE.Vector3(
-      bounds.center.x + bounds.radius * preset.rimLight.target[0],
-      bounds.floorY + bounds.radius * preset.rimLight.target[1],
-      bounds.center.z + bounds.radius * preset.rimLight.target[2]
-    );
-
-    addLight(
-      createStudioLight({
-        id: createStudioEntityId("key-light"),
-        label: "Studio Key Softbox",
-        type: "rectArea",
-        color: preset.keyLight.color,
-        intensity: preset.keyLight.intensity,
-        position: keyPosition,
-        target: keyTarget,
-        width: (preset.keyLight.width ?? 2.5) * bounds.radius,
-        height: (preset.keyLight.height ?? 2) * bounds.radius
-      })
-    );
-    addLight(
-      createStudioLight({
-        id: createStudioEntityId("fill-light"),
-        label: "Studio Fill Softbox",
-        type: "rectArea",
-        color: preset.fillLight.color,
-        intensity: preset.fillLight.intensity,
-        position: fillPosition,
-        target: fillTarget,
-        width: (preset.fillLight.width ?? 2.2) * bounds.radius,
-        height: (preset.fillLight.height ?? 2) * bounds.radius
-      })
-    );
-    addLight(
-      createStudioLight({
-        id: createStudioEntityId("rim-light"),
-        label: "Studio Rim Light",
-        type: "spot",
-        color: preset.rimLight.color,
-        intensity: preset.rimLight.intensity,
-        position: rimPosition,
-        target: rimTarget,
-        distance: (preset.rimLight.distance ?? 8) * bounds.radius,
-        angle: preset.rimLight.angle,
-        penumbra: preset.rimLight.penumbra
-      })
-    );
+    const lighting = createStudioLightingDescriptors({
+      styleProfile,
+      productProfile: session.productProfile,
+      targetFrame: {
+        center: [frame.center.x, frame.center.y, frame.center.z],
+        radius: frame.radius,
+        footprintRadius: frame.footprintRadius,
+        height: frame.height,
+        floorY: frame.floorY
+      },
+      bounds: backgroundLayout.bounds
+    });
+    lighting.lights.forEach((descriptor) => {
+      addLight(
+        createStudioLightFromDescriptor({
+          id: createStudioEntityId(descriptor.resetKey),
+          descriptor
+        }),
+        descriptor
+      );
+    });
+    lighting.modifiers.forEach((descriptor) => {
+      addModifier(
+        createStudioModifierMeshFromDescriptor({
+          id: createStudioEntityId(descriptor.resetKey),
+          descriptor
+        }),
+        descriptor
+      );
+    });
 
     this.rebuildGroupHierarchy();
     this.runtime.syncLightHelperVisibility();
@@ -937,6 +888,8 @@ export class StudioSceneSessionController {
     });
 
     session.transientEntityIds.clear();
+    session.transientLayoutEntityIds.clear();
+    session.transientLightingEntityIds.clear();
     session.transientEntityRoles.clear();
     session.transientRootGroupId = null;
     this.rebuildGroupHierarchy();
@@ -990,7 +943,7 @@ export class StudioSceneSessionController {
       this.setSelectedEntity(null, "ui");
     }
     this.removeTransientStudioEntities(session);
-    this.createTransientStudioEntities(session, preset, frame);
+    this.createTransientStudioEntities(session, frame);
     this.frameCamera(preset, frame);
   }
 
