@@ -415,6 +415,10 @@ export class EditorApp {
     this.session.resetStudioSceneGeneratedLayout();
   }
 
+  resetStudioSceneLighting() {
+    this.session.resetStudioSceneLighting();
+  }
+
   addStudioSceneDecoration(kind: StudioDecorationKind) {
     return this.session.addStudioSceneDecoration(kind);
   }

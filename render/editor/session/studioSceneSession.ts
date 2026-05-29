@@ -646,19 +646,6 @@ export class StudioSceneSessionController {
     const projectModel = this.getProjectModel();
     if (!projectModel) return;
 
-    const styleProfile = resolveStudioSceneStyleProfile(session.productProfile, session.presetId);
-    const backgroundLayout = createStudioBackgroundDescriptors({
-      styleProfile,
-      variantId: session.variantId,
-      productProfile: session.productProfile,
-      targetFrame: {
-        center: [frame.center.x, frame.center.y, frame.center.z],
-        radius: frame.radius,
-        footprintRadius: frame.footprintRadius,
-        height: frame.height,
-        floorY: frame.floorY
-      }
-    });
     const rootGroupId = createStudioEntityId("root");
     const rootGroup = projectModel.addGroup({
       id: rootGroupId,
@@ -674,6 +661,34 @@ export class StudioSceneSessionController {
     this.registerTransientEntity(session, rootGroupId, "root");
     this.markTransientObject(rootGroupId, "root");
     session.transientRootGroupId = rootGroupId;
+    this.createTransientStudioLayoutEntities(session, frame);
+    this.createTransientStudioLightingEntities(session, frame);
+    this.rebuildGroupHierarchy();
+    this.runtime.syncLightHelperVisibility();
+  }
+
+  private createTransientStudioLayoutEntities(
+    session: ActiveStudioSceneSession,
+    frame: StudioTargetFrame
+  ) {
+    const projectModel = this.getProjectModel();
+    if (!projectModel || !session.transientRootGroupId) return;
+    const rootGroup = projectModel.groups.get(session.transientRootGroupId);
+    if (!rootGroup) return;
+
+    const styleProfile = resolveStudioSceneStyleProfile(session.productProfile, session.presetId);
+    const backgroundLayout = createStudioBackgroundDescriptors({
+      styleProfile,
+      variantId: session.variantId,
+      productProfile: session.productProfile,
+      targetFrame: {
+        center: [frame.center.x, frame.center.y, frame.center.z],
+        radius: frame.radius,
+        footprintRadius: frame.footprintRadius,
+        height: frame.height,
+        floorY: frame.floorY
+      }
+    });
 
     const addMesh = (mesh: EditorMeshJSON, role: StudioTransientEntityRole) => {
       const model = projectModel.addMesh(mesh);
@@ -682,36 +697,6 @@ export class StudioSceneSessionController {
       this.registerTransientEntity(session, model.id, role);
       session.transientLayoutEntityIds.add(model.id);
       this.markTransientObject(model.id, role);
-      return binding;
-    };
-
-    const addLight = (light: EditorLightJSON, descriptor: StudioLightingLightDescriptor) => {
-      const model = projectModel.addLight(light);
-      rootGroup.children.push(model.id);
-      const binding = this.registry.create(model);
-      this.registerTransientEntity(session, model.id, descriptor.role);
-      session.transientLightingEntityIds.add(model.id);
-      this.markTransientObject(model.id, descriptor.role);
-      binding.object.userData.studioSceneLightRole = descriptor.lightRole;
-      binding.pickTargets?.forEach((target) => {
-        target.userData.studioSceneLightRole = descriptor.lightRole;
-      });
-      return binding;
-    };
-
-    const addModifier = (mesh: EditorMeshJSON, descriptor: StudioLightingModifierDescriptor) => {
-      const model = projectModel.addMesh(mesh);
-      rootGroup.children.push(model.id);
-      const binding = this.registry.create(model);
-      this.registerTransientEntity(session, model.id, descriptor.role);
-      session.transientLightingEntityIds.add(model.id);
-      this.markTransientObject(model.id, descriptor.role);
-      binding.object.userData.studioSceneModifierRole = descriptor.modifierRole;
-      binding.object.userData.studioSceneModifierVisibleInRender = descriptor.visibleInRender;
-      binding.pickTargets?.forEach((target) => {
-        target.userData.studioSceneModifierRole = descriptor.modifierRole;
-        target.userData.studioSceneModifierVisibleInRender = descriptor.visibleInRender;
-      });
       return binding;
     };
 
@@ -768,6 +753,60 @@ export class StudioSceneSessionController {
         "decoration"
       );
     });
+  }
+
+  private createTransientStudioLightingEntities(
+    session: ActiveStudioSceneSession,
+    frame: StudioTargetFrame
+  ) {
+    const projectModel = this.getProjectModel();
+    if (!projectModel || !session.transientRootGroupId) return;
+    const rootGroup = projectModel.groups.get(session.transientRootGroupId);
+    if (!rootGroup) return;
+
+    const styleProfile = resolveStudioSceneStyleProfile(session.productProfile, session.presetId);
+    const backgroundLayout = createStudioBackgroundDescriptors({
+      styleProfile,
+      variantId: session.variantId,
+      productProfile: session.productProfile,
+      targetFrame: {
+        center: [frame.center.x, frame.center.y, frame.center.z],
+        radius: frame.radius,
+        footprintRadius: frame.footprintRadius,
+        height: frame.height,
+        floorY: frame.floorY
+      }
+    });
+
+    const addLight = (light: EditorLightJSON, descriptor: StudioLightingLightDescriptor) => {
+      const model = projectModel.addLight(light);
+      rootGroup.children.push(model.id);
+      const binding = this.registry.create(model);
+      this.registerTransientEntity(session, model.id, descriptor.role);
+      session.transientLightingEntityIds.add(model.id);
+      this.markTransientObject(model.id, descriptor.role);
+      binding.object.userData.studioSceneLightRole = descriptor.lightRole;
+      binding.pickTargets?.forEach((target) => {
+        target.userData.studioSceneLightRole = descriptor.lightRole;
+      });
+      return binding;
+    };
+
+    const addModifier = (mesh: EditorMeshJSON, descriptor: StudioLightingModifierDescriptor) => {
+      const model = projectModel.addMesh(mesh);
+      rootGroup.children.push(model.id);
+      const binding = this.registry.create(model);
+      this.registerTransientEntity(session, model.id, descriptor.role);
+      session.transientLightingEntityIds.add(model.id);
+      this.markTransientObject(model.id, descriptor.role);
+      binding.object.userData.studioSceneModifierRole = descriptor.modifierRole;
+      binding.object.userData.studioSceneModifierVisibleInRender = descriptor.visibleInRender;
+      binding.pickTargets?.forEach((target) => {
+        target.userData.studioSceneModifierRole = descriptor.modifierRole;
+        target.userData.studioSceneModifierVisibleInRender = descriptor.visibleInRender;
+      });
+      return binding;
+    };
 
     const lighting = createStudioLightingDescriptors({
       styleProfile,
@@ -799,9 +838,6 @@ export class StudioSceneSessionController {
         descriptor
       );
     });
-
-    this.rebuildGroupHierarchy();
-    this.runtime.syncLightHelperVisibility();
   }
 
   private registerTransientEntity(
@@ -909,6 +945,31 @@ export class StudioSceneSessionController {
     session.transientLightingEntityIds.clear();
     session.transientEntityRoles.clear();
     session.transientRootGroupId = null;
+    this.rebuildGroupHierarchy();
+    this.runtime.syncLightHelperVisibility();
+  }
+
+  private removeTransientStudioEntityIds(
+    session: ActiveStudioSceneSession,
+    entityIds: Iterable<string>
+  ) {
+    const projectModel = this.getProjectModel();
+    if (!projectModel) return;
+    const ids = Array.from(entityIds).filter((entityId) => session.transientEntityIds.has(entityId));
+    if (ids.length === 0) return;
+
+    projectModel.groups.forEach((group) => {
+      group.children = group.children.filter((childId) => !ids.includes(childId));
+    });
+
+    ids.reverse().forEach((entityId) => {
+      this.registry.remove(entityId);
+      projectModel.removeEntity(entityId);
+      session.transientEntityIds.delete(entityId);
+      session.transientLayoutEntityIds.delete(entityId);
+      session.transientLightingEntityIds.delete(entityId);
+      session.transientEntityRoles.delete(entityId);
+    });
     this.rebuildGroupHierarchy();
     this.runtime.syncLightHelperVisibility();
   }
@@ -1104,8 +1165,68 @@ export class StudioSceneSessionController {
     }
 
     session.plinthKind = resolveStudioPlinthKind(getStudioScenePreset(session.presetId).layout.plinth.type, session.variantId);
-    this.rebuildTransientStudioEntities(session, getStudioScenePreset(session.presetId), createStudioFrameFromObject(binding.object));
+    const selectedEntityId = this.getSelectedEntityId();
+    if (selectedEntityId && session.transientLayoutEntityIds.has(selectedEntityId)) {
+      this.setSelectedEntity(null, "ui");
+    }
+    this.removeTransientStudioEntityIds(session, session.transientLayoutEntityIds);
+    this.createTransientStudioLayoutEntities(session, createStudioFrameFromObject(binding.object));
+    this.rebuildGroupHierarchy();
+    this.emit({ type: "sceneUpdated", source: "ui", pathTraceInvalidation: "scene" });
     this.emitChanged();
+  }
+
+  resetLighting() {
+    const session = this.activeSession;
+    if (!session) return;
+    const binding = this.registry.get(session.targetEntityId);
+    if (!binding) {
+      this.exit("ui");
+      return;
+    }
+
+    const selectedEntityId = this.getSelectedEntityId();
+    if (selectedEntityId && session.transientLightingEntityIds.has(selectedEntityId)) {
+      this.setSelectedEntity(null, "ui");
+    }
+    this.removeTransientStudioEntityIds(session, session.transientLightingEntityIds);
+    this.createTransientStudioLightingEntities(session, createStudioFrameFromObject(binding.object));
+    this.rebuildGroupHierarchy();
+    this.runtime.syncLightHelperVisibility();
+    this.emit({ type: "sceneUpdated", source: "ui", pathTraceInvalidation: "scene" });
+    this.emitChanged();
+  }
+
+  setTransientEntityVisible(entityId: string, visible: boolean, source: SyncSource = "ui") {
+    const session = this.activeSession;
+    const projectModel = this.getProjectModel();
+    if (!session || !projectModel || !session.transientEntityIds.has(entityId)) return false;
+    if (!this.canUseStudioSceneEntityAction(entityId, "visibility")) return false;
+
+    const record = projectModel.getEntityById(entityId);
+    const binding = this.registry.get(entityId);
+    if (!record || !binding) return false;
+
+    if (record.kind !== "light" && "visible" in record.item) {
+      record.item.visible = visible;
+      binding.applyState?.();
+    } else {
+      binding.object.visible = visible;
+    }
+
+    const selectedEntityId = this.getSelectedEntityId();
+    if (selectedEntityId === entityId && !visible) {
+      this.setSelectedEntity(null, source);
+    }
+
+    this.emit({
+      type: "entityUpdated",
+      entityId,
+      entityKind: record.kind,
+      source
+    });
+    this.emit({ type: "viewStateUpdated" });
+    return true;
   }
 
   addDecoration(kind: StudioDecorationKind) {

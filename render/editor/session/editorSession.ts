@@ -338,6 +338,10 @@ export class EditorSession {
     this.studioScene.resetGeneratedLayout();
   }
 
+  resetStudioSceneLighting() {
+    this.studioScene.resetLighting();
+  }
+
   addStudioSceneDecoration(kind: StudioDecorationKind) {
     return this.studioScene.addDecoration(kind);
   }
@@ -716,6 +720,7 @@ export class EditorSession {
 
   setEntityVisible(entityId: string, visible: boolean, source: SyncSource = "ui") {
     if (this.studioScene.isActive() && !this.canUseStudioSceneEntityAction(entityId, "visibility")) return;
+    if (this.studioScene.setTransientEntityVisible(entityId, visible, source)) return;
     this.entityIsolation.setVisible(entityId, visible, source);
   }
 
