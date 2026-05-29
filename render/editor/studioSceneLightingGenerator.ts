@@ -12,7 +12,7 @@ import type {
   StudioProductProfile,
   StudioSceneStyleProfile
 } from "./studioSceneProfiles";
-import type { StudioTransientEntityRole } from "./session/studioSceneSession";
+import type { StudioTransientEntityRole } from "./session/studioSceneSession/types";
 
 export type StudioIblDescriptor = StudioLightingProfile["ibl"];
 export type StudioGeneratedLightRole = StudioLightingProfile["lights"][number]["role"];

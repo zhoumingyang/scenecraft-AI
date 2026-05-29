@@ -12,7 +12,7 @@ import type {
   StudioSceneStyleProfile
 } from "./studioSceneProfiles";
 import type { StudioSceneVariantId } from "./studioScenes";
-import type { StudioTransientEntityRole } from "./session/studioSceneSession";
+import type { StudioTransientEntityRole } from "./session/studioSceneSession/types";
 import {
   createExtrudedShapePresetGeometry,
   geometryToCustomMesh
