@@ -1,6 +1,7 @@
 import type { EditorLightJSON } from "../core/types";
 import {
   clampUnitInterval,
+  normalizeBoolean,
   normalizeColor,
   normalizeId,
   normalizeLightType,
@@ -9,6 +10,7 @@ import {
 import { BaseEntityModel } from "./baseEntity";
 
 export class LightEntityModel extends BaseEntityModel {
+  visible: boolean;
   lightType: number;
   color: string;
   groundColor: string;
@@ -22,6 +24,7 @@ export class LightEntityModel extends BaseEntityModel {
 
   constructor(index: number, source: EditorLightJSON) {
     super(normalizeId("light", source.id, index), source);
+    this.visible = normalizeBoolean(source.visible, true);
     this.lightType = normalizeLightType(source.type);
     this.color = normalizeColor(source.color, "#ffffff");
     this.groundColor = normalizeColor(source.groundColor, "#2a3548");
@@ -35,6 +38,7 @@ export class LightEntityModel extends BaseEntityModel {
   }
 
   patchLight(source: Partial<EditorLightJSON>) {
+    if (source.visible !== undefined) this.visible = normalizeBoolean(source.visible, this.visible);
     if (source.color !== undefined) this.color = normalizeColor(source.color, this.color);
     if (source.groundColor !== undefined) {
       this.groundColor = normalizeColor(source.groundColor, this.groundColor);

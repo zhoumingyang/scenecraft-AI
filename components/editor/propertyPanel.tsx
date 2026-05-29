@@ -21,7 +21,8 @@ import {
   type ProjectAiLibraryV2JSON,
   type StudioDecorationKind,
   type StudioPlinthKind,
-  type StudioProductProfile
+  type StudioProductProfile,
+  type StudioTransientEntityRole
 } from "@/render/editor";
 import { useEditorStore, type PendingAiAsset } from "@/stores/editorStore";
 import {
@@ -69,6 +70,21 @@ const STUDIO_DECORATION_KIND_OPTIONS: StudioDecorationKind[] = [
   "floatingGeometry",
   "extrudedShape"
 ];
+
+const STUDIO_LIGHT_ROLE_LABEL_KEYS: Partial<Record<StudioTransientEntityRole, TranslationKey>> = {
+  keyLight: "editor.studioScene.lightRole.key",
+  keyShadowLight: "editor.studioScene.lightRole.keyShadow",
+  fillLight: "editor.studioScene.lightRole.fill",
+  rimLight: "editor.studioScene.lightRole.rim",
+  topLight: "editor.studioScene.lightRole.top",
+  accentLight: "editor.studioScene.lightRole.accent"
+};
+
+const STUDIO_MODIFIER_ROLE_LABEL_KEYS: Partial<Record<StudioTransientEntityRole, TranslationKey>> = {
+  reflector: "editor.studioScene.modifierRole.reflector",
+  negativeFill: "editor.studioScene.modifierRole.negativeFill",
+  stripPanel: "editor.studioScene.modifierRole.stripPanel"
+};
 
 export default function PropertyPanel() {
   const { t } = useI18n();
@@ -175,6 +191,8 @@ export default function PropertyPanel() {
     () => (studioScene?.active && selectedEntityId ? app?.getTransientStudioEntityRole(selectedEntityId) ?? null : null),
     [app, selectedEntityId, studioScene?.active, viewStateVersion]
   );
+  const studioLightRoleLabelKey = studioEntityRole ? STUDIO_LIGHT_ROLE_LABEL_KEYS[studioEntityRole] : undefined;
+  const studioModifierRoleLabelKey = studioEntityRole ? STUDIO_MODIFIER_ROLE_LABEL_KEYS[studioEntityRole] : undefined;
 
   const handleApplyTextureSet = ({ asset, selections }: ExternalTextureApplyPayload) => {
     if (!app || (entityRecord?.kind !== "mesh" && entityRecord?.kind !== "gridHelper")) {
@@ -523,6 +541,28 @@ export default function PropertyPanel() {
                             {t("editor.studioScene.deleteDecoration")}
                           </Button>
                         </Stack>
+                      </Stack>
+                    ) : null}
+
+                    {studioLightRoleLabelKey ? (
+                      <Stack spacing={0.45} sx={{ p: 0.85, borderRadius: 1.2, border: theme.sectionBorder, background: theme.sectionBg }}>
+                        <Typography sx={{ fontSize: 12, fontWeight: 700, color: theme.pillText }}>
+                          {t("editor.studioScene.lightControls")}
+                        </Typography>
+                        <Typography sx={{ fontSize: 11, color: theme.text }}>
+                          {t(studioLightRoleLabelKey)}
+                        </Typography>
+                      </Stack>
+                    ) : null}
+
+                    {studioModifierRoleLabelKey ? (
+                      <Stack spacing={0.45} sx={{ p: 0.85, borderRadius: 1.2, border: theme.sectionBorder, background: theme.sectionBg }}>
+                        <Typography sx={{ fontSize: 12, fontWeight: 700, color: theme.pillText }}>
+                          {t("editor.studioScene.modifierControls")}
+                        </Typography>
+                        <Typography sx={{ fontSize: 11, color: theme.text }}>
+                          {t(studioModifierRoleLabelKey)}
+                        </Typography>
                       </Stack>
                     ) : null}
 

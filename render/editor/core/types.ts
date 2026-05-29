@@ -163,6 +163,7 @@ export type EditorLightJSON = {
   label?: string;
   type: number | string;
   locked?: boolean;
+  visible?: boolean;
   position?: number[];
   quaternion?: number[];
   scale?: number[];

@@ -149,6 +149,7 @@ function createLightParts(model: LightEntityModel): LightBindingParts {
 
 function applyLightModelToObject(model: LightEntityModel, parts: LightBindingUpdateParts) {
   model.applyTransformToObject(parts.root);
+  parts.root.visible = model.visible;
   parts.root.updateMatrixWorld(true);
 
   if (parts.light instanceof THREE.HemisphereLight) {

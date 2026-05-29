@@ -59,6 +59,10 @@ export class EntityIsolationSessionController {
       ...mesh,
       visible: this.visibilitySnapshot?.get(mesh.id) ?? mesh.visible
     }));
+    projectJson.light = (projectJson.light || []).map((light) => ({
+      ...light,
+      visible: this.visibilitySnapshot?.get(light.id) ?? light.visible
+    }));
 
     return projectJson;
   }
@@ -98,7 +102,7 @@ export class EntityIsolationSessionController {
       this.clear(source);
     }
     const record = projectModel.getEntityById(entityId);
-    if (!record || record.item.locked || record.kind === "light") return;
+    if (!record || record.item.locked) return;
     this.applyEntityVisibleState(entityId, visible, source);
   }
 
@@ -127,6 +131,9 @@ export class EntityIsolationSessionController {
     });
     projectModel.meshes.forEach((mesh) => {
       snapshot.set(mesh.id, mesh.visible);
+    });
+    projectModel.lights.forEach((light) => {
+      snapshot.set(light.id, light.visible);
     });
 
     return snapshot;
@@ -171,7 +178,7 @@ export class EntityIsolationSessionController {
     const projectModel = this.getProjectModel();
     if (!projectModel) return;
     const record = projectModel.getEntityById(entityId);
-    if (!record || record.kind === "light" || record.item.visible === visible) return;
+    if (!record || !("visible" in record.item) || record.item.visible === visible) return;
 
     record.item.visible = visible;
     const binding = this.registry.get(entityId);

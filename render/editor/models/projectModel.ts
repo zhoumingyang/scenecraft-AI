@@ -386,6 +386,7 @@ export class EditorProjectModel {
         label: item.label,
         type: item.lightType,
         locked: item.locked,
+        visible: item.visible,
         position: [...item.position],
         quaternion: [...item.quaternion],
         scale: [...item.scale],

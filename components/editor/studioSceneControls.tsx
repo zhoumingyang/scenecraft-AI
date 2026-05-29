@@ -131,6 +131,20 @@ export default function StudioSceneControls() {
           </Button>
           <Button
             size="small"
+            variant="outlined"
+            startIcon={<RestartAltRoundedIcon />}
+            onClick={() => app?.resetStudioSceneLighting()}
+            sx={{
+              minWidth: 0,
+              px: 1,
+              color: theme.pillText,
+              borderColor: "rgba(150,190,255,0.34)"
+            }}
+          >
+            {t("editor.studioScene.restoreLighting")}
+          </Button>
+          <Button
+            size="small"
             variant="contained"
             startIcon={<CloseRoundedIcon />}
             onClick={() => app?.exitStudioScene()}

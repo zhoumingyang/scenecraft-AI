@@ -70,7 +70,7 @@ export default function SceneTreePanelRow({
     !canSelect || (node.type !== "scene" && (!node.effectivelyVisible || node.locked));
   const isGridHelper = node.type === "gridHelper";
   const lockDisabled = !canToggleLockAction || node.type === "scene" || isGridHelper || !node.effectivelyVisible;
-  const canToggleVisible = canToggleVisibleAction && node.type !== "light" && node.type !== "scene" && !isGridHelper;
+  const canToggleVisible = canToggleVisibleAction && node.type !== "scene" && !isGridHelper;
   const canDuplicate =
     canDuplicateAction && node.type !== "scene" && !isGridHelper && !node.locked && node.effectivelyVisible;
   const canDelete =

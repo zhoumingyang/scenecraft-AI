@@ -122,7 +122,7 @@ function buildEntityNodeMap(
       id: light.id,
       type: "light",
       locked: light.locked,
-      visible: true,
+      visible: light.visible,
       effectivelyVisible: project.isEntityEffectivelyVisible(light.id),
       label: light.label || fallbackLabel,
       fallbackLabel
