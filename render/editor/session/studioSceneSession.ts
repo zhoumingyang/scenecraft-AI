@@ -1,20 +1,15 @@
-import * as THREE from "three";
-
 import type { BindingRegistry } from "../bindings/bindingRegistry";
 import type { EditorAppEvent } from "../core/events";
 import type { EditorProjectJSON, SyncSource } from "../core/types";
 import type { EditorProjectModel } from "../models";
 import type { EditorRuntime } from "../runtime/editorRuntime";
 import {
-  DEFAULT_STUDIO_SCENE_VARIANT_ID,
   getStudioScenePreset,
   type StudioScenePresetId,
   type StudioSceneVariantId
 } from "../studioScenes";
-import { isStudioScenePreviewEntity } from "../studioSceneEligibility";
 import { resolveStudioSceneStyleProfile } from "../studioSceneProfiles";
 import {
-  resolveStudioPlinthKind,
   type StudioDecorationKind,
   type StudioPlinthKind
 } from "../studioSceneLayoutGenerator";
@@ -28,24 +23,26 @@ import {
   frameStudioSceneCamera
 } from "./studioSceneSession/environment";
 import {
+  clearStudioScene,
+  enterStudioScene
+} from "./studioSceneSession/lifecycle";
+import {
   canUseStudioSceneEntityAction,
   isStudioSceneEntityInteractive
 } from "./studioSceneSession/policy";
-import {
-  captureObjectVisibilitySnapshot,
-  captureViewHelperSnapshot,
-  collectVisibleIds
-} from "./studioSceneSession/snapshots";
 import { StudioSceneTransientEntityManager } from "./studioSceneSession/transientEntityManager";
 import {
-  applyStudioTargetTransform,
-  cloneObjectTransform,
-  computeStudioFitScale,
-  createStudioFrameFromObject,
-  restoreObjectTransform,
-  STUDIO_TARGET_MAX_SCALE,
-  STUDIO_TARGET_MIN_SCALE
-} from "./studioSceneSession/target";
+  autoMatchStudioStyle,
+  resetStudioGeneratedLayout,
+  resetStudioLighting,
+  setStudioPlinthKind,
+  setStudioPreset,
+  setStudioVariant
+} from "./studioSceneSession/styleMutations";
+import {
+  resetStudioTargetTransform,
+  updateStudioTargetTransform
+} from "./studioSceneSession/targetTransformMutations";
 import {
   cloneResolvedEnvConfig,
   createDefaultStudioSceneState,
@@ -225,20 +222,6 @@ export class StudioSceneSessionController {
     options: StudioSceneEnterOptions,
     source: SyncSource = "ui"
   ) {
-    const projectModel = this.getProjectModel();
-    if (!projectModel) return false;
-    const record = projectModel.getEntityById(entityId);
-    const binding = this.registry.get(entityId);
-    if (
-      !record ||
-      !binding ||
-      !isStudioScenePreviewEntity(projectModel, entityId) ||
-      record.item.locked ||
-      !projectModel.isEntityEffectivelyVisible(entityId)
-    ) {
-      return false;
-    }
-
     if (this.activeSession) {
       this.exit(source);
     }
@@ -247,247 +230,86 @@ export class StudioSceneSessionController {
       this.clearEntityIsolation(source);
     }
 
-    const productProfile = options.productProfile;
-    const styleProfile = resolveStudioSceneStyleProfile(
-      productProfile,
-      options.styleProfileId ?? null
-    );
-    const resolvedPresetId = styleProfile.id;
-    const preset = getStudioScenePreset(resolvedPresetId);
-    const plinthKind = resolveStudioPlinthKind(
-      styleProfile.layout.plinth.type,
-      DEFAULT_STUDIO_SCENE_VARIANT_ID
-    );
-    const objectVisibilitySnapshot = captureObjectVisibilitySnapshot(this.registry);
-    const viewHelperSnapshot = captureViewHelperSnapshot(this.runtime);
-    const targetTransformSnapshot = cloneObjectTransform(binding.object);
-    const sceneEnvConfigSnapshot = cloneResolvedEnvConfig(projectModel.envConfig);
-    const targetFrame = createStudioFrameFromObject(binding.object);
-    const defaultTargetScale = computeStudioFitScale(targetFrame);
-    const keepVisibleIds = collectVisibleIds(projectModel, entityId);
-
-    this.registry.list().forEach((entry) => {
-      entry.object.visible =
-        entry.kind === "light"
-          ? false
-          : keepVisibleIds.has(entry.model.id) &&
-            (objectVisibilitySnapshot.find(
-              (item) => item.entityId === entry.model.id
-            )?.visible ?? true);
+    return enterStudioScene({
+      deps: {
+        runtime: this.runtime,
+        registry: this.registry,
+        emit: this.emit,
+        getProjectModel: this.getProjectModel,
+        setSelectedEntity: this.setSelectedEntity,
+        transientEntityManager: this.transientEntityManager,
+        setActiveSession: (session) => {
+          this.activeSession = session;
+        },
+        applyStyleProfileToSceneEnv: (
+          styleProfile,
+          nextSource
+        ) => applyStudioStyleProfileToSceneEnv(this.getEnvironmentDeps(), styleProfile, nextSource),
+        applyStudioIbl: (session, styleProfile, nextSource) =>
+          this.applyStudioIbl(session, styleProfile, nextSource),
+        emitChanged: () => this.emitChanged()
+      },
+      entityId,
+      options,
+      source
     });
-
-    this.runtime.setGridHelperVisible(false);
-    this.runtime.setTransformGizmoVisible(true);
-    this.runtime.setLightHelpersVisible(false);
-    this.runtime.setShadowEnabled(true);
-
-    this.activeSession = {
-      targetEntityId: entityId,
-      presetId: resolvedPresetId,
-      variantId: DEFAULT_STUDIO_SCENE_VARIANT_ID,
-      productProfile,
-      styleProfileId: resolvedPresetId,
-      styleSelectionMode: options.styleProfileId ? "manual" : "auto",
-      plinthKind,
-      targetScale: defaultTargetScale,
-      targetRotationY: 0,
-      hdriStatus: "idle",
-      hdriError: null,
-      objectVisibilitySnapshot,
-      viewHelperSnapshot,
-      targetTransformSnapshot,
-      sceneEnvConfigSnapshot,
-      targetFrame,
-      defaultTargetScale,
-      visibleOriginalEntityIds: keepVisibleIds,
-      transientEntityIds: new Set(),
-      transientLayoutEntityIds: new Set(),
-      transientLightingEntityIds: new Set(),
-      transientRootGroupId: null,
-      transientEntityRoles: new Map()
-    };
-
-    const studioFrame = applyStudioTargetTransform(
-      binding.object,
-      targetTransformSnapshot,
-      targetFrame,
-      defaultTargetScale,
-      0
-    );
-    applyStudioStyleProfileToSceneEnv(this.getEnvironmentDeps(), styleProfile, source);
-    void this.applyStudioIbl(this.activeSession, styleProfile, source);
-    this.transientEntityManager.createTransientStudioEntities(
-      this.activeSession,
-      studioFrame
-    );
-    frameStudioSceneCamera(this.runtime, preset, studioFrame);
-    this.setSelectedEntity(entityId, source);
-    this.emitChanged();
-    return true;
   }
 
   setPreset(presetId: StudioScenePresetId) {
-    const session = this.activeSession;
-    if (!session) return;
-    const binding = this.registry.get(session.targetEntityId);
-    if (!binding) {
-      this.exit("ui");
-      return;
-    }
-
-    const preset = getStudioScenePreset(presetId);
-    const styleProfile = resolveStudioSceneStyleProfile(
-      session.productProfile,
+    if (!setStudioPreset({
+      deps: this.getStyleMutationDeps(),
+      session: this.activeSession,
       presetId
-    );
-    session.presetId = presetId;
-    session.styleProfileId = presetId;
-    session.styleSelectionMode = "manual";
-    session.plinthKind = resolveStudioPlinthKind(
-      styleProfile.layout.plinth.type,
-      session.variantId
-    );
-    session.hdriStatus = "idle";
-    session.hdriError = null;
-    applyStudioStyleProfileToSceneEnv(this.getEnvironmentDeps(), styleProfile, "ui");
-    void this.applyStudioIbl(session, styleProfile, "ui");
-    this.rebuildTransientStudioEntities(
-      session,
-      preset,
-      createStudioFrameFromObject(binding.object)
-    );
-    this.emitChanged();
+    })) {
+      this.exit("ui");
+    }
   }
 
   autoMatchStyle() {
-    const session = this.activeSession;
-    if (!session) return;
-    const binding = this.registry.get(session.targetEntityId);
-    if (!binding) {
+    if (!autoMatchStudioStyle({
+      deps: this.getStyleMutationDeps(),
+      session: this.activeSession
+    })) {
       this.exit("ui");
-      return;
     }
-
-    const styleProfile = resolveStudioSceneStyleProfile(session.productProfile);
-    const preset = getStudioScenePreset(styleProfile.id);
-
-    session.presetId = styleProfile.id;
-    session.styleProfileId = styleProfile.id;
-    session.styleSelectionMode = "auto";
-    session.plinthKind = resolveStudioPlinthKind(
-      styleProfile.layout.plinth.type,
-      session.variantId
-    );
-    session.hdriStatus = "idle";
-    session.hdriError = null;
-    applyStudioStyleProfileToSceneEnv(this.getEnvironmentDeps(), styleProfile, "ui");
-    void this.applyStudioIbl(session, styleProfile, "ui");
-    this.rebuildTransientStudioEntities(
-      session,
-      preset,
-      createStudioFrameFromObject(binding.object)
-    );
-    this.emitChanged();
   }
 
   setVariant(variantId: StudioSceneVariantId) {
-    const session = this.activeSession;
-    if (!session) return;
-    const binding = this.registry.get(session.targetEntityId);
-    if (!binding) {
-      this.exit("ui");
-      return;
-    }
-
-    session.variantId = variantId;
-    session.plinthKind = resolveStudioPlinthKind(
-      getStudioScenePreset(session.presetId).layout.plinth.type,
+    if (!setStudioVariant({
+      deps: this.getStyleMutationDeps(),
+      session: this.activeSession,
       variantId
-    );
-    this.rebuildTransientStudioEntities(
-      session,
-      getStudioScenePreset(session.presetId),
-      createStudioFrameFromObject(binding.object)
-    );
-    this.emitChanged();
+    })) {
+      this.exit("ui");
+    }
   }
 
   setPlinthKind(plinthKind: StudioPlinthKind) {
-    const session = this.activeSession;
-    if (!session) return;
-    const binding = this.registry.get(session.targetEntityId);
-    if (!binding) {
+    if (!setStudioPlinthKind({
+      deps: this.getStyleMutationDeps(),
+      session: this.activeSession,
+      plinthKind
+    })) {
       this.exit("ui");
-      return;
     }
-
-    session.plinthKind = plinthKind;
-    this.rebuildTransientStudioEntities(
-      session,
-      getStudioScenePreset(session.presetId),
-      createStudioFrameFromObject(binding.object)
-    );
-    this.emitChanged();
   }
 
   resetGeneratedLayout() {
-    const session = this.activeSession;
-    if (!session) return;
-    const binding = this.registry.get(session.targetEntityId);
-    if (!binding) {
+    if (!resetStudioGeneratedLayout({
+      deps: this.getStyleMutationDeps(),
+      session: this.activeSession
+    })) {
       this.exit("ui");
-      return;
     }
-
-    session.plinthKind = resolveStudioPlinthKind(
-      getStudioScenePreset(session.presetId).layout.plinth.type,
-      session.variantId
-    );
-    const selectedEntityId = this.getSelectedEntityId();
-    if (selectedEntityId && session.transientLayoutEntityIds.has(selectedEntityId)) {
-      this.setSelectedEntity(null, "ui");
-    }
-    this.transientEntityManager.removeTransientStudioEntityIds(
-      session,
-      session.transientLayoutEntityIds
-    );
-    this.transientEntityManager.createTransientStudioLayoutEntities(
-      session,
-      createStudioFrameFromObject(binding.object)
-    );
-    this.rebuildGroupHierarchy();
-    this.emit({ type: "sceneUpdated", source: "ui", pathTraceInvalidation: "scene" });
-    this.emitChanged();
   }
 
   resetLighting() {
-    const session = this.activeSession;
-    if (!session) return;
-    const binding = this.registry.get(session.targetEntityId);
-    if (!binding) {
+    if (!resetStudioLighting({
+      deps: this.getStyleMutationDeps(),
+      session: this.activeSession
+    })) {
       this.exit("ui");
-      return;
     }
-
-    const selectedEntityId = this.getSelectedEntityId();
-    if (
-      selectedEntityId &&
-      session.transientLightingEntityIds.has(selectedEntityId)
-    ) {
-      this.setSelectedEntity(null, "ui");
-    }
-    this.transientEntityManager.removeTransientStudioEntityIds(
-      session,
-      session.transientLightingEntityIds
-    );
-    this.transientEntityManager.createTransientStudioLightingEntities(
-      session,
-      createStudioFrameFromObject(binding.object)
-    );
-    this.rebuildGroupHierarchy();
-    this.runtime.syncLightHelperVisibility();
-    this.emit({ type: "sceneUpdated", source: "ui", pathTraceInvalidation: "scene" });
-    this.emitChanged();
   }
 
   setTransientEntityVisible(
@@ -551,67 +373,33 @@ export class StudioSceneSessionController {
   }
 
   updateTargetTransform(input: { scale?: number; rotationY?: number }) {
-    const session = this.activeSession;
-    if (!session) return;
-    const binding = this.registry.get(session.targetEntityId);
-    if (!binding) {
+    if (!updateStudioTargetTransform({
+      session: this.activeSession,
+      object: this.activeSession
+        ? this.registry.get(this.activeSession.targetEntityId)?.object ?? null
+        : null,
+      scale: input.scale,
+      rotationY: input.rotationY,
+      rebuildTransientStudioEntities: (session, preset, frame) =>
+        this.rebuildTransientStudioEntities(session, preset, frame),
+      emitChanged: () => this.emitChanged()
+    })) {
       this.exit("ui");
-      return;
     }
-
-    const nextScale =
-      typeof input.scale === "number" && Number.isFinite(input.scale)
-        ? THREE.MathUtils.clamp(
-            input.scale,
-            STUDIO_TARGET_MIN_SCALE,
-            STUDIO_TARGET_MAX_SCALE
-          )
-        : session.targetScale;
-    const nextRotationY =
-      typeof input.rotationY === "number" && Number.isFinite(input.rotationY)
-        ? input.rotationY
-        : session.targetRotationY;
-    const nextFrame = applyStudioTargetTransform(
-      binding.object,
-      session.targetTransformSnapshot,
-      session.targetFrame,
-      nextScale,
-      nextRotationY
-    );
-    session.targetScale = nextScale;
-    session.targetRotationY = nextRotationY;
-    this.rebuildTransientStudioEntities(
-      session,
-      getStudioScenePreset(session.presetId),
-      nextFrame
-    );
-    this.emitChanged();
   }
 
   resetTargetTransform() {
-    const session = this.activeSession;
-    if (!session) return;
-    const binding = this.registry.get(session.targetEntityId);
-    if (!binding) {
+    if (!resetStudioTargetTransform({
+      session: this.activeSession,
+      object: this.activeSession
+        ? this.registry.get(this.activeSession.targetEntityId)?.object ?? null
+        : null,
+      rebuildTransientStudioEntities: (session, preset, frame) =>
+        this.rebuildTransientStudioEntities(session, preset, frame),
+      emitChanged: () => this.emitChanged()
+    })) {
       this.exit("ui");
-      return;
     }
-
-    const resetFrame = applyStudioTargetTransform(
-      binding.object,
-      session.targetTransformSnapshot,
-      session.targetFrame,
-      session.defaultTargetScale,
-      0
-    );
-    session.targetScale = session.defaultTargetScale;
-    session.targetRotationY = 0;
-    this.rebuildTransientStudioEntities(
-      session,
-      getStudioScenePreset(session.presetId),
-      resetFrame
-    );
-    this.emitChanged();
   }
 
   exit(source: SyncSource = "ui") {
@@ -619,74 +407,24 @@ export class StudioSceneSessionController {
   }
 
   clear(source: SyncSource, emitEvent: boolean) {
-    const session = this.activeSession;
-    if (!session) return;
     this.hdriRequestId += 1;
-
-    const binding = this.registry.get(session.targetEntityId);
-    if (binding) {
-      restoreObjectTransform(binding.object, session.targetTransformSnapshot);
-      this.registry.syncModelTransformToObject(session.targetEntityId);
-    }
-
-    const selectedEntityId = this.getSelectedEntityId();
-    if (selectedEntityId && session.transientEntityIds.has(selectedEntityId)) {
-      this.setSelectedEntity(null, source);
-    }
-    this.transientEntityManager.removeTransientStudioEntities(session);
-
-    session.objectVisibilitySnapshot.forEach(({ entityId, visible }) => {
-      const entry = this.registry.get(entityId);
-      if (entry) {
-        entry.object.visible = visible;
-      }
+    clearStudioScene({
+      deps: {
+        runtime: this.runtime,
+        registry: this.registry,
+        emit: this.emit,
+        getProjectModel: this.getProjectModel,
+        getSelectedEntityId: this.getSelectedEntityId,
+        setSelectedEntity: this.setSelectedEntity,
+        transientEntityManager: this.transientEntityManager,
+        clearActiveSession: () => {
+          this.activeSession = null;
+        }
+      },
+      session: this.activeSession,
+      source,
+      emitEvent
     });
-    this.runtime.setGridHelperVisible(session.viewHelperSnapshot.gridHelper);
-    this.runtime.setTransformGizmoVisible(
-      session.viewHelperSnapshot.transformGizmo
-    );
-    this.runtime.setLightHelpersVisible(session.viewHelperSnapshot.lightHelper);
-    this.runtime.setShadowEnabled(session.viewHelperSnapshot.shadow);
-
-    const projectModel = this.getProjectModel();
-    if (projectModel) {
-      projectModel.envConfig = cloneResolvedEnvConfig(
-        session.sceneEnvConfigSnapshot
-      );
-      if (projectModel.envConfig.panoUrl) {
-        void this.runtime
-          .setEnvironmentFromUrl(
-            projectModel.envConfig.panoUrl,
-            projectModel.envConfig.panoAssetName || projectModel.envConfig.panoUrl
-          )
-          .finally(() => {
-            this.runtime.applyEnvConfig(projectModel.envConfig);
-            this.emit({
-              type: "sceneUpdated",
-              source,
-              pathTraceInvalidation: "environment"
-            });
-            this.emit({ type: "viewStateUpdated" });
-          });
-      } else {
-        this.runtime.clearEnvironment();
-      }
-      this.runtime.applyEnvConfig(projectModel.envConfig);
-      this.runtime.applyCameraModel(projectModel.camera);
-    }
-
-    this.activeSession = null;
-    if (emitEvent) {
-      this.emit({
-        type: "studioSceneChanged",
-        state: createDefaultStudioSceneState()
-      });
-      this.emit({ type: "viewStateUpdated" });
-    }
-
-    if (source === "ui" && this.getSelectedEntityId() === session.targetEntityId) {
-      this.setSelectedEntity(session.targetEntityId, source);
-    }
   }
 
   private rebuildTransientStudioEntities(
@@ -735,6 +473,33 @@ export class StudioSceneSessionController {
       runtime: this.runtime,
       emit: this.emit,
       getProjectModel: this.getProjectModel
+    };
+  }
+
+  private getStyleMutationDeps() {
+    return {
+      registry: this.registry,
+      runtime: this.runtime,
+      emit: this.emit,
+      getSelectedEntityId: this.getSelectedEntityId,
+      setSelectedEntity: this.setSelectedEntity,
+      rebuildGroupHierarchy: this.rebuildGroupHierarchy,
+      transientEntityManager: this.transientEntityManager,
+      rebuildTransientStudioEntities: (
+        session: ActiveStudioSceneSession,
+        preset: ReturnType<typeof getStudioScenePreset>,
+        frame: StudioTargetFrame
+      ) => this.rebuildTransientStudioEntities(session, preset, frame),
+      applyStyleProfileToSceneEnv: (
+        styleProfile: ReturnType<typeof resolveStudioSceneStyleProfile>,
+        source: SyncSource
+      ) => applyStudioStyleProfileToSceneEnv(this.getEnvironmentDeps(), styleProfile, source),
+      applyStudioIbl: (
+        session: ActiveStudioSceneSession,
+        styleProfile: ReturnType<typeof resolveStudioSceneStyleProfile>,
+        source: SyncSource
+      ) => this.applyStudioIbl(session, styleProfile, source),
+      emitChanged: () => this.emitChanged()
     };
   }
 
