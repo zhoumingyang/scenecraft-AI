@@ -40,12 +40,18 @@ import {
   StudioSceneSessionController,
   type StudioSceneEntityAction,
   type StudioSceneEnterOptions,
+  type StudioHdriResolveInput,
+  type StudioHdriResolveResult,
   type StudioTransientEntityRole
 } from "./studioSceneSession";
 import { suggestStudioProductProfile } from "../studioSceneProfiles";
 import type { StudioDecorationKind, StudioPlinthKind } from "../studioSceneLayoutGenerator";
 
 type Emit = (event: EditorAppEvent) => void;
+
+export type EditorSessionOptions = {
+  resolveStudioHdriUrl?: (input: StudioHdriResolveInput) => Promise<StudioHdriResolveResult | null>;
+};
 
 function resolveCanvasPickedEntityId(projectModel: EditorProjectModel | null, entityId: string | null) {
   if (!projectModel || !entityId) return entityId;
@@ -78,7 +84,7 @@ export class EditorSession {
 
   projectModel: EditorProjectModel | null = null;
 
-  constructor(runtime: EditorRuntime, emit: Emit) {
+  constructor(runtime: EditorRuntime, emit: Emit, options: EditorSessionOptions = {}) {
     this.runtime = runtime;
     this.emit = emit;
     this.registry = new BindingRegistry({
@@ -149,6 +155,7 @@ export class EditorSession {
       runtime,
       registry: this.registry,
       emit,
+      resolveStudioHdriUrl: options.resolveStudioHdriUrl,
       getProjectModel: () => this.projectModel,
       getSelectedEntityId: () => this.selectedEntityId,
       hasEntityIsolation: () => this.entityIsolation.hasIsolation(),

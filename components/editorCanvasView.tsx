@@ -23,6 +23,12 @@ import {
   applyGroundFallbackFromViewHelperStorage,
   restoreViewHelperVisibility
 } from "@/components/editor/viewHelperPreferences";
+import { getPolyhavenAssetDetail } from "@/frontend/api/externalAssets";
+import {
+  getPreferredHdriFormat,
+  getPreferredHdriResolution,
+  selectHdriFile
+} from "@/lib/externalAssets/source";
 
 type EditorCanvasViewProps = {
   userEmail: string | null;
@@ -60,7 +66,34 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
   useEffect(() => {
     if (!canvasHostRef.current) return;
 
-    const app = createEditorSdk(canvasHostRef.current);
+    const app = createEditorSdk(canvasHostRef.current, {
+      resolveStudioHdriUrl: async (input) => {
+        if (input.url) {
+          return {
+            url: input.url,
+            assetName: input.assetId ?? input.url
+          };
+        }
+        if (input.provider !== "polyhaven" || !input.assetId) {
+          return null;
+        }
+
+        const detail = await getPolyhavenAssetDetail(input.assetId, "hdri");
+        if (detail.assetType !== "hdri" || detail.fileOptions.length === 0) {
+          return null;
+        }
+        const resolution = getPreferredHdriResolution(detail.fileOptions);
+        const format = getPreferredHdriFormat(detail.fileOptions, resolution);
+        const file = selectHdriFile(detail.fileOptions, resolution, format);
+
+        return file
+          ? {
+              url: file.url,
+              assetName: `${detail.displayName} ${file.resolution} ${file.format}`.trim()
+            }
+          : null;
+      }
+    });
     setApp(app);
     let frameRequestId = 0;
     const pendingRenderEntityIds = new Set<string>();

@@ -122,6 +122,17 @@ export type StudioSceneEntityAction =
   | "lock"
   | "visibility";
 
+export type StudioHdriResolveInput = {
+  provider: "polyhaven" | "local" | "none";
+  assetId?: string;
+  url?: string;
+};
+
+export type StudioHdriResolveResult = {
+  url: string;
+  assetName?: string;
+};
+
 type ActiveStudioSceneSession = {
   targetEntityId: string;
   presetId: StudioScenePresetId;
@@ -152,6 +163,7 @@ type StudioSceneSessionControllerOptions = {
   runtime: EditorRuntime;
   registry: BindingRegistry;
   emit: (event: EditorAppEvent) => void;
+  resolveStudioHdriUrl?: (input: StudioHdriResolveInput) => Promise<StudioHdriResolveResult | null>;
   getProjectModel: () => EditorProjectModel | null;
   getSelectedEntityId: () => string | null;
   hasEntityIsolation: () => boolean;
@@ -324,6 +336,7 @@ export class StudioSceneSessionController {
   private readonly runtime: EditorRuntime;
   private readonly registry: BindingRegistry;
   private readonly emit: (event: EditorAppEvent) => void;
+  private readonly resolveStudioHdriUrl?: (input: StudioHdriResolveInput) => Promise<StudioHdriResolveResult | null>;
   private readonly getProjectModel: () => EditorProjectModel | null;
   private readonly getSelectedEntityId: () => string | null;
   private readonly hasEntityIsolation: () => boolean;
@@ -331,11 +344,13 @@ export class StudioSceneSessionController {
   private readonly setSelectedEntity: (entityId: string | null, source: SyncSource) => void;
   private readonly rebuildGroupHierarchy: () => void;
   private activeSession: ActiveStudioSceneSession | null = null;
+  private hdriRequestId = 0;
 
   constructor({
     runtime,
     registry,
     emit,
+    resolveStudioHdriUrl,
     getProjectModel,
     getSelectedEntityId,
     hasEntityIsolation,
@@ -346,6 +361,7 @@ export class StudioSceneSessionController {
     this.runtime = runtime;
     this.registry = registry;
     this.emit = emit;
+    this.resolveStudioHdriUrl = resolveStudioHdriUrl;
     this.getProjectModel = getProjectModel;
     this.getSelectedEntityId = getSelectedEntityId;
     this.hasEntityIsolation = hasEntityIsolation;
@@ -615,6 +631,7 @@ export class StudioSceneSessionController {
       0
     );
     this.applyStyleProfileToSceneEnv(styleProfile, source);
+    void this.applyStudioIbl(this.activeSession, styleProfile, source);
     this.createTransientStudioEntities(this.activeSession, studioFrame);
     this.frameCamera(preset, studioFrame);
     this.setSelectedEntity(entityId, source);
@@ -933,6 +950,60 @@ export class StudioSceneSessionController {
     this.emit({ type: "sceneUpdated", source, pathTraceInvalidation: "environment" });
   }
 
+  private async applyStudioIbl(
+    session: ActiveStudioSceneSession,
+    styleProfile: ReturnType<typeof resolveStudioSceneStyleProfile>,
+    source: SyncSource
+  ) {
+    const projectModel = this.getProjectModel();
+    const ibl = styleProfile.lighting.ibl;
+    const requestId = ++this.hdriRequestId;
+
+    if (!projectModel || !ibl.enabled || ibl.provider === "none") {
+      session.hdriStatus = "idle";
+      session.hdriError = null;
+      this.emitChanged();
+      return;
+    }
+
+    session.hdriStatus = "loading";
+    session.hdriError = null;
+    this.emitChanged();
+
+    try {
+      const resolved =
+        ibl.url && ibl.url.trim().length > 0
+          ? { url: ibl.url, assetName: ibl.assetId ?? ibl.url }
+          : this.resolveStudioHdriUrl
+            ? await this.resolveStudioHdriUrl({
+                provider: ibl.provider,
+                assetId: ibl.assetId,
+                url: ibl.url
+              })
+            : null;
+
+      if (!resolved?.url) {
+        throw new Error("No HDRI URL could be resolved for the selected studio style.");
+      }
+
+      if (requestId !== this.hdriRequestId || this.activeSession !== session) return;
+
+      await this.runtime.setEnvironmentFromUrl(resolved.url, resolved.assetName ?? resolved.url);
+      if (requestId !== this.hdriRequestId || this.activeSession !== session) return;
+
+      this.runtime.applyEnvConfig(projectModel.envConfig);
+      session.hdriStatus = "ready";
+      session.hdriError = null;
+      this.emit({ type: "sceneUpdated", source, pathTraceInvalidation: "environment" });
+      this.emitChanged();
+    } catch (error) {
+      if (requestId !== this.hdriRequestId || this.activeSession !== session) return;
+      session.hdriStatus = "error";
+      session.hdriError = error instanceof Error ? error.message : "Failed to load studio HDRI.";
+      this.emitChanged();
+    }
+  }
+
   private rebuildTransientStudioEntities(
     session: ActiveStudioSceneSession,
     preset: ReturnType<typeof getStudioScenePreset>,
@@ -965,6 +1036,7 @@ export class StudioSceneSessionController {
     session.hdriStatus = "idle";
     session.hdriError = null;
     this.applyStyleProfileToSceneEnv(styleProfile, "ui");
+    void this.applyStudioIbl(session, styleProfile, "ui");
     this.rebuildTransientStudioEntities(session, preset, createStudioFrameFromObject(binding.object));
     this.emitChanged();
   }
@@ -988,6 +1060,7 @@ export class StudioSceneSessionController {
     session.hdriStatus = "idle";
     session.hdriError = null;
     this.applyStyleProfileToSceneEnv(styleProfile, "ui");
+    void this.applyStudioIbl(session, styleProfile, "ui");
     this.rebuildTransientStudioEntities(session, preset, createStudioFrameFromObject(binding.object));
     this.emitChanged();
   }
@@ -1165,6 +1238,7 @@ export class StudioSceneSessionController {
   clear(source: SyncSource, emitEvent: boolean) {
     const session = this.activeSession;
     if (!session) return;
+    this.hdriRequestId += 1;
 
     const binding = this.registry.get(session.targetEntityId);
     if (binding) {

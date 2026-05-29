@@ -1,7 +1,7 @@
-import { createEditorApp, EditorApp } from "./app";
+import { createEditorApp, EditorApp, type EditorAppOptions } from "./app";
 
 export type EditorSdk = EditorApp;
 
-export function createEditorSdk(host: HTMLDivElement): EditorSdk {
-  return createEditorApp(host);
+export function createEditorSdk(host: HTMLDivElement, options: EditorAppOptions = {}): EditorSdk {
+  return createEditorApp(host, options);
 }

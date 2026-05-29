@@ -24,7 +24,12 @@ import { EditorSession } from "./session/editorSession";
 import { PICK_POINTER_MOVE_THRESHOLD_PX } from "./constants/input";
 import { SCENE_NODE_ID as SCENE_SELECTION_ID } from "./constants/scene";
 import type { StudioScenePresetId, StudioSceneVariantId } from "./studioScenes";
-import type { StudioSceneEntityAction, StudioSceneEnterOptions } from "./session/studioSceneSession";
+import type {
+  StudioHdriResolveInput,
+  StudioHdriResolveResult,
+  StudioSceneEntityAction,
+  StudioSceneEnterOptions
+} from "./session/studioSceneSession";
 import type { StudioDecorationKind, StudioPlinthKind } from "./studioSceneLayoutGenerator";
 
 export type EditorMeshListItem = {
@@ -40,6 +45,10 @@ export type EditorViewHelperVisibility = {
 };
 
 export type { LightingConflictState };
+
+export type EditorAppOptions = {
+  resolveStudioHdriUrl?: (input: StudioHdriResolveInput) => Promise<StudioHdriResolveResult | null>;
+};
 
 function formatTitleCase(value: string) {
   if (!value) return "Mesh";
@@ -61,10 +70,12 @@ export class EditorApp {
   private pendingPick: PendingPick | null = null;
   private environmentUrl: string | null = null;
 
-  constructor(host: HTMLDivElement) {
+  constructor(host: HTMLDivElement, options: EditorAppOptions = {}) {
     this.runtime = new EditorRuntime(host);
     this.session = new EditorSession(this.runtime, (event) => {
       this.emit(event);
+    }, {
+      resolveStudioHdriUrl: options.resolveStudioHdriUrl
     });
   }
 
@@ -695,6 +706,6 @@ export class EditorApp {
   }
 }
 
-export function createEditorApp(host: HTMLDivElement): EditorApp {
-  return new EditorApp(host);
+export function createEditorApp(host: HTMLDivElement, options: EditorAppOptions = {}): EditorApp {
+  return new EditorApp(host, options);
 }
