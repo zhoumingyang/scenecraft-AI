@@ -369,10 +369,15 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<StudioSceneStyleProfileId, Stud
       ibl: { enabled: true, provider: "polyhaven", assetId: "studio_small_09", intensity: 0.8, rotationY: -0.35, showAsBackground: false },
       lights: [
         { role: "key", type: "rectArea", color: "#fffaf0", intensity: 4.6, position: [3.2, 4.1, 3.4], target: [0, 0.9, 0], width: 3.4, height: 2.1 },
+        { role: "keyShadow", type: "directional", color: "#fff4df", intensity: 1.9, position: [3.1, 4.2, 2.9], target: [0, 0.55, 0], castsShadow: true },
         { role: "fill", type: "rectArea", color: "#f3fbff", intensity: 1.6, position: [-3.2, 2.4, 2.4], target: [0, 0.7, 0], width: 2.8, height: 2.4 },
-        { role: "rim", type: "spot", color: "#e2ecff", intensity: 12, position: [0, 3.2, -3.3], target: [0, 0.9, 0], distance: 10, angle: 0.58, penumbra: 0.42 }
+        { role: "rim", type: "spot", color: "#e2ecff", intensity: 12, position: [0, 3.2, -3.3], target: [0, 0.9, 0], distance: 10, angle: 0.58, penumbra: 0.42 },
+        { role: "top", type: "rectArea", color: "#ffffff", intensity: 1.9, position: [0, 4.8, 0.2], target: [0, 0.4, 0], width: 3.2, height: 2.6 },
+        { role: "accent", type: "spot", color: "#d8d2c5", intensity: 5.5, position: [-2.3, 2.4, -2.2], target: [0, 0.75, 0], distance: 7, angle: 0.48, penumbra: 0.55 }
       ],
-      modifiers: []
+      modifiers: [
+        { role: "reflector", enabled: true, placement: "left", color: "#ffffff", intensityEffect: 0.55, size: [1.3, 1.7], position: [-2.05, 1.25, 0.75], rotation: [0, 0.54, 0], visibleInRender: true }
+      ]
     },
     camera: { mode: "birdViewOnly", fov: 42, pitch: 0.18, yaw: Math.PI / 4, distanceMultiplier: 2.75, targetHeightRatio: 0.48, allowFirstPerson: false, orbitEnabled: true },
     postProcessing: {
@@ -415,10 +420,16 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<StudioSceneStyleProfileId, Stud
       ibl: { enabled: true, provider: "polyhaven", assetId: "photo_studio_loft_hall", intensity: 0.72, rotationY: -0.1, showAsBackground: false },
       lights: [
         { role: "key", type: "rectArea", color: "#fff0df", intensity: 4.4, position: [1.9, 4.2, 3.2], target: [0, 0.85, 0], width: 3.4, height: 2.4 },
+        { role: "keyShadow", type: "directional", color: "#ffead7", intensity: 1.5, position: [2.2, 4.4, 2.7], target: [0, 0.55, 0], castsShadow: true },
         { role: "fill", type: "rectArea", color: "#fff8f0", intensity: 1.4, position: [-3.1, 2.2, 2.6], target: [0, 0.75, 0], width: 2.6, height: 2.2 },
-        { role: "rim", type: "spot", color: "#fff5ec", intensity: 15, position: [1.8, 2.8, -3.1], target: [0, 0.8, 0], distance: 9, angle: 0.52, penumbra: 0.46 }
+        { role: "rim", type: "spot", color: "#fff5ec", intensity: 15, position: [1.8, 2.8, -3.1], target: [0, 0.8, 0], distance: 9, angle: 0.52, penumbra: 0.46 },
+        { role: "top", type: "rectArea", color: "#fff7ef", intensity: 1.5, position: [0, 4.6, 0.1], target: [0, 0.55, 0], width: 2.8, height: 2.6 },
+        { role: "accent", type: "spot", color: "#d8a88d", intensity: 7.2, position: [-1.7, 2.7, -2.7], target: [0, 0.8, 0], distance: 7, angle: 0.42, penumbra: 0.62 }
       ],
-      modifiers: []
+      modifiers: [
+        { role: "reflector", enabled: true, placement: "front", color: "#fff7ee", intensityEffect: 0.45, size: [1.4, 1.2], position: [-1.8, 0.95, 1.35], rotation: [-0.12, 0.38, 0], visibleInRender: true },
+        { role: "stripPanel", enabled: true, placement: "right", color: "#f0bda1", intensityEffect: 0.42, size: [0.22, 1.8], position: [2.25, 1.45, -0.85], rotation: [0, -0.58, 0], visibleInRender: true }
+      ]
     },
     camera: { mode: "birdViewOnly", fov: 38, pitch: 0.12, yaw: Math.PI / 5, distanceMultiplier: 2.9, targetHeightRatio: 0.5, allowFirstPerson: false, orbitEnabled: true },
     postProcessing: {
@@ -461,10 +472,16 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<StudioSceneStyleProfileId, Stud
       ibl: { enabled: true, provider: "polyhaven", assetId: "studio_kontrast_02", intensity: 0.95, rotationY: 0.15, showAsBackground: false },
       lights: [
         { role: "key", type: "rectArea", color: "#dbe9ff", intensity: 3, position: [2.8, 3.8, 3], target: [0, 0.9, 0], width: 2.6, height: 1.7 },
+        { role: "keyShadow", type: "directional", color: "#b8d4ff", intensity: 2.4, position: [2.7, 4, 2.6], target: [0, 0.5, 0], castsShadow: true },
         { role: "fill", type: "rectArea", color: "#274f95", intensity: 0.8, position: [-3.5, 1.9, 1.4], target: [0, 0.7, 0], width: 2.1, height: 2.8 },
-        { role: "rim", type: "spot", color: "#62a8ff", intensity: 26, position: [-1.5, 2.8, -3.2], target: [0, 0.9, 0], distance: 10, angle: 0.5, penumbra: 0.25 }
+        { role: "rim", type: "spot", color: "#62a8ff", intensity: 26, position: [-1.5, 2.8, -3.2], target: [0, 0.9, 0], distance: 10, angle: 0.5, penumbra: 0.25 },
+        { role: "top", type: "rectArea", color: "#8ab8ff", intensity: 1.3, position: [0, 4.6, -0.1], target: [0, 0.55, 0], width: 2.2, height: 2.2 },
+        { role: "accent", type: "spot", color: "#2e88ff", intensity: 14, position: [2.3, 2.2, -2.4], target: [0, 0.75, 0], distance: 8, angle: 0.4, penumbra: 0.3 }
       ],
-      modifiers: []
+      modifiers: [
+        { role: "negativeFill", enabled: true, placement: "left", color: "#05070a", intensityEffect: -0.42, size: [1.1, 1.7], position: [-2.15, 1.18, 0.55], rotation: [0, 0.5, 0], visibleInRender: true },
+        { role: "stripPanel", enabled: true, placement: "right", color: "#2e88ff", intensityEffect: 0.5, size: [0.18, 1.9], position: [2.15, 1.35, -1.0], rotation: [0, -0.58, 0], visibleInRender: true }
+      ]
     },
     camera: { mode: "birdViewOnly", fov: 40, pitch: 0.12, yaw: Math.PI / 4.5, distanceMultiplier: 2.85, targetHeightRatio: 0.48, allowFirstPerson: false, orbitEnabled: true },
     postProcessing: {
@@ -507,10 +524,15 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<StudioSceneStyleProfileId, Stud
       ibl: { enabled: true, provider: "polyhaven", assetId: "white_home_studio", intensity: 0.7, rotationY: 0.5, showAsBackground: false },
       lights: [
         { role: "key", type: "rectArea", color: "#ffd9ad", intensity: 3.4, position: [-3.4, 3.3, 2.6], target: [0, 0.8, 0], width: 2.8, height: 3.2 },
+        { role: "keyShadow", type: "directional", color: "#ffd1a0", intensity: 1.7, position: [-3.1, 3.8, 2.4], target: [0, 0.55, 0], castsShadow: true },
         { role: "fill", type: "rectArea", color: "#fff1dc", intensity: 1.1, position: [2.8, 2.2, 2.8], target: [0, 0.7, 0], width: 2.2, height: 1.8 },
-        { role: "rim", type: "spot", color: "#ffbc76", intensity: 16, position: [1.8, 2.7, -2.8], target: [0, 0.8, 0], distance: 9, angle: 0.62, penumbra: 0.5 }
+        { role: "rim", type: "spot", color: "#ffbc76", intensity: 16, position: [1.8, 2.7, -2.8], target: [0, 0.8, 0], distance: 9, angle: 0.62, penumbra: 0.5 },
+        { role: "top", type: "rectArea", color: "#fff1dc", intensity: 1.2, position: [0, 4.2, 0.2], target: [0, 0.55, 0], width: 3, height: 2.2 },
+        { role: "accent", type: "spot", color: "#73513a", intensity: 6.2, position: [2.1, 2.2, -2.3], target: [0, 0.7, 0], distance: 7, angle: 0.5, penumbra: 0.55 }
       ],
-      modifiers: []
+      modifiers: [
+        { role: "reflector", enabled: true, placement: "right", color: "#ffe2bd", intensityEffect: 0.48, size: [1.25, 1.45], position: [2.05, 1.12, 0.7], rotation: [0, -0.5, 0], visibleInRender: true }
+      ]
     },
     camera: { mode: "birdViewOnly", fov: 44, pitch: 0.15, yaw: Math.PI / 5, distanceMultiplier: 2.9, targetHeightRatio: 0.48, allowFirstPerson: false, orbitEnabled: true },
     postProcessing: {
@@ -553,10 +575,16 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<StudioSceneStyleProfileId, Stud
       ibl: { enabled: true, provider: "polyhaven", assetId: "photo_studio_loft_hall", intensity: 0.62, rotationY: -0.1, showAsBackground: false },
       lights: [
         { role: "key", type: "rectArea", color: "#fff2df", intensity: 3.8, position: [0, 4.4, 2.6], target: [0, 0.8, 0], width: 3.2, height: 1.4 },
+        { role: "keyShadow", type: "directional", color: "#fff0dc", intensity: 1.4, position: [0.7, 4.6, 2.5], target: [0, 0.55, 0], castsShadow: true },
         { role: "fill", type: "rectArea", color: "#f3f8ff", intensity: 1.2, position: [-3.1, 2.5, 2.3], target: [0, 0.7, 0], width: 2.4, height: 2.1 },
-        { role: "rim", type: "spot", color: "#ffffff", intensity: 11, position: [2.3, 2.8, -2.8], target: [0, 0.8, 0], distance: 8, angle: 0.55, penumbra: 0.36 }
+        { role: "rim", type: "spot", color: "#ffffff", intensity: 11, position: [2.3, 2.8, -2.8], target: [0, 0.8, 0], distance: 8, angle: 0.55, penumbra: 0.36 },
+        { role: "top", type: "rectArea", color: "#f7f5ef", intensity: 1.7, position: [0, 4.8, 0.1], target: [0, 0.55, 0], width: 3.4, height: 2.4 },
+        { role: "accent", type: "spot", color: "#9c8f7b", intensity: 3.8, position: [-2.2, 2.3, -2.4], target: [0, 0.75, 0], distance: 7, angle: 0.52, penumbra: 0.5 }
       ],
-      modifiers: []
+      modifiers: [
+        { role: "reflector", enabled: true, placement: "front", color: "#f4efe5", intensityEffect: 0.36, size: [1.25, 1.3], position: [-1.75, 0.95, 1.25], rotation: [-0.08, 0.34, 0], visibleInRender: true },
+        { role: "reflector", enabled: true, placement: "top", color: "#eee9df", intensityEffect: 0.22, size: [1.6, 0.8], position: [0.3, 2.8, 0.2], rotation: [Math.PI / 2, 0, 0], visibleInRender: true }
+      ]
     },
     camera: { mode: "birdViewOnly", fov: 38, pitch: 0.1, yaw: Math.PI / 6, distanceMultiplier: 3.05, targetHeightRatio: 0.5, allowFirstPerson: false, orbitEnabled: true },
     postProcessing: {
@@ -596,10 +624,16 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<StudioSceneStyleProfileId, Stud
       ibl: { enabled: true, provider: "polyhaven", assetId: "studio_small_09", intensity: 0.86, rotationY: -0.2, showAsBackground: false },
       lights: [
         { role: "key", type: "rectArea", color: "#fff8e7", intensity: 4.2, position: [2.8, 3.7, 3.1], target: [0, 0.85, 0], width: 3.3, height: 2 },
+        { role: "keyShadow", type: "directional", color: "#fff0cb", intensity: 1.5, position: [2.6, 4, 2.8], target: [0, 0.55, 0], castsShadow: true },
         { role: "fill", type: "rectArea", color: "#e8f4ff", intensity: 2, position: [-2.8, 2.2, 2.3], target: [0, 0.75, 0], width: 2.8, height: 2.5 },
-        { role: "rim", type: "spot", color: "#ffe0a8", intensity: 12, position: [0.8, 2.8, -3], target: [0, 0.8, 0], distance: 9, angle: 0.6, penumbra: 0.44 }
+        { role: "rim", type: "spot", color: "#ffe0a8", intensity: 12, position: [0.8, 2.8, -3], target: [0, 0.8, 0], distance: 9, angle: 0.6, penumbra: 0.44 },
+        { role: "top", type: "rectArea", color: "#ffffff", intensity: 1.8, position: [0, 4.4, 0.1], target: [0, 0.55, 0], width: 3.2, height: 2.4 },
+        { role: "accent", type: "point", color: "#ffb84d", intensity: 5, position: [-1.8, 1.5, -1.7], target: [0, 0.75, 0], distance: 5 }
       ],
-      modifiers: []
+      modifiers: [
+        { role: "reflector", enabled: true, placement: "left", color: "#ffffff", intensityEffect: 0.52, size: [1.2, 1.4], position: [-2, 1.1, 0.75], rotation: [0, 0.5, 0], visibleInRender: true },
+        { role: "stripPanel", enabled: true, placement: "right", color: "#ffb84d", intensityEffect: 0.45, size: [0.2, 1.6], position: [2.05, 1.25, -0.95], rotation: [0, -0.56, 0], visibleInRender: true }
+      ]
     },
     camera: { mode: "birdViewOnly", fov: 43, pitch: 0.16, yaw: Math.PI / 4.2, distanceMultiplier: 2.8, targetHeightRatio: 0.48, allowFirstPerson: false, orbitEnabled: true },
     postProcessing: {
@@ -684,6 +718,15 @@ function applyBrandColorToStyleProfile(
     if (rimLight) {
       rimLight.color = normalizedBrandColor;
     }
+    const accentLight = next.lighting.lights.find((light) => light.role === "accent");
+    if (accentLight) {
+      accentLight.color = normalizedBrandColor;
+    }
+    next.lighting.modifiers.forEach((modifier) => {
+      if (modifier.role === "stripPanel") {
+        modifier.color = normalizedBrandColor;
+      }
+    });
   }
 
   return next;
