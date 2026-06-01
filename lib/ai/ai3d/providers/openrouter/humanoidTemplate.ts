@@ -1,4 +1,4 @@
-import axios from "axios";
+import { formatOpenRouterErrorMessage } from "@/lib/ai/openrouter/client";
 import type { Ai3DProvider, Ai3DStructuredResult } from "@/lib/ai/ai3d/core/types";
 import {
   getAi3DDiagnosticPromptSummary,
@@ -13,7 +13,6 @@ import {
   validateHumanoidTemplateParams,
   type HumanoidTemplateParams
 } from "@/lib/ai/ai3d/templates";
-import { getResponseHeader } from "@/lib/http/axios";
 import { OPENROUTER_AI3D_MODEL, requestStructuredResponse } from "./client";
 import { buildTextAndImagesContent, parseJsonWithValidator, readTextContent } from "./parsing";
 import {
@@ -23,7 +22,6 @@ import {
   readReferenceImageNote
 } from "./prompts";
 import type { OpenRouterRequestContent } from "./types";
-import type { OpenRouterTextResponse } from "./types";
 import { resolveAi3DIntent } from "./workflow";
 
 async function completeStructuredJson<T>({
@@ -109,23 +107,9 @@ function parseHumanoidTemplateParams(raw: string) {
 }
 
 function toAi3DErrorMessage(error: unknown, fallbackPrefix: string) {
-  if (axios.isAxiosError<OpenRouterTextResponse>(error)) {
-    const traceId =
-      getResponseHeader(error.response?.headers, "x-request-id") ?? error.response?.data?.id ?? null;
-    const status = error.response?.status ?? "unknown";
-    const message = error.response?.data?.error?.message || `${fallbackPrefix} failed with status ${status}.`;
-    return traceId ? `${message} (trace: ${traceId})` : message;
-  }
-
-  if (error instanceof SyntaxError) {
-    return "OpenRouter returned invalid JSON for the AI 3D pipeline.";
-  }
-
-  if (error instanceof Error && error.message.trim()) {
-    return error.message;
-  }
-
-  return `${fallbackPrefix} failed.`;
+  return formatOpenRouterErrorMessage(error, fallbackPrefix, {
+    invalidJsonMessage: "OpenRouter returned invalid JSON for the AI 3D pipeline."
+  });
 }
 
 async function requestHumanoidTemplateParams({

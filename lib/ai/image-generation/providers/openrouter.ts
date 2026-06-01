@@ -1,22 +1,17 @@
-import axios from "axios";
 import {
-  getOpenRouterChatCompletionsEndpoint,
-  getOpenRouterHeaders
-} from "@/lib/ai/openrouter/config";
+  formatOpenRouterErrorMessage,
+  postOpenRouterChatCompletion,
+  type OpenRouterChatCompletionRequest
+} from "@/lib/ai/openrouter/client";
 import {
   getImageGenerationModelConfig,
   imageSizeToAspectRatio
 } from "@/lib/ai/image-generation/models";
-import { createHttpClient, getResponseHeader } from "@/lib/http/axios";
 import type {
   ImageGenerationProvider,
   ImageGenerationRequest,
   ImageGenerationResult
 } from "@/lib/ai/image-generation/types";
-
-const openRouterImageClient = createHttpClient({
-  timeout: 240_000
-});
 
 type OpenRouterResponse = {
   id?: string;
@@ -45,16 +40,13 @@ export class OpenRouterImageGenerationProvider implements ImageGenerationProvide
 
   async generateImage(request: ImageGenerationRequest): Promise<ImageGenerationResult> {
     try {
-      const response = await openRouterImageClient.post<OpenRouterResponse>(
-        getOpenRouterChatCompletionsEndpoint(),
-        this.buildRequestBody(request),
-        {
-          headers: getOpenRouterHeaders(this.apiKey)
-        }
-      );
+      const { data, traceId } = await postOpenRouterChatCompletion<OpenRouterResponse>({
+        apiKey: this.apiKey,
+        body: this.buildRequestBody(request),
+        timeout: 240_000
+      });
 
-      const traceId = getResponseHeader(response.headers, "x-request-id") ?? response.data?.id ?? null;
-      const message = response.data?.choices?.[0]?.message;
+      const message = data?.choices?.[0]?.message;
       const images =
         message?.images
           ?.map((item) => item.image_url?.url ?? item.imageUrl?.url)
@@ -67,32 +59,14 @@ export class OpenRouterImageGenerationProvider implements ImageGenerationProvide
         traceId
       };
     } catch (error) {
-      if (axios.isAxiosError<OpenRouterResponse>(error)) {
-        const traceId =
-          getResponseHeader(error.response?.headers, "x-request-id") ?? error.response?.data?.id ?? null;
-        const status = error.response?.status ?? null;
-        const message =
-          error.response?.data?.error?.message ||
-          (status
-            ? `OpenRouter image request failed with status ${status}.`
-            : [
-                "OpenRouter image request failed before receiving a response.",
-                error.code ? `code: ${error.code}.` : null,
-                error.message ? `message: ${error.message}` : null
-              ]
-                .filter(Boolean)
-                .join(" "));
-        throw new Error(traceId ? `${message} (trace: ${traceId})` : message);
-      }
-
-      throw error;
+      throw new Error(formatOpenRouterErrorMessage(error, "OpenRouter image request"));
     }
   }
 
-  private buildRequestBody(request: ImageGenerationRequest) {
+  private buildRequestBody(request: ImageGenerationRequest): OpenRouterChatCompletionRequest {
     const modelConfig = getImageGenerationModelConfig(request.model);
     const content = [
-      { type: "text", text: request.prompt },
+      { type: "text" as const, text: request.prompt },
       ...(request.referenceImages ?? []).map((imageUrl) => ({
         type: "image_url" as const,
         image_url: { url: imageUrl }
@@ -103,7 +77,7 @@ export class OpenRouterImageGenerationProvider implements ImageGenerationProvide
       model: request.model,
       messages: [
         {
-          role: "user",
+          role: "user" as const,
           content
         }
       ],

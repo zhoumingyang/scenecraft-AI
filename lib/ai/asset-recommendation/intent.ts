@@ -1,39 +1,14 @@
-import axios from "axios";
 import { z } from "zod";
 import {
-  getOpenRouterChatCompletionsEndpoint,
-  getOpenRouterHeaders
-} from "@/lib/ai/openrouter/config";
-import { createHttpClient, getResponseHeader } from "@/lib/http/axios";
+  formatOpenRouterErrorMessage,
+  isOpenRouterHttpError,
+  postOpenRouterChatCompletion,
+  readOpenRouterTextContent,
+  type OpenRouterTextResponse
+} from "@/lib/ai/openrouter/client";
 import type { AssetRecommendationInput, AssetRecommendationIntent } from "./types";
 
 const OPENROUTER_ASSET_RECOMMENDATION_MODEL = "openai/gpt-5.4";
-const textClient = createHttpClient();
-
-type OpenRouterTextResponse = {
-  id?: string;
-  error?: {
-    message?: string;
-  };
-  choices?: Array<{
-    message?: {
-      content?:
-        | string
-        | Array<{
-            type?: string;
-            text?: string;
-          }>;
-    };
-  }>;
-};
-
-type OpenRouterTextContent =
-  | string
-  | Array<{
-      type?: string;
-      text?: string;
-    }>
-  | undefined;
 
 const intentSchema = z
   .object({
@@ -48,21 +23,6 @@ const intentSchema = z
     lightingHint: z.string().trim().max(160).default("")
   })
   .strict();
-
-function readTextContent(content: OpenRouterTextContent) {
-  if (typeof content === "string") {
-    return content.trim();
-  }
-
-  if (!Array.isArray(content)) {
-    return "";
-  }
-
-  return content
-    .map((item) => (typeof item?.text === "string" ? item.text : ""))
-    .join("")
-    .trim();
-}
 
 function parseJsonContent(content: string) {
   const fencedMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/i);
@@ -124,9 +84,9 @@ function buildUserPrompt(input: AssetRecommendationInput) {
 
 export async function resolveAssetRecommendationIntent(input: AssetRecommendationInput) {
   try {
-    const response = await textClient.post<OpenRouterTextResponse>(
-      getOpenRouterChatCompletionsEndpoint(),
-      {
+    const { data, traceId } = await postOpenRouterChatCompletion<OpenRouterTextResponse>({
+      apiKey: input.apiKey,
+      body: {
         model: OPENROUTER_ASSET_RECOMMENDATION_MODEL,
         messages: [
           {
@@ -140,14 +100,10 @@ export async function resolveAssetRecommendationIntent(input: AssetRecommendatio
         ],
         temperature: 0.2,
         stream: false
-      },
-      {
-        headers: getOpenRouterHeaders(input.apiKey)
       }
-    );
+    });
 
-    const traceId = getResponseHeader(response.headers, "x-request-id") ?? response.data.id ?? null;
-    const content = readTextContent(response.data?.choices?.[0]?.message?.content);
+    const content = readOpenRouterTextContent(data?.choices?.[0]?.message?.content);
     const intent = intentSchema.parse(parseJsonContent(content));
 
     return {
@@ -155,14 +111,10 @@ export async function resolveAssetRecommendationIntent(input: AssetRecommendatio
       traceId
     };
   } catch (error) {
-    if (axios.isAxiosError<OpenRouterTextResponse>(error)) {
-      const traceId =
-        getResponseHeader(error.response?.headers, "x-request-id") ?? error.response?.data?.id ?? null;
-      const status = error.response?.status ?? "unknown";
-      const message =
-        error.response?.data?.error?.message ||
-        `OpenRouter asset recommendation intent failed with status ${status}.`;
-      throw new Error(traceId ? `${message} (trace: ${traceId})` : message);
+    if (isOpenRouterHttpError(error)) {
+      throw new Error(
+        formatOpenRouterErrorMessage(error, "OpenRouter asset recommendation intent")
+      );
     }
 
     return {

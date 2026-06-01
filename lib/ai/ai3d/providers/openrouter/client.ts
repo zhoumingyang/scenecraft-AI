@@ -1,18 +1,12 @@
 import {
-  getOpenRouterChatCompletionsEndpoint,
-  getOpenRouterHeaders
-} from "@/lib/ai/openrouter/config";
-import { createHttpClient, getResponseHeader } from "@/lib/http/axios";
+  postOpenRouterChatCompletion,
+  type OpenRouterTextResponse
+} from "@/lib/ai/openrouter/client";
 import type {
-  OpenRouterRequestMessage,
-  OpenRouterTextResponse
+  OpenRouterRequestMessage
 } from "./types";
 
 const OPENROUTER_AI3D_MODEL = "openai/gpt-5.4";
-
-const openRouterAi3DClient = createHttpClient({
-  timeout: 180_000
-});
 
 export async function requestStructuredResponse({
   apiKey,
@@ -25,22 +19,20 @@ export async function requestStructuredResponse({
   messages: OpenRouterRequestMessage[];
   temperature?: number;
 }) {
-  const response = await openRouterAi3DClient.post<OpenRouterTextResponse>(
-    getOpenRouterChatCompletionsEndpoint(),
-    {
+  const { data, traceId } = await postOpenRouterChatCompletion<OpenRouterTextResponse>({
+    apiKey,
+    body: {
       model: model ?? OPENROUTER_AI3D_MODEL,
       messages,
       temperature: temperature ?? 0.2,
       stream: false
     },
-    {
-      headers: getOpenRouterHeaders(apiKey)
-    }
-  );
+    timeout: 180_000
+  });
 
   return {
-    traceId: getResponseHeader(response.headers, "x-request-id") ?? response.data.id ?? null,
-    rawContent: response.data?.choices?.[0]?.message?.content
+    traceId,
+    rawContent: data?.choices?.[0]?.message?.content
   };
 }
 

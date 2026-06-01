@@ -1,41 +1,15 @@
-import axios from "axios";
 import {
-  getOpenRouterChatCompletionsEndpoint,
-  getOpenRouterHeaders
-} from "@/lib/ai/openrouter/config";
+  formatOpenRouterErrorMessage,
+  postOpenRouterChatCompletion,
+  readOpenRouterTextContent,
+  type OpenRouterTextResponse
+} from "@/lib/ai/openrouter/client";
 import type {
   PromptTransformMode,
   PromptTransformTarget
 } from "@/lib/ai/prompt-transform/constants";
-import { createHttpClient, getResponseHeader } from "@/lib/http/axios";
 
 const OPENROUTER_PROMPT_MODEL = "openai/gpt-5.4";
-const openRouterTextClient = createHttpClient();
-
-type OpenRouterTextResponse = {
-  id?: string;
-  error?: {
-    message?: string;
-  };
-  choices?: Array<{
-    message?: {
-      content?:
-        | string
-        | Array<{
-            type?: string;
-            text?: string;
-          }>;
-    };
-  }>;
-};
-
-type OpenRouterTextContent =
-  | string
-  | Array<{
-      type?: string;
-      text?: string;
-    }>
-  | undefined;
 
 const SHARED_OPTIMIZE_PROMPT_RULES = [
   "You rewrite prompts for AI visual generation.",
@@ -84,21 +58,6 @@ function getSystemPrompt(mode: PromptTransformMode, target: PromptTransformTarge
   return [...SHARED_OPTIMIZE_PROMPT_RULES, ...TARGET_OPTIMIZE_PROMPT_RULES[target]].join(" ");
 }
 
-function readTextContent(content: OpenRouterTextContent) {
-  if (typeof content === "string") {
-    return content.trim();
-  }
-
-  if (!Array.isArray(content)) {
-    return "";
-  }
-
-  return content
-    .map((item) => (typeof item?.text === "string" ? item.text : ""))
-    .join("")
-    .trim();
-}
-
 export async function transformPromptWithOpenRouter({
   apiKey,
   mode,
@@ -111,9 +70,9 @@ export async function transformPromptWithOpenRouter({
   target?: PromptTransformTarget;
 }) {
   try {
-    const response = await openRouterTextClient.post<OpenRouterTextResponse>(
-      getOpenRouterChatCompletionsEndpoint(),
-      {
+    const { data, traceId } = await postOpenRouterChatCompletion<OpenRouterTextResponse>({
+      apiKey,
+      body: {
         model: OPENROUTER_PROMPT_MODEL,
         messages: [
           {
@@ -127,14 +86,10 @@ export async function transformPromptWithOpenRouter({
         ],
         temperature: 0.2,
         stream: false
-      },
-      {
-        headers: getOpenRouterHeaders(apiKey)
       }
-    );
+    });
 
-    const traceId = getResponseHeader(response.headers, "x-request-id") ?? response.data.id ?? null;
-    const result = readTextContent(response.data?.choices?.[0]?.message?.content);
+    const result = readOpenRouterTextContent(data?.choices?.[0]?.message?.content);
 
     if (!result) {
       throw new Error("OpenRouter returned an empty prompt.");
@@ -145,16 +100,6 @@ export async function transformPromptWithOpenRouter({
       traceId
     };
   } catch (error) {
-    if (axios.isAxiosError<OpenRouterTextResponse>(error)) {
-      const traceId =
-        getResponseHeader(error.response?.headers, "x-request-id") ?? error.response?.data?.id ?? null;
-      const status = error.response?.status ?? "unknown";
-      const message =
-        error.response?.data?.error?.message ||
-        `OpenRouter prompt transform failed with status ${status}.`;
-      throw new Error(traceId ? `${message} (trace: ${traceId})` : message);
-    }
-
-    throw error;
+    throw new Error(formatOpenRouterErrorMessage(error, "OpenRouter prompt transform"));
   }
 }

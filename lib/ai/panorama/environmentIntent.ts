@@ -1,45 +1,16 @@
-import axios from "axios";
 import { z } from "zod";
 import {
-  getOpenRouterChatCompletionsEndpoint,
-  getOpenRouterHeaders
-} from "@/lib/ai/openrouter/config";
+  formatOpenRouterErrorMessage,
+  postOpenRouterChatCompletion,
+  readOpenRouterTextContent,
+  type OpenRouterTextResponse
+} from "@/lib/ai/openrouter/client";
 import {
   aiPanoramaEnvironmentPatchSchema,
   type AiPanoramaEnvironmentPatch
 } from "@/lib/api/contracts/ai";
-import { createHttpClient, getResponseHeader } from "@/lib/http/axios";
 
 const OPENROUTER_PANORAMA_INTENT_MODEL = "openai/gpt-5.4";
-
-const panoramaIntentClient = createHttpClient({
-  timeout: 90_000
-});
-
-type OpenRouterTextResponse = {
-  id?: string;
-  error?: {
-    message?: string;
-  };
-  choices?: Array<{
-    message?: {
-      content?:
-        | string
-        | Array<{
-            type?: string;
-            text?: string;
-          }>;
-    };
-  }>;
-};
-
-type OpenRouterTextContent =
-  | string
-  | Array<{
-      type?: string;
-      text?: string;
-    }>
-  | undefined;
 
 type PanoramaEnvironmentIntent = {
   enhancedPrompt: string;
@@ -70,21 +41,6 @@ const rawPanoramaEnvironmentIntentSchema = z
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
-}
-
-function readTextContent(content: OpenRouterTextContent) {
-  if (typeof content === "string") {
-    return content.trim();
-  }
-
-  if (!Array.isArray(content)) {
-    return "";
-  }
-
-  return content
-    .map((item) => (typeof item?.text === "string" ? item.text : ""))
-    .join("")
-    .trim();
 }
 
 function extractJsonObject(raw: string) {
@@ -170,9 +126,9 @@ export async function resolvePanoramaEnvironmentIntent({
   prompt: string;
 }) {
   try {
-    const response = await panoramaIntentClient.post<OpenRouterTextResponse>(
-      getOpenRouterChatCompletionsEndpoint(),
-      {
+    const { data, traceId } = await postOpenRouterChatCompletion<OpenRouterTextResponse>({
+      apiKey,
+      body: {
         model: OPENROUTER_PANORAMA_INTENT_MODEL,
         messages: [
           {
@@ -187,25 +143,12 @@ export async function resolvePanoramaEnvironmentIntent({
         temperature: 0.35,
         stream: false
       },
-      {
-        headers: getOpenRouterHeaders(apiKey)
-      }
-    );
-    const traceId = getResponseHeader(response.headers, "x-request-id") ?? response.data.id ?? null;
-    const content = readTextContent(response.data?.choices?.[0]?.message?.content);
+      timeout: 90_000
+    });
+    const content = readOpenRouterTextContent(data?.choices?.[0]?.message?.content);
 
     return parsePanoramaEnvironmentIntent(content, traceId);
   } catch (error) {
-    if (axios.isAxiosError<OpenRouterTextResponse>(error)) {
-      const traceId =
-        getResponseHeader(error.response?.headers, "x-request-id") ?? error.response?.data?.id ?? null;
-      const status = error.response?.status ?? "unknown";
-      const message =
-        error.response?.data?.error?.message ||
-        `OpenRouter panorama intent failed with status ${status}.`;
-      throw new Error(traceId ? `${message} (trace: ${traceId})` : message);
-    }
-
-    throw error;
+    throw new Error(formatOpenRouterErrorMessage(error, "OpenRouter panorama intent"));
   }
 }
