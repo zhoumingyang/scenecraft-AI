@@ -3,6 +3,9 @@ import {
   DEFAULT_OPENROUTER_API_BASE_URL
 } from "./constants/urls";
 
+export const OPENROUTER_API_KEY_CONFIGURATION_ERROR_MESSAGE =
+  "OPENROUTER_API_KEY is not configured.";
+
 function trimTrailingSlash(value: string) {
   return value.replace(/\/+$/, "");
 }
@@ -32,6 +35,20 @@ export function getOpenRouterApiBaseUrl() {
   }
 
   return `${CLOUDFLARE_AI_GATEWAY_BASE_URL}/${accountId}/${gatewayId}/openrouter`;
+}
+
+export function getOpenRouterApiKey() {
+  const apiKey = readEnv("OPENROUTER_API_KEY");
+
+  if (!apiKey) {
+    throw new Error(OPENROUTER_API_KEY_CONFIGURATION_ERROR_MESSAGE);
+  }
+
+  return apiKey;
+}
+
+export function isOpenRouterApiKeyConfigurationErrorMessage(message: string) {
+  return message === OPENROUTER_API_KEY_CONFIGURATION_ERROR_MESSAGE;
 }
 
 export function getOpenRouterChatCompletionsEndpoint() {

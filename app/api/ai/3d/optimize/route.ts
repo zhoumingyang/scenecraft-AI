@@ -4,9 +4,17 @@ import {
   getAiApiErrorMessage,
   optimizeAi3DRequestSchema
 } from "@/lib/api/contracts/ai";
+import {
+  getOpenRouterApiKey,
+  isOpenRouterApiKeyConfigurationErrorMessage
+} from "@/lib/ai/openrouter/config";
 import { getSession } from "@/lib/server/auth/getSession";
 
 export const maxDuration = 240;
+
+function getAi3DOptimizationErrorStatus(message: string) {
+  return isOpenRouterApiKeyConfigurationErrorMessage(message) ? 500 : 400;
+}
 
 export async function POST(request: Request) {
   const session = await getSession();
@@ -15,13 +23,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
-  const apiKey = process.env.OPENROUTER_API_KEY?.trim();
-
-  if (!apiKey) {
-    return NextResponse.json({ message: "OPENROUTER_API_KEY is not configured." }, { status: 500 });
-  }
-
   try {
+    const apiKey = getOpenRouterApiKey();
     const body = optimizeAi3DRequestSchema.parse(await request.json());
     const result = await optimizeAi3DPlan({
       apiKey,
@@ -35,6 +38,6 @@ export async function POST(request: Request) {
     return NextResponse.json(result);
   } catch (error) {
     const message = getAiApiErrorMessage(error, "AI 3D optimization failed.");
-    return NextResponse.json({ message }, { status: 400 });
+    return NextResponse.json({ message }, { status: getAi3DOptimizationErrorStatus(message) });
   }
 }

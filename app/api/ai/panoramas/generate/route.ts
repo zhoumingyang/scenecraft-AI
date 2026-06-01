@@ -15,12 +15,19 @@ import {
   getAiApiErrorMessage
 } from "@/lib/api/contracts/ai";
 import { resolvePanoramaEnvironmentIntent } from "@/lib/ai/panorama/environmentIntent";
+import {
+  getOpenRouterApiKey,
+  isOpenRouterApiKeyConfigurationErrorMessage
+} from "@/lib/ai/openrouter/config";
 import { getSession } from "@/lib/server/auth/getSession";
 
 export const maxDuration = 180;
 
 function getAiPanoramaErrorStatus(message: string) {
-  return message.includes("_API_KEY is not configured") ? 500 : 400;
+  return message.includes("_API_KEY is not configured") ||
+    isOpenRouterApiKeyConfigurationErrorMessage(message)
+    ? 500
+    : 400;
 }
 
 function buildPanoramaPrompt(prompt: string) {
@@ -42,18 +49,16 @@ export async function POST(request: Request) {
 
   try {
     const body = generateAiPanoramaRequestSchema.parse(await request.json());
+    const openRouterApiKey = getOpenRouterApiKey();
     const modelConfig = getImageGenerationModelConfig(AI_PANORAMA_MODEL_ID);
     const provider = createImageGenerationProvider(modelConfig.providerId);
-    const openRouterApiKey = process.env.OPENROUTER_API_KEY?.trim();
-    const environmentIntent = openRouterApiKey
-      ? await resolvePanoramaEnvironmentIntent({
-          apiKey: openRouterApiKey,
-          prompt: body.prompt
-        }).catch((error) => {
-          console.warn("[ai-panorama] Failed to resolve environment intent.", error);
-          return null;
-        })
-      : null;
+    const environmentIntent = await resolvePanoramaEnvironmentIntent({
+      apiKey: openRouterApiKey,
+      prompt: body.prompt
+    }).catch((error) => {
+      console.warn("[ai-panorama] Failed to resolve environment intent.", error);
+      return null;
+    });
     const generationPrompt = environmentIntent?.enhancedPrompt ?? body.prompt;
     const result = await provider.generateImage({
       providerId: modelConfig.providerId,
