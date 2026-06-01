@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
-import { getSession } from "@/lib/server/auth/getSession";
+import { withAuth } from "@/lib/server/auth/withAuth";
 import { getErrorMessage } from "@/lib/server/http/getErrorMessage";
 
 const MAX_REMOTE_IMAGE_FETCH_BYTES = 25 * 1024 * 1024;
@@ -191,13 +191,7 @@ async function readLimitedResponseBody(response: Response) {
   return body;
 }
 
-export async function POST(request: Request) {
-  const session = await getSession();
-
-  if (!session) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-  }
-
+export const POST = withAuth(async (request) => {
   try {
     const body = (await request.json()) as { url?: unknown };
     const url = parseRemoteImageUrl(body.url);
@@ -229,4 +223,4 @@ export async function POST(request: Request) {
     const message = getErrorMessage(error, "Failed to fetch remote image.");
     return NextResponse.json({ message }, { status: 400 });
   }
-}
+});

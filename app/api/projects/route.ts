@@ -5,19 +5,13 @@ import type {
   SaveProjectResponse
 } from "@/lib/api/contracts/projects";
 import { normalizeProjectAiLibrary, projectSaveRequestSchema } from "@/lib/project/schema";
-import { getSession } from "@/lib/server/auth/getSession";
+import { withAuth } from "@/lib/server/auth/withAuth";
 import { getErrorMessage } from "@/lib/server/http/getErrorMessage";
 import { createProject } from "@/lib/server/projects/mutations";
 import { listProjectsByUser } from "@/lib/server/projects/queries";
 import { serializeProjectSummary } from "@/lib/server/projects/serializers";
 
-export async function GET() {
-  const session = await getSession();
-
-  if (!session) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = withAuth(async (_request, _context, session) => {
   try {
     const items = await listProjectsByUser(session.user.id);
     const response: ListProjectsResponse = {
@@ -29,15 +23,9 @@ export async function GET() {
     const message = getErrorMessage(error, "Failed to load projects.");
     return NextResponse.json({ message }, { status: 500 });
   }
-}
+});
 
-export async function POST(request: Request) {
-  const session = await getSession();
-
-  if (!session) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-  }
-
+export const POST = withAuth(async (request, _context, session) => {
   try {
     const payload = projectSaveRequestSchema.parse((await request.json()) as SaveProjectRequest);
     const projectId = payload.snapshot.id;
@@ -63,4 +51,4 @@ export async function POST(request: Request) {
     const status = message.includes("DATABASE_URL") ? 500 : 400;
     return NextResponse.json({ message }, { status });
   }
-}
+});

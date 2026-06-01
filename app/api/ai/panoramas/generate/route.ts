@@ -19,7 +19,7 @@ import {
   getOpenRouterApiKey,
   isOpenRouterApiKeyConfigurationErrorMessage
 } from "@/lib/ai/openrouter/config";
-import { getSession } from "@/lib/server/auth/getSession";
+import { withAuth } from "@/lib/server/auth/withAuth";
 
 export const maxDuration = 180;
 
@@ -40,13 +40,7 @@ function buildPanoramaPrompt(prompt: string) {
   ].join("\n");
 }
 
-export async function POST(request: Request) {
-  const session = await getSession();
-
-  if (!session) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-  }
-
+export const POST = withAuth(async (request) => {
   try {
     const body = generateAiPanoramaRequestSchema.parse(await request.json());
     const openRouterApiKey = getOpenRouterApiKey();
@@ -90,4 +84,4 @@ export async function POST(request: Request) {
     const message = getAiApiErrorMessage(error, "AI panorama generation failed.");
     return NextResponse.json({ message }, { status: getAiPanoramaErrorStatus(message) });
   }
-}
+});

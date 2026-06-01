@@ -6,16 +6,10 @@ import {
   buildProjectAssetObjectKey,
   createAssetUploadClientToken
 } from "@/lib/server/assets/config";
-import { getSession } from "@/lib/server/auth/getSession";
+import { withAuth } from "@/lib/server/auth/withAuth";
 import { getErrorMessage } from "@/lib/server/http/getErrorMessage";
 
-export async function POST(request: Request) {
-  const session = await getSession();
-
-  if (!session) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-  }
-
+export const POST = withAuth(async (request, _context, session) => {
   try {
     assertBlobConfigured();
     const payload = prepareAssetUploadRequestSchema.parse(await request.json());
@@ -35,4 +29,4 @@ export async function POST(request: Request) {
     const status = message.includes("BLOB_READ_WRITE_TOKEN") ? 500 : 400;
     return NextResponse.json({ message }, { status });
   }
-}
+});

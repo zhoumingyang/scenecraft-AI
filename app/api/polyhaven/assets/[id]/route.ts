@@ -3,7 +3,7 @@ import type { GetExternalAssetDetailResponse } from "@/lib/externalAssets/contra
 import { isPolyhavenProviderEnabled } from "@/lib/externalAssets/config";
 import { polyhavenProvider } from "@/lib/externalAssets/polyhaven";
 import type { ExternalAssetType } from "@/lib/externalAssets/types";
-import { getSession } from "@/lib/server/auth/getSession";
+import { withAuth } from "@/lib/server/auth/withAuth";
 import { getErrorMessage } from "@/lib/server/http/getErrorMessage";
 
 function parseAssetType(value: string | null): ExternalAssetType {
@@ -14,18 +14,11 @@ function parseAssetType(value: string | null): ExternalAssetType {
   throw new Error("Unsupported asset type.");
 }
 
-export async function GET(
-  request: Request,
-  context: {
-    params: Promise<{ id: string }>;
-  }
-) {
-  const session = await getSession();
+type RouteContext = {
+  params: Promise<{ id: string }>;
+};
 
-  if (!session) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = withAuth<RouteContext>(async (request, context) => {
   if (!isPolyhavenProviderEnabled()) {
     return NextResponse.json({ message: "Poly Haven provider is disabled." }, { status: 404 });
   }
@@ -48,4 +41,4 @@ export async function GET(
     const status = message.includes("Unsupported asset type") ? 400 : 500;
     return NextResponse.json({ message }, { status });
   }
-}
+});

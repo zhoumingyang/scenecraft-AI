@@ -12,7 +12,7 @@ import {
   generateAiPbrTextureRequestSchema,
   getAiApiErrorMessage
 } from "@/lib/api/contracts/ai";
-import { getSession } from "@/lib/server/auth/getSession";
+import { withAuth } from "@/lib/server/auth/withAuth";
 import { PBR_ATLAS_LAYOUT_VERSION } from "@/render/editor";
 
 export const maxDuration = 180;
@@ -21,13 +21,7 @@ function getAiPbrTextureErrorStatus(message: string) {
   return message.includes("_API_KEY is not configured") ? 500 : 400;
 }
 
-export async function POST(request: Request) {
-  const session = await getSession();
-
-  if (!session) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-  }
-
+export const POST = withAuth(async (request) => {
   try {
     const body = generateAiPbrTextureRequestSchema.parse(await request.json());
     const modelConfig = getImageGenerationModelConfig(AI_PBR_TEXTURE_MODEL_ID);
@@ -61,4 +55,4 @@ export async function POST(request: Request) {
     const message = getAiApiErrorMessage(error, "AI PBR texture generation failed.");
     return NextResponse.json({ message }, { status: getAiPbrTextureErrorStatus(message) });
   }
-}
+});

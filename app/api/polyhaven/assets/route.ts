@@ -3,7 +3,7 @@ import type { ListExternalAssetsResponse } from "@/lib/externalAssets/contracts"
 import { isPolyhavenProviderEnabled } from "@/lib/externalAssets/config";
 import { polyhavenProvider } from "@/lib/externalAssets/polyhaven";
 import type { ExternalAssetType } from "@/lib/externalAssets/types";
-import { getSession } from "@/lib/server/auth/getSession";
+import { withAuth } from "@/lib/server/auth/withAuth";
 import { getErrorMessage } from "@/lib/server/http/getErrorMessage";
 
 function parseAssetType(value: string | null): ExternalAssetType {
@@ -19,13 +19,7 @@ function parsePositiveInteger(value: string | null, fallback: number) {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
 }
 
-export async function GET(request: Request) {
-  const session = await getSession();
-
-  if (!session) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = withAuth(async (request) => {
   if (!isPolyhavenProviderEnabled()) {
     return NextResponse.json({ message: "Poly Haven provider is disabled." }, { status: 404 });
   }
@@ -49,4 +43,4 @@ export async function GET(request: Request) {
     const status = message.includes("Unsupported asset type") ? 400 : 500;
     return NextResponse.json({ message }, { status });
   }
-}
+});

@@ -9,7 +9,7 @@ import {
   isOpenRouterApiKeyConfigurationErrorMessage
 } from "@/lib/ai/openrouter/config";
 import { isPolyhavenProviderEnabled } from "@/lib/externalAssets/config";
-import { getSession } from "@/lib/server/auth/getSession";
+import { withAuth } from "@/lib/server/auth/withAuth";
 
 export const maxDuration = 180;
 
@@ -25,13 +25,7 @@ function getRecommendationErrorStatus(message: string) {
   return 400;
 }
 
-export async function POST(request: Request) {
-  const session = await getSession();
-
-  if (!session) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-  }
-
+export const POST = withAuth(async (request) => {
   if (!isPolyhavenProviderEnabled()) {
     return NextResponse.json({ message: "Poly Haven provider is disabled." }, { status: 404 });
   }
@@ -52,4 +46,4 @@ export async function POST(request: Request) {
     const message = getAiApiErrorMessage(error, "AI asset recommendations failed.");
     return NextResponse.json({ message }, { status: getRecommendationErrorStatus(message) });
   }
-}
+});

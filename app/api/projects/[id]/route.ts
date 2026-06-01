@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { SaveProjectRequest, SaveProjectResponse } from "@/lib/api/contracts/projects";
 import { normalizeProjectAiLibrary, projectSaveRequestSchema } from "@/lib/project/schema";
-import { getSession } from "@/lib/server/auth/getSession";
+import { withAuth } from "@/lib/server/auth/withAuth";
 import { deleteBlobAssets } from "@/lib/server/assets/config";
 import { getErrorMessage } from "@/lib/server/http/getErrorMessage";
 import { deleteProject, updateProject } from "@/lib/server/projects/mutations";
@@ -13,13 +13,7 @@ type RouteContext = {
   }>;
 };
 
-export async function GET(_: Request, context: RouteContext) {
-  const session = await getSession();
-
-  if (!session) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = withAuth<RouteContext>(async (_request, context, session) => {
   try {
     const { id } = await context.params;
     const project = await getProjectByIdForUser(id, session.user.id);
@@ -41,15 +35,9 @@ export async function GET(_: Request, context: RouteContext) {
     const message = getErrorMessage(error, "Failed to load project.");
     return NextResponse.json({ message }, { status: 500 });
   }
-}
+});
 
-export async function PUT(request: Request, context: RouteContext) {
-  const session = await getSession();
-
-  if (!session) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-  }
-
+export const PUT = withAuth<RouteContext>(async (request, context, session) => {
   try {
     const { id } = await context.params;
     const payload = projectSaveRequestSchema.parse((await request.json()) as SaveProjectRequest);
@@ -92,15 +80,9 @@ export async function PUT(request: Request, context: RouteContext) {
     const status = message.includes("DATABASE_URL") ? 500 : 400;
     return NextResponse.json({ message }, { status });
   }
-}
+});
 
-export async function DELETE(_: Request, context: RouteContext) {
-  const session = await getSession();
-
-  if (!session) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-  }
-
+export const DELETE = withAuth<RouteContext>(async (_request, context, session) => {
   try {
     const { id } = await context.params;
     const deleteResult = await deleteProject(id, session.user.id);
@@ -119,4 +101,4 @@ export async function DELETE(_: Request, context: RouteContext) {
     const status = message.includes("DATABASE_URL") ? 500 : 400;
     return NextResponse.json({ message }, { status });
   }
-}
+});

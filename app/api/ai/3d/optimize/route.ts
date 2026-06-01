@@ -8,7 +8,7 @@ import {
   getOpenRouterApiKey,
   isOpenRouterApiKeyConfigurationErrorMessage
 } from "@/lib/ai/openrouter/config";
-import { getSession } from "@/lib/server/auth/getSession";
+import { withAuth } from "@/lib/server/auth/withAuth";
 
 export const maxDuration = 240;
 
@@ -16,13 +16,7 @@ function getAi3DOptimizationErrorStatus(message: string) {
   return isOpenRouterApiKeyConfigurationErrorMessage(message) ? 500 : 400;
 }
 
-export async function POST(request: Request) {
-  const session = await getSession();
-
-  if (!session) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-  }
-
+export const POST = withAuth(async (request) => {
   try {
     const apiKey = getOpenRouterApiKey();
     const body = optimizeAi3DRequestSchema.parse(await request.json());
@@ -40,4 +34,4 @@ export async function POST(request: Request) {
     const message = getAiApiErrorMessage(error, "AI 3D optimization failed.");
     return NextResponse.json({ message }, { status: getAi3DOptimizationErrorStatus(message) });
   }
-}
+});

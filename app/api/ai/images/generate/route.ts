@@ -5,7 +5,7 @@ import {
   generateAiImagesRequestSchema,
   getAiApiErrorMessage
 } from "@/lib/api/contracts/ai";
-import { getSession } from "@/lib/server/auth/getSession";
+import { withAuth } from "@/lib/server/auth/withAuth";
 
 export const maxDuration = 180;
 
@@ -13,13 +13,7 @@ function getImageGenerationErrorStatus(message: string) {
   return message.includes("_API_KEY is not configured") ? 500 : 400;
 }
 
-export async function POST(request: Request) {
-  const session = await getSession();
-
-  if (!session) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-  }
-
+export const POST = withAuth(async (request) => {
   try {
     const body = generateAiImagesRequestSchema.parse(await request.json());
     const modelConfig = getImageGenerationModelConfig(body.model);
@@ -40,4 +34,4 @@ export async function POST(request: Request) {
     const message = getAiApiErrorMessage(error, "Image generation failed.");
     return NextResponse.json({ message }, { status: getImageGenerationErrorStatus(message) });
   }
-}
+});
