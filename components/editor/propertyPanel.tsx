@@ -121,8 +121,10 @@ export default function PropertyPanel() {
     () => (open ? app?.getIsolatedEntityId() ?? null : null),
     [app, open, viewStateVersion]
   );
+  const isStudioSceneActive = Boolean(studioScene?.active);
   const canIsolateCurrentEntity =
     inspectorMode !== "ai" &&
+    !isStudioSceneActive &&
     Boolean(
       entityRecord &&
         (entityRecord.kind === "group" || entityRecord.kind === "model" || entityRecord.kind === "mesh")
@@ -136,6 +138,7 @@ export default function PropertyPanel() {
   );
   const canPreviewCurrentEntityInStudio =
     inspectorMode !== "ai" &&
+    !isStudioSceneActive &&
     Boolean(
       app?.projectModel &&
         currentIsolatableEntityId &&
