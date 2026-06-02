@@ -54,6 +54,7 @@ import {
   type StudioSceneSessionControllerOptions,
   type StudioTargetFrame,
   type StudioTransientAdoptOptions,
+  type StudioTransientEntityMetadata,
   type StudioTransientEntityRole
 } from "./studioSceneSession/types";
 
@@ -63,6 +64,7 @@ export type {
   StudioHdriResolveResult,
   StudioSceneEnterOptions,
   StudioSceneEntityAction,
+  StudioTransientEntityMetadata,
   StudioTransientEntityRole
 };
 
@@ -143,6 +145,21 @@ export class StudioSceneSessionController {
 
   getTransientStudioEntityRole(entityId: string) {
     return this.activeSession?.transientEntityRoles.get(entityId) ?? null;
+  }
+
+  getStudioSceneEntityMetadata(entityId: string | null) {
+    return this.transientEntityManager.getStudioSceneEntityMetadata(
+      this.activeSession,
+      entityId
+    );
+  }
+
+  resetStudioSceneEntity(entityId: string, source: SyncSource = "ui") {
+    return this.transientEntityManager.resetTransientStudioEntity(
+      this.activeSession,
+      entityId,
+      source
+    );
   }
 
   getSelectedStudioEntityRole(entityId: string | null) {

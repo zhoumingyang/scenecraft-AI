@@ -330,6 +330,14 @@ export class EditorSession {
     return entityId ? this.studioScene.getTransientStudioEntityRole(entityId) : null;
   }
 
+  getStudioSceneEntityMetadata(entityId: string | null) {
+    return this.studioScene.getStudioSceneEntityMetadata(entityId);
+  }
+
+  resetStudioSceneEntity(entityId: string) {
+    return this.studioScene.resetStudioSceneEntity(entityId);
+  }
+
   setStudioScenePlinthKind(plinthKind: StudioPlinthKind) {
     this.studioScene.setPlinthKind(plinthKind);
   }

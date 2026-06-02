@@ -75,7 +75,11 @@ export type {
   StudioSceneStyleProfileId,
   StudioSceneStyleSelectionMode
 } from "./studioSceneProfiles";
-export type { StudioSceneEnterOptions, StudioTransientEntityRole } from "./session/studioSceneSession";
+export type {
+  StudioSceneEnterOptions,
+  StudioTransientEntityMetadata,
+  StudioTransientEntityRole
+} from "./session/studioSceneSession";
 export {
   createPbrAtlasMaterialPatch,
   PBR_ATLAS_FIELDS,

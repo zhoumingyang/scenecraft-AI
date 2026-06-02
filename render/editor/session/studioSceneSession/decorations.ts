@@ -109,6 +109,7 @@ export function replaceStudioDecoration(input: {
   session.transientEntityIds.delete(entityId);
   session.transientLayoutEntityIds.delete(entityId);
   session.transientEntityRoles.delete(entityId);
+  session.transientEntityMetadata.delete(entityId);
 
   const nextId = deps.transientEntityManager.addTransientMeshDescriptor(
     session,
