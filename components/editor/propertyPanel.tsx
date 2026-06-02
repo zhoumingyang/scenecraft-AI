@@ -442,6 +442,7 @@ export default function PropertyPanel() {
 
                     <StudioScenePropertySection
                       app={app}
+                      isSceneSelected={selectedEntityId === SCENE_NODE_ID}
                       metadata={studioEntityMetadata}
                       selectedEntityId={selectedEntityId}
                       studioScene={studioScene}
