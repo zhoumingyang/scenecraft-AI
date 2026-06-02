@@ -142,11 +142,20 @@ export function setStudioPlinthKind(input: {
   if (!binding) return false;
 
   session.plinthKind = plinthKind;
-  deps.rebuildTransientStudioEntities(
+  const selectedEntityId = deps.getSelectedEntityId();
+  if (selectedEntityId && session.transientLayoutEntityIds.has(selectedEntityId)) {
+    deps.setSelectedEntity(null, "ui");
+  }
+  deps.transientEntityManager.removeTransientStudioEntityIds(
     session,
-    getStudioScenePreset(session.presetId),
+    session.transientLayoutEntityIds
+  );
+  deps.transientEntityManager.createTransientStudioLayoutEntities(
+    session,
     createStudioFrameFromObject(binding.object)
   );
+  deps.rebuildGroupHierarchy();
+  deps.emit({ type: "sceneUpdated", source: "ui", pathTraceInvalidation: "scene" });
   deps.emitChanged();
   return true;
 }
