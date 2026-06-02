@@ -8,6 +8,15 @@ import {
 import { createBinding } from "./bindingFactory";
 import type { BindingContext, RenderBinding } from "./types";
 
+function isObjectEffectivelyVisible(object: THREE.Object3D) {
+  let current: THREE.Object3D | null = object;
+  while (current) {
+    if (!current.visible) return false;
+    current = current.parent;
+  }
+  return true;
+}
+
 export class BindingRegistry {
   private readonly context: BindingContext;
   private readonly bindingsById = new Map<string, RenderBinding>();
@@ -63,7 +72,8 @@ export class BindingRegistry {
   getPickTargets(): THREE.Object3D[] {
     return this.list()
       .filter((binding) => !binding.model.locked)
-      .flatMap((binding) => binding.pickTargets ?? [binding.object]);
+      .flatMap((binding) => binding.pickTargets ?? [binding.object])
+      .filter(isObjectEffectivelyVisible);
   }
 
   syncModelTransformToObject(entityId: string) {

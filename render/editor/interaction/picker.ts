@@ -30,13 +30,15 @@ export function pickEntityId({
   const intersects = raycaster.intersectObjects(pickTargets, true);
   if (intersects.length === 0) return null;
 
-  let current: THREE.Object3D | null = intersects[0].object;
-  while (current) {
-    const entityId = current.userData.editorEntityId;
-    if (typeof entityId === "string") {
-      return entityId;
+  for (const hit of intersects) {
+    let current: THREE.Object3D | null = hit.object;
+    while (current) {
+      const entityId = current.userData.editorEntityId;
+      if (typeof entityId === "string") {
+        return entityId;
+      }
+      current = current.parent;
     }
-    current = current.parent;
   }
 
   return null;
