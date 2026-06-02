@@ -3,9 +3,12 @@ import type * as THREE from "three";
 import type { BindingRegistry } from "../../bindings/bindingRegistry";
 import type { EditorAppEvent } from "../../core/events";
 import type {
+  EditorLightJSON,
+  EditorMeshMaterialJSON,
   ResolvedEditorEnvConfigJSON,
   StudioSceneState,
-  SyncSource
+  SyncSource,
+  TransformLike
 } from "../../core/types";
 import type { EditorProjectModel } from "../../models";
 import type { EditorRuntime } from "../../runtime/editorRuntime";
@@ -19,7 +22,14 @@ import type {
   StudioSceneStyleProfileId,
   StudioSceneStyleSelectionMode
 } from "../../studioSceneProfiles";
-import type { StudioPlinthKind } from "../../studioSceneLayoutGenerator";
+import type {
+  StudioDecorationKind,
+  StudioPlinthKind
+} from "../../studioSceneLayoutGenerator";
+import type {
+  StudioGeneratedLightRole,
+  StudioGeneratedModifierRole
+} from "../../studioSceneLightingGenerator";
 
 export type StudioObjectVisibilitySnapshot = Array<{
   entityId: string;
@@ -80,6 +90,40 @@ export type StudioTransientAdoptOptions = {
   placeAtSpawn?: boolean;
 };
 
+export type StudioTransientEntityGroupKind = "layout" | "lighting" | "user";
+
+export type StudioTransientEntityDefaultSnapshot = {
+  transform: Required<Pick<TransformLike, "position" | "quaternion" | "scale">>;
+  visible?: boolean;
+  material?: EditorMeshMaterialJSON;
+  light?: Pick<
+    EditorLightJSON,
+    | "color"
+    | "groundColor"
+    | "intensity"
+    | "distance"
+    | "decay"
+    | "angle"
+    | "penumbra"
+    | "width"
+    | "height"
+  >;
+};
+
+export type StudioTransientEntityMetadata = {
+  entityId: string;
+  role: StudioTransientEntityRole;
+  groupKind: StudioTransientEntityGroupKind;
+  allowHide: boolean;
+  allowDelete: boolean;
+  plinthKind?: StudioPlinthKind;
+  decorationKind?: StudioDecorationKind;
+  lightRole?: StudioGeneratedLightRole;
+  modifierRole?: StudioGeneratedModifierRole;
+  hasDefaultSnapshot: boolean;
+  defaultSnapshot?: StudioTransientEntityDefaultSnapshot;
+};
+
 export type StudioSceneEnterOptions = {
   productProfile: StudioProductProfile;
   styleProfileId?: StudioScenePresetId | null;
@@ -131,6 +175,7 @@ export type ActiveStudioSceneSession = {
   transientLightingEntityIds: Set<string>;
   transientRootGroupId: string | null;
   transientEntityRoles: Map<string, StudioTransientEntityRole>;
+  transientEntityMetadata: Map<string, StudioTransientEntityMetadata>;
 };
 
 export type StudioSceneSessionControllerOptions = {

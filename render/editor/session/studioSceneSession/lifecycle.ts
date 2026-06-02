@@ -137,7 +137,8 @@ export function enterStudioScene(input: {
     transientLayoutEntityIds: new Set(),
     transientLightingEntityIds: new Set(),
     transientRootGroupId: null,
-    transientEntityRoles: new Map()
+    transientEntityRoles: new Map(),
+    transientEntityMetadata: new Map()
   };
 
   const studioFrame = applyStudioTargetTransform(

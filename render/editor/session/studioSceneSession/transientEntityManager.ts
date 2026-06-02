@@ -1,6 +1,13 @@
 import type { BindingRegistry } from "../../bindings/bindingRegistry";
+import { updateLightBinding } from "../../bindings/lightBinding";
+import { updateMeshBindingMaterial } from "../../bindings/meshBinding";
 import type { EditorAppEvent } from "../../core/events";
-import type { EditorMeshJSON, SyncSource, Vec3Tuple } from "../../core/types";
+import type {
+  EditorMeshJSON,
+  EditorMeshMaterialJSON,
+  SyncSource,
+  Vec3Tuple
+} from "../../core/types";
 import type { EditorProjectModel } from "../../models";
 import type { EditorRuntime } from "../../runtime/editorRuntime";
 import {
@@ -23,6 +30,9 @@ import {
 import { createStudioFrameFromObject } from "./target";
 import type {
   ActiveStudioSceneSession,
+  StudioTransientEntityDefaultSnapshot,
+  StudioTransientEntityGroupKind,
+  StudioTransientEntityMetadata,
   StudioTargetFrame,
   StudioTransientAdoptOptions,
   StudioTransientEntityRole
@@ -45,6 +55,82 @@ function toGeneratorFrame(frame: StudioTargetFrame) {
     height: frame.height,
     floorY: frame.floorY
   };
+}
+
+function cloneTransform(source: {
+  position: number[];
+  quaternion: number[];
+  scale: number[];
+}): StudioTransientEntityDefaultSnapshot["transform"] {
+  return {
+    position: [...source.position],
+    quaternion: [...source.quaternion],
+    scale: [...source.scale]
+  };
+}
+
+function cloneMaterial(source: unknown): EditorMeshMaterialJSON {
+  return structuredClone(source) as EditorMeshMaterialJSON;
+}
+
+function cloneLight(source: {
+  color: string;
+  groundColor: string;
+  intensity: number;
+  distance: number;
+  decay: number;
+  angle: number;
+  penumbra: number;
+  width: number;
+  height: number;
+}): NonNullable<StudioTransientEntityDefaultSnapshot["light"]> {
+  return {
+    color: source.color,
+    groundColor: source.groundColor,
+    intensity: source.intensity,
+    distance: source.distance,
+    decay: source.decay,
+    angle: source.angle,
+    penumbra: source.penumbra,
+    width: source.width,
+    height: source.height
+  };
+}
+
+function getDefaultGroupKind(role: StudioTransientEntityRole): StudioTransientEntityGroupKind {
+  if (
+    role === "studioLight" ||
+    role === "keyLight" ||
+    role === "keyShadowLight" ||
+    role === "fillLight" ||
+    role === "rimLight" ||
+    role === "topLight" ||
+    role === "accentLight" ||
+    role === "lightModifier" ||
+    role === "reflector" ||
+    role === "negativeFill" ||
+    role === "stripPanel" ||
+    role === "light"
+  ) {
+    return "lighting";
+  }
+  if (
+    role === "userMesh" ||
+    role === "userLight" ||
+    role === "userLightGroup" ||
+    role === "userModel"
+  ) {
+    return "user";
+  }
+  return "layout";
+}
+
+function getDefaultAllowHide(role: StudioTransientEntityRole) {
+  return role !== "root" && role !== "plinth";
+}
+
+function getDefaultAllowDelete(role: StudioTransientEntityRole) {
+  return role !== "root" && role !== "plinth" && role !== "background" && role !== "cove" && role !== "floor" && role !== "backWall" && role !== "sideWall";
 }
 
 export class StudioSceneTransientEntityManager {
@@ -91,7 +177,12 @@ export class StudioSceneTransientEntityManager {
       }
     }
 
-    this.registerTransientEntity(session, entityId, role);
+    this.registerTransientEntity(session, entityId, role, {
+      groupKind: "user",
+      allowHide: true,
+      allowDelete: true,
+      captureDefaultSnapshot: false
+    });
     this.markTransientObject(entityId, role);
     if (options.placeAtSpawn) {
       this.placeTransientEntityAtSpawn(session, entityId);
@@ -106,6 +197,14 @@ export class StudioSceneTransientEntityManager {
     this.runtime.syncLightHelperVisibility();
     this.emitChanged();
     return true;
+  }
+
+  getStudioSceneEntityMetadata(
+    session: ActiveStudioSceneSession | null,
+    entityId: string | null
+  ) {
+    if (!session || !entityId) return null;
+    return session.transientEntityMetadata.get(entityId) ?? null;
   }
 
   createTransientStudioEntities(
@@ -127,7 +226,11 @@ export class StudioSceneTransientEntityManager {
       scale: [1, 1, 1]
     });
     this.registry.create(rootGroup);
-    this.registerTransientEntity(session, rootGroupId, "root");
+    this.registerTransientEntity(session, rootGroupId, "root", {
+      groupKind: "layout",
+      allowHide: false,
+      allowDelete: false
+    });
     this.markTransientObject(rootGroupId, "root");
     session.transientRootGroupId = rootGroupId;
     this.createTransientStudioLayoutEntities(session, frame);
@@ -158,12 +261,19 @@ export class StudioSceneTransientEntityManager {
 
     const addMesh = (
       mesh: EditorMeshJSON,
-      role: StudioTransientEntityRole
+      role: StudioTransientEntityRole,
+      descriptor: StudioLayoutMeshDescriptor
     ) => {
       const model = projectModel.addMesh(mesh);
       rootGroup.children.push(model.id);
       this.registry.create(model);
-      this.registerTransientEntity(session, model.id, role);
+      this.registerTransientEntity(session, model.id, role, {
+        groupKind: "layout",
+        allowHide: descriptor.allowHide,
+        allowDelete: descriptor.allowDelete,
+        plinthKind: descriptor.plinthKind,
+        decorationKind: descriptor.decorationKind
+      });
       session.transientLayoutEntityIds.add(model.id);
       this.markTransientObject(model.id, role);
     };
@@ -174,7 +284,8 @@ export class StudioSceneTransientEntityManager {
           id: createStudioEntityId(descriptor.subRole),
           descriptor
         }),
-        descriptor.role
+        descriptor.role,
+        descriptor
       );
     });
 
@@ -191,7 +302,8 @@ export class StudioSceneTransientEntityManager {
           id: createStudioEntityId(descriptor.resetKey),
           descriptor
         }),
-        "plinth"
+        "plinth",
+        descriptor
       );
     });
 
@@ -208,7 +320,8 @@ export class StudioSceneTransientEntityManager {
           id: createStudioEntityId(descriptor.resetKey),
           descriptor
         }),
-        "decoration"
+        "decoration",
+        descriptor
       );
     });
   }
@@ -244,7 +357,12 @@ export class StudioSceneTransientEntityManager {
       );
       rootGroup.children.push(model.id);
       const binding = this.registry.create(model);
-      this.registerTransientEntity(session, model.id, descriptor.role);
+      this.registerTransientEntity(session, model.id, descriptor.role, {
+        groupKind: "lighting",
+        allowHide: true,
+        allowDelete: true,
+        lightRole: descriptor.lightRole
+      });
       session.transientLightingEntityIds.add(model.id);
       this.markTransientObject(model.id, descriptor.role);
       binding.object.userData.studioSceneLightRole = descriptor.lightRole;
@@ -262,7 +380,12 @@ export class StudioSceneTransientEntityManager {
       );
       rootGroup.children.push(model.id);
       const binding = this.registry.create(model);
-      this.registerTransientEntity(session, model.id, descriptor.role);
+      this.registerTransientEntity(session, model.id, descriptor.role, {
+        groupKind: "lighting",
+        allowHide: true,
+        allowDelete: true,
+        modifierRole: descriptor.modifierRole
+      });
       session.transientLightingEntityIds.add(model.id);
       this.markTransientObject(model.id, descriptor.role);
       binding.object.userData.studioSceneModifierRole = descriptor.modifierRole;
@@ -303,6 +426,7 @@ export class StudioSceneTransientEntityManager {
     session.transientLayoutEntityIds.clear();
     session.transientLightingEntityIds.clear();
     session.transientEntityRoles.clear();
+    session.transientEntityMetadata.clear();
     session.transientRootGroupId = null;
     this.rebuildGroupHierarchy();
     this.runtime.syncLightHelperVisibility();
@@ -330,6 +454,7 @@ export class StudioSceneTransientEntityManager {
       session.transientLayoutEntityIds.delete(entityId);
       session.transientLightingEntityIds.delete(entityId);
       session.transientEntityRoles.delete(entityId);
+      session.transientEntityMetadata.delete(entityId);
     });
     this.rebuildGroupHierarchy();
     this.runtime.syncLightHelperVisibility();
@@ -353,7 +478,14 @@ export class StudioSceneTransientEntityManager {
     );
     rootGroup.children.push(model.id);
     this.registry.create(model);
-    this.registerTransientEntity(session, model.id, descriptor.role);
+    this.registerTransientEntity(session, model.id, descriptor.role, {
+      groupKind: "layout",
+      allowHide: descriptor.allowHide,
+      allowDelete: descriptor.allowDelete,
+      plinthKind: descriptor.plinthKind,
+      decorationKind: descriptor.decorationKind
+    });
+    session.transientLayoutEntityIds.add(model.id);
     this.markTransientObject(model.id, descriptor.role);
     this.rebuildGroupHierarchy();
     this.emit({ type: "sceneUpdated", source, pathTraceInvalidation: "scene" });
@@ -364,10 +496,95 @@ export class StudioSceneTransientEntityManager {
   private registerTransientEntity(
     session: ActiveStudioSceneSession,
     entityId: string,
-    role: StudioTransientEntityRole
+    role: StudioTransientEntityRole,
+    metadata: Partial<Omit<StudioTransientEntityMetadata, "entityId" | "role" | "hasDefaultSnapshot" | "defaultSnapshot">> & {
+      captureDefaultSnapshot?: boolean;
+    } = {}
   ) {
     session.transientEntityIds.add(entityId);
     session.transientEntityRoles.set(entityId, role);
+    const groupKind = metadata.groupKind ?? getDefaultGroupKind(role);
+    const captureDefaultSnapshot = metadata.captureDefaultSnapshot ?? groupKind !== "user";
+    const defaultSnapshot = captureDefaultSnapshot ? this.captureDefaultSnapshot(entityId) : undefined;
+    session.transientEntityMetadata.set(entityId, {
+      entityId,
+      role,
+      groupKind,
+      allowHide: metadata.allowHide ?? getDefaultAllowHide(role),
+      allowDelete: metadata.allowDelete ?? getDefaultAllowDelete(role),
+      plinthKind: metadata.plinthKind,
+      decorationKind: metadata.decorationKind,
+      lightRole: metadata.lightRole,
+      modifierRole: metadata.modifierRole,
+      hasDefaultSnapshot: Boolean(defaultSnapshot),
+      defaultSnapshot
+    });
+  }
+
+  resetTransientStudioEntity(
+    session: ActiveStudioSceneSession | null,
+    entityId: string,
+    source: SyncSource
+  ) {
+    if (!session || !session.transientEntityIds.has(entityId)) return false;
+    const metadata = session.transientEntityMetadata.get(entityId);
+    if (!metadata?.defaultSnapshot) return false;
+    const projectModel = this.getProjectModel();
+    const record = projectModel?.getEntityById(entityId);
+    const binding = this.registry.get(entityId);
+    if (!projectModel || !record || !binding) return false;
+
+    const snapshot = metadata.defaultSnapshot;
+    record.item.patchTransform(snapshot.transform);
+    if ("visible" in record.item && snapshot.visible !== undefined) {
+      record.item.visible = snapshot.visible;
+    }
+
+    if (record.kind === "mesh" && snapshot.material) {
+      updateMeshBindingMaterial(
+        binding,
+        this.runtime.textureLoader,
+        snapshot.material,
+        () => this.runtime.invalidatePathTraceMaterials()
+      );
+      this.registry.syncModelTransformToObject(entityId);
+    } else if (record.kind === "light" && snapshot.light) {
+      updateLightBinding(binding, {
+        ...snapshot.transform,
+        ...snapshot.light,
+        visible: snapshot.visible
+      });
+    } else {
+      this.registry.syncModelTransformToObject(entityId);
+    }
+
+    this.emit({
+      type: "entityUpdated",
+      entityId,
+      entityKind: record.kind,
+      source,
+      affectsSceneTree: snapshot.visible !== undefined
+    });
+    this.emit({ type: "sceneUpdated", source, pathTraceInvalidation: "scene" });
+    this.emitChanged();
+    return true;
+  }
+
+  private captureDefaultSnapshot(entityId: string) {
+    const record = this.getProjectModel()?.getEntityById(entityId);
+    if (!record) return undefined;
+    const snapshot: StudioTransientEntityDefaultSnapshot = {
+      transform: cloneTransform(record.item),
+      visible: "visible" in record.item ? record.item.visible : undefined
+    };
+
+    if (record.kind === "mesh") {
+      snapshot.material = cloneMaterial(record.item.material);
+    } else if (record.kind === "light") {
+      snapshot.light = cloneLight(record.item);
+    }
+
+    return snapshot;
   }
 
   private markTransientObject(
