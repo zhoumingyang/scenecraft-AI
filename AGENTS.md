@@ -346,6 +346,7 @@ If the task is about temporary studio preview / 棚拍场景:
 - TopBar-added/imported mesh, light, light preset, and model entities in studio mode are also transient studio entities under the studio root; they may be selected and edited but must not register persistent project assets or survive studio exit
 - studio product profiles are confirmed through the studio entry dialog before entering studio mode; automatic inference is only a prefill suggestion, and product dimensions must continue to come from runtime target bounds rather than form data
 - studio style profiles are session-only generation inputs; they may drive temporary procedural background, plinth, decoration, material, lighting, camera, and post-processing defaults but must not be added to the persisted project JSON schema unless explicitly requested
+- studio property panels depend on session-only transient metadata and default snapshots for role labels, permissions, and single-object restore; do not persist this metadata or add it to project JSON
 - Poly Haven HDRIs used for studio IBL are resolved at the React/app boundary, applied only as temporary environment lighting, never shown as the background by default, and must not be written into saved project JSON
 - preserve graceful fallback when remote HDRI loading fails or Poly Haven is unavailable; virtual studio lights should continue to work when IBL fails
 
