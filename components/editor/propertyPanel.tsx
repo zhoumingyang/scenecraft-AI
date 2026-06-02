@@ -4,14 +4,17 @@ import { useMemo, useState } from "react";
 import { Box, CircularProgress, IconButton, Stack, Tooltip, Typography } from "@mui/material";
 import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import CenterFocusStrongRoundedIcon from "@mui/icons-material/CenterFocusStrongRounded";
+import LightbulbRoundedIcon from "@mui/icons-material/LightbulbRounded";
 import PhotoCameraRoundedIcon from "@mui/icons-material/PhotoCameraRounded";
+import RestartAltRoundedIcon from "@mui/icons-material/RestartAltRounded";
 import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
+import ViewQuiltRoundedIcon from "@mui/icons-material/ViewQuiltRounded";
 import {
   ExternalAssetBrowserDialog,
   type ExternalTextureApplyPayload
 } from "@/components/editor/externalAssetBrowserDialog";
 import { isPolyhavenProviderEnabled } from "@/lib/externalAssets/config";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, type TranslationKey } from "@/lib/i18n";
 import { createExternalAssetSource } from "@/lib/externalAssets/source";
 import {
   createPbrAtlasMaterialPatch,
@@ -43,6 +46,27 @@ const PANEL_WIDTH = 272;
 const COLLAPSED_VISIBLE_WIDTH = 44;
 const CLOSED_AI_LIBRARY: ProjectAiLibraryV2JSON = { version: 2, assets: [] };
 const CLOSED_PENDING_AI_ASSETS: PendingAiAsset[] = [];
+const STUDIO_RESETTABLE_ENTITY_ROLES = new Set([
+  "background",
+  "cove",
+  "floor",
+  "backWall",
+  "sideWall",
+  "plinth",
+  "decoration",
+  "light",
+  "studioLight",
+  "keyLight",
+  "keyShadowLight",
+  "fillLight",
+  "rimLight",
+  "topLight",
+  "accentLight",
+  "lightModifier",
+  "reflector",
+  "negativeFill",
+  "stripPanel"
+]);
 
 export default function PropertyPanel() {
   const { t } = useI18n();
@@ -151,6 +175,60 @@ export default function PropertyPanel() {
     () => (studioScene?.active ? app?.getStudioSceneEntityMetadata(selectedEntityId) ?? null : null),
     [app, selectedEntityId, studioScene?.active, viewStateVersion]
   );
+  const headerActionButtonSx = {
+    color: theme.mutedText,
+    border: theme.sectionBorder,
+    background: "transparent",
+    "&:hover": {
+      background: theme.iconButtonBg
+    }
+  };
+  const renderHeaderActionButton = (
+    key: string,
+    title: TranslationKey,
+    onClick: () => void,
+    icon: React.ReactNode
+  ) => (
+    <Tooltip key={key} title={t(title)} arrow>
+      <IconButton
+        size="small"
+        aria-label={t(title)}
+        onClick={onClick}
+        sx={headerActionButtonSx}
+      >
+        {icon}
+      </IconButton>
+    </Tooltip>
+  );
+  const studioHeaderActions =
+    studioScene?.active && studioEntityMetadata?.role === "root"
+      ? [
+          renderHeaderActionButton(
+            "restore-layout",
+            "editor.studioScene.restoreLayout",
+            () => app?.resetStudioSceneGeneratedLayout(),
+            <ViewQuiltRoundedIcon sx={{ fontSize: 15 }} />
+          ),
+          renderHeaderActionButton(
+            "restore-lighting",
+            "editor.studioScene.restoreLighting",
+            () => app?.resetStudioSceneLighting(),
+            <LightbulbRoundedIcon sx={{ fontSize: 15 }} />
+          )
+        ]
+      : studioScene?.active &&
+          studioEntityMetadata?.hasDefaultSnapshot &&
+          selectedEntityId &&
+          STUDIO_RESETTABLE_ENTITY_ROLES.has(studioEntityMetadata.role)
+        ? [
+            renderHeaderActionButton(
+              "reset-selected",
+              "editor.studioScene.resetSelected",
+              () => app?.resetStudioSceneEntity(selectedEntityId),
+              <RestartAltRoundedIcon sx={{ fontSize: 15 }} />
+            )
+          ]
+        : [];
 
   const handleApplyTextureSet = ({ asset, selections }: ExternalTextureApplyPayload) => {
     if (!app || (entityRecord?.kind !== "mesh" && entityRecord?.kind !== "gridHelper")) {
@@ -425,6 +503,7 @@ export default function PropertyPanel() {
                           </IconButton>
                         </Tooltip>
                       ) : null}
+                      {studioHeaderActions}
                     </Stack>
 
                     {entityRecord.kind === "scene" ? (
@@ -445,7 +524,6 @@ export default function PropertyPanel() {
 
                     <StudioScenePropertySection
                       app={app}
-                      isSceneSelected={selectedEntityId === SCENE_NODE_ID}
                       metadata={studioEntityMetadata}
                       selectedEntityId={selectedEntityId}
                       studioScene={studioScene}

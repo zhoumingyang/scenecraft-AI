@@ -1,11 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { FormControl, IconButton, MenuItem, Select, Stack, Tooltip } from "@mui/material";
-import LightbulbRoundedIcon from "@mui/icons-material/LightbulbRounded";
-import RestartAltRoundedIcon from "@mui/icons-material/RestartAltRounded";
-import SwapHorizRoundedIcon from "@mui/icons-material/SwapHorizRounded";
-import ViewQuiltRoundedIcon from "@mui/icons-material/ViewQuiltRounded";
+import { FormControl, MenuItem, Select, Stack } from "@mui/material";
 import type { TranslationKey } from "@/lib/i18n";
 import { useI18n } from "@/lib/i18n";
 import type {
@@ -46,32 +42,8 @@ const STUDIO_DECORATION_KIND_OPTIONS: StudioDecorationKind[] = [
   "extrudedShape"
 ];
 
-const STUDIO_BACKGROUND_ROLES = new Set([
-  "background",
-  "cove",
-  "floor",
-  "backWall",
-  "sideWall"
-]);
-
-const STUDIO_LIGHT_ROLES = new Set([
-  "keyLight",
-  "keyShadowLight",
-  "fillLight",
-  "rimLight",
-  "topLight",
-  "accentLight"
-]);
-
-const STUDIO_MODIFIER_ROLES = new Set([
-  "reflector",
-  "negativeFill",
-  "stripPanel"
-]);
-
 type StudioScenePropertySectionProps = {
   app: EditorApp | null;
-  isSceneSelected: boolean;
   metadata: StudioTransientEntityMetadata | null;
   selectedEntityId: string | null;
   studioScene: StudioSceneState | null;
@@ -80,7 +52,6 @@ type StudioScenePropertySectionProps = {
 
 export default function StudioScenePropertySection({
   app,
-  isSceneSelected,
   metadata,
   selectedEntityId,
   studioScene,
@@ -103,60 +74,11 @@ export default function StudioScenePropertySection({
     border: theme.sectionBorder,
     background: theme.sectionBg
   };
-  const canResetSelected = Boolean(metadata?.hasDefaultSnapshot && selectedEntityId);
-  const iconButtonSx = {
-    width: 32,
-    height: 32,
-    color: theme.pillText,
-    border: theme.sectionBorder,
-    background: "transparent",
-    "&:hover": {
-      background: theme.iconButtonBg
-    }
-  };
-
-  const iconButton = (
-    title: TranslationKey,
-    onClick: () => void,
-    icon: React.ReactNode
-  ) => (
-    <Tooltip title={t(title)} arrow>
-      <IconButton size="small" aria-label={t(title)} onClick={onClick} sx={iconButtonSx}>
-        {icon}
-      </IconButton>
-    </Tooltip>
-  );
-
-  const resetSelectedButton = () =>
-    canResetSelected
-      ? iconButton(
-          "editor.studioScene.resetSelected",
-          () => selectedEntityId && app?.resetStudioSceneEntity(selectedEntityId),
-          <RestartAltRoundedIcon sx={{ fontSize: 17 }} />
-        )
-      : null;
-
-  if (isSceneSelected) {
-    return null;
-  }
 
   if (!metadata) return null;
 
   if (metadata.role === "root") {
-    return (
-      <Stack direction="row" spacing={0.6} sx={sectionSx}>
-        {iconButton(
-          "editor.studioScene.restoreLayout",
-          () => app?.resetStudioSceneGeneratedLayout(),
-          <ViewQuiltRoundedIcon sx={{ fontSize: 17 }} />
-        )}
-        {iconButton(
-          "editor.studioScene.restoreLighting",
-          () => app?.resetStudioSceneLighting(),
-          <LightbulbRoundedIcon sx={{ fontSize: 17 }} />
-        )}
-      </Stack>
-    );
+    return null;
   }
 
   if (metadata.role === "plinth" && studioScene.plinthKind) {
@@ -175,17 +97,6 @@ export default function StudioScenePropertySection({
             ))}
           </Select>
         </FormControl>
-        <Stack direction="row" spacing={0.6}>
-          {resetSelectedButton()}
-        </Stack>
-      </Stack>
-    );
-  }
-
-  if (STUDIO_BACKGROUND_ROLES.has(metadata.role)) {
-    return (
-      <Stack direction="row" spacing={0.6} sx={sectionSx}>
-        {resetSelectedButton()}
       </Stack>
     );
   }
@@ -196,7 +107,11 @@ export default function StudioScenePropertySection({
         <FormControl size="small" fullWidth>
           <Select
             value={decorationKind}
-            onChange={(event) => setDecorationKind(event.target.value as StudioDecorationKind)}
+            onChange={(event) => {
+              const nextKind = event.target.value as StudioDecorationKind;
+              setDecorationKind(nextKind);
+              app?.replaceStudioSceneDecoration(selectedEntityId, nextKind);
+            }}
             sx={{ height: 34, fontSize: 12 }}
           >
             {STUDIO_DECORATION_KIND_OPTIONS.map((kind) => (
@@ -206,30 +121,6 @@ export default function StudioScenePropertySection({
             ))}
           </Select>
         </FormControl>
-        <Stack direction="row" spacing={0.6}>
-          {resetSelectedButton()}
-          {iconButton(
-            "editor.studioScene.replaceDecoration",
-            () => app?.replaceStudioSceneDecoration(selectedEntityId, decorationKind),
-            <SwapHorizRoundedIcon sx={{ fontSize: 17 }} />
-          )}
-        </Stack>
-      </Stack>
-    );
-  }
-
-  if (STUDIO_LIGHT_ROLES.has(metadata.role)) {
-    return (
-      <Stack direction="row" spacing={0.6} sx={sectionSx}>
-        {resetSelectedButton()}
-      </Stack>
-    );
-  }
-
-  if (STUDIO_MODIFIER_ROLES.has(metadata.role)) {
-    return (
-      <Stack direction="row" spacing={0.6} sx={sectionSx}>
-        {resetSelectedButton()}
       </Stack>
     );
   }
