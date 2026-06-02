@@ -143,6 +143,9 @@ export function setStudioPlinthKind(input: {
 
   session.plinthKind = plinthKind;
   const selectedEntityId = deps.getSelectedEntityId();
+  const shouldRestorePlinthSelection = Boolean(
+    selectedEntityId && session.transientEntityRoles.get(selectedEntityId) === "plinth"
+  );
   if (selectedEntityId && session.transientLayoutEntityIds.has(selectedEntityId)) {
     deps.setSelectedEntity(null, "ui");
   }
@@ -154,6 +157,14 @@ export function setStudioPlinthKind(input: {
     session,
     createStudioFrameFromObject(binding.object)
   );
+  if (shouldRestorePlinthSelection) {
+    const nextPlinthId = Array.from(session.transientLayoutEntityIds).find(
+      (entityId) => session.transientEntityRoles.get(entityId) === "plinth"
+    );
+    if (nextPlinthId) {
+      deps.setSelectedEntity(nextPlinthId, "ui");
+    }
+  }
   deps.rebuildGroupHierarchy();
   deps.emit({ type: "sceneUpdated", source: "ui", pathTraceInvalidation: "scene" });
   deps.emitChanged();
