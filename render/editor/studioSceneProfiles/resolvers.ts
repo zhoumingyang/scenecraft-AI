@@ -142,6 +142,16 @@ export function createStudioEnvPatchFromStyleProfile(
     environmentIntensity: profile.lighting.ibl.intensity,
     backgroundShow: profile.lighting.ibl.showAsBackground ? 1 : 0,
     environmentRotationY: profile.lighting.ibl.rotationY,
+    ...createStudioPostProcessingEnvPatchFromStyleProfile(profile)
+  };
+}
+
+export function createStudioPostProcessingEnvPatchFromStyleProfile(
+  profile: StudioSceneStyleProfile
+): Partial<EditorEnvConfigJSON> {
+  const filmProfile = profile.postProcessing.passes.film ?? profile.postProcessing.grain;
+
+  return {
     toneMapping: profile.postProcessing.toneMapping,
     toneMappingExposure: profile.postProcessing.exposure,
     postProcessing: {
@@ -166,12 +176,12 @@ export function createStudioEnvPatchFromStyleProfile(
               }
             }
           : undefined,
-        film: profile.postProcessing.passes.film
+        film: filmProfile
           ? {
-              enabled: profile.postProcessing.passes.film.enabled,
+              enabled: filmProfile.enabled,
               params: {
-                intensity: profile.postProcessing.passes.film.intensity,
-                grayscale: profile.postProcessing.passes.film.grayscale
+                intensity: filmProfile.intensity,
+                grayscale: filmProfile.grayscale
               }
             }
           : undefined,

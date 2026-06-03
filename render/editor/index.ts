@@ -88,6 +88,7 @@ export {
 export type { PbrAtlasTextureField } from "./materials/pbrAtlas";
 export * from "./constants/environment";
 export * from "./postProcessing";
+export * from "./studioColorGrading";
 export * from "./studioSceneLayoutGenerator";
 export * from "./core/types";
 export * from "./core/events";
