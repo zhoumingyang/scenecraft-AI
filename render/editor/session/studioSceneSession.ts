@@ -58,6 +58,7 @@ import {
   type StudioSceneEnterOptions,
   type StudioSceneEntityAction,
   type StudioScenePostProcessingPatch,
+  type StudioScenePostProcessingState,
   type StudioSceneSessionControllerOptions,
   type StudioTargetFrame,
   type StudioTransientAdoptOptions,
@@ -72,6 +73,7 @@ export type {
   StudioSceneEnterOptions,
   StudioSceneEntityAction,
   StudioScenePostProcessingPatch,
+  StudioScenePostProcessingState,
   StudioTransientEntityMetadata,
   StudioTransientEntityRole
 };

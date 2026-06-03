@@ -77,6 +77,8 @@ export type {
 } from "./studioSceneProfiles";
 export type {
   StudioSceneEnterOptions,
+  StudioScenePostProcessingPatch,
+  StudioScenePostProcessingState,
   StudioTransientEntityMetadata,
   StudioTransientEntityRole
 } from "./session/studioSceneSession";
