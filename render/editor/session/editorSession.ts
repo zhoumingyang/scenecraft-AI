@@ -42,6 +42,7 @@ import {
   type StudioSceneEnterOptions,
   type StudioHdriResolveInput,
   type StudioHdriResolveResult,
+  type StudioScenePostProcessingPatch,
   type StudioTransientEntityRole
 } from "./studioSceneSession";
 import { suggestStudioProductProfile } from "../studioSceneProfiles";
@@ -348,6 +349,18 @@ export class EditorSession {
 
   resetStudioSceneLighting() {
     this.studioScene.resetLighting();
+  }
+
+  getStudioScenePostProcessingState() {
+    return this.studioScene.getPostProcessingState();
+  }
+
+  updateStudioScenePostProcessing(patch: StudioScenePostProcessingPatch) {
+    return this.studioScene.updatePostProcessing(patch);
+  }
+
+  resetStudioScenePostProcessing() {
+    return this.studioScene.resetPostProcessing();
   }
 
   addStudioSceneDecoration(kind: StudioDecorationKind) {

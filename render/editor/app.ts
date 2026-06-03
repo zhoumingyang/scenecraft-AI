@@ -28,7 +28,8 @@ import type {
   StudioHdriResolveInput,
   StudioHdriResolveResult,
   StudioSceneEntityAction,
-  StudioSceneEnterOptions
+  StudioSceneEnterOptions,
+  StudioScenePostProcessingPatch
 } from "./session/studioSceneSession";
 import type { StudioDecorationKind, StudioPlinthKind } from "./studioSceneLayoutGenerator";
 
@@ -425,6 +426,18 @@ export class EditorApp {
 
   resetStudioSceneLighting() {
     this.session.resetStudioSceneLighting();
+  }
+
+  getStudioScenePostProcessingState() {
+    return this.session.getStudioScenePostProcessingState();
+  }
+
+  updateStudioScenePostProcessing(patch: StudioScenePostProcessingPatch) {
+    return this.session.updateStudioScenePostProcessing(patch);
+  }
+
+  resetStudioScenePostProcessing() {
+    return this.session.resetStudioScenePostProcessing();
   }
 
   addStudioSceneDecoration(kind: StudioDecorationKind) {
