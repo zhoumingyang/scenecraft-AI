@@ -123,6 +123,13 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<
     postProcessing: {
       toneMapping: DEFAULT_EDITOR_TONE_MAPPING,
       exposure: 1,
+      contrast: 0.04,
+      saturation: 0.02,
+      temperature: 0.02,
+      tint: 0,
+      vignette: 0.12,
+      detail: 0.08,
+      grain: { enabled: false, intensity: 0.08, grayscale: false },
       passes: {
         bloom: { enabled: false, strength: 0.5, radius: 0.15, threshold: 0.9 },
         gtao: { enabled: false, radius: 0.5, distanceFallOff: 1, thickness: 1, blendIntensity: 1 }
@@ -187,6 +194,13 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<
     postProcessing: {
       toneMapping: THREE.ACESFilmicToneMapping,
       exposure: 1.08,
+      contrast: 0.08,
+      saturation: 0.04,
+      temperature: 0.08,
+      tint: 0.03,
+      vignette: 0.18,
+      detail: -0.08,
+      grain: { enabled: false, intensity: 0.1, grayscale: false },
       passes: {
         bloom: { enabled: true, strength: 0.32, radius: 0.22, threshold: 0.88 },
         bokeh: { enabled: false, focus: 12, aperture: 0.004, maxblur: 0.006 }
@@ -251,6 +265,13 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<
     postProcessing: {
       toneMapping: THREE.ACESFilmicToneMapping,
       exposure: 0.94,
+      contrast: 0.18,
+      saturation: -0.04,
+      temperature: -0.1,
+      tint: 0.04,
+      vignette: 0.28,
+      detail: 0.18,
+      grain: { enabled: false, intensity: 0.12, grayscale: false },
       passes: {
         bloom: { enabled: true, strength: 0.55, radius: 0.18, threshold: 0.78 },
         gtao: { enabled: true, radius: 0.65, distanceFallOff: 1, thickness: 1, blendIntensity: 0.75 }
@@ -314,7 +335,13 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<
     postProcessing: {
       toneMapping: THREE.ACESFilmicToneMapping,
       exposure: 1.02,
+      contrast: 0.06,
+      saturation: 0.06,
       temperature: 0.18,
+      tint: -0.02,
+      vignette: 0.2,
+      detail: -0.04,
+      grain: { enabled: false, intensity: 0.18, grayscale: false },
       passes: {
         film: { enabled: false, intensity: 0.18, grayscale: false }
       }
@@ -378,6 +405,13 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<
     postProcessing: {
       toneMapping: THREE.ACESFilmicToneMapping,
       exposure: 1,
+      contrast: 0.03,
+      saturation: -0.02,
+      temperature: 0.03,
+      tint: 0,
+      vignette: 0.16,
+      detail: 0.05,
+      grain: { enabled: false, intensity: 0.08, grayscale: false },
       passes: {}
     }
   },
@@ -439,7 +473,13 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<
     postProcessing: {
       toneMapping: THREE.ACESFilmicToneMapping,
       exposure: 1.06,
+      contrast: 0.06,
       saturation: 0.12,
+      temperature: 0.04,
+      tint: -0.02,
+      vignette: 0.1,
+      detail: 0.08,
+      grain: { enabled: false, intensity: 0.08, grayscale: false },
       passes: {
         bloom: { enabled: false, strength: 0.3, radius: 0.18, threshold: 0.9 }
       }

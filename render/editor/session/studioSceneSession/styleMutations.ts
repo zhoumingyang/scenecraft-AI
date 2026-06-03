@@ -32,6 +32,10 @@ type StyleMutationDeps = {
     styleProfile: ReturnType<typeof resolveStudioSceneStyleProfile>,
     source: SyncSource
   ) => void;
+  applyStudioColorGradingDefaults: (
+    session: ActiveStudioSceneSession,
+    styleProfile: ReturnType<typeof resolveStudioSceneStyleProfile>
+  ) => void;
   applyStudioIbl: (
     session: ActiveStudioSceneSession,
     styleProfile: ReturnType<typeof resolveStudioSceneStyleProfile>,
@@ -65,6 +69,7 @@ export function setStudioPreset(input: {
   session.hdriStatus = "idle";
   session.hdriError = null;
   deps.applyStyleProfileToSceneEnv(styleProfile, "ui");
+  deps.applyStudioColorGradingDefaults(session, styleProfile);
   void deps.applyStudioIbl(session, styleProfile, "ui");
   deps.rebuildTransientStudioEntities(
     session,
@@ -97,6 +102,7 @@ export function autoMatchStudioStyle(input: {
   session.hdriStatus = "idle";
   session.hdriError = null;
   deps.applyStyleProfileToSceneEnv(styleProfile, "ui");
+  deps.applyStudioColorGradingDefaults(session, styleProfile);
   void deps.applyStudioIbl(session, styleProfile, "ui");
   deps.rebuildTransientStudioEntities(
     session,

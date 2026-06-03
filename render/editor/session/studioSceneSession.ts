@@ -23,6 +23,12 @@ import {
   frameStudioSceneCamera
 } from "./studioSceneSession/environment";
 import {
+  applyStudioColorGradingDefaults,
+  getStudioScenePostProcessingState,
+  resetStudioScenePostProcessing,
+  updateStudioScenePostProcessing
+} from "./studioSceneSession/postProcessing";
+import {
   clearStudioScene,
   enterStudioScene
 } from "./studioSceneSession/lifecycle";
@@ -51,6 +57,8 @@ import {
   type StudioHdriResolveResult,
   type StudioSceneEnterOptions,
   type StudioSceneEntityAction,
+  type StudioScenePostProcessingPatch,
+  type StudioScenePostProcessingState,
   type StudioSceneSessionControllerOptions,
   type StudioTargetFrame,
   type StudioTransientAdoptOptions,
@@ -64,6 +72,8 @@ export type {
   StudioHdriResolveResult,
   StudioSceneEnterOptions,
   StudioSceneEntityAction,
+  StudioScenePostProcessingPatch,
+  StudioScenePostProcessingState,
   StudioTransientEntityMetadata,
   StudioTransientEntityRole
 };
@@ -262,6 +272,12 @@ export class StudioSceneSessionController {
           styleProfile,
           nextSource
         ) => applyStudioStyleProfileToSceneEnv(this.getEnvironmentDeps(), styleProfile, nextSource),
+        applyStudioColorGradingDefaults: (session, styleProfile) =>
+          applyStudioColorGradingDefaults(
+            this.getPostProcessingDeps(),
+            session,
+            styleProfile
+          ),
         applyStudioIbl: (session, styleProfile, nextSource) =>
           this.applyStudioIbl(session, styleProfile, nextSource),
         emitChanged: () => this.emitChanged()
@@ -327,6 +343,33 @@ export class StudioSceneSessionController {
     })) {
       this.exit("ui");
     }
+  }
+
+  getPostProcessingState() {
+    return getStudioScenePostProcessingState(
+      this.activeSession,
+      this.getProjectModel()
+    );
+  }
+
+  updatePostProcessing(
+    patch: StudioScenePostProcessingPatch,
+    source: SyncSource = "ui"
+  ) {
+    return updateStudioScenePostProcessing({
+      deps: this.getPostProcessingDeps(),
+      session: this.activeSession,
+      patch,
+      source
+    });
+  }
+
+  resetPostProcessing(source: SyncSource = "ui") {
+    return resetStudioScenePostProcessing({
+      deps: this.getPostProcessingDeps(),
+      session: this.activeSession,
+      source
+    });
   }
 
   setTransientEntityVisible(
@@ -493,6 +536,14 @@ export class StudioSceneSessionController {
     };
   }
 
+  private getPostProcessingDeps() {
+    return {
+      runtime: this.runtime,
+      emit: this.emit,
+      getProjectModel: this.getProjectModel
+    };
+  }
+
   private getStyleMutationDeps() {
     return {
       registry: this.registry,
@@ -511,6 +562,14 @@ export class StudioSceneSessionController {
         styleProfile: ReturnType<typeof resolveStudioSceneStyleProfile>,
         source: SyncSource
       ) => applyStudioStyleProfileToSceneEnv(this.getEnvironmentDeps(), styleProfile, source),
+      applyStudioColorGradingDefaults: (
+        session: ActiveStudioSceneSession,
+        styleProfile: ReturnType<typeof resolveStudioSceneStyleProfile>
+      ) => applyStudioColorGradingDefaults(
+        this.getPostProcessingDeps(),
+        session,
+        styleProfile
+      ),
       applyStudioIbl: (
         session: ActiveStudioSceneSession,
         styleProfile: ReturnType<typeof resolveStudioSceneStyleProfile>,

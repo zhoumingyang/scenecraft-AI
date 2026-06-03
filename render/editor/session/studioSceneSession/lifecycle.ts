@@ -6,6 +6,7 @@ import type { EditorRuntime } from "../../runtime/editorRuntime";
 import { DEFAULT_STUDIO_SCENE_VARIANT_ID, getStudioScenePreset } from "../../studioScenes";
 import { isStudioScenePreviewEntity } from "../../studioSceneEligibility";
 import { resolveStudioSceneStyleProfile } from "../../studioSceneProfiles";
+import { createStudioColorGradingConfigFromStyleProfile } from "../../studioColorGrading";
 import { resolveStudioPlinthKind } from "../../studioSceneLayoutGenerator";
 import { frameStudioSceneCamera } from "./environment";
 import {
@@ -39,6 +40,10 @@ type EnterStudioSceneDeps = {
   applyStyleProfileToSceneEnv: (
     styleProfile: ReturnType<typeof resolveStudioSceneStyleProfile>,
     source: SyncSource
+  ) => void;
+  applyStudioColorGradingDefaults: (
+    session: ActiveStudioSceneSession,
+    styleProfile: ReturnType<typeof resolveStudioSceneStyleProfile>
   ) => void;
   applyStudioIbl: (
     session: ActiveStudioSceneSession,
@@ -95,6 +100,8 @@ export function enterStudioScene(input: {
   const viewHelperSnapshot = captureViewHelperSnapshot(deps.runtime);
   const targetTransformSnapshot = cloneObjectTransform(binding.object);
   const sceneEnvConfigSnapshot = cloneResolvedEnvConfig(projectModel.envConfig);
+  const studioColorGradingDefaultConfig =
+    createStudioColorGradingConfigFromStyleProfile(styleProfile);
   const targetFrame = createStudioFrameFromObject(binding.object);
   const defaultTargetScale = computeStudioFitScale(targetFrame);
   const keepVisibleIds = collectVisibleIds(projectModel, entityId);
@@ -130,6 +137,9 @@ export function enterStudioScene(input: {
     viewHelperSnapshot,
     targetTransformSnapshot,
     sceneEnvConfigSnapshot,
+    studioColorGradingConfig: { ...studioColorGradingDefaultConfig },
+    studioColorGradingDefaultConfig,
+    studioPostProcessingDirty: false,
     targetFrame,
     defaultTargetScale,
     visibleOriginalEntityIds: keepVisibleIds,
@@ -150,6 +160,7 @@ export function enterStudioScene(input: {
   );
   deps.setActiveSession(nextSession);
   deps.applyStyleProfileToSceneEnv(styleProfile, source);
+  deps.applyStudioColorGradingDefaults(nextSession, styleProfile);
   void deps.applyStudioIbl(nextSession, styleProfile, source);
   deps.transientEntityManager.createTransientStudioEntities(nextSession, studioFrame);
   frameStudioSceneCamera(deps.runtime, preset, studioFrame);
@@ -189,6 +200,7 @@ export function clearStudioScene(input: {
   deps.runtime.setTransformGizmoVisible(session.viewHelperSnapshot.transformGizmo);
   deps.runtime.setLightHelpersVisible(session.viewHelperSnapshot.lightHelper);
   deps.runtime.setShadowEnabled(session.viewHelperSnapshot.shadow);
+  deps.runtime.applyStudioColorGradingConfig(null);
 
   const projectModel = deps.getProjectModel();
   if (projectModel) {

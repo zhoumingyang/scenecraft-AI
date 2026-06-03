@@ -77,6 +77,8 @@ export type {
 } from "./studioSceneProfiles";
 export type {
   StudioSceneEnterOptions,
+  StudioScenePostProcessingPatch,
+  StudioScenePostProcessingState,
   StudioTransientEntityMetadata,
   StudioTransientEntityRole
 } from "./session/studioSceneSession";
@@ -88,6 +90,7 @@ export {
 export type { PbrAtlasTextureField } from "./materials/pbrAtlas";
 export * from "./constants/environment";
 export * from "./postProcessing";
+export * from "./studioColorGrading";
 export * from "./studioSceneLayoutGenerator";
 export * from "./core/types";
 export * from "./core/events";

@@ -10,6 +10,7 @@ import type {
   ResolvedEditorEnvConfigJSON,
   ResolvedMeshMaterialJSON
 } from "../core/types";
+import type { StudioColorGradingConfig } from "../studioColorGrading";
 import {
   captureObjectTransformState,
   hasObjectTransformChanged,
@@ -469,6 +470,11 @@ export class EditorRuntime {
         this.pathTracer.invalidateMaterials();
       }
     }
+    this.requestFrame();
+  }
+
+  applyStudioColorGradingConfig(config: StudioColorGradingConfig | null) {
+    this.postProcessing.applyStudioColorGradingConfig(config);
     this.requestFrame();
   }
 

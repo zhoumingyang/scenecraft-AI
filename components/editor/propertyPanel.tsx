@@ -175,6 +175,13 @@ export default function PropertyPanel() {
     () => (studioScene?.active ? app?.getStudioSceneEntityMetadata(selectedEntityId) ?? null : null),
     [app, selectedEntityId, studioScene?.active, viewStateVersion]
   );
+  const studioPostProcessingState = useMemo(
+    () =>
+      studioScene?.active && selectedEntityId === SCENE_NODE_ID
+        ? app?.getStudioScenePostProcessingState() ?? null
+        : null,
+    [app, selectedEntityId, studioScene?.active, viewStateVersion]
+  );
   const headerActionButtonSx = {
     color: theme.mutedText,
     border: theme.sectionBorder,
@@ -201,7 +208,16 @@ export default function PropertyPanel() {
     </Tooltip>
   );
   const studioHeaderActions =
-    studioScene?.active && studioEntityMetadata?.role === "root"
+    studioScene?.active && selectedEntityId === SCENE_NODE_ID
+      ? [
+          renderHeaderActionButton(
+            "restore-post",
+            "editor.studioScene.restorePost",
+            () => app?.resetStudioScenePostProcessing(),
+            <RestartAltRoundedIcon sx={{ fontSize: 15 }} />
+          )
+        ]
+      : studioScene?.active && studioEntityMetadata?.role === "root"
       ? [
           renderHeaderActionButton(
             "restore-layout",
@@ -525,6 +541,7 @@ export default function PropertyPanel() {
                     <StudioScenePropertySection
                       app={app}
                       metadata={studioEntityMetadata}
+                      postProcessingState={studioPostProcessingState}
                       selectedEntityId={selectedEntityId}
                       studioScene={studioScene}
                       theme={theme}

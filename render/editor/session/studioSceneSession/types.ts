@@ -5,6 +5,7 @@ import type { EditorAppEvent } from "../../core/events";
 import type {
   EditorLightJSON,
   EditorMeshMaterialJSON,
+  ResolvedEditorPostProcessingConfigJSON,
   ResolvedEditorEnvConfigJSON,
   StudioSceneState,
   SyncSource,
@@ -12,6 +13,10 @@ import type {
 } from "../../core/types";
 import type { EditorProjectModel } from "../../models";
 import type { EditorRuntime } from "../../runtime/editorRuntime";
+import type {
+  StudioColorGradingConfig,
+  StudioColorGradingPatch
+} from "../../studioColorGrading";
 import type {
   StudioSceneHdriStatus,
   StudioScenePresetId,
@@ -151,6 +156,38 @@ export type StudioHdriResolveResult = {
   assetName?: string;
 };
 
+export type StudioScenePostProcessingState = {
+  active: true;
+  dirty: boolean;
+  exposure: number;
+  colorGrading: StudioColorGradingConfig;
+  bloom: {
+    enabled: boolean;
+    strength: number;
+    radius: number;
+    threshold: number;
+  };
+  bokeh: {
+    enabled: boolean;
+    focus: number;
+    aperture: number;
+    maxblur: number;
+  };
+  grain: {
+    enabled: boolean;
+    intensity: number;
+  };
+  postProcessing: ResolvedEditorPostProcessingConfigJSON;
+};
+
+export type StudioScenePostProcessingPatch = {
+  exposure?: number;
+  colorGrading?: StudioColorGradingPatch;
+  bloom?: Partial<StudioScenePostProcessingState["bloom"]>;
+  bokeh?: Partial<StudioScenePostProcessingState["bokeh"]>;
+  grain?: Partial<StudioScenePostProcessingState["grain"]>;
+};
+
 export type ActiveStudioSceneSession = {
   targetEntityId: string;
   presetId: StudioScenePresetId;
@@ -167,6 +204,9 @@ export type ActiveStudioSceneSession = {
   viewHelperSnapshot: StudioViewHelperSnapshot;
   targetTransformSnapshot: StudioTargetTransformSnapshot;
   sceneEnvConfigSnapshot: ResolvedEditorEnvConfigJSON;
+  studioColorGradingConfig: StudioColorGradingConfig;
+  studioColorGradingDefaultConfig: StudioColorGradingConfig;
+  studioPostProcessingDirty: boolean;
   targetFrame: StudioTargetFrame;
   defaultTargetScale: number;
   visibleOriginalEntityIds: Set<string>;
