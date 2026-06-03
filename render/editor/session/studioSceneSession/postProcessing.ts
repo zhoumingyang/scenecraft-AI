@@ -25,6 +25,16 @@ type StudioPostProcessingDeps = {
   getProjectModel: () => EditorProjectModel | null;
 };
 
+function addDefinedParam<T extends Record<string, boolean | number>>(
+  params: T,
+  key: keyof T,
+  value: boolean | number | undefined
+) {
+  if (value !== undefined) {
+    params[key] = value as T[keyof T];
+  }
+}
+
 function applyEnvPatch(
   projectModel: EditorProjectModel,
   patch: Partial<EditorEnvConfigJSON>
@@ -114,31 +124,31 @@ export function updateStudioScenePostProcessing(input: {
 
   const passPatch: NonNullable<EditorEnvConfigJSON["postProcessing"]>["passes"] = {};
   if (patch.bloom) {
+    const params: NonNullable<typeof passPatch.unrealBloom>["params"] = {};
+    addDefinedParam(params, "strength", patch.bloom.strength);
+    addDefinedParam(params, "radius", patch.bloom.radius);
+    addDefinedParam(params, "threshold", patch.bloom.threshold);
     passPatch.unrealBloom = {
       enabled: patch.bloom.enabled,
-      params: {
-        strength: patch.bloom.strength,
-        radius: patch.bloom.radius,
-        threshold: patch.bloom.threshold
-      }
+      params
     };
   }
   if (patch.bokeh) {
+    const params: NonNullable<typeof passPatch.bokeh>["params"] = {};
+    addDefinedParam(params, "focus", patch.bokeh.focus);
+    addDefinedParam(params, "aperture", patch.bokeh.aperture);
+    addDefinedParam(params, "maxblur", patch.bokeh.maxblur);
     passPatch.bokeh = {
       enabled: patch.bokeh.enabled,
-      params: {
-        focus: patch.bokeh.focus,
-        aperture: patch.bokeh.aperture,
-        maxblur: patch.bokeh.maxblur
-      }
+      params
     };
   }
   if (patch.grain) {
+    const params: NonNullable<typeof passPatch.film>["params"] = {};
+    addDefinedParam(params, "intensity", patch.grain.intensity);
     passPatch.film = {
       enabled: patch.grain.enabled,
-      params: {
-        intensity: patch.grain.intensity
-      }
+      params
     };
   }
   if (Object.keys(passPatch).length > 0) {
