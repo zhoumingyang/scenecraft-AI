@@ -181,6 +181,13 @@ export type StudioPostProcessingProfile = {
   contrast?: number;
   temperature?: number;
   tint?: number;
+  vignette?: number;
+  detail?: number;
+  grain?: {
+    enabled: boolean;
+    intensity: number;
+    grayscale: boolean;
+  };
   passes: {
     bloom?: {
       enabled: boolean;
