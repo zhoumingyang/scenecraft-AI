@@ -17,6 +17,12 @@ import { SSRPass } from "three/examples/jsm/postprocessing/SSRPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 
 import type { EditorPostProcessPassId, ResolvedEditorPostProcessingConfigJSON } from "../core/types";
+import type { StudioColorGradingConfig } from "../studioColorGrading";
+import {
+  createStudioColorGradingPass,
+  setStudioColorGradingPassSize,
+  updateStudioColorGradingPass
+} from "./studioColorGradingPass";
 
 type EditorRuntimePostProcessingOptions = {
   scene: THREE.Scene;
@@ -43,7 +49,10 @@ export class EditorRuntimePostProcessing {
   private halftonePass: HalftonePass | null = null;
   private smaaPass: SMAAPass | null = null;
   private ssrPass: SSRPass | null = null;
+  private studioColorGradingPass: ReturnType<typeof createStudioColorGradingPass> | null = null;
+  private studioColorGradingEnabled = false;
   private unrealBloomPass: UnrealBloomPass | null = null;
+  private currentConfig: ResolvedEditorPostProcessingConfigJSON | null = null;
   private readonly viewportSize = new THREE.Vector2(1, 1);
 
   constructor({ scene, camera, renderer }: EditorRuntimePostProcessingOptions) {
@@ -87,6 +96,7 @@ export class EditorRuntimePostProcessing {
   }
 
   applyConfig(config: ResolvedEditorPostProcessingConfigJSON) {
+    this.currentConfig = config;
     const { passes } = config;
     this.ensureConfiguredPasses(config);
 
@@ -203,6 +213,29 @@ export class EditorRuntimePostProcessing {
     this.rebuildComposerPasses(config);
   }
 
+  applyStudioColorGradingConfig(config: StudioColorGradingConfig | null) {
+    if (!config) {
+      this.studioColorGradingEnabled = false;
+      if (this.studioColorGradingPass) {
+        this.studioColorGradingPass.enabled = false;
+      }
+      if (this.currentConfig) {
+        this.rebuildComposerPasses(this.currentConfig);
+      }
+      return;
+    }
+
+    this.ensureStudioColorGradingPass(config);
+    this.studioColorGradingEnabled = true;
+    if (this.studioColorGradingPass) {
+      this.studioColorGradingPass.enabled = true;
+      updateStudioColorGradingPass(this.studioColorGradingPass, config);
+    }
+    if (this.currentConfig) {
+      this.rebuildComposerPasses(this.currentConfig);
+    }
+  }
+
   syncCameraState() {
     if (this.bokehPass) {
       const bokehUniforms = this.bokehPass.materialBokeh.uniforms as Record<
@@ -244,6 +277,7 @@ export class EditorRuntimePostProcessing {
     this.disposePass(this.outputPass);
     this.disposePass(this.smaaPass);
     this.disposePass(this.ssrPass);
+    this.disposePass(this.studioColorGradingPass);
     this.disposePass(this.unrealBloomPass);
     this.pixelatedPass = null;
     this.afterimagePass = null;
@@ -255,6 +289,7 @@ export class EditorRuntimePostProcessing {
     this.halftonePass = null;
     this.smaaPass = null;
     this.ssrPass = null;
+    this.studioColorGradingPass = null;
     this.unrealBloomPass = null;
     this.composer.dispose();
   }
@@ -418,6 +453,15 @@ export class EditorRuntimePostProcessing {
     this.smaaPass.enabled = true;
   }
 
+  private ensureStudioColorGradingPass(config: StudioColorGradingConfig) {
+    if (this.studioColorGradingPass) return;
+
+    this.studioColorGradingPass = createStudioColorGradingPass(config);
+    this.studioColorGradingPass.enabled = false;
+    const { width, height } = this.getCurrentSize();
+    setStudioColorGradingPassSize(this.studioColorGradingPass, width, height);
+  }
+
   private syncPassSize(width: number, height: number) {
     const effectiveWidth = Math.max(1, Math.round(width * this.renderer.getPixelRatio()));
     const effectiveHeight = Math.max(1, Math.round(height * this.renderer.getPixelRatio()));
@@ -449,6 +493,14 @@ export class EditorRuntimePostProcessing {
       this.halftonePass.uniforms.width.value = effectiveWidth;
       this.halftonePass.uniforms.height.value = effectiveHeight;
     }
+
+    if (this.studioColorGradingPass) {
+      setStudioColorGradingPassSize(
+        this.studioColorGradingPass,
+        effectiveWidth,
+        effectiveHeight
+      );
+    }
   }
 
   private rebuildComposerPasses(config: ResolvedEditorPostProcessingConfigJSON) {
@@ -467,6 +519,9 @@ export class EditorRuntimePostProcessing {
     this.appendEffectPass("film", this.filmPass, config);
     this.appendEffectPass("glitch", this.glitchPass, config);
 
+    if (this.studioColorGradingEnabled && this.studioColorGradingPass) {
+      this.composer.addPass(this.studioColorGradingPass);
+    }
     this.composer.addPass(this.outlinePass);
     if (this.smaaPass) {
       this.composer.addPass(this.smaaPass);
