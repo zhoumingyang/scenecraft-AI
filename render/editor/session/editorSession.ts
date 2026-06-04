@@ -14,7 +14,6 @@ import type {
 import type { EditorAppEvent } from "../core/events";
 import { BindingRegistry } from "../bindings/bindingRegistry";
 import { updateMeshBindingMaterial } from "../bindings/meshBinding";
-import { pickEntityId } from "../interaction/picker";
 import type { LightPresetId } from "../lightPresets";
 import {
   type StudioScenePresetId,
@@ -29,13 +28,27 @@ import {
 } from "../core/types";
 import { Ai3DPlanSessionController } from "./ai3dPlanSession";
 import { Ai3DPreviewSession } from "./ai3dPreviewSession";
+import {
+  dispatchEditorCommand,
+  type EditorCommandHandlers
+} from "./commandDispatcher";
 import { EntityIsolationSessionController } from "./entityIsolationSession";
 import { EntityMutationSessionController } from "./entityMutationSession";
 import { createMeshEntityId, createMeshPayload } from "./entityFactories";
 import { LightSessionController } from "./lightSession";
 import { ModelImportSessionController } from "./modelImportSession";
 import { ModelAnimationSessionController } from "./modelAnimationSession";
+import {
+  createProjectBindings,
+  rebuildProjectGroupHierarchy
+} from "./projectBindings";
+import {
+  flushRuntimeStateToProjectModel as flushRenderStateToProjectModel,
+  getSerializableProjectJSON,
+  syncRenderChangesToModel as syncRenderStateChangesToModel
+} from "./renderSync";
 import { SceneEnvironmentSessionController } from "./sceneEnvironmentSession";
+import { EditorSelectionSessionController } from "./selection";
 import {
   StudioSceneSessionController,
   type StudioSceneEntityAction,
@@ -54,20 +67,6 @@ export type EditorSessionOptions = {
   resolveStudioHdriUrl?: (input: StudioHdriResolveInput) => Promise<StudioHdriResolveResult | null>;
 };
 
-function resolveCanvasPickedEntityId(projectModel: EditorProjectModel | null, entityId: string | null) {
-  if (!projectModel || !entityId) return entityId;
-
-  let resolvedEntityId = entityId;
-  let parentGroupId = projectModel.getParentGroupId(resolvedEntityId);
-
-  while (parentGroupId) {
-    resolvedEntityId = parentGroupId;
-    parentGroupId = projectModel.getParentGroupId(resolvedEntityId);
-  }
-
-  return resolvedEntityId;
-}
-
 export class EditorSession {
   private readonly runtime: EditorRuntime;
   private readonly registry: BindingRegistry;
@@ -81,6 +80,8 @@ export class EditorSession {
   private readonly modelImport: ModelImportSessionController;
   private readonly modelAnimation: ModelAnimationSessionController;
   private readonly studioScene: StudioSceneSessionController;
+  private readonly selection: EditorSelectionSessionController;
+  private readonly commandHandlers: EditorCommandHandlers;
   private selectedEntityId: string | null = null;
 
   projectModel: EditorProjectModel | null = null;
@@ -164,6 +165,55 @@ export class EditorSession {
       setSelectedEntity: (entityId, source) => this.setSelectedEntity(entityId, source),
       rebuildGroupHierarchy: () => this.rebuildGroupHierarchy()
     });
+    this.selection = new EditorSelectionSessionController({
+      runtime,
+      registry: this.registry,
+      emit,
+      getProjectModel: () => this.projectModel,
+      getSelectedEntityId: () => this.selectedEntityId,
+      setSelectedEntityId: (entityId) => {
+        this.selectedEntityId = entityId;
+      },
+      studioScene: this.studioScene,
+      canUseStudioSceneEntityAction: (entityId, action) =>
+        this.canUseStudioSceneEntityAction(entityId, action)
+    });
+    this.commandHandlers = {
+      loadProject: (project) => this.loadProject(project),
+      clearProject: () => this.clearProject(),
+      importModel: (file, source) => this.importModel(file, source),
+      setSelectedEntity: (entityId, source) => this.setSelectedEntity(entityId, source),
+      removeEntity: (entityId, source) => this.removeEntity(entityId, source),
+      duplicateEntity: (entityId, source) => this.duplicateEntity(entityId, source),
+      setEntityLocked: (entityId, locked, source) =>
+        this.setEntityLocked(entityId, locked, source),
+      setEntityVisible: (entityId, visible, source) =>
+        this.setEntityVisible(entityId, visible, source),
+      updateEntityTransform: (entityId, patch, source) =>
+        this.updateEntityTransform(entityId, patch, source),
+      updateEntityLabel: (entityId, label, source) =>
+        this.updateEntityLabel(entityId, label, source),
+      updateCamera: (patch, source) => this.updateCamera(patch, source),
+      updateSceneEnvConfig: (patch, source) =>
+        this.updateSceneEnvConfig(patch, source),
+      updateGroundConfig: (patch, source) => this.updateGroundConfig(patch, source),
+      updateGroundMaterial: (patch, source) => this.updateGroundMaterial(patch, source),
+      updateMeshMaterial: (entityId, patch, source) =>
+        this.updateMeshMaterial(entityId, patch, source),
+      createMesh: (geometryName, source) => this.createMesh(geometryName, source),
+      updateLight: (entityId, patch, source) => this.updateLight(entityId, patch, source),
+      createLight: (lightType, source) => this.createLight(lightType, source),
+      createLightPreset: (presetId, source) => this.createLightPreset(presetId, source),
+      isStudioSceneActive: () => this.studioScene.isActive(),
+      canUseStudioSceneEntityAction: (entityId, action) =>
+        this.canUseStudioSceneEntityAction(entityId, action),
+      selectModelAnimation: (entityId, animationId, source) =>
+        this.modelAnimation.selectAnimation(entityId, animationId, source),
+      updateModelAnimationTimeScale: (entityId, timeScale, source) =>
+        this.modelAnimation.updateTimeScale(entityId, timeScale, source),
+      controlModelAnimation: (entityId, action, source) =>
+        this.modelAnimation.control(entityId, action, source)
+    };
   }
 
   dispose() {
@@ -186,17 +236,7 @@ export class EditorSession {
     this.runtime.applyEnvConfig(this.projectModel.envConfig);
     this.runtime.applyCameraModel(this.projectModel.camera);
 
-    const pendingBindingReady: Promise<void>[] = [];
-    const registerBinding = (binding: { ready?: Promise<void> }) => {
-      if (binding.ready) {
-        pendingBindingReady.push(binding.ready);
-      }
-    };
-
-    this.projectModel.groups.forEach((group) => registerBinding(this.registry.create(group)));
-    this.projectModel.models.forEach((model) => registerBinding(this.registry.create(model)));
-    this.projectModel.meshes.forEach((mesh) => registerBinding(this.registry.create(mesh)));
-    this.projectModel.lights.forEach((light) => registerBinding(this.registry.create(light)));
+    const pendingBindingReady = createProjectBindings(this.projectModel, this.registry);
     this.rebuildGroupHierarchy();
     this.runtime.syncLightHelperVisibility();
 
@@ -227,28 +267,22 @@ export class EditorSession {
   }
 
   flushRuntimeStateToProjectModel(deltaSeconds = 0) {
-    if (!this.projectModel) return;
-
-    if (this.studioScene.isActive()) {
-      this.registry.refresh(deltaSeconds);
-      this.studioScene.getTransientStudioEntityIds().forEach((entityId) => {
-        this.registry.syncObjectTransformToModel(entityId);
-      });
-      return;
-    }
-
-    this.runtime.syncCameraModel(this.projectModel.camera);
-    this.registry.refresh(deltaSeconds);
-    this.registry.syncAllObjectTransformsToModel();
+    flushRenderStateToProjectModel({
+      projectModel: this.projectModel,
+      registry: this.registry,
+      runtime: this.runtime,
+      studioScene: this.studioScene,
+      deltaSeconds
+    });
   }
 
   getProjectJSON(): EditorProjectJSON | null {
-    if (!this.projectModel) return null;
-
-    const projectJson = this.projectModel.toJSON();
-    return this.studioScene.filterTransientEntitiesFromProjectJSON(
-      this.entityIsolation.applyVisibilityToProjectJSON(projectJson)
-    );
+    return getSerializableProjectJSON({
+      projectModel: this.projectModel,
+      studioScene: this.studioScene,
+      applyEntityIsolationVisibility: (projectJson) =>
+        this.entityIsolation.applyVisibilityToProjectJSON(projectJson)
+    });
   }
 
   getSelectedEntityId(): string | null {
@@ -391,77 +425,7 @@ export class EditorSession {
   }
 
   async dispatch(command: EditorCommand) {
-    switch (command.type) {
-      case "project.load":
-        await this.loadProject(command.project);
-        return;
-      case "project.clear":
-        await this.clearProject();
-        return;
-      case "model.import":
-        await this.importModel(command.file, command.source ?? "ui");
-        return;
-      case "selection.set":
-        this.setSelectedEntity(command.entityId, command.source ?? "ui");
-        return;
-      case "entity.remove":
-        this.removeEntity(command.entityId, command.source ?? "ui");
-        return;
-      case "entity.duplicate":
-        this.duplicateEntity(command.entityId, command.source ?? "ui");
-        return;
-      case "entity.lock":
-        this.setEntityLocked(command.entityId, command.locked, command.source ?? "ui");
-        return;
-      case "entity.visible":
-        this.setEntityVisible(command.entityId, command.visible, command.source ?? "ui");
-        return;
-      case "entity.transform":
-        this.updateEntityTransform(command.entityId, command.patch, command.source ?? "ui");
-        return;
-      case "entity.label":
-        this.updateEntityLabel(command.entityId, command.label, command.source ?? "ui");
-        return;
-      case "camera.patch":
-        this.updateCamera(command.patch, command.source ?? "ui");
-        return;
-      case "scene.envConfig.patch":
-        await this.updateSceneEnvConfig(command.patch, command.source ?? "ui");
-        return;
-      case "ground.patch":
-        this.updateGroundConfig(command.patch, command.source ?? "ui");
-        return;
-      case "ground.material":
-        this.updateGroundMaterial(command.patch, command.source ?? "ui");
-        return;
-      case "mesh.material":
-        this.updateMeshMaterial(command.entityId, command.patch, command.source ?? "ui");
-        return;
-      case "mesh.create":
-        this.createMesh(command.geometryName, command.source ?? "ui");
-        return;
-      case "light.patch":
-        this.updateLight(command.entityId, command.patch, command.source ?? "ui");
-        return;
-      case "light.create":
-        this.createLight(command.lightType, command.source ?? "ui");
-        return;
-      case "lightPreset.create":
-        await this.createLightPreset(command.presetId, command.source ?? "ui");
-        return;
-      case "model.animation.select":
-        if (this.studioScene.isActive() && !this.canUseStudioSceneEntityAction(command.entityId, "select")) return;
-        this.modelAnimation.selectAnimation(command.entityId, command.animationId, command.source ?? "ui");
-        return;
-      case "model.animation.timeScale":
-        if (this.studioScene.isActive() && !this.canUseStudioSceneEntityAction(command.entityId, "select")) return;
-        this.modelAnimation.updateTimeScale(command.entityId, command.timeScale, command.source ?? "ui");
-        return;
-      case "model.animation.control":
-        if (this.studioScene.isActive() && !this.canUseStudioSceneEntityAction(command.entityId, "select")) return;
-        this.modelAnimation.control(command.entityId, command.action, command.source ?? "ui");
-        return;
-    }
+    await dispatchEditorCommand(this.commandHandlers, command);
   }
 
   async importModel(file: File, source: SyncSource = "ui") {
@@ -622,102 +586,23 @@ export class EditorSession {
   }
 
   syncRenderChangesToModel(deltaSeconds = 0) {
-    let sceneChanged = false;
-    if (this.projectModel && this.studioScene.isActive()) {
-      sceneChanged = this.registry.refresh(deltaSeconds) || sceneChanged;
-
-      const renderTransformedBinding =
-        this.selectedEntityId && this.studioScene.isTransientStudioEntity(this.selectedEntityId)
-          ? this.registry.syncObjectTransformToModel(this.selectedEntityId)
-          : null;
-
-      if (renderTransformedBinding) {
-        this.emit({
-          type: "entityUpdated",
-          entityId: renderTransformedBinding.model.id,
-          entityKind: renderTransformedBinding.kind,
-          source: "render",
-          affectsSceneTree: false
-        });
-        sceneChanged = true;
-      }
-
-      return sceneChanged;
-    }
-
-    if (
-      this.projectModel &&
-      !this.studioScene.isActive() &&
-      this.runtime.syncCameraModel(this.projectModel.camera)
-    ) {
-      this.emit({ type: "cameraUpdated", source: "render" });
-      sceneChanged = true;
-    }
-
-    sceneChanged = this.registry.refresh(deltaSeconds) || sceneChanged;
-
-    const renderTransformedBinding =
-      !this.studioScene.isActive() && this.selectedEntityId && this.selectedEntityId !== SCENE_SELECTION_ID
-        ? this.registry.syncObjectTransformToModel(this.selectedEntityId)
-        : null;
-
-    if (renderTransformedBinding) {
-      this.emit({
-        type: "entityUpdated",
-        entityId: renderTransformedBinding.model.id,
-        entityKind: renderTransformedBinding.kind,
-        source: "render",
-        affectsSceneTree: false
-      });
-      sceneChanged = true;
-    }
-
-    return sceneChanged;
+    return syncRenderStateChangesToModel({
+      projectModel: this.projectModel,
+      registry: this.registry,
+      runtime: this.runtime,
+      studioScene: this.studioScene,
+      selectedEntityId: this.selectedEntityId,
+      emit: this.emit,
+      deltaSeconds
+    });
   }
 
   pick(clientX: number, clientY: number): string | null {
-    const pickedEntityId = pickEntityId({
-      camera: this.runtime.camera,
-      raycaster: this.runtime.raycaster,
-      domElement: this.runtime.renderer.domElement,
-      pickTargets: this.registry.getPickTargets(),
-      clientX,
-      clientY
-    });
-
-    if (pickedEntityId && this.studioScene.isTransientStudioEntity(pickedEntityId)) {
-      return pickedEntityId;
-    }
-
-    return resolveCanvasPickedEntityId(this.projectModel, pickedEntityId);
+    return this.selection.pick(clientX, clientY);
   }
 
   setSelectedEntity(entityId: string | null, source: SyncSource = "ui") {
-    if (this.studioScene.isActive() && entityId && !this.canUseStudioSceneEntityAction(entityId, "select")) {
-      return;
-    }
-
-    if (entityId === GROUND_HELPER_NODE_ID) {
-      if (!this.projectModel?.envConfig.ground.visible) return;
-      if (this.selectedEntityId === entityId) return;
-      this.selectedEntityId = entityId;
-      this.runtime.attachTransformTarget(null);
-      this.emit({ type: "selectionChanged", selectedEntityId: entityId, source });
-      return;
-    }
-
-    if (entityId && entityId !== SCENE_SELECTION_ID) {
-      if (this.studioScene.isActive() && !this.studioScene.isStudioSceneEntityInteractive(entityId)) {
-        return;
-      }
-      const binding = this.registry.get(entityId);
-      if (!binding || binding.model.locked || !this.projectModel?.isEntityEffectivelyVisible(entityId)) return;
-    }
-    if (this.selectedEntityId === entityId) return;
-    this.selectedEntityId = entityId;
-    const binding = entityId && entityId !== SCENE_SELECTION_ID ? this.registry.get(entityId) : null;
-    this.runtime.attachTransformTarget(binding?.object ?? null);
-    this.emit({ type: "selectionChanged", selectedEntityId: entityId, source });
+    this.selection.setSelectedEntity(entityId, source);
   }
 
   removeEntity(entityId: string, source: SyncSource = "ui") {
@@ -755,25 +640,10 @@ export class EditorSession {
 
   private rebuildGroupHierarchy() {
     if (!this.projectModel) return;
-
-    this.projectModel.groups.forEach((group) => {
-      const parentGroupId = this.projectModel?.getParentGroupId(group.id) ?? null;
-      this.registry.attach(group.id, parentGroupId, this.runtime.scene);
-    });
-
-    this.projectModel.models.forEach((model) => {
-      const parentGroupId = this.projectModel?.getParentGroupId(model.id) ?? null;
-      this.registry.attach(model.id, parentGroupId, this.runtime.scene);
-    });
-
-    this.projectModel.meshes.forEach((mesh) => {
-      const parentGroupId = this.projectModel?.getParentGroupId(mesh.id) ?? null;
-      this.registry.attach(mesh.id, parentGroupId, this.runtime.scene);
-    });
-
-    this.projectModel.lights.forEach((light) => {
-      const parentGroupId = this.projectModel?.getParentGroupId(light.id) ?? null;
-      this.registry.attach(light.id, parentGroupId, this.runtime.scene);
+    rebuildProjectGroupHierarchy({
+      projectModel: this.projectModel,
+      registry: this.registry,
+      scene: this.runtime.scene
     });
   }
 
