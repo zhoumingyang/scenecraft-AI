@@ -21,8 +21,6 @@ import type {
 } from "./core/types";
 import { EditorRuntime } from "./runtime/editorRuntime";
 import { EditorSession } from "./session/editorSession";
-import { PICK_POINTER_MOVE_THRESHOLD_PX } from "./constants/input";
-import { SCENE_NODE_ID as SCENE_SELECTION_ID } from "./constants/scene";
 import type { StudioScenePresetId, StudioSceneVariantId } from "./studioScenes";
 import type {
   StudioHdriResolveInput,
@@ -32,18 +30,17 @@ import type {
   StudioScenePostProcessingPatch
 } from "./session/studioSceneSession";
 import type { StudioDecorationKind, StudioPlinthKind } from "./studioSceneLayoutGenerator";
+import { EditorAppEnvironmentAssets } from "./app/environmentAssets";
+import { EditorAppEventHub } from "./app/events";
+import { getEditorMeshList, type EditorMeshListItem } from "./app/meshList";
+import { EditorAppPointerPicking } from "./app/pointerPicking";
+import {
+  EditorAppViewState,
+  type EditorViewHelperVisibility
+} from "./app/viewState";
 
-export type EditorMeshListItem = {
-  id: string;
-  label: string;
-};
-
-export type EditorViewHelperVisibility = {
-  gridHelper: boolean;
-  transformGizmo: boolean;
-  lightHelper: boolean;
-  shadow: boolean;
-};
+export type { EditorMeshListItem };
+export type { EditorViewHelperVisibility };
 
 export type { LightingConflictState };
 
@@ -51,32 +48,44 @@ export type EditorAppOptions = {
   resolveStudioHdriUrl?: (input: StudioHdriResolveInput) => Promise<StudioHdriResolveResult | null>;
 };
 
-function formatTitleCase(value: string) {
-  if (!value) return "Mesh";
-  return value.charAt(0).toUpperCase() + value.slice(1);
-}
-
-type PendingPick = {
-  pointerId: number;
-  startX: number;
-  startY: number;
-  moved: boolean;
-};
-
 export class EditorApp {
   private readonly runtime: EditorRuntime;
   private readonly session: EditorSession;
-  private readonly listeners = new Set<EditorAppListener>();
+  private readonly events: EditorAppEventHub;
+  private readonly environmentAssets: EditorAppEnvironmentAssets;
+  private readonly pointerPicking: EditorAppPointerPicking;
+  private readonly viewState: EditorAppViewState;
   private disposed = false;
-  private pendingPick: PendingPick | null = null;
-  private environmentUrl: string | null = null;
 
   constructor(host: HTMLDivElement, options: EditorAppOptions = {}) {
     this.runtime = new EditorRuntime(host);
+    this.events = new EditorAppEventHub(this.runtime);
     this.session = new EditorSession(this.runtime, (event) => {
       this.emit(event);
     }, {
       resolveStudioHdriUrl: options.resolveStudioHdriUrl
+    });
+    this.environmentAssets = new EditorAppEnvironmentAssets({
+      session: this.session,
+      getProjectModel: () => this.projectModel
+    });
+    this.pointerPicking = new EditorAppPointerPicking({
+      runtime: this.runtime,
+      pickEntity: (clientX, clientY) => this.session.pick(clientX, clientY),
+      setSelectedEntity: (entityId) => {
+        void this.dispatch({
+          type: "selection.set",
+          entityId,
+          source: "render"
+        });
+      }
+    });
+    this.viewState = new EditorAppViewState({
+      runtime: this.runtime,
+      session: this.session,
+      getProjectModel: () => this.projectModel,
+      updateCamera: (update, source) => this.updateCamera(update, source),
+      emitViewStateUpdated: () => this.emit({ type: "viewStateUpdated" })
     });
   }
 
@@ -87,40 +96,32 @@ export class EditorApp {
   start() {
     if (this.disposed) return;
     this.runtime.start({
-      onPointerDown: this.onPointerDown,
+      onPointerDown: this.pointerPicking.onPointerDown,
       onFrame: this.onFrame
     });
-    window.addEventListener("pointermove", this.onPointerMove);
-    window.addEventListener("pointerup", this.onPointerUp);
-    window.addEventListener("pointercancel", this.onPointerCancel);
+    this.pointerPicking.addWindowListeners();
   }
 
   dispose() {
     if (this.disposed) return;
     this.disposed = true;
-    window.removeEventListener("pointermove", this.onPointerMove);
-    window.removeEventListener("pointerup", this.onPointerUp);
-    window.removeEventListener("pointercancel", this.onPointerCancel);
-    this.pendingPick = null;
-    this.revokeEnvironmentUrl();
+    this.pointerPicking.removeWindowListeners();
+    this.environmentAssets.dispose();
     this.session.dispose();
     this.runtime.dispose();
   }
 
   subscribe(listener: EditorAppListener): () => void {
-    this.listeners.add(listener);
-    return () => {
-      this.listeners.delete(listener);
-    };
+    return this.events.subscribe(listener);
   }
 
   async loadProject(projectJson: EditorProjectJSON) {
-    this.revokeEnvironmentUrlIfChanged(projectJson.envConfig?.panoUrl ?? "");
+    this.environmentAssets.beforeLoadProject(projectJson);
     await this.session.loadProject(projectJson);
   }
 
   async clearProject() {
-    this.revokeEnvironmentUrl();
+    this.environmentAssets.beforeClearProject();
     await this.session.clearProject();
   }
 
@@ -139,7 +140,7 @@ export class EditorApp {
       command.type === "scene.envConfig.patch" &&
       command.patch.panoUrl !== undefined
     ) {
-      this.revokeEnvironmentUrlIfChanged(command.patch.panoUrl);
+      this.environmentAssets.beforeSceneEnvConfigPatch(command.patch);
     }
 
     await this.session.dispatch(command);
@@ -200,12 +201,7 @@ export class EditorApp {
   }
 
   getMeshList(): EditorMeshListItem[] {
-    const meshes = this.projectModel?.meshes;
-    if (!meshes) return [];
-    return Array.from(meshes.values()).map((mesh, index) => ({
-      id: mesh.id,
-      label: mesh.label || `${formatTitleCase(mesh.geometryName)} ${index + 1}`
-    }));
+    return getEditorMeshList(this.projectModel);
   }
 
   getLightingConflictState(): LightingConflictState {
@@ -213,103 +209,46 @@ export class EditorApp {
   }
 
   getRenderMode() {
-    return this.runtime.getRenderMode();
+    return this.viewState.getRenderMode();
   }
 
   setRenderMode(mode: EditorRenderMode) {
-    if (!this.runtime.setRenderMode(mode)) return;
-    this.emit({ type: "viewStateUpdated" });
+    this.viewState.setRenderMode(mode);
   }
 
   isFirstPersonCamera() {
-    return this.runtime.isFirstPersonCamera();
+    return this.viewState.isFirstPersonCamera();
   }
 
   getFirstPersonHeight() {
-    return this.projectModel?.camera.position[1] ?? this.runtime.camera.position.y;
+    return this.viewState.getFirstPersonHeight();
   }
 
   setFirstPersonHeight(height: number, source: SyncSource = "ui") {
-    if (!this.projectModel) return;
-    const nextHeight = Number.isFinite(height) ? height : this.projectModel.camera.position[1];
-    this.updateCamera(
-      {
-        position: [
-          this.projectModel.camera.position[0],
-          nextHeight,
-          this.projectModel.camera.position[2]
-        ]
-      },
-      source
-    );
+    this.viewState.setFirstPersonHeight(height, source);
   }
 
   getViewHelperVisibility() {
-    return {
-      gridHelper: this.runtime.getGridHelperVisible(),
-      transformGizmo: this.runtime.getTransformGizmoVisible(),
-      lightHelper: this.runtime.getLightHelpersVisible(),
-      shadow: this.runtime.getShadowEnabled()
-    } satisfies EditorViewHelperVisibility;
+    return this.viewState.getViewHelperVisibility();
   }
 
   getActiveTransformRotationDrag() {
-    return this.runtime.getActiveTransformRotationDrag();
+    return this.viewState.getActiveTransformRotationDrag();
   }
 
   setViewHelperVisibility(
     helper: "gridHelper" | "transformGizmo" | "lightHelper" | "shadow",
     visible: boolean
   ) {
-    if (helper === "gridHelper") {
-      this.session.updateGroundConfig({ visible }, "ui");
-    } else if (helper === "transformGizmo") {
-      this.runtime.setTransformGizmoVisible(visible);
-    } else if (helper === "lightHelper") {
-      this.runtime.setLightHelpersVisible(visible);
-    } else {
-      this.session.updateGroundConfig({ mode: visible ? "plane" : "grid" }, "ui");
-    }
-    this.emit({ type: "viewStateUpdated" });
+    this.viewState.setViewHelperVisibility(helper, visible);
   }
 
   setViewHelperVisibilityState(visibility: EditorViewHelperVisibility) {
-    this.session.updateGroundConfig(
-      {
-        visible: visibility.gridHelper,
-        mode: visibility.shadow ? "plane" : "grid"
-      },
-      "ui"
-    );
-    this.runtime.setTransformGizmoVisible(visibility.transformGizmo);
-    this.runtime.setLightHelpersVisible(visibility.lightHelper);
-    this.emit({ type: "viewStateUpdated" });
+    this.viewState.setViewHelperVisibilityState(visibility);
   }
 
   async importPanorama(file: File) {
-    if (!this.projectModel) return;
-    const nextUrl = URL.createObjectURL(file);
-    try {
-      await this.session.updateSceneEnvConfig(
-        {
-          panoAssetId: "",
-          panoAssetName: file.name,
-          panoUrl: nextUrl,
-          externalSource: null
-        },
-        "ui",
-        { panoAssetName: file.name }
-      );
-      this.revokeEnvironmentUrl();
-      this.environmentUrl = nextUrl;
-      this.setSelectedEntity(SCENE_SELECTION_ID, "ui");
-      return {
-        sourceUrl: nextUrl
-      };
-    } catch (error) {
-      URL.revokeObjectURL(nextUrl);
-      throw error;
-    }
+    return this.environmentAssets.importPanorama(file);
   }
 
   async importModel(file: File, source: SyncSource = "ui") {
@@ -618,117 +557,12 @@ export class EditorApp {
   }
 
   private emit(event: EditorAppEvent) {
-    this.invalidatePathTraceForEvent(event);
-    this.runtime.requestFrame();
-    this.listeners.forEach((listener) => {
-      listener(event);
-    });
+    this.events.emit(event);
   }
-
-  private invalidatePathTraceForEvent(event: EditorAppEvent) {
-    if (event.type === "projectLoaded") {
-      this.runtime.invalidatePathTraceScene();
-      return;
-    }
-
-    if (event.type === "studioSceneChanged") {
-      this.runtime.invalidatePathTraceScene();
-      return;
-    }
-
-    if (event.type === "cameraUpdated") {
-      this.runtime.invalidatePathTraceCamera();
-      return;
-    }
-
-    if (event.type === "sceneUpdated") {
-      if (!event.pathTraceInvalidation || event.pathTraceInvalidation === "scene") {
-        this.runtime.invalidatePathTraceScene();
-        return;
-      }
-
-      if (event.pathTraceInvalidation === "environment") {
-        this.runtime.invalidatePathTraceEnvironment();
-        return;
-      }
-
-      if (event.pathTraceInvalidation === "materials") {
-        this.runtime.invalidatePathTraceMaterials();
-      }
-      return;
-    }
-
-    if (event.type !== "entityUpdated") return;
-
-    if (event.entityKind === "light") {
-      this.runtime.invalidatePathTraceLights();
-      return;
-    }
-
-    this.runtime.invalidatePathTraceScene();
-  }
-
-  private onPointerDown = (event: PointerEvent) => {
-    if (event.button !== 0) return;
-    this.pendingPick = null;
-    if (this.runtime.beginTransformInteraction(event.clientX, event.clientY)) return;
-    if (this.runtime.isFirstPersonCamera()) return;
-
-    this.pendingPick = {
-      pointerId: event.pointerId,
-      startX: event.clientX,
-      startY: event.clientY,
-      moved: false
-    };
-  };
-
-  private onPointerMove = (event: PointerEvent) => {
-    if (!this.pendingPick || this.pendingPick.pointerId !== event.pointerId) return;
-    const deltaX = event.clientX - this.pendingPick.startX;
-    const deltaY = event.clientY - this.pendingPick.startY;
-    const distanceSquared = deltaX * deltaX + deltaY * deltaY;
-    if (distanceSquared <= PICK_POINTER_MOVE_THRESHOLD_PX * PICK_POINTER_MOVE_THRESHOLD_PX) return;
-    this.pendingPick.moved = true;
-  };
-
-  private onPointerUp = (event: PointerEvent) => {
-    if (!this.pendingPick || this.pendingPick.pointerId !== event.pointerId) return;
-    const shouldPick = !this.pendingPick.moved;
-    this.pendingPick = null;
-    if (!shouldPick) return;
-
-    const pickedEntityId = this.session.pick(event.clientX, event.clientY);
-    void this.dispatch({
-      type: "selection.set",
-      entityId: pickedEntityId,
-      source: "render"
-    });
-  };
-
-  private onPointerCancel = (event: PointerEvent) => {
-    if (!this.pendingPick || this.pendingPick.pointerId !== event.pointerId) return;
-    this.pendingPick = null;
-  };
 
   private onFrame = (deltaSeconds: number) => {
     return this.session.syncRenderChangesToModel(deltaSeconds);
   };
-
-  private revokeEnvironmentUrl() {
-    if (!this.environmentUrl) return;
-    if (this.environmentUrl.startsWith("blob:")) {
-      URL.revokeObjectURL(this.environmentUrl);
-    }
-    this.environmentUrl = null;
-  }
-
-  private revokeEnvironmentUrlIfChanged(nextUrl: string) {
-    if (!this.environmentUrl || this.environmentUrl === nextUrl) {
-      return;
-    }
-
-    this.revokeEnvironmentUrl();
-  }
 }
 
 export function createEditorApp(host: HTMLDivElement, options: EditorAppOptions = {}): EditorApp {
