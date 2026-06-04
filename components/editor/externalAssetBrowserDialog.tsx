@@ -2,31 +2,19 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
-import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import {
   Alert,
-  Backdrop,
-  Box,
-  Button,
   CircularProgress,
   Dialog,
   DialogContent,
   DialogTitle,
   IconButton,
-  MenuItem,
   Stack,
-  TextField,
   Typography
 } from "@mui/material";
 import { getPolyhavenAssetDetail } from "@/frontend/api/externalAssets";
 import { useI18n } from "@/lib/i18n";
 import {
-  getPreferredHdriFormat,
-  getPreferredHdriResolution,
-  getPreferredModelFormat,
-  getPreferredModelResolution,
-  getPreferredTextureFormat,
-  getPreferredTextureResolution,
   selectHdriFile,
   selectModelFile,
   selectTextureImportFiles
@@ -34,14 +22,24 @@ import {
 import type {
   ExternalAssetDetail,
   ExternalAssetListItem,
-  ExternalAssetType,
-  ExternalTextureAssetDetail
+  ExternalAssetType
 } from "@/lib/externalAssets/types";
 import { getApiErrorMessage } from "@/lib/http/axios";
 import { useEditorStore } from "@/stores/editorStore";
 import type { EditorThemeTokens } from "./theme";
-import { ExternalAssetBrowserCard } from "./externalAssets/externalAssetBrowserCard";
-import { ExternalAssetDetailDialog } from "./externalAssets/externalAssetDetailDialog";
+import { ExternalAssetApplyOverlay } from "./externalAssets/externalAssetApplyOverlay";
+import { ExternalAssetBrowserFilterBar } from "./externalAssets/externalAssetBrowserFilterBar";
+import { ExternalAssetBrowserResults } from "./externalAssets/externalAssetBrowserResults";
+import { ExternalAssetPreviewPanel } from "./externalAssets/externalAssetPreviewPanel";
+import {
+  DETAIL_CACHE_LIMIT,
+  getAvailableFormats,
+  getAvailableResolutions,
+  getDetailCacheKey,
+  getPreferredFormatForResolution,
+  getPreferredSelection,
+  preloadTextureSelections
+} from "./externalAssets/externalAssetSelection";
 import { createLruCache } from "./externalAssets/lruCache";
 import type {
   ExternalHdriApplyPayload,
@@ -65,108 +63,6 @@ type ExternalAssetBrowserDialogProps = {
   onApplyTexture?: (payload: ExternalTextureApplyPayload) => Promise<void> | void;
   onApplyModel?: (payload: ExternalModelApplyPayload) => Promise<void> | void;
 };
-
-const DETAIL_CACHE_LIMIT = 48;
-
-function getDetailCacheKey(assetType: ExternalAssetType, assetId: string) {
-  return `${assetType}:${assetId}`;
-}
-
-function getTextureFormats(asset: ExternalTextureAssetDetail, resolution: string) {
-  const formats = new Set<string>();
-  asset.textureMaps.forEach((textureMap) => {
-    textureMap.fileOptions.forEach((file) => {
-      if (file.resolution === resolution) {
-        formats.add(file.format);
-      }
-    });
-  });
-
-  return Array.from(formats).sort((left, right) => left.localeCompare(right));
-}
-
-function getAvailableResolutions(asset: ExternalAssetDetail | null) {
-  if (!asset) {
-    return [];
-  }
-
-  if (asset.assetType === "hdri") {
-    return Array.from(new Set(asset.fileOptions.map((file) => file.resolution)));
-  }
-
-  return asset.availableResolutions;
-}
-
-function getAvailableFormats(asset: ExternalAssetDetail | null, resolution: string) {
-  if (!asset || !resolution) {
-    return [];
-  }
-
-  if (asset.assetType === "hdri") {
-    return Array.from(
-      new Set(
-        asset.fileOptions
-          .filter((file) => file.resolution === resolution)
-          .map((file) => file.format)
-      )
-    );
-  }
-
-  if (asset.assetType === "model") {
-    return Array.from(
-      new Set(
-        asset.modelFiles
-          .filter((file) => file.resolution === resolution)
-          .map((file) => file.format)
-      )
-    );
-  }
-
-  return getTextureFormats(asset, resolution);
-}
-
-function getPreferredSelection(asset: ExternalAssetDetail) {
-  if (asset.assetType === "hdri") {
-    const resolution = getPreferredHdriResolution(asset.fileOptions);
-    return {
-      resolution,
-      format: getPreferredHdriFormat(asset.fileOptions, resolution)
-    };
-  }
-
-  if (asset.assetType === "model") {
-    const resolution = getPreferredModelResolution(asset);
-    return {
-      resolution,
-      format: getPreferredModelFormat(asset.modelFiles, resolution)
-    };
-  }
-
-  return {
-    resolution: getPreferredTextureResolution(asset),
-    format: getPreferredTextureFormat(asset)
-  };
-}
-
-function preloadImageUrl(url: string, errorMessage: string) {
-  return new Promise<void>((resolve, reject) => {
-    const image = new Image();
-    image.onload = () => resolve();
-    image.onerror = () => reject(new Error(errorMessage));
-    image.src = url;
-  });
-}
-
-async function preloadTextureSelections(
-  selections: ExternalTextureApplyPayload["selections"],
-  errorMessage: string
-) {
-  await Promise.all(
-    Array.from(new Set(selections.map((selection) => selection.file.url))).map((url) =>
-      preloadImageUrl(url, errorMessage)
-    )
-  );
-}
 
 export function ExternalAssetBrowserDialog({
   open,
@@ -282,17 +178,9 @@ export function ExternalAssetBrowserDialog({
       return;
     }
 
-    if (selectedAssetDetail.assetType === "hdri") {
-      setSelectedFormat(getPreferredHdriFormat(selectedAssetDetail.fileOptions, selectedResolution));
-      return;
-    }
-
-    if (selectedAssetDetail.assetType === "model") {
-      setSelectedFormat(getPreferredModelFormat(selectedAssetDetail.modelFiles, selectedResolution));
-      return;
-    }
-
-    setSelectedFormat(availableFormats[0] ?? "");
+    setSelectedFormat(
+      getPreferredFormatForResolution(selectedAssetDetail, selectedResolution, availableFormats)
+    );
   }, [selectedAssetDetail, selectedFormat, selectedResolution]);
 
   const applyDetailSelection = (detail: ExternalAssetDetail) => {
@@ -503,178 +391,45 @@ export function ExternalAssetBrowserDialog({
 
         <DialogContent sx={{ px: 3, pb: 3, pt: 0 }}>
           <Stack spacing={1.25}>
-            <Stack direction={{ xs: "column", md: "row" }} spacing={1}>
-              <Stack direction="row" spacing={1} sx={{ flex: 1 }}>
-                <TextField
-                  fullWidth
-                  size="small"
-                  value={queryInput}
-                  onChange={(event) => setQueryInput(event.target.value)}
-                  placeholder={t("editor.assets.searchPlaceholder")}
-                  disabled={isApplying}
-                  sx={{
-                    "& .MuiOutlinedInput-root": {
-                      color: theme.pillText,
-                      background: theme.inputBg
-                    }
-                  }}
-                />
-                <Button
-                  color="inherit"
-                  onClick={submitSearch}
-                  disabled={isApplying}
-                  startIcon={<SearchRoundedIcon sx={{ fontSize: 18 }} />}
-                  sx={{
-                    minWidth: 110,
-                    borderRadius: 1,
-                    border: theme.sectionBorder,
-                    background: theme.iconButtonBg,
-                    color: theme.pillText,
-                    textTransform: "none"
-                  }}
-                >
-                  {t("editor.assets.searchAction")}
-                </Button>
-              </Stack>
-
-              <TextField
-                select
-                size="small"
-                value={category}
-                onChange={(event) => {
-                  setCategory(event.target.value);
-                  setPage(1);
-                }}
-                disabled={isApplying}
-                sx={{
-                  minWidth: { xs: "100%", md: 220 },
-                  "& .MuiOutlinedInput-root": {
-                    color: theme.pillText,
-                    background: theme.inputBg
-                  }
-                }}
-              >
-                <MenuItem value="">{t("editor.assets.categoryAll")}</MenuItem>
-                {categories.map((item) => (
-                  <MenuItem key={item.value} value={item.value}>
-                    {item.label} ({item.assetCount})
-                  </MenuItem>
-                ))}
-              </TextField>
-            </Stack>
+            <ExternalAssetBrowserFilterBar
+              theme={theme}
+              isApplying={isApplying}
+              queryInput={queryInput}
+              category={category}
+              categories={categories}
+              onQueryInputChange={setQueryInput}
+              onCategoryChange={(value) => {
+                setCategory(value);
+                setPage(1);
+              }}
+              onSearch={submitSearch}
+            />
 
             {errorMessage ? <Alert severity="error">{errorMessage}</Alert> : null}
 
-            <Stack
-              spacing={1}
-              sx={{
-                minHeight: 420,
-                borderRadius: 1.5,
-                border: theme.sectionBorder,
-                background: theme.sectionBg,
-                p: 1
-              }}
-            >
-              {isListLoading ? (
-                <Stack
-                  spacing={1}
-                  alignItems="center"
-                  justifyContent="center"
-                  sx={{
-                    minHeight: 372,
-                    color: theme.mutedText
-                  }}
-                >
-                  <CircularProgress size={22} sx={{ color: theme.pillText }} />
-                  <Typography sx={{ fontSize: 12 }}>{t("common.processing")}</Typography>
-                </Stack>
-              ) : (
-                <Box
-                  sx={{
-                    display: "grid",
-                    gap: 1,
-                    gridTemplateColumns: {
-                      xs: "repeat(1, minmax(0, 1fr))",
-                      sm: "repeat(2, minmax(0, 1fr))",
-                      lg: "repeat(3, minmax(0, 1fr))",
-                      xl: "repeat(4, minmax(0, 1fr))"
-                    }
-                  }}
-                >
-                  {assets.map((item) => (
-                    <ExternalAssetBrowserCard
-                      key={item.assetId}
-                      item={item}
-                      theme={theme}
-                      isApplying={isApplying}
-                      isSelected={selectedAssetId === item.assetId}
-                      detail={selectedAssetId === item.assetId ? selectedAssetDetail : null}
-                      detailError={selectedAssetId === item.assetId ? selectedDetailError : null}
-                      isDetailLoading={selectedAssetId === item.assetId ? isDetailLoading : false}
-                      selectedResolution={selectedAssetId === item.assetId ? selectedResolution : ""}
-                      selectedFormat={selectedAssetId === item.assetId ? selectedFormat : ""}
-                      availableResolutions={
-                        selectedAssetId === item.assetId ? selectedAvailableResolutions : []
-                      }
-                      availableFormats={selectedAssetId === item.assetId ? selectedAvailableFormats : []}
-                      onSelect={() => handleSelectAsset(item)}
-                      onResolutionChange={setSelectedResolution}
-                      onFormatChange={setSelectedFormat}
-                      onViewDetails={() => setIsDetailOpen(true)}
-                      onApply={handleApply}
-                    />
-                  ))}
-                </Box>
-              )}
-
-              {!isListLoading && assets.length === 0 ? (
-                <Box
-                  sx={{
-                    py: 4,
-                    textAlign: "center",
-                    color: theme.mutedText
-                  }}
-                >
-                  <Typography sx={{ fontSize: 13 }}>{t("editor.assets.empty")}</Typography>
-                </Box>
-              ) : null}
-
-              <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ pt: 0.5 }}>
-                <Typography sx={{ fontSize: 12, color: theme.mutedText }}>
-                  {t("editor.assets.pageStatus", { page, total: pageCount })}
-                </Typography>
-                <Stack direction="row" spacing={1}>
-                  <Button
-                    color="inherit"
-                    disabled={isApplying || isListLoading || page <= 1}
-                    onClick={() => setPage((current) => Math.max(1, current - 1))}
-                    sx={{
-                      minWidth: 84,
-                      borderRadius: 1,
-                      border: theme.sectionBorder,
-                      color: theme.pillText,
-                      textTransform: "none"
-                    }}
-                  >
-                    {t("editor.assets.previousPage")}
-                  </Button>
-                  <Button
-                    color="inherit"
-                    disabled={isApplying || isListLoading || page >= pageCount}
-                    onClick={() => setPage((current) => Math.min(pageCount, current + 1))}
-                    sx={{
-                      minWidth: 84,
-                      borderRadius: 1,
-                      border: theme.sectionBorder,
-                      color: theme.pillText,
-                      textTransform: "none"
-                    }}
-                  >
-                    {t("editor.assets.nextPage")}
-                  </Button>
-                </Stack>
-              </Stack>
-            </Stack>
+            <ExternalAssetBrowserResults
+              theme={theme}
+              assets={assets}
+              isApplying={isApplying}
+              isListLoading={isListLoading}
+              page={page}
+              pageCount={pageCount}
+              selectedAssetId={selectedAssetId}
+              selectedAssetDetail={selectedAssetDetail}
+              selectedDetailError={selectedDetailError}
+              isDetailLoading={isDetailLoading}
+              selectedResolution={selectedResolution}
+              selectedFormat={selectedFormat}
+              selectedAvailableResolutions={selectedAvailableResolutions}
+              selectedAvailableFormats={selectedAvailableFormats}
+              onSelectAsset={handleSelectAsset}
+              onResolutionChange={setSelectedResolution}
+              onFormatChange={setSelectedFormat}
+              onViewDetails={() => setIsDetailOpen(true)}
+              onApply={handleApply}
+              onPreviousPage={() => setPage((current) => Math.max(1, current - 1))}
+              onNextPage={() => setPage((current) => Math.min(pageCount, current + 1))}
+            />
 
             {isApplying ? (
               <Stack direction="row" spacing={1} alignItems="center" sx={{ color: theme.mutedText }}>
@@ -686,7 +441,7 @@ export function ExternalAssetBrowserDialog({
         </DialogContent>
       </Dialog>
 
-      <ExternalAssetDetailDialog
+      <ExternalAssetPreviewPanel
         open={isDetailOpen}
         asset={selectedAssetDetail}
         theme={theme}
@@ -697,26 +452,11 @@ export function ExternalAssetBrowserDialog({
         onClose={() => setIsDetailOpen(false)}
       />
 
-      <Backdrop
+      <ExternalAssetApplyOverlay
         open={isApplying}
-        sx={{
-          zIndex: (muiTheme) => muiTheme.zIndex.modal + 1,
-          display: "flex",
-          flexDirection: "column",
-          gap: 1.5,
-          color: theme.titleText,
-          backdropFilter: "blur(10px)",
-          background:
-            editorThemeMode === "dark"
-              ? "radial-gradient(circle at 50% 28%, rgba(114,234,255,0.16), transparent 38%), rgba(4,7,16,0.78)"
-              : "radial-gradient(circle at 50% 28%, rgba(145,198,255,0.22), transparent 38%), rgba(245,249,255,0.78)"
-        }}
-      >
-        <CircularProgress size={34} thickness={4.2} sx={{ color: theme.titleText }} />
-        <Typography sx={{ fontSize: 14, fontWeight: 700, color: theme.titleText }}>
-          {t("editor.scene.loadingTitle")}
-        </Typography>
-      </Backdrop>
+        theme={theme}
+        editorThemeMode={editorThemeMode}
+      />
     </>
   );
 }
