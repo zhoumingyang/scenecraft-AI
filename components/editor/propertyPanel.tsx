@@ -1,250 +1,66 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Box, CircularProgress, IconButton, Stack, Tooltip, Typography } from "@mui/material";
-import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
-import CenterFocusStrongRoundedIcon from "@mui/icons-material/CenterFocusStrongRounded";
-import LightbulbRoundedIcon from "@mui/icons-material/LightbulbRounded";
-import PhotoCameraRoundedIcon from "@mui/icons-material/PhotoCameraRounded";
-import RestartAltRoundedIcon from "@mui/icons-material/RestartAltRounded";
+import { useState } from "react";
+import { Box, IconButton, Stack, Typography } from "@mui/material";
 import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
-import ViewQuiltRoundedIcon from "@mui/icons-material/ViewQuiltRounded";
 import {
   ExternalAssetBrowserDialog,
   type ExternalTextureApplyPayload
 } from "@/components/editor/externalAssetBrowserDialog";
 import { isPolyhavenProviderEnabled } from "@/lib/externalAssets/config";
-import { useI18n, type TranslationKey } from "@/lib/i18n";
+import { useI18n } from "@/lib/i18n";
 import { createExternalAssetSource } from "@/lib/externalAssets/source";
 import {
   createPbrAtlasMaterialPatch,
-  GROUND_HELPER_NODE_ID,
-  isStudioScenePreviewEntity,
   SCENE_NODE_ID,
-  type ProjectAiLibraryV2JSON,
   type StudioProductProfile
 } from "@/render/editor";
-import { useEditorStore, type PendingAiAsset } from "@/stores/editorStore";
+import { useEditorStore } from "@/stores/editorStore";
 import {
-  GroundScaleSection,
-  LightSettingsSection,
-  MeshAppearanceSection,
-  ModelAnimationSection,
-  SceneSettingsSection,
   TextureConfigDialog,
-  TextureFieldKey,
-  TransformSection
+  TextureFieldKey
 } from "@/components/editor/propertyPanelSections";
-import AiImagePropertyPanel from "@/components/editor/aiImagePropertyPanel";
 import ProjectAiLibraryDialog from "@/components/editor/projectAiLibraryDialog";
 import StudioSceneEntryDialog from "@/components/editor/studioSceneEntryDialog";
-import StudioScenePropertySection from "@/components/editor/studioScenePropertySection";
-import { getLightTypeLabel, getTextureDialogTitle } from "@/components/editor/propertyPanelSections/util";
+import { getTextureDialogTitle } from "@/components/editor/propertyPanelSections/util";
 import { getEditorThemeTokens } from "@/components/editor/theme";
-
-const PANEL_WIDTH = 272;
-const COLLAPSED_VISIBLE_WIDTH = 44;
-const CLOSED_AI_LIBRARY: ProjectAiLibraryV2JSON = { version: 2, assets: [] };
-const CLOSED_PENDING_AI_ASSETS: PendingAiAsset[] = [];
-const STUDIO_RESETTABLE_ENTITY_ROLES = new Set([
-  "background",
-  "cove",
-  "floor",
-  "backWall",
-  "sideWall",
-  "plinth",
-  "decoration",
-  "light",
-  "studioLight",
-  "keyLight",
-  "keyShadowLight",
-  "fillLight",
-  "rimLight",
-  "topLight",
-  "accentLight",
-  "lightModifier",
-  "reflector",
-  "negativeFill",
-  "stripPanel"
-]);
+import {
+  COLLAPSED_VISIBLE_WIDTH,
+  PANEL_WIDTH
+} from "@/components/editor/propertyPanel/constants";
+import { PropertyPanelContent } from "@/components/editor/propertyPanel/propertyPanelContent";
+import { usePropertyPanelState } from "@/components/editor/propertyPanel/usePropertyPanelState";
 
 export default function PropertyPanel() {
   const { t } = useI18n();
   const [open, setOpen] = useState(true);
-  const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
-  const app = useEditorStore((state) => (open ? state.app : null));
-  const selectedEntityId = useEditorStore((state) => (open ? state.selectedEntityId : null));
-  const viewStateVersion = useEditorStore((state) => (open ? state.viewStateVersion : 0));
-  const selectedEntityVersion = useEditorStore((state) =>
-    open && selectedEntityId ? state.entityVersions[selectedEntityId] ?? 0 : 0
-  );
-  const sceneTreeVersion = useEditorStore((state) => (open ? state.sceneTreeVersion : 0));
-  const inspectorMode = useEditorStore((state) => (open ? state.aiImage.inspectorMode : "entity"));
-  const aiMode = useEditorStore((state) => (open ? state.aiMode : "image"));
-  const aiTexture = useEditorStore((state) => (open ? state.aiTexture : null));
-  const loadedAiLibrary = useEditorStore((state) =>
-    open ? state.loadedAiLibrary : CLOSED_AI_LIBRARY
-  );
-  const pendingAiAssets = useEditorStore((state) =>
-    open ? state.pendingAiAssets : CLOSED_PENDING_AI_ASSETS
-  );
-  const studioScene = useEditorStore((state) => (open ? state.studioScene : null));
   const [activeTextureField, setActiveTextureField] = useState<TextureFieldKey | null>(null);
   const [materialLibraryOpen, setMaterialLibraryOpen] = useState(false);
   const [aiLibraryOpen, setAiLibraryOpen] = useState(false);
   const [studioEntryTargetId, setStudioEntryTargetId] = useState<string | null>(null);
   const [studioEntryProfile, setStudioEntryProfile] = useState<StudioProductProfile | null>(null);
+  const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
+  const {
+    app,
+    selectedEntityId,
+    inspectorMode,
+    aiMode,
+    aiTexture,
+    loadedAiLibrary,
+    pendingAiAssets,
+    studioScene,
+    entityRecord,
+    panelTitle,
+    studioEntityMetadata,
+    studioPostProcessingState,
+    canIsolateCurrentEntity,
+    currentIsolatableEntityId,
+    isCurrentEntityIsolated,
+    canPreviewCurrentEntityInStudio,
+    isCurrentEntityInStudio
+  } = usePropertyPanelState(open, t);
   const theme = getEditorThemeTokens(editorThemeMode);
   const isPolyhavenEnabled = isPolyhavenProviderEnabled();
-
-  const entityRecord = useMemo(() => {
-    if (!open) return null;
-    const project = app?.projectModel;
-    if (!project || !selectedEntityId) return null;
-    if (selectedEntityId === SCENE_NODE_ID) {
-      return {
-        kind: "scene" as const,
-        envConfig: project.envConfig
-      };
-    }
-
-    if (selectedEntityId === GROUND_HELPER_NODE_ID) {
-      if (!project.envConfig.ground.visible) return null;
-      return {
-        kind: "gridHelper" as const,
-        item: project.envConfig.ground
-      };
-    }
-
-    const record = project.getEntityById(selectedEntityId);
-    if (!record) return null;
-
-    return {
-      ...record
-    };
-  }, [app, open, sceneTreeVersion, selectedEntityId, selectedEntityVersion, viewStateVersion]);
-
-  const panelTitle =
-    inspectorMode === "ai"
-      ? t("editor.ai.panelTitle")
-      : entityRecord
-        ? entityRecord.kind === "scene"
-          ? t("editor.sceneTree.scene")
-          : entityRecord.kind === "group"
-            ? t("editor.sceneTree.group")
-          : entityRecord.kind === "model"
-            ? t("editor.sceneTree.model")
-            : entityRecord.kind === "mesh"
-              ? t("editor.sceneTree.meshes")
-              : entityRecord.kind === "gridHelper"
-                ? t("editor.view.gridHelper")
-              : getLightTypeLabel(entityRecord.item.lightType, t)
-        : t("editor.properties.none");
-
-  const isolatedEntityId = useMemo(
-    () => (open ? app?.getIsolatedEntityId() ?? null : null),
-    [app, open, viewStateVersion]
-  );
-  const isStudioSceneActive = Boolean(studioScene?.active);
-  const canIsolateCurrentEntity =
-    inspectorMode !== "ai" &&
-    !isStudioSceneActive &&
-    Boolean(
-      entityRecord &&
-        (entityRecord.kind === "group" || entityRecord.kind === "model" || entityRecord.kind === "mesh")
-    );
-  const currentIsolatableEntityId =
-    entityRecord && (entityRecord.kind === "group" || entityRecord.kind === "model" || entityRecord.kind === "mesh")
-      ? entityRecord.item.id
-      : null;
-  const isCurrentEntityIsolated = Boolean(
-    canIsolateCurrentEntity && currentIsolatableEntityId && isolatedEntityId === currentIsolatableEntityId
-  );
-  const canPreviewCurrentEntityInStudio =
-    inspectorMode !== "ai" &&
-    !isStudioSceneActive &&
-    Boolean(
-      app?.projectModel &&
-        currentIsolatableEntityId &&
-        isStudioScenePreviewEntity(app.projectModel, currentIsolatableEntityId)
-    );
-  const isCurrentEntityInStudio = Boolean(
-    studioScene?.active && currentIsolatableEntityId && studioScene.targetEntityId === currentIsolatableEntityId
-  );
-  const studioEntityMetadata = useMemo(
-    () => (studioScene?.active ? app?.getStudioSceneEntityMetadata(selectedEntityId) ?? null : null),
-    [app, selectedEntityId, studioScene?.active, viewStateVersion]
-  );
-  const studioPostProcessingState = useMemo(
-    () =>
-      studioScene?.active && selectedEntityId === SCENE_NODE_ID
-        ? app?.getStudioScenePostProcessingState() ?? null
-        : null,
-    [app, selectedEntityId, studioScene?.active, viewStateVersion]
-  );
-  const headerActionButtonSx = {
-    color: theme.mutedText,
-    border: theme.sectionBorder,
-    background: "transparent",
-    "&:hover": {
-      background: theme.iconButtonBg
-    }
-  };
-  const renderHeaderActionButton = (
-    key: string,
-    title: TranslationKey,
-    onClick: () => void,
-    icon: React.ReactNode
-  ) => (
-    <Tooltip key={key} title={t(title)} arrow>
-      <IconButton
-        size="small"
-        aria-label={t(title)}
-        onClick={onClick}
-        sx={headerActionButtonSx}
-      >
-        {icon}
-      </IconButton>
-    </Tooltip>
-  );
-  const studioHeaderActions =
-    studioScene?.active && selectedEntityId === SCENE_NODE_ID
-      ? [
-          renderHeaderActionButton(
-            "restore-post",
-            "editor.studioScene.restorePost",
-            () => app?.resetStudioScenePostProcessing(),
-            <RestartAltRoundedIcon sx={{ fontSize: 15 }} />
-          )
-        ]
-      : studioScene?.active && studioEntityMetadata?.role === "root"
-      ? [
-          renderHeaderActionButton(
-            "restore-layout",
-            "editor.studioScene.restoreLayout",
-            () => app?.resetStudioSceneGeneratedLayout(),
-            <ViewQuiltRoundedIcon sx={{ fontSize: 15 }} />
-          ),
-          renderHeaderActionButton(
-            "restore-lighting",
-            "editor.studioScene.restoreLighting",
-            () => app?.resetStudioSceneLighting(),
-            <LightbulbRoundedIcon sx={{ fontSize: 15 }} />
-          )
-        ]
-      : studioScene?.active &&
-          studioEntityMetadata?.hasDefaultSnapshot &&
-          selectedEntityId &&
-          STUDIO_RESETTABLE_ENTITY_ROLES.has(studioEntityMetadata.role)
-        ? [
-            renderHeaderActionButton(
-              "reset-selected",
-              "editor.studioScene.resetSelected",
-              () => app?.resetStudioSceneEntity(selectedEntityId),
-              <RestartAltRoundedIcon sx={{ fontSize: 15 }} />
-            )
-          ]
-        : [];
 
   const handleApplyTextureSet = ({ asset, selections }: ExternalTextureApplyPayload) => {
     if (!app || (entityRecord?.kind !== "mesh" && entityRecord?.kind !== "gridHelper")) {
@@ -285,6 +101,12 @@ export default function PropertyPanel() {
       externalSource: null
     });
     app?.setSelectedEntity(SCENE_NODE_ID);
+  };
+
+  const handleStudioEntryOpen = (entityId: string) => {
+    if (!app) return;
+    setStudioEntryTargetId(entityId);
+    setStudioEntryProfile(app.suggestStudioProductProfile(entityId));
   };
 
   return (
@@ -351,251 +173,30 @@ export default function PropertyPanel() {
             </Stack>
 
             {open ? (
-              <Box
-                sx={{
-                  flex: 1,
-                  minHeight: 0,
-                  maxHeight: "100%",
-                  overflowY: "auto",
-                  pr: 0.25
-                }}
-              >
-                {inspectorMode === "ai" ? (
-                  <AiImagePropertyPanel />
-                ) : !entityRecord ? (
-                  <Stack
-                    spacing={1}
-                    justifyContent="center"
-                    sx={{ height: "100%", minHeight: 180, color: theme.mutedText }}
-                  >
-                    <Typography sx={{ fontSize: 14, fontWeight: 600 }}>
-                      {t("editor.properties.none")}
-                    </Typography>
-                    <Typography sx={{ fontSize: 12 }}>
-                      {aiMode === "texture"
-                        ? t("editor.aiPbr.emptyTargetHint")
-                        : t("editor.properties.emptyHint")}
-                    </Typography>
-                    {aiMode === "texture" && aiTexture?.isGenerating ? (
-                      <Stack
-                        direction="row"
-                        spacing={0.7}
-                        alignItems="center"
-                        sx={{
-                          mt: 0.4,
-                          px: 1,
-                          py: 0.9,
-                          borderRadius: 1,
-                          border: theme.sectionBorder,
-                          background: theme.itemBg
-                        }}
-                      >
-                        <CircularProgress size={14} sx={{ color: theme.titleText }} />
-                        <Typography sx={{ fontSize: 11, color: theme.text }}>
-                          {t("editor.aiPbr.generating")}
-                        </Typography>
-                      </Stack>
-                    ) : null}
-                    {aiMode === "texture" && aiTexture?.result ? (
-                      <Box
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => setAiLibraryOpen(true)}
-                        onKeyDown={(event) => {
-                          if (event.key !== "Enter" && event.key !== " ") return;
-                          event.preventDefault();
-                          setAiLibraryOpen(true);
-                        }}
-                        sx={{
-                          mt: 0.6,
-                          width: "100%",
-                          borderRadius: 1.2,
-                          border: theme.sectionBorder,
-                          background: theme.sectionBg,
-                          overflow: "hidden",
-                          cursor: "pointer",
-                          "&:hover, &:focus-visible": {
-                            outline: "none",
-                            border: theme.itemSelectedBorder
-                          }
-                        }}
-                      >
-                        <Box
-                          component="img"
-                          src={aiTexture.result.atlasImageUrl}
-                          alt={aiTexture.result.prompt}
-                          sx={{
-                            width: "100%",
-                            aspectRatio: "1 / 1",
-                            objectFit: "cover",
-                            display: "block",
-                            borderBottom: theme.sectionBorder
-                          }}
-                        />
-                        <Stack direction="row" spacing={0.6} alignItems="center" sx={{ p: 0.8 }}>
-                          <AutoAwesomeRoundedIcon sx={{ fontSize: 15, color: theme.titleText }} />
-                          <Typography
-                            sx={{
-                              minWidth: 0,
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
-                              fontSize: 11,
-                              color: theme.text
-                            }}
-                          >
-                            {t("editor.aiPbr.openAssets")}
-                          </Typography>
-                        </Stack>
-                      </Box>
-                    ) : null}
-                  </Stack>
-                ) : (
-                  <Stack spacing={0.9}>
-                    <Stack direction="row" spacing={0.6} alignItems="center" sx={{ minWidth: 0 }}>
-                      <Typography
-                        sx={{
-                          px: 0.15,
-                          minWidth: 0,
-                          flex: 1,
-                          fontSize: 13,
-                          fontWeight: 600,
-                          color: theme.pillText
-                        }}
-                      >
-                        {panelTitle}
-                      </Typography>
-                      {canIsolateCurrentEntity && currentIsolatableEntityId ? (
-                        <Tooltip
-                          title={
-                            isCurrentEntityIsolated
-                              ? t("editor.properties.restoreVisibility")
-                              : t("editor.properties.isolate")
-                          }
-                          arrow
-                        >
-                          <IconButton
-                            size="small"
-                            onClick={() => app?.toggleEntityIsolation(currentIsolatableEntityId)}
-                            sx={{
-                              color: isCurrentEntityIsolated ? theme.pillText : theme.mutedText,
-                              border: theme.sectionBorder,
-                              background: isCurrentEntityIsolated ? theme.iconButtonBg : "transparent",
-                              "&:hover": {
-                                background: theme.iconButtonBg
-                              }
-                            }}
-                          >
-                            <CenterFocusStrongRoundedIcon sx={{ fontSize: 15 }} />
-                          </IconButton>
-                        </Tooltip>
-                      ) : null}
-                      {canPreviewCurrentEntityInStudio && currentIsolatableEntityId ? (
-                        <Tooltip
-                          title={
-                            isCurrentEntityInStudio
-                              ? t("editor.studioScene.title")
-                              : t("editor.studioScene.enter")
-                          }
-                          arrow
-                        >
-                          <IconButton
-                            size="small"
-                            onClick={() => {
-                              if (!app || !currentIsolatableEntityId) return;
-                              setStudioEntryTargetId(currentIsolatableEntityId);
-                              setStudioEntryProfile(app.suggestStudioProductProfile(currentIsolatableEntityId));
-                            }}
-                            sx={{
-                              color: isCurrentEntityInStudio ? theme.pillText : theme.mutedText,
-                              border: theme.sectionBorder,
-                              background: isCurrentEntityInStudio ? theme.iconButtonBg : "transparent",
-                              "&:hover": {
-                                background: theme.iconButtonBg
-                              }
-                            }}
-                          >
-                            <PhotoCameraRoundedIcon sx={{ fontSize: 15 }} />
-                          </IconButton>
-                        </Tooltip>
-                      ) : null}
-                      {studioHeaderActions}
-                    </Stack>
-
-                    {entityRecord.kind === "scene" ? (
-                      <SceneSettingsSection
-                        envConfig={entityRecord.envConfig}
-                        onPanoramaPreviewClick={() => setAiLibraryOpen(true)}
-                      />
-                    ) : entityRecord.kind === "gridHelper" ? (
-                      <GroundScaleSection scale={entityRecord.item.scale} />
-                    ) : (
-                      <TransformSection
-                        entityId={entityRecord.item.id}
-                        position={entityRecord.item.position}
-                        quaternion={entityRecord.item.quaternion}
-                        scaleValues={entityRecord.item.scale}
-                      />
-                    )}
-
-                    <StudioScenePropertySection
-                      app={app}
-                      metadata={studioEntityMetadata}
-                      postProcessingState={studioPostProcessingState}
-                      selectedEntityId={selectedEntityId}
-                      studioScene={studioScene}
-                      theme={theme}
-                    />
-
-                    {entityRecord.kind === "mesh" ? (
-                      <MeshAppearanceSection
-                        entityId={entityRecord.item.id}
-                        material={entityRecord.item.material}
-                        onTextureConfigOpen={setActiveTextureField}
-                        onMaterialLibraryOpen={() => setMaterialLibraryOpen(true)}
-                        materialLibraryEnabled={isPolyhavenEnabled}
-                      />
-                    ) : null}
-
-                    {entityRecord.kind === "gridHelper" && entityRecord.item.mode === "plane" ? (
-                      <MeshAppearanceSection
-                        material={entityRecord.item.material}
-                        onMaterialPatch={(patch) => app?.updateGroundMaterial(patch)}
-                        onTextureConfigOpen={setActiveTextureField}
-                        onMaterialLibraryOpen={() => setMaterialLibraryOpen(true)}
-                        materialLibraryEnabled={isPolyhavenEnabled}
-                      />
-                    ) : null}
-
-                    {entityRecord.kind === "model" ? (
-                      <ModelAnimationSection
-                        entityId={entityRecord.item.id}
-                        animations={entityRecord.item.animations}
-                        activeAnimationId={entityRecord.item.activeAnimationId}
-                        timeScale={entityRecord.item.animationTimeScale}
-                        playbackState={entityRecord.item.animationPlaybackState}
-                        externalSource={entityRecord.item.externalSource}
-                      />
-                    ) : null}
-
-                    {entityRecord.kind === "light" ? (
-                      <LightSettingsSection
-                        entityId={entityRecord.item.id}
-                        lightType={entityRecord.item.lightType}
-                        color={entityRecord.item.color}
-                        groundColor={entityRecord.item.groundColor}
-                        angle={entityRecord.item.angle}
-                        penumbra={entityRecord.item.penumbra}
-                        intensity={entityRecord.item.intensity}
-                        distance={entityRecord.item.distance}
-                        decay={entityRecord.item.decay}
-                        width={entityRecord.item.width}
-                        height={entityRecord.item.height}
-                      />
-                    ) : null}
-                  </Stack>
-                )}
-              </Box>
+              <PropertyPanelContent
+                app={app}
+                aiMode={aiMode}
+                aiTexture={aiTexture}
+                canIsolateCurrentEntity={canIsolateCurrentEntity}
+                canPreviewCurrentEntityInStudio={canPreviewCurrentEntityInStudio}
+                currentIsolatableEntityId={currentIsolatableEntityId}
+                entityRecord={entityRecord}
+                inspectorMode={inspectorMode}
+                isCurrentEntityInStudio={isCurrentEntityInStudio}
+                isCurrentEntityIsolated={isCurrentEntityIsolated}
+                isPolyhavenEnabled={isPolyhavenEnabled}
+                panelTitle={panelTitle}
+                selectedEntityId={selectedEntityId}
+                studioEntityMetadata={studioEntityMetadata}
+                studioPostProcessingState={studioPostProcessingState}
+                studioScene={studioScene}
+                theme={theme}
+                t={t}
+                onAiLibraryOpen={() => setAiLibraryOpen(true)}
+                onMaterialLibraryOpen={() => setMaterialLibraryOpen(true)}
+                onStudioEntryOpen={handleStudioEntryOpen}
+                onTextureConfigOpen={setActiveTextureField}
+              />
             ) : null}
           </Stack>
         </Box>
