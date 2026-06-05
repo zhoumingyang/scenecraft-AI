@@ -1,522 +1,122 @@
-import { useRef, useState, type ChangeEvent } from "react";
-import {
-  createExternalAssetSource
-} from "@/lib/externalAssets/source";
-import { createEmptyProjectAiLibrary } from "@/lib/project/schema";
-import type {
-  GetProjectResponse,
-  ProjectSummary,
-  SaveProjectResponse
-} from "@/lib/api/contracts/projects";
-import type {
-  EditorProjectJSON,
-  EditorProjectMetaJSON
-} from "@/render/editor";
-import {
-  SCENE_NODE_ID,
-  createDefaultEditorProjectJSON,
-  inferModelFileFormat,
-  isHighDynamicRangeEnvironmentAssetName
-} from "@/render/editor";
-import { useEditorStore, type ProjectSaveStatus } from "@/stores/editorStore";
-import {
-  applyGroundFallbackFromViewHelperStorage,
-  hasStoredViewHelperVisibility,
-  persistViewHelperVisibility,
-  restoreViewHelperVisibility
-} from "@/components/editor/viewHelperPreferences";
-import {
-  projectSnapshotUsesAssetReference,
-  readImageDimensions,
-  syncEditorProjectSearchParam
-} from "@/components/editor/projectPersistence";
-import type {
-  ExternalHdriApplyPayload,
-  ExternalModelApplyPayload
-} from "@/components/editor/externalAssetBrowserDialog";
-import { cleanupUploadedAssets } from "@/frontend/api/assets";
-import { deleteProject, getProject, listProjects, createProject, updateProject } from "@/frontend/api/projects";
 import { isPolyhavenProviderEnabled } from "@/lib/externalAssets/config";
 import type { TopBarTranslate } from "./types";
-import {
-  cloneProjectSnapshot,
-  uploadPendingAiAssets,
-  uploadProjectThumbnail,
-  uploadSceneLocalAssets
-} from "./projectSaveHelpers";
-
-type PersistedProject = GetProjectResponse["project"] | SaveProjectResponse["project"];
-
-function createIdleSaveStatus(): ProjectSaveStatus {
-  return {
-    phase: "idle",
-    message: null,
-    updatedAt: Date.now()
-  };
-}
+import { createIdleSaveStatus } from "./topBarProjectActionUtils";
+import { useTopBarAiLibraryActions } from "./useTopBarAiLibraryActions";
+import { useTopBarImportActions } from "./useTopBarImportActions";
+import { useTopBarProjectListActions } from "./useTopBarProjectListActions";
+import { useTopBarProjectLoadActions } from "./useTopBarProjectLoadActions";
+import { useTopBarProjectSaveActions } from "./useTopBarProjectSaveActions";
+import { useTopBarProjectStoreState } from "./useTopBarProjectStoreState";
 
 export function useTopBarProjectActions(t: TopBarTranslate) {
-  const modelImportInputRef = useRef<HTMLInputElement | null>(null);
-  const panoImportInputRef = useRef<HTMLInputElement | null>(null);
-  const app = useEditorStore((state) => state.app);
-  const currentProjectId = useEditorStore((state) => state.currentProjectId);
-  const currentProjectMeta = useEditorStore((state) => state.currentProjectMeta);
-  const loadedAiLibrary = useEditorStore((state) => state.loadedAiLibrary);
-  const pendingAiAssets = useEditorStore((state) => state.pendingAiAssets);
-  const localProjectAssets = useEditorStore((state) => state.localProjectAssets);
-  const saveStatus = useEditorStore((state) => state.saveStatus);
-  const hasUnsavedChanges = useEditorStore((state) => state.hasUnsavedChanges);
-  const isStudioSceneActive = useEditorStore((state) => state.studioScene.active);
-  const projectListDialogOpen = useEditorStore((state) => state.projectListDialogOpen);
-  const projectSaveDialogOpen = useEditorStore((state) => state.projectSaveDialogOpen);
-  const registerLocalProjectAsset = useEditorStore((state) => state.registerLocalProjectAsset);
-  const clearLocalProjectAssets = useEditorStore((state) => state.clearLocalProjectAssets);
-  const clearPendingAiAssets = useEditorStore((state) => state.clearPendingAiAssets);
-  const setCurrentProject = useEditorStore((state) => state.setCurrentProject);
-  const setProjectMeta = useEditorStore((state) => state.setProjectMeta);
-  const setLoadedAiLibrary = useEditorStore((state) => state.setLoadedAiLibrary);
-  const markUnsavedChanges = useEditorStore((state) => state.markUnsavedChanges);
-  const setSaveStatus = useEditorStore((state) => state.setSaveStatus);
-  const beginSceneLoading = useEditorStore((state) => state.beginSceneLoading);
-  const endSceneLoading = useEditorStore((state) => state.endSceneLoading);
-  const setProjectListDialogOpen = useEditorStore((state) => state.setProjectListDialogOpen);
-  const setProjectSaveDialogOpen = useEditorStore((state) => state.setProjectSaveDialogOpen);
-  const removeAiLibraryAsset = useEditorStore((state) => state.removeAiLibraryAsset);
-  const [aiLibraryDialogOpen, setAiLibraryDialogOpen] = useState(false);
-  const [projects, setProjects] = useState<ProjectSummary[]>([]);
-  const [isProjectListLoading, setIsProjectListLoading] = useState(false);
-  const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
-  const [projectListError, setProjectListError] = useState<string | null>(null);
-  const [polyhavenHdriDialogOpen, setPolyhavenHdriDialogOpen] = useState(false);
-  const [polyhavenModelDialogOpen, setPolyhavenModelDialogOpen] = useState(false);
+  const state = useTopBarProjectStoreState();
+  const {
+    app,
+    currentProjectId,
+    currentProjectMeta,
+    loadedAiLibrary,
+    pendingAiAssets,
+    localProjectAssets,
+    saveStatus,
+    hasUnsavedChanges,
+    isStudioSceneActive,
+    projectListDialogOpen,
+    projectSaveDialogOpen,
+    registerLocalProjectAsset,
+    clearLocalProjectAssets,
+    clearPendingAiAssets,
+    setCurrentProject,
+    setProjectMeta,
+    setLoadedAiLibrary,
+    markUnsavedChanges,
+    setSaveStatus,
+    beginSceneLoading,
+    endSceneLoading,
+    setProjectListDialogOpen,
+    setProjectSaveDialogOpen,
+    removeAiLibraryAsset,
+    isSaving
+  } = state;
   const isPolyhavenEnabled = isPolyhavenProviderEnabled();
-  const isSaving = saveStatus.phase === "saving";
-  const aiLibraryAssetCount =
-    loadedAiLibrary.assets.length + pendingAiAssets.length;
-
-  const runWithSceneLoading = async <T,>(task: () => Promise<T>) => {
-    beginSceneLoading(t("editor.scene.loadingTitle"));
-    try {
-      return await task();
-    } finally {
-      endSceneLoading();
-    }
-  };
-
-  const restoreProjectViewHelpers = (projectId: string | null) => {
-    if (!app) return;
-    restoreViewHelperVisibility(app, projectId);
-  };
-
-  const clearProjectScopedState = () => {
-    clearPendingAiAssets();
-    clearLocalProjectAssets();
-  };
-
-  const confirmDiscardUnsavedChanges = () => {
-    return !hasUnsavedChanges || window.confirm(t("editor.project.confirmDiscardChanges"));
-  };
-
-  const applyPersistedProjectState = (project: PersistedProject, fallbackMeta: EditorProjectMetaJSON | null = null) => {
-    restoreProjectViewHelpers(project.id);
-    setCurrentProject(project.id);
-    setProjectMeta(project.snapshot.meta ?? fallbackMeta);
-    setLoadedAiLibrary(project.aiSnapshot);
-    clearProjectScopedState();
-    markUnsavedChanges(false);
-    syncEditorProjectSearchParam(project.id);
-  };
-
-  const prepareProjectForLoad = (project: PersistedProject) =>
-    applyGroundFallbackFromViewHelperStorage(project.snapshot, project.id);
-
-  const resetToDefaultProjectState = (project: EditorProjectJSON) => {
-    restoreProjectViewHelpers(null);
-    setCurrentProject(null);
-    setProjectMeta(project.meta ?? null);
-    setLoadedAiLibrary(createEmptyProjectAiLibrary());
-    clearProjectScopedState();
-    markUnsavedChanges(false);
-    syncEditorProjectSearchParam(null);
-    setSaveStatus(createIdleSaveStatus());
-  };
-
-  const loadProjectsForDialog = async () => {
-    setProjectListError(null);
-    setIsProjectListLoading(true);
-
-    try {
-      const response = await listProjects();
-      setProjects(response.projects);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : t("editor.project.loadListFailed");
-      setProjectListError(message);
-    } finally {
-      setIsProjectListLoading(false);
-    }
-  };
-
-  const onImportModel = () => {
-    modelImportInputRef.current?.click();
-  };
-
-  const onImportPano = () => {
-    panoImportInputRef.current?.click();
-  };
-
-  const onImportLibraryHdri = () => {
-    if (!isPolyhavenEnabled) {
-      return;
-    }
-
-    setPolyhavenHdriDialogOpen(true);
-  };
-
-  const onImportLibraryModel = () => {
-    if (!isPolyhavenEnabled) {
-      return;
-    }
-
-    setPolyhavenModelDialogOpen(true);
-  };
-
-  const onImportModelFile = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0] ?? null;
-    event.target.value = "";
-    if (!app || !file) return;
-    if (!inferModelFileFormat(file.name)) return;
-
-    const imported = await app.importModel(file);
-    if (!imported) {
-      return;
-    }
-
-    if (!isStudioSceneActive) {
-      registerLocalProjectAsset({
-        sourceUrl: imported.sourceUrl,
-        file,
-        kind: "model_source",
-        targetPath: `model:${imported.entityId}`,
-        entityId: imported.entityId
-      });
-    }
-  };
-
-  const onImportPanoFile = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0] ?? null;
-    event.target.value = "";
-    if (!app || !file) return;
-
-    if (isHighDynamicRangeEnvironmentAssetName(file.name)) {
-      try {
-        const imported = await app.importPanorama(file);
-        if (imported?.sourceUrl && !isStudioSceneActive) {
-          registerLocalProjectAsset({
-            sourceUrl: imported.sourceUrl,
-            file,
-            kind: "environment_image",
-            targetPath: "env:pano"
-          });
-        }
-      } catch {
-        window.alert(t("editor.import.panoLoadError"));
-      }
-      return;
-    }
-
-    const imageUrl = URL.createObjectURL(file);
-
-    try {
-      const dimensions = await readImageDimensions(imageUrl);
-      if (dimensions.width !== dimensions.height * 2) {
-        window.alert(t("editor.import.panoRatioError"));
-        return;
-      }
-
-      const imported = await app.importPanorama(file);
-      if (imported?.sourceUrl && !isStudioSceneActive) {
-        registerLocalProjectAsset({
-          sourceUrl: imported.sourceUrl,
-          file,
-          kind: "environment_image",
-          targetPath: "env:pano"
-        });
-      }
-    } catch {
-      window.alert(t("editor.import.panoLoadError"));
-    } finally {
-      URL.revokeObjectURL(imageUrl);
-    }
-  };
-
-  const executeSave = async (meta: EditorProjectMetaJSON) => {
-    if (!app) {
-      return;
-    }
-
-    app.flushRuntimeStateToProjectModel();
-    const currentSnapshot = app.getProjectJSON();
-    if (!currentSnapshot) {
-      return;
-    }
-
-    const snapshot = cloneProjectSnapshot(currentSnapshot);
-    const projectId = snapshot.id;
-    snapshot.meta = meta;
-    setSaveStatus({
-      phase: "saving",
-      message: t("editor.project.saving"),
-      updatedAt: Date.now()
-    });
-    setProjectSaveDialogOpen(false);
-
-    const uploadedAssetsForCleanup: string[] = [];
-    let shouldCleanupUploadedAssets = true;
-    const trackUploadedAsset = (asset: { objectKey: string }) => {
-      uploadedAssetsForCleanup.push(asset.objectKey);
-    };
-
-    try {
-      const uploadedSceneAssets = await uploadSceneLocalAssets(
-        snapshot,
-        projectId,
-        localProjectAssets,
-        { onUploaded: trackUploadedAsset }
-      );
-      const thumbnailAsset = await uploadProjectThumbnail(app, snapshot, projectId, {
-        onUploaded: trackUploadedAsset
-      });
-      const uploadedAi = await uploadPendingAiAssets(
-        snapshot,
-        projectId,
-        loadedAiLibrary,
-        pendingAiAssets,
-        { onUploaded: trackUploadedAsset }
-      );
-      const uploadedAssets = [...uploadedSceneAssets, thumbnailAsset, ...uploadedAi.uploadedAssets];
-      const payload = {
-        snapshot,
-        aiSnapshot: uploadedAi.aiSnapshot,
-        uploadedAssets
-      };
-
-      const response = currentProjectId
-        ? await updateProject(currentProjectId, payload)
-        : await createProject(payload);
-      shouldCleanupUploadedAssets = false;
-
-      if (!currentProjectId && !hasStoredViewHelperVisibility(response.project.id)) {
-        persistViewHelperVisibility(response.project.id, app.getViewHelperVisibility());
-      }
-
-      await runWithSceneLoading(() =>
-        app.dispatch({
-          type: "project.load",
-          project: prepareProjectForLoad(response.project)
-        })
-      );
-      applyPersistedProjectState(response.project, meta);
-      setSaveStatus({
-        phase: "success",
-        message: t("editor.project.saveSuccess"),
-        updatedAt: Date.now()
-      });
-    } catch (error) {
-      if (shouldCleanupUploadedAssets && uploadedAssetsForCleanup.length > 0) {
-        await cleanupUploadedAssets({
-          objectKeys: uploadedAssetsForCleanup
-        }).catch((cleanupError) => {
-          console.warn("[projects] Failed to clean up uploaded assets after save failure.", cleanupError);
-        });
-      }
-
-      const message = error instanceof Error ? error.message : t("editor.project.saveFailed");
-      setSaveStatus({
-        phase: "error",
-        message,
-        updatedAt: Date.now()
-      });
-    }
-  };
-
-  const onSaveScene = () => {
-    if (isSaving) {
-      return;
-    }
-
-    if (!currentProjectId) {
-      setProjectSaveDialogOpen(true);
-      return;
-    }
-
-    void executeSave(
-      currentProjectMeta ?? {
-        title: t("editor.project.untitled")
-      }
-    );
-  };
-
-  const loadDefaultProject = async () => {
-    if (!app) return;
-    const project = createDefaultEditorProjectJSON();
-    await runWithSceneLoading(() =>
-      app.dispatch({
-        type: "project.load",
-        project
-      })
-    );
-    resetToDefaultProjectState(project);
-  };
-
-  const onCreateProject = async () => {
-    if (!confirmDiscardUnsavedChanges()) {
-      return;
-    }
-
-    await loadDefaultProject();
-  };
-
-  const onClearProject = async () => {
-    if (!app) return;
-    if (!confirmDiscardUnsavedChanges()) {
-      return;
-    }
-
-    await app.dispatch({ type: "project.clear" });
-    markUnsavedChanges(true);
-  };
-
-  const onDeleteAiLibraryAsset = (payload: {
-    source: "loaded" | "pending";
-    assetId: string;
-  }) => {
-    const assetReference =
-      payload.source === "pending"
-        ? {
-            sourceUrl: pendingAiAssets.find((asset) => asset.id === payload.assetId)?.sourceUrl ?? null,
-            assetId: null
-          }
-        : {
-            sourceUrl: loadedAiLibrary.assets.find((asset) => asset.id === payload.assetId)?.url ?? null,
-            assetId: loadedAiLibrary.assets.find((asset) => asset.id === payload.assetId)?.assetId ?? null
-          };
-
-    const snapshot = app?.getProjectJSON() ?? null;
-    if (snapshot && projectSnapshotUsesAssetReference(snapshot, assetReference)) {
-      window.alert(t("editor.project.aiAssetInUseDeleteBlocked"));
-      return;
-    }
-
-    removeAiLibraryAsset(payload);
-    markUnsavedChanges(true);
-  };
-
-  const openProjectSelectDialog = async () => {
-    setProjectListDialogOpen(true);
-    await loadProjectsForDialog();
-  };
-
-  const onSelectProject = async (projectId: string) => {
-    if (!app) {
-      return;
-    }
-
-    if (!confirmDiscardUnsavedChanges()) {
-      return;
-    }
-
-    setProjectListError(null);
-    setProjectListDialogOpen(false);
-
-    try {
-      const response = await runWithSceneLoading(async () => {
-        const projectResponse = await getProject(projectId);
-        await app.dispatch({
-          type: "project.load",
-          project: prepareProjectForLoad(projectResponse.project)
-        });
-        return projectResponse;
-      });
-
-      applyPersistedProjectState(response.project);
-      setSaveStatus(createIdleSaveStatus());
-    } catch (error) {
-      const message = error instanceof Error ? error.message : t("editor.project.loadFailed");
-      setProjectListDialogOpen(true);
-      setProjectListError(message);
-    }
-  };
-
-  const onDeleteProject = async (projectId: string) => {
-    const project = projects.find((item) => item.id === projectId) ?? null;
-    const projectTitle = project?.title ?? t("editor.project.untitled");
-
-    if (currentProjectId === projectId && hasUnsavedChanges) {
-      if (!window.confirm(t("editor.project.confirmDiscardChanges"))) {
-        return;
-      }
-    }
-
-    if (!window.confirm(t("editor.project.deleteConfirm", { title: projectTitle }))) {
-      return;
-    }
-
-    setProjectListError(null);
-    setDeletingProjectId(projectId);
-
-    try {
-      await deleteProject(projectId);
-      setProjects((current) => current.filter((item) => item.id !== projectId));
-
-      if (currentProjectId === projectId) {
-        await loadDefaultProject();
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : t("editor.project.deleteFailed");
-      setProjectListError(message);
-    } finally {
-      setDeletingProjectId(null);
-    }
-  };
-
-  const onApplyExternalHdri = async ({ asset, file }: ExternalHdriApplyPayload) => {
-    if (!app) {
-      return;
-    }
-
-    await app.dispatch({
-      type: "scene.envConfig.patch",
-      patch: {
-        panoAssetId: "",
-        panoAssetName: file.fileName,
-        panoUrl: file.url,
-        externalSource: createExternalAssetSource(asset, file)
-      },
-      source: "ui"
-    });
-    app.setSelectedEntity(SCENE_NODE_ID);
-  };
-
-  const onApplyExternalModel = async ({ asset, file }: ExternalModelApplyPayload) => {
-    if (!app) {
-      return;
-    }
-
-    await app.importModelFromSource({
-      sourceUrl: file.url,
-      format: file.format,
-      label: asset.displayName,
-      externalSource: createExternalAssetSource(asset, file)
-    });
-  };
+  const {
+    applyPersistedProjectState,
+    loadDefaultProject,
+    onClearProject,
+    onCreateProject,
+    prepareProjectForLoad,
+    runWithSceneLoading
+  } = useTopBarProjectLoadActions({
+    app,
+    beginSceneLoading,
+    clearLocalProjectAssets,
+    clearPendingAiAssets,
+    endSceneLoading,
+    hasUnsavedChanges,
+    markUnsavedChanges,
+    setCurrentProject,
+    setLoadedAiLibrary,
+    setProjectMeta,
+    setSaveStatus,
+    t
+  });
+  const { executeSave, onSaveScene } = useTopBarProjectSaveActions({
+    app,
+    applyPersistedProjectState,
+    currentProjectId,
+    currentProjectMeta,
+    isSaving,
+    loadedAiLibrary,
+    localProjectAssets,
+    pendingAiAssets,
+    prepareProjectForLoad,
+    runWithSceneLoading,
+    setProjectSaveDialogOpen,
+    setSaveStatus,
+    t
+  });
+  const {
+    deletingProjectId,
+    isProjectListLoading,
+    onDeleteProject,
+    onSelectProject,
+    openProjectSelectDialog,
+    projectListError,
+    projects
+  } = useTopBarProjectListActions({
+    app,
+    applyPersistedProjectState,
+    currentProjectId,
+    hasUnsavedChanges,
+    loadDefaultProject,
+    prepareProjectForLoad,
+    runWithSceneLoading,
+    setProjectListDialogOpen,
+    setSaveStatus,
+    t
+  });
+  const importActions = useTopBarImportActions({
+    app,
+    isPolyhavenEnabled,
+    isStudioSceneActive,
+    registerLocalProjectAsset,
+    t
+  });
+  const aiLibraryActions = useTopBarAiLibraryActions({
+    app,
+    loadedAiLibrary,
+    markUnsavedChanges,
+    pendingAiAssets,
+    removeAiLibraryAsset,
+    t
+  });
 
   return {
-    aiLibraryAssetCount,
-    aiLibraryDialogOpen,
+    aiLibraryAssetCount: aiLibraryActions.aiLibraryAssetCount,
+    aiLibraryDialogOpen: aiLibraryActions.aiLibraryDialogOpen,
     app,
-    closeAiLibraryDialog: () => setAiLibraryDialogOpen(false),
-    closePolyhavenHdriDialog: () => setPolyhavenHdriDialogOpen(false),
-    closePolyhavenModelDialog: () => setPolyhavenModelDialogOpen(false),
+    closeAiLibraryDialog: aiLibraryActions.closeAiLibraryDialog,
+    closePolyhavenHdriDialog: importActions.closePolyhavenHdriDialog,
+    closePolyhavenModelDialog: importActions.closePolyhavenModelDialog,
     closeProjectListDialog: () => setProjectListDialogOpen(false),
     closeProjectSaveDialog: () => setProjectSaveDialogOpen(false),
     currentProjectMeta,
@@ -526,27 +126,27 @@ export function useTopBarProjectActions(t: TopBarTranslate) {
     isProjectListLoading,
     isSaving,
     loadedAiLibrary,
-    modelImportInputRef,
-    onApplyExternalHdri,
-    onApplyExternalModel,
+    modelImportInputRef: importActions.modelImportInputRef,
+    onApplyExternalHdri: importActions.onApplyExternalHdri,
+    onApplyExternalModel: importActions.onApplyExternalModel,
     onClearProject,
     onCreateProject,
-    onDeleteAiLibraryAsset,
+    onDeleteAiLibraryAsset: aiLibraryActions.onDeleteAiLibraryAsset,
     onDeleteProject,
-    onImportLibraryHdri,
-    onImportLibraryModel,
-    onImportModel,
-    onImportModelFile,
-    onImportPano,
-    onImportPanoFile,
+    onImportLibraryHdri: importActions.onImportLibraryHdri,
+    onImportLibraryModel: importActions.onImportLibraryModel,
+    onImportModel: importActions.onImportModel,
+    onImportModelFile: importActions.onImportModelFile,
+    onImportPano: importActions.onImportPano,
+    onImportPanoFile: importActions.onImportPanoFile,
     onSaveScene,
     onSelectProject,
-    openAiLibraryDialog: () => setAiLibraryDialogOpen(true),
+    openAiLibraryDialog: aiLibraryActions.openAiLibraryDialog,
     openProjectSelectDialog,
-    panoImportInputRef,
+    panoImportInputRef: importActions.panoImportInputRef,
     pendingAiAssets,
-    polyhavenHdriDialogOpen,
-    polyhavenModelDialogOpen,
+    polyhavenHdriDialogOpen: importActions.polyhavenHdriDialogOpen,
+    polyhavenModelDialogOpen: importActions.polyhavenModelDialogOpen,
     projectListDialogOpen,
     projectListError,
     projectSaveDialogOpen,
