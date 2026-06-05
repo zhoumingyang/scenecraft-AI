@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import {
   Alert,
@@ -12,41 +12,23 @@ import {
   Stack,
   Typography
 } from "@mui/material";
-import { getPolyhavenAssetDetail } from "@/frontend/api/externalAssets";
 import { useI18n } from "@/lib/i18n";
-import {
-  selectHdriFile,
-  selectModelFile,
-  selectTextureImportFiles
-} from "@/lib/externalAssets/source";
-import type {
-  ExternalAssetDetail,
-  ExternalAssetListItem,
-  ExternalAssetType
-} from "@/lib/externalAssets/types";
-import { getApiErrorMessage } from "@/lib/http/axios";
+import type { ExternalAssetDetail, ExternalAssetType } from "@/lib/externalAssets/types";
 import { useEditorStore } from "@/stores/editorStore";
 import type { EditorThemeTokens } from "./theme";
 import { ExternalAssetApplyOverlay } from "./externalAssets/externalAssetApplyOverlay";
 import { ExternalAssetBrowserFilterBar } from "./externalAssets/externalAssetBrowserFilterBar";
 import { ExternalAssetBrowserResults } from "./externalAssets/externalAssetBrowserResults";
 import { ExternalAssetPreviewPanel } from "./externalAssets/externalAssetPreviewPanel";
-import {
-  DETAIL_CACHE_LIMIT,
-  getAvailableFormats,
-  getAvailableResolutions,
-  getDetailCacheKey,
-  getPreferredFormatForResolution,
-  getPreferredSelection,
-  preloadTextureSelections
-} from "./externalAssets/externalAssetSelection";
-import { createLruCache } from "./externalAssets/lruCache";
+import { getExternalAssetApplySelection } from "./externalAssets/externalAssetApplyActions";
+import { preloadTextureSelections } from "./externalAssets/externalAssetSelection";
 import type {
   ExternalHdriApplyPayload,
   ExternalModelApplyPayload,
   ExternalTextureApplyPayload
 } from "./externalAssets/types";
 import { useExternalAssetBrowser } from "./externalAssets/useExternalAssetBrowser";
+import { useExternalAssetDetailSelection } from "./externalAssets/useExternalAssetDetailSelection";
 
 export type {
   ExternalHdriApplyPayload,
@@ -78,19 +60,6 @@ export function ExternalAssetBrowserDialog({
   const beginSceneLoading = useEditorStore((state) => state.beginSceneLoading);
   const endSceneLoading = useEditorStore((state) => state.endSceneLoading);
   const [isApplying, setIsApplying] = useState(false);
-  const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
-  const [selectedAssetDetail, setSelectedAssetDetail] = useState<ExternalAssetDetail | null>(null);
-  const [selectedDetailError, setSelectedDetailError] = useState<string | null>(null);
-  const [isDetailLoading, setIsDetailLoading] = useState(false);
-  const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const [selectedResolution, setSelectedResolution] = useState("");
-  const [selectedFormat, setSelectedFormat] = useState("");
-  const detailCacheRef = useRef(
-    createLruCache<string, ExternalAssetDetail>({
-      maxSize: DETAIL_CACHE_LIMIT
-    })
-  );
-  const detailRequestId = useRef(0);
   const {
     assets,
     categories,
@@ -109,138 +78,33 @@ export function ExternalAssetBrowserDialog({
     open,
     assetType
   });
+  const {
+    handleSelectAsset,
+    isDetailLoading,
+    isDetailOpen,
+    selectedAssetDetail,
+    selectedAssetId,
+    selectedAvailableFormats,
+    selectedAvailableResolutions,
+    selectedDetailError,
+    selectedFormat,
+    selectedResolution,
+    setIsDetailOpen,
+    setSelectedFormat,
+    setSelectedResolution
+  } = useExternalAssetDetailSelection({
+    assetType,
+    assets,
+    isApplying,
+    open,
+    t
+  });
 
   useEffect(() => {
-    if (!open) {
-      if (!isApplying) {
-        setIsApplying(false);
-      }
-      setSelectedAssetId(null);
-      setSelectedAssetDetail(null);
-      setSelectedDetailError(null);
-      setIsDetailLoading(false);
-      setIsDetailOpen(false);
-      setSelectedResolution("");
-      setSelectedFormat("");
-      detailRequestId.current += 1;
+    if (!open && !isApplying) {
+      setIsApplying(false);
     }
   }, [isApplying, open]);
-
-  useEffect(() => {
-    setSelectedAssetId(null);
-    setSelectedAssetDetail(null);
-    setSelectedDetailError(null);
-    setIsDetailLoading(false);
-    setIsDetailOpen(false);
-    setSelectedResolution("");
-    setSelectedFormat("");
-    detailRequestId.current += 1;
-  }, [assetType]);
-
-  useEffect(() => {
-    if (!selectedAssetId || assets.some((item) => item.assetId === selectedAssetId)) {
-      return;
-    }
-
-    setSelectedAssetId(null);
-    setSelectedAssetDetail(null);
-    setSelectedDetailError(null);
-    setIsDetailLoading(false);
-    setIsDetailOpen(false);
-    setSelectedResolution("");
-    setSelectedFormat("");
-    detailRequestId.current += 1;
-  }, [assets, selectedAssetId]);
-
-  const selectedAvailableResolutions = useMemo(
-    () => getAvailableResolutions(selectedAssetDetail),
-    [selectedAssetDetail]
-  );
-  const selectedAvailableFormats = useMemo(
-    () => getAvailableFormats(selectedAssetDetail, selectedResolution),
-    [selectedAssetDetail, selectedResolution]
-  );
-
-  useEffect(() => {
-    if (!selectedAssetDetail || !selectedResolution) {
-      return;
-    }
-
-    const availableFormats = getAvailableFormats(selectedAssetDetail, selectedResolution);
-    if (availableFormats.length === 0) {
-      if (selectedFormat !== "") {
-        setSelectedFormat("");
-      }
-      return;
-    }
-
-    if (availableFormats.includes(selectedFormat)) {
-      return;
-    }
-
-    setSelectedFormat(
-      getPreferredFormatForResolution(selectedAssetDetail, selectedResolution, availableFormats)
-    );
-  }, [selectedAssetDetail, selectedFormat, selectedResolution]);
-
-  const applyDetailSelection = (detail: ExternalAssetDetail) => {
-    const nextSelection = getPreferredSelection(detail);
-    setSelectedAssetDetail(detail);
-    setSelectedResolution(nextSelection.resolution);
-    setSelectedFormat(nextSelection.format);
-  };
-
-  const handleSelectAsset = (item: ExternalAssetListItem) => {
-    if (isApplying) {
-      return;
-    }
-
-    if (selectedAssetId === item.assetId && (selectedAssetDetail || isDetailLoading)) {
-      return;
-    }
-
-    setSelectedAssetId(item.assetId);
-    setSelectedAssetDetail(null);
-    setSelectedDetailError(null);
-    setIsDetailOpen(false);
-    setSelectedResolution("");
-    setSelectedFormat("");
-
-    const cacheKey = getDetailCacheKey(item.assetType, item.assetId);
-    const cachedDetail = detailCacheRef.current.get(cacheKey);
-    if (cachedDetail) {
-      detailRequestId.current += 1;
-      setIsDetailLoading(false);
-      applyDetailSelection(cachedDetail);
-      return;
-    }
-
-    const requestId = detailRequestId.current + 1;
-    detailRequestId.current = requestId;
-    setIsDetailLoading(true);
-
-    void getPolyhavenAssetDetail(item.assetId, item.assetType)
-      .then((detail) => {
-        if (detailRequestId.current !== requestId) {
-          return;
-        }
-
-        detailCacheRef.current.set(cacheKey, detail);
-        applyDetailSelection(detail);
-      })
-      .catch((error: unknown) => {
-        if (detailRequestId.current !== requestId) {
-          return;
-        }
-
-        setSelectedDetailError(getApiErrorMessage(error, t("editor.assets.detailLoadFailed")));
-      })
-      .finally(() => {
-        if (detailRequestId.current === requestId) {
-          setIsDetailLoading(false);
-        }
-      });
-  };
 
   const handleDialogClose = () => {
     if (isApplying) {
@@ -267,54 +131,34 @@ export function ExternalAssetBrowserDialog({
     let sceneLoadingStarted = false;
 
     try {
-      if (asset.assetType === "hdri") {
-        const file = selectHdriFile(asset.fileOptions, resolution, format);
-        if (!file) {
-          setErrorMessage(t("editor.assets.noCompatibleFile"));
-          return;
-        }
+      const selection = getExternalAssetApplySelection({
+        asset,
+        format,
+        resolution,
+        t
+      });
 
-        onClose();
-        beginSceneLoading(t("editor.scene.loadingTitle"));
-        sceneLoadingStarted = true;
-        await onApplyHdri?.({
-          asset,
-          file
-        });
-        return;
-      }
-
-      if (asset.assetType === "model") {
-        const file = selectModelFile(asset.modelFiles, resolution, format);
-        if (!file) {
-          setErrorMessage(t("editor.assets.noCompatibleFile"));
-          return;
-        }
-
-        onClose();
-        beginSceneLoading(t("editor.scene.loadingTitle"));
-        sceneLoadingStarted = true;
-        await onApplyModel?.({
-          asset,
-          file
-        });
-        return;
-      }
-
-      const selections = selectTextureImportFiles(asset, resolution, format);
-      if (selections.length === 0) {
-        setErrorMessage(t("editor.assets.noCompatibleMaps"));
+      if ("errorMessage" in selection) {
+        setErrorMessage(selection.errorMessage);
         return;
       }
 
       onClose();
       beginSceneLoading(t("editor.scene.loadingTitle"));
       sceneLoadingStarted = true;
-      await preloadTextureSelections(selections, t("editor.assets.loadFailed"));
-      await onApplyTexture?.({
-        asset,
-        selections
-      });
+
+      if (selection.type === "hdri") {
+        await onApplyHdri?.(selection.payload);
+        return;
+      }
+
+      if (selection.type === "model") {
+        await onApplyModel?.(selection.payload);
+        return;
+      }
+
+      await preloadTextureSelections(selection.payload.selections, t("editor.assets.loadFailed"));
+      await onApplyTexture?.(selection.payload);
     } catch (error) {
       window.alert(error instanceof Error ? error.message : t("editor.import.modelLoadError"));
     } finally {
