@@ -4,9 +4,7 @@ import { updateMeshBindingMaterial } from "../../bindings/meshBinding";
 import type { EditorAppEvent } from "../../core/events";
 import type {
   EditorMeshJSON,
-  EditorMeshMaterialJSON,
-  SyncSource,
-  Vec3Tuple
+  SyncSource
 } from "../../core/types";
 import type { EditorProjectModel } from "../../models";
 import type { EditorRuntime } from "../../runtime/editorRuntime";
@@ -28,10 +26,15 @@ import {
   createStudioModifierMeshFromDescriptor
 } from "./factories";
 import { createStudioFrameFromObject } from "./target";
+import {
+  captureTransientEntityDefaultSnapshot,
+  getDefaultAllowDelete,
+  getDefaultAllowHide,
+  getDefaultGroupKind,
+  toGeneratorFrame
+} from "./transientEntityMetadata";
 import type {
   ActiveStudioSceneSession,
-  StudioTransientEntityDefaultSnapshot,
-  StudioTransientEntityGroupKind,
   StudioTransientEntityMetadata,
   StudioTargetFrame,
   StudioTransientAdoptOptions,
@@ -46,92 +49,6 @@ type StudioSceneTransientEntityManagerOptions = {
   getProjectModel: () => EditorProjectModel | null;
   rebuildGroupHierarchy: () => void;
 };
-
-function toGeneratorFrame(frame: StudioTargetFrame) {
-  return {
-    center: [frame.center.x, frame.center.y, frame.center.z] as Vec3Tuple,
-    radius: frame.radius,
-    footprintRadius: frame.footprintRadius,
-    height: frame.height,
-    floorY: frame.floorY
-  };
-}
-
-function cloneTransform(source: {
-  position: number[];
-  quaternion: number[];
-  scale: number[];
-}): StudioTransientEntityDefaultSnapshot["transform"] {
-  return {
-    position: [...source.position],
-    quaternion: [...source.quaternion],
-    scale: [...source.scale]
-  };
-}
-
-function cloneMaterial(source: unknown): EditorMeshMaterialJSON {
-  return structuredClone(source) as EditorMeshMaterialJSON;
-}
-
-function cloneLight(source: {
-  color: string;
-  groundColor: string;
-  intensity: number;
-  distance: number;
-  decay: number;
-  angle: number;
-  penumbra: number;
-  width: number;
-  height: number;
-}): NonNullable<StudioTransientEntityDefaultSnapshot["light"]> {
-  return {
-    color: source.color,
-    groundColor: source.groundColor,
-    intensity: source.intensity,
-    distance: source.distance,
-    decay: source.decay,
-    angle: source.angle,
-    penumbra: source.penumbra,
-    width: source.width,
-    height: source.height
-  };
-}
-
-function getDefaultGroupKind(role: StudioTransientEntityRole): StudioTransientEntityGroupKind {
-  if (
-    role === "studioLight" ||
-    role === "keyLight" ||
-    role === "keyShadowLight" ||
-    role === "fillLight" ||
-    role === "rimLight" ||
-    role === "topLight" ||
-    role === "accentLight" ||
-    role === "lightModifier" ||
-    role === "reflector" ||
-    role === "negativeFill" ||
-    role === "stripPanel" ||
-    role === "light"
-  ) {
-    return "lighting";
-  }
-  if (
-    role === "userMesh" ||
-    role === "userLight" ||
-    role === "userLightGroup" ||
-    role === "userModel"
-  ) {
-    return "user";
-  }
-  return "layout";
-}
-
-function getDefaultAllowHide(role: StudioTransientEntityRole) {
-  return role !== "root" && role !== "plinth";
-}
-
-function getDefaultAllowDelete(role: StudioTransientEntityRole) {
-  return role !== "root" && role !== "plinth" && role !== "background" && role !== "cove" && role !== "floor" && role !== "backWall" && role !== "sideWall";
-}
 
 export class StudioSceneTransientEntityManager {
   private readonly registry: BindingRegistry;
@@ -573,18 +490,7 @@ export class StudioSceneTransientEntityManager {
   private captureDefaultSnapshot(entityId: string) {
     const record = this.getProjectModel()?.getEntityById(entityId);
     if (!record) return undefined;
-    const snapshot: StudioTransientEntityDefaultSnapshot = {
-      transform: cloneTransform(record.item),
-      visible: "visible" in record.item ? record.item.visible : undefined
-    };
-
-    if (record.kind === "mesh") {
-      snapshot.material = cloneMaterial(record.item.material);
-    } else if (record.kind === "light") {
-      snapshot.light = cloneLight(record.item);
-    }
-
-    return snapshot;
+    return captureTransientEntityDefaultSnapshot(record);
   }
 
   private markTransientObject(
