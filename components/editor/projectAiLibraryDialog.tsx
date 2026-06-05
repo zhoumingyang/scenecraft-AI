@@ -1,70 +1,20 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import {
-  Box,
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  IconButton,
-  Stack,
-  Tab,
-  Tabs,
-  Tooltip,
-  Typography
-} from "@mui/material";
-import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
-import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
-import FormatPaintRoundedIcon from "@mui/icons-material/FormatPaintRounded";
-import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
-import LandscapeRoundedIcon from "@mui/icons-material/LandscapeRounded";
-import VisibilityRoundedIcon from "@mui/icons-material/VisibilityRounded";
+import { useState } from "react";
+import { Box, Dialog, DialogContent, Typography } from "@mui/material";
 import AiImagePreviewDialog from "@/components/editor/aiImagePreviewDialog";
-import type { EditorThemeTokens } from "@/components/editor/theme";
 import { useI18n } from "@/lib/i18n";
-import type { ProjectAiAssetJSON, ProjectAiAssetKindJSON, ProjectAiLibraryV2JSON } from "@/render/editor";
-import type { PendingAiAsset } from "@/stores/editorStore";
 import { useEditorStore } from "@/stores/editorStore";
-
-type ProjectAiLibraryDialogProps = {
-  open: boolean;
-  theme: EditorThemeTokens;
-  loadedLibrary: ProjectAiLibraryV2JSON;
-  pendingAssets: PendingAiAsset[];
-  mode?: "manage" | "apply";
-  allowedKinds?: ProjectAiAssetKindJSON[];
-  onClose: () => void;
-  onDeleteAsset?: (payload: {
-    source: "loaded" | "pending";
-    assetId: string;
-  }) => void;
-  onApplyAsset?: (payload: { imageUrl: string; assetId?: string }) => void;
-  onApplyPbrAtlas?: (payload: { imageUrl: string; assetId?: string }) => void;
-  onApplyPanorama?: (payload: { imageUrl: string; assetId?: string; assetName?: string }) => void;
-};
-
-type AiAssetListItem = {
-  key: string;
-  source: "loaded" | "pending";
-  assetId: string;
-  kind: ProjectAiAssetJSON["kind"];
-  imageUrl: string;
-  uploadedAssetId?: string;
-  assetName?: string;
-  prompt: string;
-  model: string;
-  createdAt: string;
-  traceId?: string | null;
-};
-
-type AiAssetTab = "all" | ProjectAiAssetKindJSON;
-
-const ALL_ASSET_KINDS: ProjectAiAssetKindJSON[] = ["image", "pbr_atlas", "panorama"];
-
-function getAssetAspectRatio(kind: ProjectAiAssetKindJSON) {
-  if (kind === "panorama") return "2 / 1";
-  return "1 / 1";
-}
+import { ProjectAiLibraryGrid } from "./projectAiLibraryDialog/projectAiLibraryGrid";
+import { ProjectAiLibraryHeader } from "./projectAiLibraryDialog/projectAiLibraryHeader";
+import { ProjectAiLibraryTabs } from "./projectAiLibraryDialog/projectAiLibraryTabs";
+import { useProjectAiLibraryItems } from "./projectAiLibraryDialog/useProjectAiLibraryItems";
+import {
+  ALL_ASSET_KINDS,
+  type AiAssetListItem,
+  type AiAssetTab,
+  type ProjectAiLibraryDialogProps
+} from "./projectAiLibraryDialog/types";
 
 export default function ProjectAiLibraryDialog({
   open,
@@ -85,64 +35,19 @@ export default function ProjectAiLibraryDialog({
     null
   );
   const [activeTab, setActiveTab] = useState<AiAssetTab>("all");
-  const allowedKindSet = useMemo(() => new Set(allowedKinds), [allowedKinds]);
 
-  const items = useMemo<AiAssetListItem[]>(() => {
-    const savedItems = loadedLibrary.assets.map((asset) => ({
-      key: `loaded:${asset.id}`,
-      source: "loaded" as const,
-      assetId: asset.id,
-      kind: asset.kind,
-      imageUrl: asset.url,
-      uploadedAssetId: asset.assetId,
-      assetName: asset.originalName,
-      prompt: asset.prompt,
-      model: asset.model,
-      createdAt: asset.createdAt,
-      traceId: asset.traceId
-    }));
-    const pendingItems = pendingAssets.map((asset) => ({
-      key: `pending:${asset.id}`,
-      source: "pending" as const,
-      assetId: asset.id,
-      kind: asset.kind,
-      imageUrl: asset.sourceUrl,
-      assetName: asset.fileName,
-      prompt: asset.prompt,
-      model: asset.model,
-      createdAt: asset.createdAt,
-      traceId: asset.traceId
-    }));
+  const { filteredItems, getTabCount, items, visibleTabs } = useProjectAiLibraryItems({
+    activeTab,
+    allowedKinds,
+    loadedLibrary,
+    pendingAssets
+  });
 
-    return [...pendingItems, ...savedItems].sort(
-      (left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime()
-    );
-  }, [loadedLibrary.assets, pendingAssets]);
-
-  const filteredItems = useMemo(
-    () =>
-      items.filter((item) => {
-        if (!allowedKindSet.has(item.kind)) {
-          return false;
-        }
-        return activeTab === "all" || item.kind === activeTab;
-      }),
-    [activeTab, allowedKindSet, items]
-  );
-
-  const visibleTabs = useMemo(
-    () => ALL_ASSET_KINDS.filter((kind) => allowedKindSet.has(kind)),
-    [allowedKindSet]
-  );
-
-  const getAssetKindLabel = (kind: ProjectAiAssetKindJSON) => {
+  const getAssetKindLabel = (kind: AiAssetListItem["kind"]) => {
     if (kind === "pbr_atlas") return t("editor.project.aiPbrAtlas");
     if (kind === "panorama") return t("editor.project.aiPanorama");
     return t("editor.project.aiImage");
   };
-
-  const getTabCount = (tab: AiAssetTab) =>
-    items.filter((item) => allowedKindSet.has(item.kind) && (tab === "all" || item.kind === tab)).length;
 
   const handleDelete = (item: AiAssetListItem) => {
     if (!window.confirm(t("editor.project.aiAssetDeleteConfirm"))) {
@@ -207,70 +112,19 @@ export default function ProjectAiLibraryDialog({
           }
         }}
       >
-        <DialogTitle
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 1.5,
-            color: theme.titleText,
-            fontWeight: 700
-          }}
-        >
-          <Stack direction="row" spacing={1} alignItems="baseline" sx={{ minWidth: 0 }}>
-            <Typography component="span" sx={{ fontSize: 18, fontWeight: 700, color: theme.titleText }}>
-              {t("editor.project.aiLibraryTitle")}
-            </Typography>
-            <Typography component="span" sx={{ fontSize: 12, color: theme.mutedText }}>
-              {t("editor.project.aiLibraryCount", { count: filteredItems.length })}
-            </Typography>
-          </Stack>
-          <IconButton
-            size="small"
-            onClick={onClose}
-            aria-label={t("dialog.close")}
-            sx={{
-              color: theme.pillText,
-              border: theme.sectionBorder,
-              background: theme.iconButtonBg
-            }}
-          >
-            <CloseRoundedIcon sx={{ fontSize: 18 }} />
-          </IconButton>
-        </DialogTitle>
+        <ProjectAiLibraryHeader count={filteredItems.length} onClose={onClose} t={t} theme={theme} />
 
         <DialogContent sx={{ px: 3, pb: 3, pt: 0 }}>
           {items.length > 0 ? (
-            <Tabs
-              value={activeTab}
-              onChange={(_, value: AiAssetTab) => setActiveTab(value)}
-              variant="scrollable"
-              scrollButtons="auto"
-              sx={{
-                minHeight: 36,
-                mb: 1.4,
-                borderBottom: theme.sectionBorder,
-                "& .MuiTab-root": {
-                  minHeight: 36,
-                  px: 1.2,
-                  color: theme.text,
-                  fontSize: 12,
-                  fontWeight: 700,
-                  textTransform: "none"
-                },
-                "& .Mui-selected": {
-                  color: theme.titleText
-                },
-                "& .MuiTabs-indicator": {
-                  background: theme.titleText
-                }
-              }}
-            >
-              <Tab value="all" label={`${t("editor.project.aiLibraryAll")} (${getTabCount("all")})`} />
-              {visibleTabs.map((kind) => (
-                <Tab key={kind} value={kind} label={`${getAssetKindLabel(kind)} (${getTabCount(kind)})`} />
-              ))}
-            </Tabs>
+            <ProjectAiLibraryTabs
+              activeTab={activeTab}
+              getAssetKindLabel={getAssetKindLabel}
+              getTabCount={getTabCount}
+              onChange={setActiveTab}
+              t={t}
+              theme={theme}
+              visibleTabs={visibleTabs}
+            />
           ) : null}
 
           {filteredItems.length === 0 ? (
@@ -288,170 +142,23 @@ export default function ProjectAiLibraryDialog({
               </Typography>
             </Box>
           ) : (
-            <Box
-              sx={{
-                display: "grid",
-                gap: 1.25,
-                gridTemplateColumns: {
-                  xs: "repeat(1, minmax(0, 1fr))",
-                  sm: "repeat(2, minmax(0, 1fr))",
-                  md: "repeat(3, minmax(0, 1fr))",
-                  lg: "repeat(5, minmax(0, 1fr))"
-                }
+            <ProjectAiLibraryGrid
+              getAssetKindLabel={getAssetKindLabel}
+              items={filteredItems}
+              mode={mode}
+              onApply={onApplyAsset ? handleApply : undefined}
+              onApplyPanorama={onApplyPanorama ? handleApplyPanorama : undefined}
+              onApplyPbrAtlas={onApplyPbrAtlas ? handleApplyPbrAtlas : undefined}
+              onDelete={handleDelete}
+              onPreview={(item) => {
+                setPreviewItem({
+                  imageUrl: item.imageUrl,
+                  prompt: item.prompt
+                });
               }}
-            >
-              {filteredItems.map((item) => (
-                <Box
-                  key={item.key}
-                  sx={{
-                    borderRadius: 1.5,
-                    border: theme.sectionBorder,
-                    background: theme.sectionBg,
-                    overflow: "hidden"
-                  }}
-                >
-                  <Box sx={{ position: "relative", borderBottom: theme.sectionBorder }}>
-                    <Box
-                      component="img"
-                      src={item.imageUrl}
-                      alt={item.prompt}
-                      sx={{
-                        width: "100%",
-                        aspectRatio: getAssetAspectRatio(item.kind),
-                        objectFit: "cover",
-                        display: "block"
-                      }}
-                    />
-                    <Typography
-                      sx={{
-                        position: "absolute",
-                        top: 8,
-                        left: 8,
-                        borderRadius: 0.75,
-                        px: 0.7,
-                        py: 0.25,
-                        fontSize: 10,
-                        fontWeight: 800,
-                        color: theme.titleText,
-                        background: theme.panelBg,
-                        border: theme.sectionBorder,
-                        boxShadow: "0 8px 18px rgba(0,0,0,0.22)"
-                      }}
-                    >
-                      {getAssetKindLabel(item.kind)}
-                    </Typography>
-                  </Box>
-                  <Stack spacing={0.6} sx={{ p: 1 }}>
-                    <Typography
-                      title={item.prompt}
-                      sx={{
-                        fontSize: 12,
-                        fontWeight: 700,
-                        color: theme.titleText,
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis"
-                      }}
-                    >
-                      {item.prompt}
-                    </Typography>
-                    <Typography sx={{ fontSize: 11, color: theme.text }}>
-                      {item.model}
-                    </Typography>
-                    <Tooltip title={item.traceId ? `${t("editor.project.aiTraceId")}: ${item.traceId}` : ""}>
-                      <Typography sx={{ fontSize: 11, color: theme.mutedText }}>
-                        {new Date(item.createdAt).toLocaleString()}
-                      </Typography>
-                    </Tooltip>
-                    <Stack direction="row" justifyContent="flex-end" spacing={0.5}>
-                      {mode === "manage" ? (
-                        <>
-                          <Tooltip title={t("editor.ai.viewResult")}>
-                            <IconButton
-                              size="small"
-                              onClick={() => {
-                                setPreviewItem({
-                                  imageUrl: item.imageUrl,
-                                  prompt: item.prompt
-                                });
-                              }}
-                              sx={{
-                                color: theme.pillText,
-                                border: theme.sectionBorder,
-                                background: theme.iconButtonBg
-                              }}
-                            >
-                              <VisibilityRoundedIcon sx={{ fontSize: 16 }} />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title={t("editor.project.delete")}>
-                            <IconButton
-                              size="small"
-                              onClick={() => handleDelete(item)}
-                              sx={{
-                                color: theme.pillText,
-                                border: theme.sectionBorder,
-                                background: theme.iconButtonBg
-                              }}
-                            >
-                              <DeleteRoundedIcon sx={{ fontSize: 16 }} />
-                            </IconButton>
-                          </Tooltip>
-                        </>
-                      ) : (
-                        <>
-                          {item.kind === "image" && onApplyAsset ? (
-                            <Tooltip title={t("editor.properties.applyAiAsset")}>
-                              <IconButton
-                                size="small"
-                                onClick={() => handleApply(item)}
-                                sx={{
-                                  color: theme.pillText,
-                                  border: theme.sectionBorder,
-                                  background: theme.iconButtonBg
-                                }}
-                              >
-                                <FormatPaintRoundedIcon sx={{ fontSize: 16 }} />
-                              </IconButton>
-                            </Tooltip>
-                          ) : null}
-                          {item.kind === "pbr_atlas" && onApplyPbrAtlas ? (
-                            <Tooltip title={t("editor.project.applyPbrAtlas")}>
-                              <IconButton
-                                size="small"
-                                onClick={() => handleApplyPbrAtlas(item)}
-                                sx={{
-                                  color: theme.pillText,
-                                  border: theme.sectionBorder,
-                                  background: theme.iconButtonBg
-                                }}
-                              >
-                                <AutoAwesomeRoundedIcon sx={{ fontSize: 16 }} />
-                              </IconButton>
-                            </Tooltip>
-                          ) : null}
-                          {item.kind === "panorama" && onApplyPanorama ? (
-                            <Tooltip title={t("editor.project.applyPanorama")}>
-                              <IconButton
-                                size="small"
-                                onClick={() => handleApplyPanorama(item)}
-                                sx={{
-                                  color: theme.pillText,
-                                  border: theme.sectionBorder,
-                                  background: theme.iconButtonBg
-                                }}
-                              >
-                                <LandscapeRoundedIcon sx={{ fontSize: 16 }} />
-                              </IconButton>
-                            </Tooltip>
-                          ) : null}
-                        </>
-                      )}
-                    </Stack>
-                  </Stack>
-                </Box>
-              ))}
-            </Box>
+              t={t}
+              theme={theme}
+            />
           )}
         </DialogContent>
       </Dialog>
