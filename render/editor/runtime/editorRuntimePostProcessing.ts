@@ -1,5 +1,4 @@
 import * as THREE from "three";
-import { Pass } from "three/examples/jsm/postprocessing/Pass.js";
 import { AfterimagePass } from "three/examples/jsm/postprocessing/AfterimagePass.js";
 import { BokehPass } from "three/examples/jsm/postprocessing/BokehPass.js";
 import { DotScreenPass } from "three/examples/jsm/postprocessing/DotScreenPass.js";
@@ -16,13 +15,19 @@ import { SMAAPass } from "three/examples/jsm/postprocessing/SMAAPass.js";
 import { SSRPass } from "three/examples/jsm/postprocessing/SSRPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 
-import type { EditorPostProcessPassId, ResolvedEditorPostProcessingConfigJSON } from "../core/types";
+import type { ResolvedEditorPostProcessingConfigJSON } from "../core/types";
 import type { StudioColorGradingConfig } from "../studioColorGrading";
 import {
   createStudioColorGradingPass,
   setStudioColorGradingPassSize,
   updateStudioColorGradingPass
 } from "./studioColorGradingPass";
+import {
+  applyRuntimePostProcessingPassConfig,
+  disposePostProcessingPass,
+  rebuildRuntimePostProcessingComposerPasses,
+  type EditorRuntimePostProcessingPassRefs
+} from "./editorRuntimePostProcessingPasses";
 
 type EditorRuntimePostProcessingOptions = {
   scene: THREE.Scene;
@@ -97,114 +102,12 @@ export class EditorRuntimePostProcessing {
 
   applyConfig(config: ResolvedEditorPostProcessingConfigJSON) {
     this.currentConfig = config;
-    const { passes } = config;
     this.ensureConfiguredPasses(config);
-
-    if (this.pixelatedPass) {
-      this.pixelatedPass.enabled = passes.pixelated.enabled;
-      this.pixelatedPass.setPixelSize(passes.pixelated.params.pixelSize);
-      this.pixelatedPass.normalEdgeStrength = passes.pixelated.params.normalEdgeStrength;
-      this.pixelatedPass.depthEdgeStrength = passes.pixelated.params.depthEdgeStrength;
-    }
-
-    if (this.afterimagePass) {
-      this.afterimagePass.enabled = passes.afterimage.enabled;
-      this.afterimagePass.damp = passes.afterimage.params.damp;
-    }
-
-    if (this.bokehPass) {
-      const bokehUniforms = this.bokehPass.materialBokeh.uniforms as Record<
-        string,
-        { value: number | THREE.Texture | null }
-      >;
-      this.bokehPass.enabled = passes.bokeh.enabled;
-      bokehUniforms.focus.value = passes.bokeh.params.focus;
-      bokehUniforms.aperture.value = passes.bokeh.params.aperture;
-      bokehUniforms.maxblur.value = passes.bokeh.params.maxblur;
-      bokehUniforms.aspect.value = this.camera.aspect;
-      bokehUniforms.nearClip.value = this.camera.near;
-      bokehUniforms.farClip.value = this.camera.far;
-    }
-
-    if (this.dotScreenPass) {
-      const dotScreenUniforms = this.dotScreenPass.uniforms as Record<
-        string,
-        { value: number | THREE.Vector2 | THREE.Texture | null }
-      >;
-      this.dotScreenPass.enabled = passes.dotScreen.enabled;
-      dotScreenUniforms.angle.value = passes.dotScreen.params.angle;
-      dotScreenUniforms.scale.value = passes.dotScreen.params.scale;
-    }
-
-    if (this.filmPass) {
-      const filmUniforms = this.filmPass.uniforms as Record<
-        string,
-        { value: number | boolean | THREE.Texture | null }
-      >;
-      this.filmPass.enabled = passes.film.enabled;
-      filmUniforms.intensity.value = passes.film.params.intensity;
-      filmUniforms.grayscale.value = passes.film.params.grayscale;
-    }
-
-    if (this.glitchPass) {
-      this.glitchPass.enabled = passes.glitch.enabled;
-      this.glitchPass.goWild = passes.glitch.params.goWild;
-    }
-
-    if (this.gtaoPass) {
-      this.gtaoPass.enabled = passes.gtao.enabled;
-      this.gtaoPass.output = GTAOPass.OUTPUT.Default;
-      this.gtaoPass.blendIntensity = passes.gtao.params.blendIntensity;
-      this.gtaoPass.updateGtaoMaterial({
-        radius: passes.gtao.params.radius,
-        distanceFallOff: passes.gtao.params.distanceFallOff,
-        thickness: passes.gtao.params.thickness
-      });
-      this.gtaoPass.updatePdMaterial({
-        lumaPhi: 10,
-        depthPhi: 2,
-        normalPhi: 3,
-        radius: 8,
-        radiusExponent: 2,
-        rings: 2,
-        samples: 16
-      });
-    }
-
-    if (this.halftonePass) {
-      const halftoneUniforms = this.halftonePass.uniforms as Record<
-        string,
-        { value: number | boolean | THREE.Texture | null }
-      >;
-      this.halftonePass.enabled = passes.halftone.enabled;
-      halftoneUniforms.shape.value = passes.halftone.params.shape;
-      halftoneUniforms.radius.value = passes.halftone.params.radius;
-      halftoneUniforms.scatter.value = passes.halftone.params.scatter;
-      halftoneUniforms.blending.value = passes.halftone.params.blending;
-      halftoneUniforms.blendingMode.value = passes.halftone.params.blendingMode;
-      halftoneUniforms.greyscale.value = passes.halftone.params.greyscale;
-    }
-
-    if (this.ssrPass) {
-      this.ssrPass.enabled = passes.ssr.enabled;
-      this.ssrPass.output = SSRPass.OUTPUT.Default;
-      this.ssrPass.opacity = passes.ssr.params.opacity;
-      this.ssrPass.maxDistance = passes.ssr.params.maxDistance;
-      this.ssrPass.thickness = passes.ssr.params.thickness;
-      this.ssrPass.blur = passes.ssr.params.blur;
-      this.ssrPass.distanceAttenuation = passes.ssr.params.distanceAttenuation;
-      this.ssrPass.fresnel = passes.ssr.params.fresnel;
-      this.ssrPass.infiniteThick = passes.ssr.params.infiniteThick;
-      this.ssrPass.bouncing = false;
-      this.ssrPass.selects = null;
-    }
-
-    if (this.unrealBloomPass) {
-      this.unrealBloomPass.enabled = passes.unrealBloom.enabled;
-      this.unrealBloomPass.strength = passes.unrealBloom.params.strength;
-      this.unrealBloomPass.radius = passes.unrealBloom.params.radius;
-      this.unrealBloomPass.threshold = passes.unrealBloom.params.threshold;
-    }
+    applyRuntimePostProcessingPassConfig({
+      camera: this.camera,
+      config,
+      passes: this.getPassRefs()
+    });
 
     this.outlinePass.enabled = true;
     if (this.smaaPass) {
@@ -265,20 +168,20 @@ export class EditorRuntimePostProcessing {
   }
 
   dispose() {
-    this.disposePass(this.pixelatedPass);
-    this.disposePass(this.afterimagePass);
-    this.disposePass(this.bokehPass);
-    this.disposePass(this.dotScreenPass);
-    this.disposePass(this.filmPass);
-    this.disposePass(this.glitchPass);
-    this.disposePass(this.gtaoPass);
-    this.disposePass(this.halftonePass);
-    this.disposePass(this.outlinePass);
-    this.disposePass(this.outputPass);
-    this.disposePass(this.smaaPass);
-    this.disposePass(this.ssrPass);
-    this.disposePass(this.studioColorGradingPass);
-    this.disposePass(this.unrealBloomPass);
+    disposePostProcessingPass(this.pixelatedPass);
+    disposePostProcessingPass(this.afterimagePass);
+    disposePostProcessingPass(this.bokehPass);
+    disposePostProcessingPass(this.dotScreenPass);
+    disposePostProcessingPass(this.filmPass);
+    disposePostProcessingPass(this.glitchPass);
+    disposePostProcessingPass(this.gtaoPass);
+    disposePostProcessingPass(this.halftonePass);
+    disposePostProcessingPass(this.outlinePass);
+    disposePostProcessingPass(this.outputPass);
+    disposePostProcessingPass(this.smaaPass);
+    disposePostProcessingPass(this.ssrPass);
+    disposePostProcessingPass(this.studioColorGradingPass);
+    disposePostProcessingPass(this.unrealBloomPass);
     this.pixelatedPass = null;
     this.afterimagePass = null;
     this.bokehPass = null;
@@ -504,57 +407,31 @@ export class EditorRuntimePostProcessing {
   }
 
   private rebuildComposerPasses(config: ResolvedEditorPostProcessingConfigJSON) {
-    const composerWithPasses = this.composer as EffectComposer & { passes: Pass[] };
-    composerWithPasses.passes.length = 0;
-    this.composer.addPass(this.renderPass);
-
-    this.appendEffectPass("pixelated", this.pixelatedPass, config);
-    this.appendEffectPass("gtao", this.gtaoPass, config);
-    this.appendEffectPass("ssr", this.ssrPass, config);
-    this.appendEffectPass("bokeh", this.bokehPass, config);
-    this.appendEffectPass("unrealBloom", this.unrealBloomPass, config);
-    this.appendEffectPass("afterimage", this.afterimagePass, config);
-    this.appendEffectPass("dotScreen", this.dotScreenPass, config);
-    this.appendEffectPass("halftone", this.halftonePass, config);
-    this.appendEffectPass("film", this.filmPass, config);
-    this.appendEffectPass("glitch", this.glitchPass, config);
-
-    if (this.studioColorGradingEnabled && this.studioColorGradingPass) {
-      this.composer.addPass(this.studioColorGradingPass);
-    }
-    this.composer.addPass(this.outlinePass);
-    if (this.smaaPass) {
-      this.composer.addPass(this.smaaPass);
-    }
-    this.composer.addPass(this.outputPass);
+    rebuildRuntimePostProcessingComposerPasses({
+      composer: this.composer,
+      config,
+      outputPass: this.outputPass,
+      outlinePass: this.outlinePass,
+      passes: this.getPassRefs(),
+      renderPass: this.renderPass,
+      studioColorGradingEnabled: this.studioColorGradingEnabled,
+      studioColorGradingPass: this.studioColorGradingPass
+    });
   }
 
-  private appendEffectPass(
-    passId: EditorPostProcessPassId,
-    pass: Pass | null,
-    config: ResolvedEditorPostProcessingConfigJSON
-  ) {
-    if (!pass || !config.passes[passId].enabled) return;
-
-    this.composer.addPass(pass);
-  }
-
-  private disposePass(pass: { dispose?: (() => void) | undefined } | null | undefined) {
-    if (!pass || typeof pass.dispose !== "function") return;
-
-    try {
-      pass.dispose();
-    } catch (error) {
-      const passName =
-        typeof pass === "object" &&
-        pass !== null &&
-        "constructor" in pass &&
-        pass.constructor &&
-        typeof pass.constructor === "function" &&
-        pass.constructor.name
-          ? pass.constructor.name
-          : "UnknownPass";
-      console.warn(`[editor] Failed to dispose post-processing pass: ${passName}`, error);
-    }
+  private getPassRefs(): EditorRuntimePostProcessingPassRefs {
+    return {
+      afterimagePass: this.afterimagePass,
+      bokehPass: this.bokehPass,
+      dotScreenPass: this.dotScreenPass,
+      filmPass: this.filmPass,
+      glitchPass: this.glitchPass,
+      gtaoPass: this.gtaoPass,
+      halftonePass: this.halftonePass,
+      pixelatedPass: this.pixelatedPass,
+      smaaPass: this.smaaPass,
+      ssrPass: this.ssrPass,
+      unrealBloomPass: this.unrealBloomPass
+    };
   }
 }
