@@ -25,11 +25,11 @@ import { EditorRuntimePostProcessing } from "./editorRuntimePostProcessing";
 import { EditorRuntimeStudioScene } from "./editorRuntimeStudioScene";
 import { FirstPersonController } from "./firstPersonController";
 import { ModelLoaderFactory } from "./modelLoaderFactory";
-
-type RuntimeStartOptions = {
-  onPointerDown: (event: PointerEvent) => void;
-  onFrame: (deltaSeconds: number) => boolean;
-};
+import {
+  startRuntimeLifecycle,
+  stopRuntimeLifecycle,
+  type RuntimeStartOptions
+} from "./editorRuntimeLifecycle";
 
 const ORBIT_DAMPING_FRAME_BUDGET = 45;
 
@@ -129,28 +129,14 @@ export class EditorRuntime {
   start(options: RuntimeStartOptions) {
     if (this.disposed) return;
     this.startOptions = options;
-    this.host.appendChild(this.renderer.domElement);
-    this.resize();
-    this.clock.start();
-    this.firstPersonController.connect();
-    this.orbitControls.addEventListener("change", this.onOrbitControlsChange);
-    this.renderer.domElement.addEventListener("pointerdown", options.onPointerDown);
-    window.addEventListener("pointermove", this.onPointerMove);
-    window.addEventListener("pointerup", this.onPointerUp);
-    window.addEventListener("resize", this.resize);
+    startRuntimeLifecycle(this.getLifecycleBindings(), options);
     this.requestFrame();
   }
 
   stop() {
     if (!this.startOptions) return;
     window.cancelAnimationFrame(this.rafId);
-    this.clock.stop();
-    window.removeEventListener("resize", this.resize);
-    this.orbitControls.removeEventListener("change", this.onOrbitControlsChange);
-    this.renderer.domElement.removeEventListener("pointerdown", this.startOptions.onPointerDown);
-    window.removeEventListener("pointermove", this.onPointerMove);
-    window.removeEventListener("pointerup", this.onPointerUp);
-    this.firstPersonController.disconnect();
+    stopRuntimeLifecycle(this.getLifecycleBindings(), this.startOptions);
     this.startOptions = null;
   }
 
@@ -591,5 +577,19 @@ export class EditorRuntime {
       runtimeChanged ||
       sessionChanged
     );
+  }
+
+  private getLifecycleBindings() {
+    return {
+      clock: this.clock,
+      firstPersonController: this.firstPersonController,
+      host: this.host,
+      onOrbitControlsChange: this.onOrbitControlsChange,
+      onPointerMove: this.onPointerMove,
+      onPointerUp: this.onPointerUp,
+      orbitControls: this.orbitControls,
+      renderer: this.renderer,
+      resize: this.resize
+    };
   }
 }
