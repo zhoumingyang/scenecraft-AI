@@ -1,106 +1,22 @@
 import * as THREE from "three";
-
-type GizmoHandleType = "translate-axis" | "translate-free" | "rotate-axis";
-type GizmoHandleAxis = "x" | "y" | "z" | "free";
-type GizmoHandleKey =
-  | "translate-axis:x"
-  | "translate-axis:y"
-  | "translate-axis:z"
-  | "translate-free:free"
-  | "rotate-axis:x"
-  | "rotate-axis:y"
-  | "rotate-axis:z";
-
-type ActiveDrag =
-  | {
-      type: "translate-axis";
-      axis: "x" | "y" | "z";
-      origin: THREE.Vector3;
-      startWorldPosition: THREE.Vector3;
-      plane: THREE.Plane;
-      startOffset: number;
-    }
-  | {
-      type: "translate-free";
-      plane: THREE.Plane;
-      startPoint: THREE.Vector3;
-      startWorldPosition: THREE.Vector3;
-    }
-  | {
-      type: "rotate-axis";
-      axis: "x" | "y" | "z";
-      origin: THREE.Vector3;
-      plane: THREE.Plane;
-      startVector: THREE.Vector3;
-      startWorldQuaternion: THREE.Quaternion;
-      currentAngle: number;
-    };
-
-type PointerInfo = {
-  clientX: number;
-  clientY: number;
-};
-
-type HandleVisual = {
-  key: GizmoHandleKey;
-  type: GizmoHandleType;
-  axis: GizmoHandleAxis;
-  root: THREE.Object3D;
-  pickTargets: THREE.Object3D[];
-  materials: THREE.MeshBasicMaterial[];
-};
-
-type RotateVisual = HandleVisual & {
-  base: THREE.Group;
-  previewMesh: THREE.Mesh;
-  fullMesh: THREE.Mesh;
-};
-
-type TranslateVisual = HandleVisual & {
-  base: THREE.Group;
-  tip: THREE.Mesh;
-};
-
-function normalizePositiveAngle(angle: number) {
-  const fullTurn = Math.PI * 2;
-  return ((angle % fullTurn) + fullTurn) % fullTurn;
-}
-
-function getAxisVector(axis: "x" | "y" | "z"): THREE.Vector3 {
-  if (axis === "x") return new THREE.Vector3(1, 0, 0);
-  if (axis === "y") return new THREE.Vector3(0, 1, 0);
-  return new THREE.Vector3(0, 0, 1);
-}
-
-function getHandleKey(type: GizmoHandleType, axis: GizmoHandleAxis): GizmoHandleKey {
-  return `${type}:${axis}` as GizmoHandleKey;
-}
-
-function createHandleMaterial(color: string, opacity: number) {
-  const material = new THREE.MeshBasicMaterial({
-    color,
-    transparent: true,
-    opacity,
-    depthTest: false,
-    depthWrite: false
-  });
-
-  material.userData.baseColor = color;
-  material.userData.baseOpacity = opacity;
-  return material;
-}
-
-function tintHex(color: string, amount: number) {
-  const source = new THREE.Color(color);
-  const target = new THREE.Color(amount >= 0 ? "#ffffff" : "#000000");
-  return `#${source.lerp(target, Math.min(Math.abs(amount), 1)).getHexString()}`;
-}
-
-function tagHandle(object: THREE.Object3D, type: GizmoHandleType, axis: GizmoHandleAxis) {
-  object.userData.gizmoHandleType = type;
-  object.userData.gizmoAxis = axis;
-  object.renderOrder = 999;
-}
+import {
+  getAxisVector,
+  getHandleKey,
+  normalizePositiveAngle,
+  type ActiveDrag,
+  type GizmoHandleAxis,
+  type GizmoHandleKey,
+  type GizmoHandleType,
+  type HandleVisual,
+  type PointerInfo,
+  type RotateVisual,
+  type TranslateVisual
+} from "./customTransformGizmoTypes";
+import {
+  createFreeTranslateVisual,
+  createRotateVisual,
+  createTranslateVisual
+} from "./customTransformGizmoVisuals";
 
 export class CustomTransformGizmo {
   readonly root: THREE.Group;
@@ -147,18 +63,18 @@ export class CustomTransformGizmo {
     } as const;
 
     (["x", "y", "z"] as const).forEach((axis) => {
-      const translateVisual = this.createTranslateVisual(axis, colors[axis]);
+      const translateVisual = createTranslateVisual(axis, colors[axis], this.handleTargets);
       this.translateVisuals.set(axis, translateVisual);
       this.visuals.set(translateVisual.key, translateVisual);
       this.root.add(translateVisual.root);
 
-      const rotateVisual = this.createRotateVisual(axis, colors[axis]);
+      const rotateVisual = createRotateVisual(axis, colors[axis], this.handleTargets);
       this.rotateVisuals.set(axis, rotateVisual);
       this.visuals.set(rotateVisual.key, rotateVisual);
       this.root.add(rotateVisual.root);
     });
 
-    this.freeVisual = this.createFreeTranslateVisual();
+    this.freeVisual = createFreeTranslateVisual(this.handleTargets);
     this.visuals.set(this.freeVisual.key, this.freeVisual);
     this.root.add(this.freeVisual.root);
 
@@ -371,93 +287,6 @@ export class CustomTransformGizmo {
 
   isHandleHit(clientX: number, clientY: number): boolean {
     return Boolean(this.pickHandle(clientX, clientY));
-  }
-
-  private createTranslateVisual(axis: "x" | "y" | "z", color: string): TranslateVisual {
-    const key = getHandleKey("translate-axis", axis);
-    const root = new THREE.Group();
-    const base = new THREE.Group();
-    const shaftMaterial = createHandleMaterial(tintHex(color, -0.16), 0.92);
-    const tipMaterial = createHandleMaterial(tintHex(color, 0.08), 0.98);
-    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 0.92, 12), shaftMaterial);
-    const tip = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.26, 18), tipMaterial);
-
-    shaft.position.y = 0.46;
-    tip.position.y = 1.08;
-    tagHandle(root, "translate-axis", axis);
-    tagHandle(base, "translate-axis", axis);
-    tagHandle(shaft, "translate-axis", axis);
-    tagHandle(tip, "translate-axis", axis);
-    base.add(shaft, tip);
-    root.add(base);
-    this.handleTargets.push(root, base, shaft, tip);
-
-    return {
-      key,
-      type: "translate-axis",
-      axis,
-      root,
-      base,
-      tip,
-      pickTargets: [root, base, shaft, tip],
-      materials: [shaftMaterial, tipMaterial]
-    };
-  }
-
-  private createRotateVisual(axis: "x" | "y" | "z", color: string): RotateVisual {
-    const key = getHandleKey("rotate-axis", axis);
-    const root = new THREE.Group();
-    const base = new THREE.Group();
-    const previewMaterial = createHandleMaterial(tintHex(color, -0.08), 0.48);
-    const fullMaterial = createHandleMaterial(color, 0.86);
-    const previewMesh = new THREE.Mesh(
-      new THREE.TorusGeometry(1.05, 0.022, 10, 48, Math.PI / 2),
-      previewMaterial
-    );
-    const fullMesh = new THREE.Mesh(
-      new THREE.TorusGeometry(1.05, 0.022, 10, 96, Math.PI * 2),
-      fullMaterial
-    );
-
-    fullMesh.visible = false;
-    tagHandle(root, "rotate-axis", axis);
-    tagHandle(base, "rotate-axis", axis);
-    tagHandle(previewMesh, "rotate-axis", axis);
-    tagHandle(fullMesh, "rotate-axis", axis);
-    base.add(previewMesh, fullMesh);
-    root.add(base);
-    this.handleTargets.push(root, base, previewMesh, fullMesh);
-
-    return {
-      key,
-      type: "rotate-axis",
-      axis,
-      root,
-      base,
-      previewMesh,
-      fullMesh,
-      pickTargets: [root, base, previewMesh, fullMesh],
-      materials: [previewMaterial, fullMaterial]
-    };
-  }
-
-  private createFreeTranslateVisual(): HandleVisual {
-    const key = getHandleKey("translate-free", "free");
-    const root = new THREE.Mesh(
-      new THREE.OctahedronGeometry(0.14, 0),
-      createHandleMaterial("#f4f7ff", 0.95)
-    );
-    tagHandle(root, "translate-free", "free");
-    this.handleTargets.push(root);
-
-    return {
-      key,
-      type: "translate-free",
-      axis: "free",
-      root,
-      pickTargets: [root],
-      materials: [root.material as THREE.MeshBasicMaterial]
-    };
   }
 
   private syncToTarget() {
