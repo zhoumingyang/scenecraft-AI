@@ -2,6 +2,10 @@ import * as THREE from "three";
 
 import type { StudioScenePresetDefinition } from "../../studioScenes";
 import {
+  getStudioLightFixtureClearance,
+  getStudioLightFixtureRadius
+} from "../../studioSceneRoomGeometry";
+import {
   MIN_FRAME_RADIUS,
   ROOM_TARGET_MARGIN_RATIO,
   type StudioRoomBounds,
@@ -13,7 +17,20 @@ import {
   createPlaneMesh,
   lookAtQuaternion
 } from "./geometry";
-import { toRoomPoint } from "./room";
+import { clampPointToRoom, toRoomPoint, toWorldPoint } from "./room";
+
+function toLightRoomPoint(
+  frame: StudioSceneFrame,
+  bounds: StudioRoomBounds,
+  offset: [number, number, number],
+  fixtureRadius: number
+) {
+  return clampPointToRoom(
+    toWorldPoint(frame, offset),
+    bounds,
+    fixtureRadius + getStudioLightFixtureClearance(bounds.radius)
+  );
+}
 
 function createRectAreaLight(
   preset: StudioScenePresetDefinition,
@@ -23,10 +40,11 @@ function createRectAreaLight(
 ) {
   const config = preset[key];
   const radius = Math.max(frame.radius, MIN_FRAME_RADIUS);
-  const position = toRoomPoint(frame, bounds, config.position);
-  const target = toRoomPoint(frame, bounds, config.target, ROOM_TARGET_MARGIN_RATIO);
   const width = Math.min((config.width ?? 2.5) * radius, bounds.width * 0.48);
   const height = Math.min((config.height ?? 2) * radius, bounds.wallHeight * 0.55);
+  const fixtureRadius = getStudioLightFixtureRadius(radius, config);
+  const position = toLightRoomPoint(frame, bounds, config.position, fixtureRadius);
+  const target = toRoomPoint(frame, bounds, config.target, ROOM_TARGET_MARGIN_RATIO);
   const light = new THREE.RectAreaLight(
     new THREE.Color(config.color),
     config.intensity,
@@ -45,12 +63,18 @@ function createRimSpotLight(
   bounds: StudioRoomBounds
 ) {
   const config = preset.rimLight;
-  const position = toRoomPoint(frame, bounds, config.position);
+  const radius = Math.max(frame.radius, MIN_FRAME_RADIUS);
+  const position = toLightRoomPoint(
+    frame,
+    bounds,
+    config.position,
+    getStudioLightFixtureRadius(radius, config)
+  );
   const target = toRoomPoint(frame, bounds, config.target, ROOM_TARGET_MARGIN_RATIO);
   const light = new THREE.SpotLight(
     new THREE.Color(config.color),
     config.intensity,
-    config.distance ? config.distance * Math.max(frame.radius, MIN_FRAME_RADIUS) : 0,
+    config.distance ? config.distance * radius : 0,
     config.angle ?? Math.PI / 4,
     config.penumbra ?? 0.35,
     2

@@ -7,6 +7,10 @@ import type {
   Vec3Tuple
 } from "./core/types";
 import type { StudioLayoutBounds, StudioLayoutTargetFrame } from "./studioSceneLayoutGenerator";
+import {
+  getStudioLightFixtureClearance,
+  getStudioLightFixtureRadius
+} from "./studioSceneRoomGeometry";
 import type {
   StudioLightingProfile,
   StudioProductProfile,
@@ -96,6 +100,31 @@ function resolveRelativePosition(bounds: StudioLayoutBounds, value: Vec3Tuple) {
   );
 }
 
+function clampPositionToStudioRoom(
+  position: THREE.Vector3,
+  bounds: StudioLayoutBounds,
+  margin: number
+) {
+  position.x = THREE.MathUtils.clamp(position.x, bounds.leftX + margin, bounds.rightX - margin);
+  position.y = THREE.MathUtils.clamp(position.y, bounds.floorY + margin, bounds.ceilingY - margin);
+  position.z = THREE.MathUtils.clamp(position.z, bounds.backZ + margin, bounds.frontZ - margin);
+  return position;
+}
+
+function resolveLightPosition(
+  bounds: StudioLayoutBounds,
+  light: StudioLightingProfile["lights"][number]
+) {
+  const fixtureMargin =
+    getStudioLightFixtureRadius(bounds.radius, light) +
+    getStudioLightFixtureClearance(bounds.radius);
+  return clampPositionToStudioRoom(
+    resolveRelativePosition(bounds, light.position),
+    bounds,
+    fixtureMargin
+  );
+}
+
 function createLookAtQuaternion(position: THREE.Vector3, target: THREE.Vector3) {
   const helper = new THREE.Object3D();
   helper.position.copy(position);
@@ -107,8 +136,12 @@ function createLightDescriptor(
   profileLight: StudioLightingProfile["lights"][number],
   bounds: StudioLayoutBounds
 ): StudioLightingLightDescriptor {
-  const position = resolveRelativePosition(bounds, profileLight.position);
-  const target = resolveRelativePosition(bounds, profileLight.target);
+  const position = resolveLightPosition(bounds, profileLight);
+  const target = clampPositionToStudioRoom(
+    resolveRelativePosition(bounds, profileLight.target),
+    bounds,
+    Math.max(bounds.radius * 0.22, 0.2)
+  );
   const type: EditorLightJSON["type"] =
     profileLight.type === "rectArea"
       ? "rectArea"
@@ -164,7 +197,14 @@ function createModifierDescriptor(
   modifier: StudioLightingProfile["modifiers"][number],
   bounds: StudioLayoutBounds
 ): StudioLightingModifierDescriptor {
-  const position = resolveRelativePosition(bounds, modifier.position);
+  const modifierMargin =
+    Math.max(modifier.size[0], modifier.size[1], 0.35) * bounds.radius * 0.5 +
+    getStudioLightFixtureClearance(bounds.radius);
+  const position = clampPositionToStudioRoom(
+    resolveRelativePosition(bounds, modifier.position),
+    bounds,
+    modifierMargin
+  );
   const quaternion = new THREE.Quaternion().setFromEuler(
     new THREE.Euler(modifier.rotation[0], modifier.rotation[1], modifier.rotation[2], "XYZ")
   );

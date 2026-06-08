@@ -11,6 +11,10 @@ import type {
 } from "../studioSceneProfiles";
 import type { StudioSceneVariantId } from "../studioScenes";
 import type { StudioTransientEntityRole } from "../session/studioSceneSession/types";
+import {
+  STUDIO_ROOM_HALF_EXTENT_RATIO,
+  expandStudioRoomBoundsForLights
+} from "../studioSceneRoomGeometry";
 
 export type StudioLayoutEntitySubRole =
   | "layoutRoot"
@@ -63,9 +67,11 @@ export type StudioLayoutBounds = {
   depth: number;
   wallHeight: number;
   floorY: number;
+  ceilingY: number;
   leftX: number;
   rightX: number;
   backZ: number;
+  frontZ: number;
 };
 
 export type StudioLayoutMaterialDescriptor = EditorMeshMaterialJSON & {
@@ -143,22 +149,30 @@ export function createStudioLayoutBounds(
 ): StudioLayoutBounds {
   const radius = Math.max(input.targetFrame.radius, 1.2);
   const { background, plinth } = input.styleProfile.layout;
-  const width = radius * background.widthMultiplier;
-  const depth = radius * background.depthMultiplier;
-  const wallHeight = Math.max(input.targetFrame.height * 2.4, radius * background.heightMultiplier);
+  const expandedBounds = expandStudioRoomBoundsForLights({
+    radius,
+    width: radius * background.widthMultiplier,
+    depth: radius * background.depthMultiplier,
+    wallHeight: Math.max(input.targetFrame.height * 2.4, radius * background.heightMultiplier),
+    lights: input.styleProfile.lighting.lights
+  });
   const floorY = input.targetFrame.floorY - plinth.clearance * radius;
   const [centerX, centerY, centerZ] = input.targetFrame.center;
+  const halfWidth = expandedBounds.width * STUDIO_ROOM_HALF_EXTENT_RATIO;
+  const halfDepth = expandedBounds.depth * STUDIO_ROOM_HALF_EXTENT_RATIO;
 
   return {
     center: [centerX, centerY, centerZ],
     radius,
-    width,
-    depth,
-    wallHeight,
+    width: expandedBounds.width,
+    depth: expandedBounds.depth,
+    wallHeight: expandedBounds.wallHeight,
     floorY,
-    leftX: centerX - width * 0.48,
-    rightX: centerX + width * 0.48,
-    backZ: centerZ - depth * 0.48
+    ceilingY: floorY + expandedBounds.wallHeight,
+    leftX: centerX - halfWidth,
+    rightX: centerX + halfWidth,
+    backZ: centerZ - halfDepth,
+    frontZ: centerZ + halfDepth
   };
 }
 

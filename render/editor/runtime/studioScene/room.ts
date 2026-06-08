@@ -2,6 +2,7 @@ import * as THREE from "three";
 import type { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 import type { StudioScenePresetDefinition } from "../../studioScenes";
+import { expandStudioRoomBoundsForLights } from "../../studioSceneRoomGeometry";
 import {
   MIN_FRAME_RADIUS,
   ROOM_CAMERA_MARGIN_RATIO,
@@ -27,24 +28,32 @@ export function createRoomBounds(
   frame: StudioSceneFrame
 ): StudioRoomBounds {
   const radius = Math.max(frame.radius, MIN_FRAME_RADIUS);
-  const width = radius * 7;
-  const depth = radius * 6.5;
-  const wallHeight = Math.max(frame.height * WALL_HEIGHT_MULTIPLIER, radius * 4);
   const floorY = frame.floorY - preset.targetLift * radius;
   const center = frame.center.clone();
+  const expandedBounds = expandStudioRoomBoundsForLights({
+    radius,
+    width: radius * preset.layout.background.widthMultiplier,
+    depth: radius * preset.layout.background.depthMultiplier,
+    wallHeight: Math.max(
+      frame.height * WALL_HEIGHT_MULTIPLIER,
+      radius * preset.layout.background.heightMultiplier
+    ),
+    floorLiftRatio: preset.targetLift,
+    lights: [preset.keyLight, preset.fillLight, preset.rimLight]
+  });
 
   return {
     center,
     radius,
-    width,
-    depth,
-    wallHeight,
+    width: expandedBounds.width,
+    depth: expandedBounds.depth,
+    wallHeight: expandedBounds.wallHeight,
     floorY,
-    ceilingY: floorY + wallHeight,
-    leftX: center.x - width * ROOM_HALF_EXTENT_RATIO,
-    rightX: center.x + width * ROOM_HALF_EXTENT_RATIO,
-    backZ: center.z - depth * ROOM_HALF_EXTENT_RATIO,
-    frontZ: center.z + depth * ROOM_HALF_EXTENT_RATIO
+    ceilingY: floorY + expandedBounds.wallHeight,
+    leftX: center.x - expandedBounds.width * ROOM_HALF_EXTENT_RATIO,
+    rightX: center.x + expandedBounds.width * ROOM_HALF_EXTENT_RATIO,
+    backZ: center.z - expandedBounds.depth * ROOM_HALF_EXTENT_RATIO,
+    frontZ: center.z + expandedBounds.depth * ROOM_HALF_EXTENT_RATIO
   };
 }
 

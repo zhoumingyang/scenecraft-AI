@@ -7,6 +7,7 @@ import {
   type StudioRoomBounds,
   type StudioSceneFrame
 } from "./types";
+import { createStudioRoundedRoomGeometry } from "../../studioSceneRoomGeometry";
 import {
   createBoxMesh,
   createCylinderMesh,
@@ -23,14 +24,12 @@ export function createStudioRuntimeObjects({
   bounds
 }: StudioSceneRuntimeBuildInput) {
   const radius = bounds.radius;
-  const { width, depth, wallHeight, floorY, ceilingY, center, backZ, frontZ, leftX, rightX } =
-    bounds;
+  const { width, depth, wallHeight, floorY, center } = bounds;
   const plinthHeight = Math.max(radius * 0.32, 0.18);
   const plinthRadius = Math.max(frame.footprintRadius * 1.16, radius * 0.72, 0.72);
   const objects: THREE.Object3D[] = [];
 
-  const floorMaterial = createMaterial(preset.floorColor, { side: THREE.DoubleSide });
-  const wallMaterial = createMaterial(preset.wallColor, { side: THREE.DoubleSide });
+  const roomMaterial = createMaterial(preset.backgroundColor, { side: THREE.DoubleSide });
   const accentMaterial = createMaterial(preset.accentColor, {
     roughness: 0.72,
     metalness: preset.id === "darkTech" ? 0.25 : 0
@@ -41,53 +40,15 @@ export function createStudioRuntimeObjects({
   });
 
   objects.push(
-    createPlaneMesh({
-      name: "studio-floor",
-      width,
-      height: depth,
-      position: new THREE.Vector3(center.x, floorY, center.z),
-      rotation: new THREE.Euler(-Math.PI / 2, 0, 0),
-      material: floorMaterial
-    }),
-    createPlaneMesh({
-      name: "studio-back-wall",
+    createRoundedRoomMesh({
+      name: "studio-closed-cove-room",
       width,
       height: wallHeight,
-      position: new THREE.Vector3(center.x, floorY + wallHeight / 2, backZ),
-      rotation: new THREE.Euler(0, 0, 0),
-      material: wallMaterial
-    }),
-    createPlaneMesh({
-      name: "studio-left-wall",
-      width: depth,
-      height: wallHeight,
-      position: new THREE.Vector3(leftX, floorY + wallHeight / 2, center.z),
-      rotation: new THREE.Euler(0, Math.PI / 2, 0),
-      material: wallMaterial.clone()
-    }),
-    createPlaneMesh({
-      name: "studio-right-wall",
-      width: depth,
-      height: wallHeight,
-      position: new THREE.Vector3(rightX, floorY + wallHeight / 2, center.z),
-      rotation: new THREE.Euler(0, -Math.PI / 2, 0),
-      material: wallMaterial.clone()
-    }),
-    createPlaneMesh({
-      name: "studio-front-wall",
-      width,
-      height: wallHeight,
-      position: new THREE.Vector3(center.x, floorY + wallHeight / 2, frontZ),
-      rotation: new THREE.Euler(0, Math.PI, 0),
-      material: wallMaterial.clone()
-    }),
-    createPlaneMesh({
-      name: "studio-ceiling",
-      width,
-      height: depth,
-      position: new THREE.Vector3(center.x, ceilingY, center.z),
-      rotation: new THREE.Euler(Math.PI / 2, 0, 0),
-      material: wallMaterial.clone()
+      depth,
+      radius,
+      cornerRadiusRatio: preset.layout.background.cornerRadiusRatio,
+      position: new THREE.Vector3(center.x, floorY + wallHeight / 2, center.z),
+      material: roomMaterial
     }),
     createCylinderMesh({
       name: "studio-plinth",
@@ -112,6 +73,35 @@ export function createStudioRuntimeObjects({
   );
 
   return objects;
+}
+
+function createRoundedRoomMesh({
+  name,
+  width,
+  height,
+  depth,
+  radius,
+  cornerRadiusRatio,
+  position,
+  material
+}: {
+  name: string;
+  width: number;
+  height: number;
+  depth: number;
+  radius: number;
+  cornerRadiusRatio: number;
+  position: THREE.Vector3;
+  material: THREE.Material;
+}) {
+  const mesh = new THREE.Mesh(
+    createStudioRoundedRoomGeometry({ width, height, depth, radius, cornerRadiusRatio }),
+    material
+  );
+  mesh.name = name;
+  mesh.position.copy(position);
+  mesh.receiveShadow = true;
+  return mesh;
 }
 
 function createVariantDetailObjects(
@@ -275,7 +265,7 @@ function createWindowTableDetails(
   plinthMaterial: THREE.Material
 ) {
   const radius = Math.max(frame.radius, MIN_FRAME_RADIUS);
-  const windowX = bounds.rightX - radius * 0.04;
+  const windowX = bounds.rightX - Math.max(radius * 0.55, 0.55);
   const windowY = floorY + Math.min(bounds.wallHeight * 0.55, radius * 2.15);
   const windowZ = frame.center.z - radius * 1.2;
   const glowMaterial = createEmissiveMaterial("#dceeff", 1.65);

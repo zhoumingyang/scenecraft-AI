@@ -8,6 +8,7 @@ import type {
   StudioSceneVariantDefinition,
   StudioSceneVariantId
 } from "../../studioScenes";
+import { STUDIO_ROOM_HALF_EXTENT_RATIO } from "../../studioSceneRoomGeometry";
 
 export type StudioSceneFrame = {
   center: THREE.Vector3;
@@ -81,7 +82,7 @@ export type StudioSceneRuntimeBuildInput = {
 
 export const MIN_FRAME_RADIUS = 1.2;
 export const WALL_HEIGHT_MULTIPLIER = 2.4;
-export const ROOM_HALF_EXTENT_RATIO = 0.48;
+export const ROOM_HALF_EXTENT_RATIO = STUDIO_ROOM_HALF_EXTENT_RATIO;
 export const ROOM_INTERIOR_MARGIN_RATIO = 0.16;
 export const ROOM_CAMERA_MARGIN_RATIO = 0.32;
 export const ROOM_TARGET_MARGIN_RATIO = 0.22;
