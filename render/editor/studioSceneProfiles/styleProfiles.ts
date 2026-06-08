@@ -232,10 +232,10 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<
         accent: "#2e88ff"
       },
       surfaces: {
-        background: surface("#07090d", 0.62),
-        floor: surface("#11151d", 0.58),
-        wall: surface("#171b24", 0.62),
-        plinth: surface("#191f2b", 0.45, 0.15),
+        background: surface("#07090d", 0.62, 0, "#09111d", 0.06),
+        floor: surface("#11151d", 0.58, 0, "#0d1420", 0.08),
+        wall: surface("#171b24", 0.62, 0, "#0f1725", 0.12),
+        plinth: surface("#191f2b", 0.45, 0.15, "#0c1524", 0.08),
         decoration: surface("#2e88ff", 0.42, 0.1, "#0b2444", 0.8)
       }
     },

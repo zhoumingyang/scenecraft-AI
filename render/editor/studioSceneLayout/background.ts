@@ -1,3 +1,4 @@
+import * as THREE from "three";
 import { geometryToCustomMesh } from "../utils/geometry";
 import { createStudioRoundedRoomGeometry } from "../studioSceneRoomGeometry";
 import { IDENTITY_QUATERNION } from "./descriptors";
@@ -9,6 +10,13 @@ import {
   type StudioLayoutMeshDescriptor
 } from "./types";
 
+function orientRoomGeometryToInterior(geometry: THREE.BufferGeometry) {
+  // Studio cameras sit inside the cove, so the room mesh must face inward.
+  geometry.scale(-1, 1, 1);
+  geometry.computeVertexNormals();
+  return geometry;
+}
+
 export function createStudioBackgroundDescriptors(input: StudioLayoutGeneratorInput): {
   bounds: StudioLayoutBounds;
   descriptors: StudioLayoutMeshDescriptor[];
@@ -16,16 +24,18 @@ export function createStudioBackgroundDescriptors(input: StudioLayoutGeneratorIn
   const bounds = createStudioLayoutBounds(input);
   const { background } = input.styleProfile.layout;
   const backgroundMaterial = createStudioLayoutMaterial(
-    input.styleProfile.materials.surfaces.background
+    input.styleProfile.materials.surfaces.wall
   );
   const [centerX, , centerZ] = bounds.center;
-  const geometry = createStudioRoundedRoomGeometry({
-    width: bounds.width,
-    height: bounds.wallHeight,
-    depth: bounds.depth,
-    radius: bounds.radius,
-    cornerRadiusRatio: background.cornerRadiusRatio
-  });
+  const geometry = orientRoomGeometryToInterior(
+    createStudioRoundedRoomGeometry({
+      width: bounds.width,
+      height: bounds.wallHeight,
+      depth: bounds.depth,
+      radius: bounds.radius,
+      cornerRadiusRatio: background.cornerRadiusRatio
+    })
+  );
   const customMesh = geometryToCustomMesh(geometry);
   geometry.dispose();
 
