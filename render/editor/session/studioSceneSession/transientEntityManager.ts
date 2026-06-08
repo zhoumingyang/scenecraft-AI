@@ -1,3 +1,4 @@
+import * as THREE from "three";
 import type { BindingRegistry } from "../../bindings/bindingRegistry";
 import { updateLightBinding } from "../../bindings/lightBinding";
 import { updateMeshBindingMaterial } from "../../bindings/meshBinding";
@@ -193,6 +194,7 @@ export class StudioSceneTransientEntityManager {
       });
       session.transientLayoutEntityIds.add(model.id);
       this.markTransientObject(model.id, role);
+      this.configureStudioTransientMeshShadows(this.registry.get(model.id)?.object ?? null, role);
     };
 
     backgroundLayout.descriptors.forEach((descriptor) => {
@@ -282,6 +284,11 @@ export class StudioSceneTransientEntityManager {
       });
       session.transientLightingEntityIds.add(model.id);
       this.markTransientObject(model.id, descriptor.role);
+      this.configureStudioTransientLightShadows(
+        binding.object,
+        descriptor.lightRole,
+        frame
+      );
       binding.object.userData.studioSceneLightRole = descriptor.lightRole;
       binding.pickTargets?.forEach((target) => {
         target.userData.studioSceneLightRole = descriptor.lightRole;
@@ -305,6 +312,7 @@ export class StudioSceneTransientEntityManager {
       });
       session.transientLightingEntityIds.add(model.id);
       this.markTransientObject(model.id, descriptor.role);
+      this.configureStudioTransientMeshShadows(binding.object, descriptor.role);
       binding.object.userData.studioSceneModifierRole = descriptor.modifierRole;
       binding.object.userData.studioSceneModifierVisibleInRender =
         descriptor.visibleInRender;
@@ -404,6 +412,7 @@ export class StudioSceneTransientEntityManager {
     });
     session.transientLayoutEntityIds.add(model.id);
     this.markTransientObject(model.id, descriptor.role);
+    this.configureStudioTransientMeshShadows(this.registry.get(model.id)?.object ?? null, descriptor.role);
     this.rebuildGroupHierarchy();
     this.emit({ type: "sceneUpdated", source, pathTraceInvalidation: "scene" });
     this.emitChanged();
@@ -504,6 +513,71 @@ export class StudioSceneTransientEntityManager {
     binding.pickTargets?.forEach((target) => {
       target.userData.studioScene = true;
       target.userData.studioSceneRole = role;
+    });
+  }
+
+  private configureStudioTransientMeshShadows(
+    object: THREE.Object3D | null,
+    role: StudioTransientEntityRole
+  ) {
+    if (!object) return;
+    const receiveOnlyRoles = new Set<StudioTransientEntityRole>([
+      "background",
+      "cove",
+      "floor",
+      "backWall",
+      "sideWall"
+    ]);
+    const noShadowRoles = new Set<StudioTransientEntityRole>([
+      "reflector",
+      "negativeFill",
+      "stripPanel"
+    ]);
+
+    object.traverse((child) => {
+      if (!(child instanceof THREE.Mesh)) return;
+      if (noShadowRoles.has(role)) {
+        child.castShadow = false;
+        child.receiveShadow = false;
+        return;
+      }
+      if (receiveOnlyRoles.has(role)) {
+        child.castShadow = false;
+        child.receiveShadow = true;
+      }
+    });
+  }
+
+  private configureStudioTransientLightShadows(
+    object: THREE.Object3D,
+    lightRole: "key" | "keyShadow" | "fill" | "rim" | "top" | "accent",
+    frame: StudioTargetFrame
+  ) {
+    object.traverse((child) => {
+      if (child instanceof THREE.DirectionalLight) {
+        child.castShadow = lightRole === "keyShadow";
+        if (!child.castShadow) return;
+        const halfWidth = Math.max(frame.footprintRadius * 2.2, frame.radius * 1.9, 1.6);
+        const top = Math.max(frame.height * 1.35, frame.radius * 2.2, 1.8);
+        const bottom = -Math.max(frame.radius * 1.25, frame.footprintRadius * 1.4, 1.2);
+        child.shadow.mapSize.set(1536, 1536);
+        child.shadow.camera.left = -halfWidth;
+        child.shadow.camera.right = halfWidth;
+        child.shadow.camera.top = top;
+        child.shadow.camera.bottom = bottom;
+        child.shadow.camera.near = 0.5;
+        child.shadow.camera.far = Math.max(frame.radius * 8, frame.height * 4, 24);
+        child.shadow.bias = -0.00008;
+        child.shadow.normalBias = 0.008;
+        child.shadow.radius = 3;
+        child.shadow.camera.updateProjectionMatrix();
+        child.shadow.needsUpdate = true;
+        return;
+      }
+
+      if (child instanceof THREE.SpotLight || child instanceof THREE.PointLight) {
+        child.castShadow = false;
+      }
     });
   }
 
