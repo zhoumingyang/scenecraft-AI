@@ -5,6 +5,7 @@ export const STUDIO_ROOM_DEFAULT_CORNER_RADIUS_RATIO = 0.16;
 export const STUDIO_ROOM_MIN_CORNER_RADIUS_RATIO = 0.12;
 export const STUDIO_ROOM_LIGHT_CLEARANCE_RATIO = 0.36;
 export const STUDIO_ROOM_MIN_LIGHT_CLEARANCE = 0.4;
+export const STUDIO_ROOM_CURVE_SEGMENTS = 24;
 
 export type StudioRoomGeometryInput = {
   width: number;
@@ -50,13 +51,15 @@ export function resolveStudioRoomCornerRadius({
 }
 
 export function createStudioRoundedRoomGeometry(input: StudioRoomGeometryInput) {
-  return new RoundedBoxGeometry(
+  const geometry = new RoundedBoxGeometry(
     input.width,
     input.height,
     input.depth,
-    10,
+    STUDIO_ROOM_CURVE_SEGMENTS,
     resolveStudioRoomCornerRadius(input)
   );
+  geometry.computeVertexNormals();
+  return geometry;
 }
 
 export function getStudioLightFixtureClearance(radius: number) {
