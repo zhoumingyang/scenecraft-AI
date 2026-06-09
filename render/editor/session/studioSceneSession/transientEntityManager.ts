@@ -17,6 +17,7 @@ import {
 } from "../../studioSceneLayoutGenerator";
 import {
   createStudioLightingDescriptors,
+  type StudioGeneratedLightRole,
   type StudioLightingModifierDescriptor
 } from "../../studioSceneLightingGenerator";
 import { resolveStudioSceneStyleProfile } from "../../studioSceneProfiles";
@@ -522,13 +523,14 @@ export class StudioSceneTransientEntityManager {
   ) {
     if (!object) return;
     const receiveOnlyRoles = new Set<StudioTransientEntityRole>([
-      "background",
-      "cove",
       "floor",
-      "backWall",
-      "sideWall"
+      "plinth"
     ]);
     const noShadowRoles = new Set<StudioTransientEntityRole>([
+      "background",
+      "cove",
+      "backWall",
+      "sideWall",
       "reflector",
       "negativeFill",
       "stripPanel"
@@ -550,7 +552,7 @@ export class StudioSceneTransientEntityManager {
 
   private configureStudioTransientLightShadows(
     object: THREE.Object3D,
-    lightRole: "key" | "keyShadow" | "fill" | "rim" | "top" | "accent",
+    lightRole: StudioGeneratedLightRole,
     frame: StudioTargetFrame
   ) {
     object.traverse((child) => {

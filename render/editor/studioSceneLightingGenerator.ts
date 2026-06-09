@@ -60,7 +60,10 @@ const LIGHT_ROLE_LABELS: Record<StudioGeneratedLightRole, string> = {
   fill: "Studio Fill Light",
   rim: "Studio Rim Light",
   top: "Studio Top Light",
-  accent: "Studio Accent Light"
+  accent: "Studio Accent Light",
+  roomFill: "Studio Room Fill",
+  wallWash: "Studio Wall Wash",
+  ceilingWash: "Studio Ceiling Wash"
 };
 
 const LIGHT_ROLE_TO_TRANSIENT_ROLE: Record<StudioGeneratedLightRole, StudioTransientEntityRole> = {
@@ -69,7 +72,10 @@ const LIGHT_ROLE_TO_TRANSIENT_ROLE: Record<StudioGeneratedLightRole, StudioTrans
   fill: "fillLight",
   rim: "rimLight",
   top: "topLight",
-  accent: "accentLight"
+  accent: "accentLight",
+  roomFill: "roomFillLight",
+  wallWash: "wallWashLight",
+  ceilingWash: "ceilingWashLight"
 };
 
 const MODIFIER_ROLE_LABELS: Record<StudioGeneratedModifierRole, string> = {

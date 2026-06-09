@@ -66,6 +66,9 @@ export function getDefaultGroupKind(role: StudioTransientEntityRole): StudioTran
     role === "rimLight" ||
     role === "topLight" ||
     role === "accentLight" ||
+    role === "roomFillLight" ||
+    role === "wallWashLight" ||
+    role === "ceilingWashLight" ||
     role === "lightModifier" ||
     role === "reflector" ||
     role === "negativeFill" ||

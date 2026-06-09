@@ -137,7 +137,16 @@ export type StudioLightingProfile = {
     showAsBackground: false;
   };
   lights: Array<{
-    role: "key" | "keyShadow" | "fill" | "rim" | "top" | "accent";
+    role:
+      | "key"
+      | "keyShadow"
+      | "fill"
+      | "rim"
+      | "top"
+      | "accent"
+      | "roomFill"
+      | "wallWash"
+      | "ceilingWash";
     type: "ambient" | "hemisphere" | "rectArea" | "directional" | "spot" | "point";
     color: string;
     groundColor?: string;

@@ -90,6 +90,33 @@ const STUDIO_ENTITY_ACTIONS: Partial<
     "lock",
     "visibility"
   ]),
+  roomFillLight: new Set([
+    "select",
+    "transform",
+    "light",
+    "delete",
+    "rename",
+    "lock",
+    "visibility"
+  ]),
+  wallWashLight: new Set([
+    "select",
+    "transform",
+    "light",
+    "delete",
+    "rename",
+    "lock",
+    "visibility"
+  ]),
+  ceilingWashLight: new Set([
+    "select",
+    "transform",
+    "light",
+    "delete",
+    "rename",
+    "lock",
+    "visibility"
+  ]),
   lightModifier: new Set([
     "select",
     "transform",
