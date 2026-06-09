@@ -216,9 +216,9 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<
         accent: "#d8a88d"
       },
       surfaces: {
-        background: surface("#f6eee8", 0.72, 0, "#fff0e5", 0.085),
-        floor: surface("#e8ddd4", 0.76, 0, "#f6ebe0", 0.03),
-        wall: surface("#f2e7df", 0.72, 0, "#fff0e5", 0.095),
+        background: surface("#f6eee8", 0.72, 0, "#fff0e5", 0.045),
+        floor: surface("#e8ddd4", 0.76, 0, "#f6ebe0", 0.02),
+        wall: surface("#f2e7df", 0.72, 0, "#fff0e5", 0.05),
         plinth: surface("#fff7ef", 0.48),
         decoration: surface("#d8a88d", 0.55, 0.05)
       }
@@ -228,7 +228,7 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<
         enabled: true,
         provider: "polyhaven",
         assetId: "photo_studio_loft_hall",
-        intensity: 0.72,
+        intensity: 0.58,
         rotationY: -0.1,
         showAsBackground: false
       },
@@ -245,8 +245,8 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<
           ceilingColor: "#fff8f1",
           groundColor: "#ead7c9",
           roomIntensity: 0.16,
-          wallIntensity: 0.4,
-          ceilingIntensity: 0.24
+          wallIntensity: 0.28,
+          ceilingIntensity: 0.16
         })
       ],
       modifiers: [
@@ -257,8 +257,8 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<
     camera: { mode: "birdViewOnly", fov: 38, pitch: 0.12, yaw: Math.PI / 5, distanceMultiplier: 2.9, targetHeightRatio: 0.5, allowFirstPerson: false, orbitEnabled: true },
     postProcessing: {
       toneMapping: THREE.ACESFilmicToneMapping,
-      exposure: 1.08,
-      contrast: 0.08,
+      exposure: 0.96,
+      contrast: 0.05,
       saturation: 0.04,
       temperature: 0.08,
       tint: 0.03,
@@ -266,7 +266,7 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<
       detail: -0.08,
       grain: { enabled: false, intensity: 0.1, grayscale: false },
       passes: {
-        bloom: { enabled: true, strength: 0.32, radius: 0.22, threshold: 0.88 },
+        bloom: { enabled: true, strength: 0.12, radius: 0.12, threshold: 0.96 },
         bokeh: { enabled: false, focus: 12, aperture: 0.004, maxblur: 0.006 }
       }
     }

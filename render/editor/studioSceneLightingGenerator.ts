@@ -244,12 +244,23 @@ function createModifierDescriptor(
   };
 }
 
+function shouldUseIblAsAmbientBase(ibl: StudioLightingProfile["ibl"]) {
+  return ibl.enabled && ibl.provider !== "none";
+}
+
+function isAmbientVirtualLight(light: StudioLightingProfile["lights"][number]) {
+  return light.type === "ambient" || light.type === "hemisphere";
+}
+
 export function createStudioLightingDescriptors(
   input: StudioLightingGeneratorInput
 ): StudioLightingGeneratorOutput {
+  const removeAmbientVirtualLights = shouldUseIblAsAmbientBase(input.styleProfile.lighting.ibl);
   return {
     ibl: input.styleProfile.lighting.ibl,
-    lights: input.styleProfile.lighting.lights.map((light) => createLightDescriptor(light, input.bounds)),
+    lights: input.styleProfile.lighting.lights
+      .filter((light) => !(removeAmbientVirtualLights && isAmbientVirtualLight(light)))
+      .map((light) => createLightDescriptor(light, input.bounds)),
     modifiers: input.styleProfile.lighting.modifiers
       .filter((modifier) => modifier.enabled)
       .slice(0, 3)

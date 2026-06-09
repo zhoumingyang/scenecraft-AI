@@ -89,7 +89,7 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
         return file
           ? {
               url: file.url,
-              assetName: `${detail.displayName} ${file.resolution} ${file.format}`.trim()
+              assetName: file.fileName || file.url
             }
           : null;
       }

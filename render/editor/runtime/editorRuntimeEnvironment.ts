@@ -216,8 +216,15 @@ export class EditorRuntimeEnvironment {
   }
 
   async loadEnvironmentTexture(url: string, assetName = url) {
-    if (isHighDynamicRangeEnvironmentAssetName(assetName)) {
-      if (assetName.toLowerCase().endsWith(".exr")) {
+    const isHdrEnvironment =
+      isHighDynamicRangeEnvironmentAssetName(assetName) ||
+      isHighDynamicRangeEnvironmentAssetName(url);
+
+    if (isHdrEnvironment) {
+      const isExrEnvironment =
+        assetName.toLowerCase().split(/[?#]/, 1)[0]?.endsWith(".exr") ||
+        url.toLowerCase().split(/[?#]/, 1)[0]?.endsWith(".exr");
+      if (isExrEnvironment) {
         const texture = await this.exrLoader.loadAsync(url);
         texture.mapping = THREE.EquirectangularReflectionMapping;
         applyTextureColorSpace(texture, "environmentHdr");
