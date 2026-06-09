@@ -45,7 +45,7 @@ function roomSafetyLights(options: {
   return [
     {
       role: "roomFill",
-      type: "hemisphere",
+      type: "ambient",
       color: options.roomColor,
       groundColor: options.groundColor,
       intensity: options.roomIntensity,
@@ -58,10 +58,10 @@ function roomSafetyLights(options: {
       type: "rectArea",
       color: options.wallColor,
       intensity: options.wallIntensity,
-      position: [0, 2.4, -2.9],
-      target: [0, 1.05, -1.25],
-      width: 4.4,
-      height: 2.5,
+      position: [0, 2.25, 2.7],
+      target: [0, 1.25, -2.7],
+      width: 5.8,
+      height: 3.1,
       castsShadow: false
     },
     {
@@ -69,10 +69,10 @@ function roomSafetyLights(options: {
       type: "rectArea",
       color: options.ceilingColor,
       intensity: options.ceilingIntensity,
-      position: [0, 4.55, 0.1],
-      target: [0, 2.4, 0],
-      width: 4.6,
-      height: 3.2,
+      position: [0, 1.35, 0.35],
+      target: [0, 4.45, 0],
+      width: 5.4,
+      height: 3.8,
       castsShadow: false
     }
   ];
@@ -137,9 +137,9 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<
         accent: "#d8d2c5"
       },
       surfaces: {
-        background: surface("#f8f7f3", 0.82, 0, "#f8f3e8", 0.04),
-        floor: surface("#e9e7df", 0.86, 0, "#f1eee6", 0.02),
-        wall: surface("#f3f1eb", 0.82, 0, "#f8f3e8", 0.045),
+        background: surface("#f8f7f3", 0.82, 0, "#f8f3e8", 0.08),
+        floor: surface("#e9e7df", 0.86, 0, "#f1eee6", 0.025),
+        wall: surface("#f3f1eb", 0.82, 0, "#f8f3e8", 0.09),
         plinth: surface("#f7f5ef", 0.68),
         decoration: surface("#d8d2c5", 0.78)
       }
@@ -165,9 +165,9 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<
           wallColor: "#fff7ea",
           ceilingColor: "#ffffff",
           groundColor: "#e6e2d8",
-          roomIntensity: 0.42,
-          wallIntensity: 0.78,
-          ceilingIntensity: 0.5
+          roomIntensity: 0.18,
+          wallIntensity: 0.48,
+          ceilingIntensity: 0.28
         })
       ],
       modifiers: [
@@ -216,9 +216,9 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<
         accent: "#d8a88d"
       },
       surfaces: {
-        background: surface("#f6eee8", 0.72, 0, "#fff0e5", 0.05),
-        floor: surface("#e8ddd4", 0.76, 0, "#f6ebe0", 0.025),
-        wall: surface("#f2e7df", 0.72, 0, "#fff0e5", 0.055),
+        background: surface("#f6eee8", 0.72, 0, "#fff0e5", 0.085),
+        floor: surface("#e8ddd4", 0.76, 0, "#f6ebe0", 0.03),
+        wall: surface("#f2e7df", 0.72, 0, "#fff0e5", 0.095),
         plinth: surface("#fff7ef", 0.48),
         decoration: surface("#d8a88d", 0.55, 0.05)
       }
@@ -244,9 +244,9 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<
           wallColor: "#ffeadd",
           ceilingColor: "#fff8f1",
           groundColor: "#ead7c9",
-          roomIntensity: 0.36,
-          wallIntensity: 0.64,
-          ceilingIntensity: 0.42
+          roomIntensity: 0.16,
+          wallIntensity: 0.4,
+          ceilingIntensity: 0.24
         })
       ],
       modifiers: [
@@ -296,9 +296,9 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<
         accent: "#2e88ff"
       },
       surfaces: {
-        background: surface("#07090d", 0.62, 0, "#09111d", 0.06),
+        background: surface("#07090d", 0.62, 0, "#09111d", 0.11),
         floor: surface("#11151d", 0.58, 0, "#0d1420", 0.08),
-        wall: surface("#171b24", 0.62, 0, "#142033", 0.16),
+        wall: surface("#171b24", 0.62, 0, "#142033", 0.22),
         plinth: surface("#191f2b", 0.45, 0.15, "#0c1524", 0.08),
         decoration: surface("#2e88ff", 0.42, 0.1, "#0b2444", 0.8)
       }
@@ -324,9 +324,9 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<
           wallColor: "#365272",
           ceilingColor: "#4b6687",
           groundColor: "#121823",
-          roomIntensity: 0.32,
-          wallIntensity: 0.38,
-          ceilingIntensity: 0.28
+          roomIntensity: 0.14,
+          wallIntensity: 0.26,
+          ceilingIntensity: 0.16
         })
       ],
       modifiers: [
@@ -376,9 +376,9 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<
         accent: "#73513a"
       },
       surfaces: {
-        background: surface("#2b211c", 0.82, 0, "#3a2b22", 0.08),
-        floor: surface("#8c6548", 0.78, 0, "#9a7558", 0.03),
-        wall: surface("#c9b49b", 0.8, 0, "#e1c8a9", 0.045),
+        background: surface("#2b211c", 0.82, 0, "#3a2b22", 0.1),
+        floor: surface("#8c6548", 0.78, 0, "#9a7558", 0.035),
+        wall: surface("#c9b49b", 0.8, 0, "#e1c8a9", 0.085),
         plinth: surface("#d9c3a3", 0.64),
         decoration: surface("#73513a", 0.72)
       }
@@ -404,9 +404,9 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<
           wallColor: "#ffd0a0",
           ceilingColor: "#ffe7c8",
           groundColor: "#6f4d38",
-          roomIntensity: 0.32,
-          wallIntensity: 0.48,
-          ceilingIntensity: 0.36
+          roomIntensity: 0.16,
+          wallIntensity: 0.34,
+          ceilingIntensity: 0.2
         })
       ],
       modifiers: [
@@ -454,9 +454,9 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<
         accent: "#9c8f7b"
       },
       surfaces: {
-        background: surface("#eee9df", 0.78, 0, "#f2eadf", 0.04),
-        floor: surface("#cfc7b7", 0.8, 0, "#ded5c5", 0.025),
-        wall: surface("#ddd5c8", 0.76, 0, "#eee5d7", 0.045),
+        background: surface("#eee9df", 0.78, 0, "#f2eadf", 0.08),
+        floor: surface("#cfc7b7", 0.8, 0, "#ded5c5", 0.03),
+        wall: surface("#ddd5c8", 0.76, 0, "#eee5d7", 0.09),
         plinth: surface("#f2eee6", 0.62),
         decoration: surface("#9c8f7b", 0.7)
       }
@@ -482,9 +482,9 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<
           wallColor: "#f8ead8",
           ceilingColor: "#fff8ef",
           groundColor: "#c7bcaa",
-          roomIntensity: 0.34,
-          wallIntensity: 0.58,
-          ceilingIntensity: 0.4
+          roomIntensity: 0.16,
+          wallIntensity: 0.36,
+          ceilingIntensity: 0.22
         })
       ],
       modifiers: [
@@ -531,9 +531,9 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<
         accent: "#ffb84d"
       },
       surfaces: {
-        background: surface("#f5f8ff", 0.76, 0, "#f7fbff", 0.04),
-        floor: surface("#e1ecff", 0.78, 0, "#eef5ff", 0.025),
-        wall: surface("#f8fbff", 0.76, 0, "#ffffff", 0.045),
+        background: surface("#f5f8ff", 0.76, 0, "#f7fbff", 0.08),
+        floor: surface("#e1ecff", 0.78, 0, "#eef5ff", 0.03),
+        wall: surface("#f8fbff", 0.76, 0, "#ffffff", 0.09),
         plinth: surface("#ffffff", 0.58),
         decoration: surface("#ffb84d", 0.5)
       }
@@ -559,9 +559,9 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<
           wallColor: "#f0f8ff",
           ceilingColor: "#ffffff",
           groundColor: "#dceaff",
-          roomIntensity: 0.36,
-          wallIntensity: 0.62,
-          ceilingIntensity: 0.42
+          roomIntensity: 0.17,
+          wallIntensity: 0.38,
+          ceilingIntensity: 0.24
         })
       ],
       modifiers: [
