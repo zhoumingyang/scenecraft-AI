@@ -4,6 +4,7 @@ import { DEFAULT_EDITOR_TONE_MAPPING } from "../runtime/colorManagement";
 import type {
   PbrSurfaceConfig,
   StudioLayoutProfile,
+  StudioLightingProfile,
   StudioSceneStyleProfile,
   StudioSceneStyleProfileId
 } from "./types";
@@ -20,7 +21,7 @@ function surface(
   roughness: number,
   metalness = 0,
   emissive = "#000000",
-  emissiveIntensity = 1
+  emissiveIntensity = 0
 ): PbrSurfaceConfig {
   return {
     color,
@@ -30,6 +31,51 @@ function surface(
     emissiveIntensity,
     opacity: 1
   };
+}
+
+function roomSafetyLights(options: {
+  roomColor: string;
+  wallColor: string;
+  ceilingColor: string;
+  groundColor: string;
+  roomIntensity: number;
+  wallIntensity: number;
+  ceilingIntensity: number;
+}): StudioLightingProfile["lights"] {
+  return [
+    {
+      role: "roomFill",
+      type: "ambient",
+      color: options.roomColor,
+      groundColor: options.groundColor,
+      intensity: options.roomIntensity,
+      position: [0, 4.25, 0],
+      target: [0, 0.7, 0],
+      castsShadow: false
+    },
+    {
+      role: "wallWash",
+      type: "rectArea",
+      color: options.wallColor,
+      intensity: options.wallIntensity,
+      position: [0, 2.25, 2.7],
+      target: [0, 1.25, -2.7],
+      width: 5.8,
+      height: 3.1,
+      castsShadow: false
+    },
+    {
+      role: "ceilingWash",
+      type: "rectArea",
+      color: options.ceilingColor,
+      intensity: options.ceilingIntensity,
+      position: [0, 1.35, 0.35],
+      target: [0, 4.45, 0],
+      width: 5.4,
+      height: 3.8,
+      castsShadow: false
+    }
+  ];
 }
 
 function defaultLayout(
@@ -91,9 +137,9 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<
         accent: "#d8d2c5"
       },
       surfaces: {
-        background: surface("#f8f7f3", 0.82),
-        floor: surface("#e9e7df", 0.86),
-        wall: surface("#f3f1eb", 0.82),
+        background: surface("#f8f7f3", 0.82, 0, "#f8f3e8", 0.08),
+        floor: surface("#e9e7df", 0.86, 0, "#f1eee6", 0.025),
+        wall: surface("#f3f1eb", 0.82, 0, "#f8f3e8", 0.09),
         plinth: surface("#f7f5ef", 0.68),
         decoration: surface("#d8d2c5", 0.78)
       }
@@ -113,7 +159,16 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<
         { role: "fill", type: "rectArea", color: "#f3fbff", intensity: 1.6, position: [-3.2, 2.4, 2.4], target: [0, 0.7, 0], width: 2.8, height: 2.4 },
         { role: "rim", type: "spot", color: "#e2ecff", intensity: 12, position: [0, 3.2, -3.3], target: [0, 0.9, 0], distance: 10, angle: 0.58, penumbra: 0.42 },
         { role: "top", type: "rectArea", color: "#ffffff", intensity: 1.9, position: [0, 4.8, 0.2], target: [0, 0.4, 0], width: 3.2, height: 2.6 },
-        { role: "accent", type: "spot", color: "#d8d2c5", intensity: 5.5, position: [-2.3, 2.4, -2.2], target: [0, 0.75, 0], distance: 7, angle: 0.48, penumbra: 0.55 }
+        { role: "accent", type: "spot", color: "#d8d2c5", intensity: 5.5, position: [-2.3, 2.4, -2.2], target: [0, 0.75, 0], distance: 7, angle: 0.48, penumbra: 0.55 },
+        ...roomSafetyLights({
+          roomColor: "#fffaf0",
+          wallColor: "#fff7ea",
+          ceilingColor: "#ffffff",
+          groundColor: "#e6e2d8",
+          roomIntensity: 0.18,
+          wallIntensity: 0.48,
+          ceilingIntensity: 0.28
+        })
       ],
       modifiers: [
         { role: "reflector", enabled: true, placement: "left", color: "#ffffff", intensityEffect: 0.55, size: [1.3, 1.7], position: [-2.05, 1.25, 0.75], rotation: [0, 0.54, 0], visibleInRender: true }
@@ -122,7 +177,7 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<
     camera: { mode: "birdViewOnly", fov: 42, pitch: 0.18, yaw: Math.PI / 4, distanceMultiplier: 2.75, targetHeightRatio: 0.48, allowFirstPerson: false, orbitEnabled: true },
     postProcessing: {
       toneMapping: DEFAULT_EDITOR_TONE_MAPPING,
-      exposure: 1,
+      exposure: 1.04,
       contrast: 0.04,
       saturation: 0.02,
       temperature: 0.02,
@@ -161,9 +216,9 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<
         accent: "#d8a88d"
       },
       surfaces: {
-        background: surface("#f6eee8", 0.72),
-        floor: surface("#e8ddd4", 0.76),
-        wall: surface("#f2e7df", 0.72),
+        background: surface("#f6eee8", 0.72, 0, "#fff0e5", 0.085),
+        floor: surface("#e8ddd4", 0.76, 0, "#f6ebe0", 0.03),
+        wall: surface("#f2e7df", 0.72, 0, "#fff0e5", 0.095),
         plinth: surface("#fff7ef", 0.48),
         decoration: surface("#d8a88d", 0.55, 0.05)
       }
@@ -183,7 +238,16 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<
         { role: "fill", type: "rectArea", color: "#fff8f0", intensity: 1.4, position: [-3.1, 2.2, 2.6], target: [0, 0.75, 0], width: 2.6, height: 2.2 },
         { role: "rim", type: "spot", color: "#fff5ec", intensity: 15, position: [1.8, 2.8, -3.1], target: [0, 0.8, 0], distance: 9, angle: 0.52, penumbra: 0.46 },
         { role: "top", type: "rectArea", color: "#fff7ef", intensity: 1.5, position: [0, 4.6, 0.1], target: [0, 0.55, 0], width: 2.8, height: 2.6 },
-        { role: "accent", type: "spot", color: "#d8a88d", intensity: 7.2, position: [-1.7, 2.7, -2.7], target: [0, 0.8, 0], distance: 7, angle: 0.42, penumbra: 0.62 }
+        { role: "accent", type: "spot", color: "#d8a88d", intensity: 7.2, position: [-1.7, 2.7, -2.7], target: [0, 0.8, 0], distance: 7, angle: 0.42, penumbra: 0.62 },
+        ...roomSafetyLights({
+          roomColor: "#fff2e8",
+          wallColor: "#ffeadd",
+          ceilingColor: "#fff8f1",
+          groundColor: "#ead7c9",
+          roomIntensity: 0.16,
+          wallIntensity: 0.4,
+          ceilingIntensity: 0.24
+        })
       ],
       modifiers: [
         { role: "reflector", enabled: true, placement: "front", color: "#fff7ee", intensityEffect: 0.45, size: [1.4, 1.2], position: [-1.8, 0.95, 1.35], rotation: [-0.12, 0.38, 0], visibleInRender: true },
@@ -232,9 +296,9 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<
         accent: "#2e88ff"
       },
       surfaces: {
-        background: surface("#07090d", 0.62, 0, "#09111d", 0.06),
+        background: surface("#07090d", 0.62, 0, "#09111d", 0.11),
         floor: surface("#11151d", 0.58, 0, "#0d1420", 0.08),
-        wall: surface("#171b24", 0.62, 0, "#0f1725", 0.12),
+        wall: surface("#171b24", 0.62, 0, "#142033", 0.22),
         plinth: surface("#191f2b", 0.45, 0.15, "#0c1524", 0.08),
         decoration: surface("#2e88ff", 0.42, 0.1, "#0b2444", 0.8)
       }
@@ -254,7 +318,16 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<
         { role: "fill", type: "hemisphere", color: "#8db8ff", groundColor: "#243246", intensity: 1.15, position: [0, 4.2, 0], target: [0, 0.7, 0] },
         { role: "rim", type: "spot", color: "#62a8ff", intensity: 26, position: [-1.5, 2.8, -3.2], target: [0, 0.9, 0], distance: 10, angle: 0.5, penumbra: 0.25 },
         { role: "top", type: "rectArea", color: "#b9d3ff", intensity: 1.9, position: [0, 4.6, -0.1], target: [0, 0.55, 0], width: 2.8, height: 2.8 },
-        { role: "accent", type: "spot", color: "#2e88ff", intensity: 14, position: [2.3, 2.2, -2.4], target: [0, 0.75, 0], distance: 8, angle: 0.4, penumbra: 0.3 }
+        { role: "accent", type: "spot", color: "#2e88ff", intensity: 14, position: [2.3, 2.2, -2.4], target: [0, 0.75, 0], distance: 8, angle: 0.4, penumbra: 0.3 },
+        ...roomSafetyLights({
+          roomColor: "#405875",
+          wallColor: "#365272",
+          ceilingColor: "#4b6687",
+          groundColor: "#121823",
+          roomIntensity: 0.14,
+          wallIntensity: 0.26,
+          ceilingIntensity: 0.16
+        })
       ],
       modifiers: [
         { role: "negativeFill", enabled: false, placement: "left", color: "#05070a", intensityEffect: -0.42, size: [1.1, 1.7], position: [-2.15, 1.18, 0.55], rotation: [0, 0.5, 0], visibleInRender: false },
@@ -264,8 +337,8 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<
     camera: { mode: "birdViewOnly", fov: 40, pitch: 0.12, yaw: Math.PI / 4.5, distanceMultiplier: 2.85, targetHeightRatio: 0.48, allowFirstPerson: false, orbitEnabled: true },
     postProcessing: {
       toneMapping: THREE.ACESFilmicToneMapping,
-      exposure: 1.02,
-      contrast: 0.18,
+      exposure: 1.06,
+      contrast: 0.14,
       saturation: -0.04,
       temperature: -0.1,
       tint: 0.04,
@@ -274,7 +347,7 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<
       grain: { enabled: false, intensity: 0.12, grayscale: false },
       passes: {
         bloom: { enabled: true, strength: 0.55, radius: 0.18, threshold: 0.78 },
-        gtao: { enabled: true, radius: 0.5, distanceFallOff: 1, thickness: 1, blendIntensity: 0.38 }
+        gtao: { enabled: true, radius: 0.45, distanceFallOff: 1.2, thickness: 0.7, blendIntensity: 0.26 }
       }
     }
   },
@@ -303,9 +376,9 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<
         accent: "#73513a"
       },
       surfaces: {
-        background: surface("#2b211c", 0.82),
-        floor: surface("#8c6548", 0.78),
-        wall: surface("#c9b49b", 0.8),
+        background: surface("#2b211c", 0.82, 0, "#3a2b22", 0.1),
+        floor: surface("#8c6548", 0.78, 0, "#9a7558", 0.035),
+        wall: surface("#c9b49b", 0.8, 0, "#e1c8a9", 0.085),
         plinth: surface("#d9c3a3", 0.64),
         decoration: surface("#73513a", 0.72)
       }
@@ -325,7 +398,16 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<
         { role: "fill", type: "rectArea", color: "#fff1dc", intensity: 1.1, position: [2.8, 2.2, 2.8], target: [0, 0.7, 0], width: 2.2, height: 1.8 },
         { role: "rim", type: "spot", color: "#ffbc76", intensity: 16, position: [1.8, 2.7, -2.8], target: [0, 0.8, 0], distance: 9, angle: 0.62, penumbra: 0.5 },
         { role: "top", type: "rectArea", color: "#fff1dc", intensity: 1.2, position: [0, 4.2, 0.2], target: [0, 0.55, 0], width: 3, height: 2.2 },
-        { role: "accent", type: "spot", color: "#73513a", intensity: 6.2, position: [2.1, 2.2, -2.3], target: [0, 0.7, 0], distance: 7, angle: 0.5, penumbra: 0.55 }
+        { role: "accent", type: "spot", color: "#73513a", intensity: 6.2, position: [2.1, 2.2, -2.3], target: [0, 0.7, 0], distance: 7, angle: 0.5, penumbra: 0.55 },
+        ...roomSafetyLights({
+          roomColor: "#ffd9ad",
+          wallColor: "#ffd0a0",
+          ceilingColor: "#ffe7c8",
+          groundColor: "#6f4d38",
+          roomIntensity: 0.16,
+          wallIntensity: 0.34,
+          ceilingIntensity: 0.2
+        })
       ],
       modifiers: [
         { role: "reflector", enabled: true, placement: "right", color: "#ffe2bd", intensityEffect: 0.48, size: [1.25, 1.45], position: [2.05, 1.12, 0.7], rotation: [0, -0.5, 0], visibleInRender: true }
@@ -334,7 +416,7 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<
     camera: { mode: "birdViewOnly", fov: 44, pitch: 0.15, yaw: Math.PI / 5, distanceMultiplier: 2.9, targetHeightRatio: 0.48, allowFirstPerson: false, orbitEnabled: true },
     postProcessing: {
       toneMapping: THREE.ACESFilmicToneMapping,
-      exposure: 1.02,
+      exposure: 1.06,
       contrast: 0.06,
       saturation: 0.06,
       temperature: 0.18,
@@ -372,9 +454,9 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<
         accent: "#9c8f7b"
       },
       surfaces: {
-        background: surface("#eee9df", 0.78),
-        floor: surface("#cfc7b7", 0.8),
-        wall: surface("#ddd5c8", 0.76),
+        background: surface("#eee9df", 0.78, 0, "#f2eadf", 0.08),
+        floor: surface("#cfc7b7", 0.8, 0, "#ded5c5", 0.03),
+        wall: surface("#ddd5c8", 0.76, 0, "#eee5d7", 0.09),
         plinth: surface("#f2eee6", 0.62),
         decoration: surface("#9c8f7b", 0.7)
       }
@@ -394,7 +476,16 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<
         { role: "fill", type: "rectArea", color: "#f3f8ff", intensity: 1.2, position: [-3.1, 2.5, 2.3], target: [0, 0.7, 0], width: 2.4, height: 2.1 },
         { role: "rim", type: "spot", color: "#ffffff", intensity: 11, position: [2.3, 2.8, -2.8], target: [0, 0.8, 0], distance: 8, angle: 0.55, penumbra: 0.36 },
         { role: "top", type: "rectArea", color: "#f7f5ef", intensity: 1.7, position: [0, 4.8, 0.1], target: [0, 0.55, 0], width: 3.4, height: 2.4 },
-        { role: "accent", type: "spot", color: "#9c8f7b", intensity: 3.8, position: [-2.2, 2.3, -2.4], target: [0, 0.75, 0], distance: 7, angle: 0.52, penumbra: 0.5 }
+        { role: "accent", type: "spot", color: "#9c8f7b", intensity: 3.8, position: [-2.2, 2.3, -2.4], target: [0, 0.75, 0], distance: 7, angle: 0.52, penumbra: 0.5 },
+        ...roomSafetyLights({
+          roomColor: "#fff4e5",
+          wallColor: "#f8ead8",
+          ceilingColor: "#fff8ef",
+          groundColor: "#c7bcaa",
+          roomIntensity: 0.16,
+          wallIntensity: 0.36,
+          ceilingIntensity: 0.22
+        })
       ],
       modifiers: [
         { role: "reflector", enabled: true, placement: "front", color: "#f4efe5", intensityEffect: 0.36, size: [1.25, 1.3], position: [-1.75, 0.95, 1.25], rotation: [-0.08, 0.34, 0], visibleInRender: true },
@@ -404,7 +495,7 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<
     camera: { mode: "birdViewOnly", fov: 38, pitch: 0.1, yaw: Math.PI / 6, distanceMultiplier: 3.05, targetHeightRatio: 0.5, allowFirstPerson: false, orbitEnabled: true },
     postProcessing: {
       toneMapping: THREE.ACESFilmicToneMapping,
-      exposure: 1,
+      exposure: 1.04,
       contrast: 0.03,
       saturation: -0.02,
       temperature: 0.03,
@@ -440,9 +531,9 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<
         accent: "#ffb84d"
       },
       surfaces: {
-        background: surface("#f5f8ff", 0.76),
-        floor: surface("#e1ecff", 0.78),
-        wall: surface("#f8fbff", 0.76),
+        background: surface("#f5f8ff", 0.76, 0, "#f7fbff", 0.08),
+        floor: surface("#e1ecff", 0.78, 0, "#eef5ff", 0.03),
+        wall: surface("#f8fbff", 0.76, 0, "#ffffff", 0.09),
         plinth: surface("#ffffff", 0.58),
         decoration: surface("#ffb84d", 0.5)
       }
@@ -462,7 +553,16 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<
         { role: "fill", type: "rectArea", color: "#e8f4ff", intensity: 2, position: [-2.8, 2.2, 2.3], target: [0, 0.75, 0], width: 2.8, height: 2.5 },
         { role: "rim", type: "spot", color: "#ffe0a8", intensity: 12, position: [0.8, 2.8, -3], target: [0, 0.8, 0], distance: 9, angle: 0.6, penumbra: 0.44 },
         { role: "top", type: "rectArea", color: "#ffffff", intensity: 1.8, position: [0, 4.4, 0.1], target: [0, 0.55, 0], width: 3.2, height: 2.4 },
-        { role: "accent", type: "point", color: "#ffb84d", intensity: 5, position: [-1.8, 1.5, -1.7], target: [0, 0.75, 0], distance: 5 }
+        { role: "accent", type: "point", color: "#ffb84d", intensity: 5, position: [-1.8, 1.5, -1.7], target: [0, 0.75, 0], distance: 5 },
+        ...roomSafetyLights({
+          roomColor: "#f7fbff",
+          wallColor: "#f0f8ff",
+          ceilingColor: "#ffffff",
+          groundColor: "#dceaff",
+          roomIntensity: 0.17,
+          wallIntensity: 0.38,
+          ceilingIntensity: 0.24
+        })
       ],
       modifiers: [
         { role: "reflector", enabled: true, placement: "left", color: "#ffffff", intensityEffect: 0.52, size: [1.2, 1.4], position: [-2, 1.1, 0.75], rotation: [0, 0.5, 0], visibleInRender: true },
