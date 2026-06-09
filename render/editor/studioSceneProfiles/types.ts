@@ -138,8 +138,9 @@ export type StudioLightingProfile = {
   };
   lights: Array<{
     role: "key" | "keyShadow" | "fill" | "rim" | "top" | "accent";
-    type: "rectArea" | "directional" | "spot" | "point";
+    type: "ambient" | "hemisphere" | "rectArea" | "directional" | "spot" | "point";
     color: string;
+    groundColor?: string;
     intensity: number;
     position: Vec3Tuple;
     target: Vec3Tuple;

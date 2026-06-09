@@ -143,13 +143,17 @@ function createLightDescriptor(
     Math.max(bounds.radius * 0.22, 0.2)
   );
   const type: EditorLightJSON["type"] =
-    profileLight.type === "rectArea"
-      ? "rectArea"
-      : profileLight.type === "directional"
-        ? "directional"
-        : profileLight.type === "spot"
-          ? "spot"
-          : "point";
+    profileLight.type === "ambient"
+      ? "ambient"
+      : profileLight.type === "hemisphere"
+        ? "hemisphere"
+        : profileLight.type === "rectArea"
+          ? "rectArea"
+          : profileLight.type === "directional"
+            ? "directional"
+            : profileLight.type === "spot"
+              ? "spot"
+              : "point";
 
   return {
     kind: "light",
@@ -165,7 +169,7 @@ function createLightDescriptor(
       quaternion: toQuaternionTuple(createLookAtQuaternion(position, target)),
       scale: [1, 1, 1],
       color: profileLight.color,
-      groundColor: "#263041",
+      groundColor: profileLight.groundColor ?? "#263041",
       intensity: profileLight.intensity,
       distance: (profileLight.distance ?? 0) * bounds.radius,
       decay: 2,

@@ -251,20 +251,20 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<
       lights: [
         { role: "key", type: "rectArea", color: "#dbe9ff", intensity: 3, position: [2.8, 3.8, 3], target: [0, 0.9, 0], width: 2.6, height: 1.7 },
         { role: "keyShadow", type: "directional", color: "#b8d4ff", intensity: 2.4, position: [2.7, 4, 2.6], target: [0, 0.5, 0], castsShadow: true },
-        { role: "fill", type: "rectArea", color: "#274f95", intensity: 0.8, position: [-3.5, 1.9, 1.4], target: [0, 0.7, 0], width: 2.1, height: 2.8 },
+        { role: "fill", type: "hemisphere", color: "#8db8ff", groundColor: "#243246", intensity: 1.15, position: [0, 4.2, 0], target: [0, 0.7, 0] },
         { role: "rim", type: "spot", color: "#62a8ff", intensity: 26, position: [-1.5, 2.8, -3.2], target: [0, 0.9, 0], distance: 10, angle: 0.5, penumbra: 0.25 },
-        { role: "top", type: "rectArea", color: "#8ab8ff", intensity: 1.3, position: [0, 4.6, -0.1], target: [0, 0.55, 0], width: 2.2, height: 2.2 },
+        { role: "top", type: "rectArea", color: "#b9d3ff", intensity: 1.9, position: [0, 4.6, -0.1], target: [0, 0.55, 0], width: 2.8, height: 2.8 },
         { role: "accent", type: "spot", color: "#2e88ff", intensity: 14, position: [2.3, 2.2, -2.4], target: [0, 0.75, 0], distance: 8, angle: 0.4, penumbra: 0.3 }
       ],
       modifiers: [
-        { role: "negativeFill", enabled: true, placement: "left", color: "#05070a", intensityEffect: -0.42, size: [1.1, 1.7], position: [-2.15, 1.18, 0.55], rotation: [0, 0.5, 0], visibleInRender: true },
+        { role: "negativeFill", enabled: false, placement: "left", color: "#05070a", intensityEffect: -0.42, size: [1.1, 1.7], position: [-2.15, 1.18, 0.55], rotation: [0, 0.5, 0], visibleInRender: false },
         { role: "stripPanel", enabled: true, placement: "right", color: "#2e88ff", intensityEffect: 0.5, size: [0.18, 1.9], position: [2.15, 1.35, -1.0], rotation: [0, -0.58, 0], visibleInRender: true }
       ]
     },
     camera: { mode: "birdViewOnly", fov: 40, pitch: 0.12, yaw: Math.PI / 4.5, distanceMultiplier: 2.85, targetHeightRatio: 0.48, allowFirstPerson: false, orbitEnabled: true },
     postProcessing: {
       toneMapping: THREE.ACESFilmicToneMapping,
-      exposure: 0.94,
+      exposure: 1.02,
       contrast: 0.18,
       saturation: -0.04,
       temperature: -0.1,
@@ -274,7 +274,7 @@ export const STUDIO_SCENE_STYLE_PROFILES: Record<
       grain: { enabled: false, intensity: 0.12, grayscale: false },
       passes: {
         bloom: { enabled: true, strength: 0.55, radius: 0.18, threshold: 0.78 },
-        gtao: { enabled: true, radius: 0.65, distanceFallOff: 1, thickness: 1, blendIntensity: 0.75 }
+        gtao: { enabled: true, radius: 0.5, distanceFallOff: 1, thickness: 1, blendIntensity: 0.38 }
       }
     }
   },

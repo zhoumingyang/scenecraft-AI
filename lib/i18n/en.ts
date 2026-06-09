@@ -580,8 +580,6 @@ const en = {
     "editor.ai3d.listPlaceholder": "Comma-separated, for example: tail, wings, backpack"
 } as const;
 
-export type TranslationDictionary = {
-  [Key in keyof typeof en]: string;
-};
+export type TranslationDictionary = typeof en;
 
 export default en;
