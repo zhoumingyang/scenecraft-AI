@@ -1,11 +1,17 @@
 import * as THREE from "three";
 import type { BindingRegistry } from "../../bindings/bindingRegistry";
+import type { StudioLayoutBounds } from "../../studioSceneLayoutGenerator";
 import { createStudioFrameFromObject } from "./target";
 import type {
   ActiveStudioSceneSession,
   StudioTargetFrame,
   StudioTransientEntityRole
 } from "./types";
+
+const STUDIO_SHADOW_SCENE_EXTENT_RATIO = 6.8;
+const STUDIO_SHADOW_MIN_HALF_EXTENT = 5;
+const STUDIO_SHADOW_MIN_VERTICAL_EXTENT = 5;
+const STUDIO_SHADOW_ROOM_MARGIN_RATIO = 0.18;
 
 export function markTransientObject(
   registry: BindingRegistry,
@@ -28,14 +34,13 @@ export function configureStudioTransientMeshShadows(
 ) {
   if (!object) return;
   const receiveOnlyRoles = new Set<StudioTransientEntityRole>([
-    "floor",
-    "plinth"
-  ]);
-  const noShadowRoles = new Set<StudioTransientEntityRole>([
     "background",
     "cove",
+    "floor",
     "backWall",
-    "sideWall",
+    "sideWall"
+  ]);
+  const noShadowRoles = new Set<StudioTransientEntityRole>([
     "reflector",
     "negativeFill",
     "stripPanel"
@@ -51,6 +56,17 @@ export function configureStudioTransientMeshShadows(
     if (receiveOnlyRoles.has(role)) {
       child.castShadow = false;
       child.receiveShadow = true;
+      return;
+    }
+    if (role === "plinth") {
+      child.castShadow = true;
+      child.receiveShadow = true;
+      return;
+    }
+    if (role === "decoration") {
+      child.castShadow = true;
+      child.receiveShadow = true;
+      return;
     }
   });
 }
@@ -58,24 +74,42 @@ export function configureStudioTransientMeshShadows(
 export function configureStudioTransientLightShadows(
   object: THREE.Object3D,
   lightRole: string,
-  frame: StudioTargetFrame
+  frame: StudioTargetFrame,
+  bounds?: StudioLayoutBounds
 ) {
   object.traverse((child) => {
     if (child instanceof THREE.DirectionalLight) {
       child.castShadow = lightRole === "keyShadow";
       if (!child.castShadow) return;
-      const halfWidth = Math.max(frame.footprintRadius * 2.2, frame.radius * 1.9, 1.6);
-      const top = Math.max(frame.height * 1.35, frame.radius * 2.2, 1.8);
-      const bottom = -Math.max(frame.radius * 1.25, frame.footprintRadius * 1.4, 1.2);
-      child.shadow.mapSize.set(2048, 2048);
+      const roomMargin = bounds ? bounds.radius * STUDIO_SHADOW_ROOM_MARGIN_RATIO : 0;
+      const halfWidth = Math.max(
+        frame.footprintRadius * 3.6,
+        frame.radius * STUDIO_SHADOW_SCENE_EXTENT_RATIO,
+        bounds ? bounds.width * 0.5 + roomMargin : 0,
+        bounds ? bounds.depth * 0.5 + roomMargin : 0,
+        STUDIO_SHADOW_MIN_HALF_EXTENT
+      );
+      const verticalExtent = Math.max(
+        frame.height * 3.2,
+        frame.radius * STUDIO_SHADOW_SCENE_EXTENT_RATIO,
+        bounds ? bounds.wallHeight + roomMargin : 0,
+        STUDIO_SHADOW_MIN_VERTICAL_EXTENT
+      );
+      const far = Math.max(
+        frame.radius * 14,
+        frame.height * 6,
+        bounds ? bounds.width + bounds.depth + bounds.wallHeight : 0,
+        36
+      );
+      child.shadow.mapSize.set(4096, 4096);
       child.shadow.camera.left = -halfWidth;
       child.shadow.camera.right = halfWidth;
-      child.shadow.camera.top = top;
-      child.shadow.camera.bottom = bottom;
-      child.shadow.camera.near = 0.5;
-      child.shadow.camera.far = Math.max(frame.radius * 8, frame.height * 4, 24);
-      child.shadow.bias = 0.00012;
-      child.shadow.normalBias = 0.025;
+      child.shadow.camera.top = verticalExtent;
+      child.shadow.camera.bottom = -verticalExtent;
+      child.shadow.camera.near = 0.1;
+      child.shadow.camera.far = far;
+      child.shadow.bias = 0.00008;
+      child.shadow.normalBias = 0.012;
       child.shadow.radius = 3;
       child.shadow.camera.updateProjectionMatrix();
       child.shadow.needsUpdate = true;

@@ -292,7 +292,8 @@ export class StudioSceneTransientEntityManager {
       this.configureStudioTransientLightShadows(
         binding.object,
         descriptor.lightRole,
-        frame
+        frame,
+        backgroundLayout.bounds
       );
       binding.object.userData.studioSceneLightRole = descriptor.lightRole;
       binding.pickTargets?.forEach((target) => {
@@ -510,9 +511,10 @@ export class StudioSceneTransientEntityManager {
   private configureStudioTransientLightShadows(
     object: Parameters<typeof configureStudioTransientLightShadows>[0],
     lightRole: Parameters<typeof configureStudioTransientLightShadows>[1],
-    frame: StudioTargetFrame
+    frame: StudioTargetFrame,
+    bounds?: Parameters<typeof configureStudioTransientLightShadows>[3]
   ) {
-    configureStudioTransientLightShadows(object, lightRole, frame);
+    configureStudioTransientLightShadows(object, lightRole, frame, bounds);
   }
 
   private placeTransientEntityAtSpawn(

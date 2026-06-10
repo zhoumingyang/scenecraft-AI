@@ -181,12 +181,14 @@ export function createStudioDecorationDescriptors(
 ): StudioLayoutMeshDescriptor[] {
   const kinds = getDefaultDecorationKinds(input).slice(0, 5);
   const [centerX, , centerZ] = input.bounds.center;
+  const backWallShadowClearance = input.bounds.radius * 0.68;
+  const sideWallShadowClearance = input.bounds.radius * 0.72;
   const positions: Vec3Tuple[] = [
-    [centerX - input.bounds.width * 0.27, input.plinthTopY + input.bounds.radius * 0.42, input.bounds.backZ + input.bounds.radius * 0.18],
-    [centerX + input.bounds.width * 0.24, input.plinthTopY + input.bounds.radius * 0.32, input.bounds.backZ + input.bounds.radius * 0.32],
-    [input.bounds.leftX + input.bounds.radius * 0.42, input.plinthTopY + input.bounds.radius * 0.5, centerZ + input.bounds.depth * 0.08],
-    [input.bounds.rightX - input.bounds.radius * 0.42, input.plinthTopY + input.bounds.radius * 0.64, centerZ - input.bounds.depth * 0.05],
-    [centerX, input.plinthTopY + input.bounds.radius * 1.1, input.bounds.backZ + input.bounds.radius * 0.5]
+    [centerX - input.bounds.width * 0.27, input.plinthTopY + input.bounds.radius * 0.42, input.bounds.backZ + backWallShadowClearance],
+    [centerX + input.bounds.width * 0.24, input.plinthTopY + input.bounds.radius * 0.32, input.bounds.backZ + backWallShadowClearance * 1.12],
+    [input.bounds.leftX + sideWallShadowClearance, input.plinthTopY + input.bounds.radius * 0.5, centerZ + input.bounds.depth * 0.08],
+    [input.bounds.rightX - sideWallShadowClearance, input.plinthTopY + input.bounds.radius * 0.64, centerZ - input.bounds.depth * 0.05],
+    [centerX, input.plinthTopY + input.bounds.radius * 1.1, input.bounds.backZ + backWallShadowClearance]
   ];
 
   return kinds.map((kind, index) =>
