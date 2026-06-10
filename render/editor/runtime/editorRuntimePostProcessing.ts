@@ -68,7 +68,8 @@ export class EditorRuntimePostProcessing {
     this.composer = new EffectComposer(
       this.renderer,
       new THREE.WebGLRenderTarget(1, 1, {
-        depthBuffer: true
+        depthBuffer: true,
+        type: THREE.HalfFloatType
       })
     );
     this.renderPass = new RenderPass(this.scene, this.camera);

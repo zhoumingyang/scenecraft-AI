@@ -73,7 +73,7 @@ export const darkTechStyleProfile: StudioSceneStyleProfile = {
     temperature: -0.1,
     tint: 0.04,
     vignette: 0.28,
-    detail: 0.18,
+    detail: 0.04,
     grain: { enabled: false, intensity: 0.12, grayscale: false },
     passes: {
       bloom: { enabled: true, strength: 0.55, radius: 0.18, threshold: 0.78 },

@@ -59,6 +59,10 @@ const STUDIO_COLOR_GRADING_SHADER = {
       return mix(softened, sharpened, step(0.0, detail));
     }
 
+    float interleavedGradientNoise(vec2 position) {
+      return fract(52.9829189 * fract(dot(position, vec2(0.06711056, 0.00583715))));
+    }
+
     void main() {
       vec4 source = texture2D(tDiffuse, vUv);
       vec3 color = source.rgb;
@@ -75,6 +79,9 @@ const STUDIO_COLOR_GRADING_SHADER = {
       vec2 centeredUv = vUv - 0.5;
       float vignetteMask = smoothstep(0.78, 0.28, length(centeredUv));
       color *= mix(1.0 - vignette * 0.52, 1.0, vignetteMask);
+
+      float dither = interleavedGradientNoise(gl_FragCoord.xy) - 0.5;
+      color += vec3(dither / 255.0);
 
       gl_FragColor = vec4(clamp(color, 0.0, 1.0), source.a);
     }
