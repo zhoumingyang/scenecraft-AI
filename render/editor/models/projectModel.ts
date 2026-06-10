@@ -113,7 +113,7 @@ export class EditorProjectModel {
     const record = this.getEntityById(id);
     if (!record) return false;
 
-    if (record.kind !== "light" && !record.item.visible) {
+    if ("visible" in record.item && !record.item.visible) {
       return false;
     }
 

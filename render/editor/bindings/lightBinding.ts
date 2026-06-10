@@ -56,8 +56,11 @@ function createAmbientHelper(color: string) {
   return new THREE.LineSegments(geometry, material);
 }
 
-function markAsEditorLightHelper(helper: THREE.Object3D) {
+function markAsEditorLightHelper(helper: THREE.Object3D, owner: THREE.Object3D) {
   helper.userData.editorLightHelper = true;
+  helper.userData.editorLightHelperOwner = owner;
+  helper.userData.editorLightHelperOwnerVisible = owner.visible;
+  helper.userData.editorLightHelperEnabled = true;
 }
 
 function getShadowCameraFar(distance: number) {
@@ -151,6 +154,11 @@ function applyLightModelToObject(model: LightEntityModel, parts: LightBindingUpd
   model.applyTransformToObject(parts.root);
   parts.root.visible = model.visible;
   parts.root.updateMatrixWorld(true);
+  if (parts.helper) {
+    parts.helper.userData.editorLightHelperOwnerVisible = model.visible;
+    parts.helper.visible =
+      model.visible && parts.helper.userData.editorLightHelperEnabled !== false;
+  }
 
   if (parts.light instanceof THREE.HemisphereLight) {
     parts.light.color.set(model.color);
@@ -226,7 +234,7 @@ export function createLightBinding(context: BindingContext, model: LightEntityMo
   applyLightModelToObject(model, parts);
   setEntityId(parts.root, model.id);
   setEntityId(parts.helper, model.id);
-  markAsEditorLightHelper(parts.helper);
+  markAsEditorLightHelper(parts.helper, parts.root);
   scene.add(parts.root);
   if (!(parts.helper instanceof RectAreaLightHelper)) {
     scene.add(parts.helper);
@@ -237,6 +245,9 @@ export function createLightBinding(context: BindingContext, model: LightEntityMo
     model,
     object: parts.root,
     pickTargets: [parts.root, parts.helper],
+    applyState: () => {
+      applyLightModelToObject(model, parts);
+    },
     lastTransformState: captureObjectTransformState(parts.root),
     refresh: () => {
       if (parts.helper instanceof THREE.DirectionalLightHelper) {

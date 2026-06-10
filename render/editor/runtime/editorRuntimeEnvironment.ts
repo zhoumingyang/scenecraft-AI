@@ -207,7 +207,13 @@ export class EditorRuntimeEnvironment {
   syncLightHelperVisibility() {
     this.scene.traverse((object) => {
       if (object.userData?.editorLightHelper !== true) return;
-      object.visible = this.lightHelpersVisible;
+      const owner = object.userData.editorLightHelperOwner;
+      const ownerVisible =
+        owner instanceof THREE.Object3D
+          ? owner.visible
+          : object.userData.editorLightHelperOwnerVisible !== false;
+      object.userData.editorLightHelperEnabled = this.lightHelpersVisible;
+      object.visible = this.lightHelpersVisible && ownerVisible;
     });
   }
 

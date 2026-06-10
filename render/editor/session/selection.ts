@@ -71,20 +71,32 @@ export class EditorSelectionSessionController {
   }
 
   pick(clientX: number, clientY: number): string | null {
+    const projectModel = this.getProjectModel();
     const pickedEntityId = pickEntityId({
       camera: this.runtime.camera,
       raycaster: this.runtime.raycaster,
       domElement: this.runtime.renderer.domElement,
       pickTargets: this.registry.getPickTargets(),
       clientX,
-      clientY
+      clientY,
+      isEntityPickable: (entityId) => {
+        const binding = this.registry.get(entityId);
+        if (!binding || binding.model.locked) return false;
+        if (
+          this.studioScene.isActive() &&
+          !this.studioScene.isStudioSceneEntityInteractive(entityId)
+        ) {
+          return false;
+        }
+        return projectModel?.isEntityEffectivelyVisible(entityId) ?? true;
+      }
     });
 
     if (pickedEntityId && this.studioScene.isTransientStudioEntity(pickedEntityId)) {
       return pickedEntityId;
     }
 
-    return resolveCanvasPickedEntityId(this.getProjectModel(), pickedEntityId);
+    return resolveCanvasPickedEntityId(projectModel, pickedEntityId);
   }
 
   setSelectedEntity(entityId: string | null, source: SyncSource = "ui") {
