@@ -24,6 +24,15 @@ export class TextParticleEffect {
   }
 
   resize(width: number, height: number) {
+    if (!this.isDrawableSize(width, height)) {
+      this.disposeParticles();
+      this.basePositions = new Float32Array();
+      this.colors = new Float32Array();
+      this.randomVectors = new Float32Array();
+      this.seeds = new Float32Array();
+      return;
+    }
+
     this.buildParticles(width, height);
   }
 
@@ -113,7 +122,25 @@ export class TextParticleEffect {
     this.scene.add(this.pointsCore);
   }
 
+  private isDrawableSize(width: number, height: number) {
+    return (
+      Number.isFinite(width) &&
+      Number.isFinite(height) &&
+      Math.floor(width) >= 1 &&
+      Math.floor(height) >= 1
+    );
+  }
+
   private createTextPositions(width: number, height: number) {
+    width = Math.floor(width);
+    height = Math.floor(height);
+    if (!this.isDrawableSize(width, height)) {
+      this.colors = new Float32Array();
+      this.randomVectors = new Float32Array();
+      this.seeds = new Float32Array();
+      return new Float32Array();
+    }
+
     const canvas = document.createElement("canvas");
     const scale = Math.min(window.devicePixelRatio, 2);
     canvas.width = Math.floor(width * scale);
