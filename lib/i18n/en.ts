@@ -92,7 +92,7 @@ const en = {
     "editor.properties.isolate": "Render only selected object",
     "editor.properties.restoreVisibility": "Restore scene visibility",
     "editor.studioScene.enter": "Studio preview",
-    "editor.studioScene.exit": "Exit studio",
+    "editor.studioScene.exit": "Exit",
     "editor.studioScene.title": "Studio Preview",
     "editor.studioScene.preset": "Preset",
     "editor.studioScene.lighting": "Lighting",

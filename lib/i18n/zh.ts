@@ -92,7 +92,7 @@ const zh: TranslationDictionary = {
     "editor.properties.isolate": "仅渲染当前对象",
     "editor.properties.restoreVisibility": "恢复场景原有显示",
     "editor.studioScene.enter": "棚拍预览",
-    "editor.studioScene.exit": "退出棚拍",
+    "editor.studioScene.exit": "Exit",
     "editor.studioScene.title": "棚拍预览",
     "editor.studioScene.preset": "预设",
     "editor.studioScene.lighting": "光照氛围",

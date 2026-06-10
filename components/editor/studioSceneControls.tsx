@@ -1,8 +1,9 @@
 "use client";
 
-import { Box, Button, FormControl, MenuItem, Select, Slider, Stack, Typography } from "@mui/material";
-import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
-import RestartAltRoundedIcon from "@mui/icons-material/RestartAltRounded";
+import { Box, Button, FormControl, IconButton, MenuItem, Select, Slider, Stack, Tooltip, Typography } from "@mui/material";
+import AutoFixHighRoundedIcon from "@mui/icons-material/AutoFixHighRounded";
+import LightModeRoundedIcon from "@mui/icons-material/LightModeRounded";
+import ReplayRoundedIcon from "@mui/icons-material/ReplayRounded";
 import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
 import {
   DEFAULT_STUDIO_SCENE_VARIANT_ID,
@@ -68,26 +69,29 @@ export default function StudioSceneControls() {
   const activeVariantId = studioScene.variantId ?? DEFAULT_STUDIO_SCENE_VARIANT_ID;
   const productProfile = studioScene.productProfile;
   const rotationDegrees = THREE_RAD_TO_DEG * studioScene.targetRotationY;
-  const hdriLabel =
-    studioScene.hdriStatus === "ready"
-      ? t("editor.studioScene.hdri.ready")
-      : studioScene.hdriStatus === "loading"
-        ? t("editor.studioScene.hdri.loading")
-        : studioScene.hdriStatus === "error"
-          ? t("editor.studioScene.hdri.error")
-          : "";
+  const actionIconButtonSx = {
+    width: 32,
+    height: 32,
+    color: theme.pillText,
+    border: "1px solid rgba(150,190,255,0.34)",
+    background: theme.itemBg,
+    "&:hover": {
+      background: theme.itemHoverBg,
+      borderColor: "rgba(150,190,255,0.48)"
+    }
+  } as const;
 
   return (
     <Box
       sx={{
         position: "absolute",
         left: "50%",
-        bottom: 20,
+        bottom: 124,
         zIndex: 24,
         width: "min(680px, calc(100vw - 28px))",
         transform: "translateX(-50%)",
         pointerEvents: "auto",
-        borderRadius: 2,
+        borderRadius: 1.25,
         border: theme.panelBorder,
         background: theme.panelBg,
         boxShadow: theme.panelShadow,
@@ -101,52 +105,39 @@ export default function StudioSceneControls() {
           <Typography sx={{ flex: 1, fontSize: 13, fontWeight: 700, color: theme.pillText }}>
             {t("editor.studioScene.title")}
           </Typography>
-          <Button
-            size="small"
-            variant="outlined"
-            startIcon={<RestartAltRoundedIcon />}
-            onClick={() => app?.autoMatchStudioSceneStyle()}
-            sx={{
-              minWidth: 0,
-              px: 1,
-              color: theme.pillText,
-              borderColor: "rgba(150,190,255,0.34)"
-            }}
-          >
-            {t("editor.studioScene.autoMatch")}
-          </Button>
-          <Button
-            size="small"
-            variant="outlined"
-            startIcon={<RestartAltRoundedIcon />}
-            onClick={() => app?.resetStudioSceneTargetTransform()}
-            sx={{
-              minWidth: 0,
-              px: 1,
-              color: theme.pillText,
-              borderColor: "rgba(150,190,255,0.34)"
-            }}
-          >
-            {t("editor.studioScene.reset")}
-          </Button>
-          <Button
-            size="small"
-            variant="outlined"
-            startIcon={<RestartAltRoundedIcon />}
-            onClick={() => app?.resetStudioSceneLighting()}
-            sx={{
-              minWidth: 0,
-              px: 1,
-              color: theme.pillText,
-              borderColor: "rgba(150,190,255,0.34)"
-            }}
-          >
-            {t("editor.studioScene.restoreLighting")}
-          </Button>
+          <Tooltip title={t("editor.studioScene.autoMatch")}>
+            <IconButton
+              size="small"
+              aria-label={t("editor.studioScene.autoMatch")}
+              onClick={() => app?.autoMatchStudioSceneStyle()}
+              sx={actionIconButtonSx}
+            >
+              <AutoFixHighRoundedIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title={t("editor.studioScene.reset")}>
+            <IconButton
+              size="small"
+              aria-label={t("editor.studioScene.reset")}
+              onClick={() => app?.resetStudioSceneTargetTransform()}
+              sx={actionIconButtonSx}
+            >
+              <ReplayRoundedIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title={t("editor.studioScene.restoreLighting")}>
+            <IconButton
+              size="small"
+              aria-label={t("editor.studioScene.restoreLighting")}
+              onClick={() => app?.resetStudioSceneLighting()}
+              sx={actionIconButtonSx}
+            >
+              <LightModeRoundedIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+          </Tooltip>
           <Button
             size="small"
             variant="contained"
-            startIcon={<CloseRoundedIcon />}
             onClick={() => app?.exitStudioScene()}
             sx={{ minWidth: 0, px: 1 }}
           >
@@ -329,17 +320,6 @@ export default function StudioSceneControls() {
             />
           </Stack>
         </Stack>
-
-        {hdriLabel ? (
-          <Typography
-            sx={{
-              fontSize: 11,
-              color: studioScene.hdriStatus === "error" ? "#ffb86b" : theme.mutedText
-            }}
-          >
-            {hdriLabel}
-          </Typography>
-        ) : null}
       </Stack>
     </Box>
   );
