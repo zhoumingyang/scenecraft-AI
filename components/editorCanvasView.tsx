@@ -12,23 +12,13 @@ import {
   TopBar,
   ViewportControls
 } from "@/components/editor";
-import { getProject } from "@/frontend/api/projects";
-import { createEmptyProjectAiLibrary } from "@/lib/project/schema";
-import { createDefaultEditorProjectJSON } from "@/render/editor";
+import { resolveStudioHdriUrl } from "@/components/editor/editorHdriResolver";
+import { useEditorAppEventBridge } from "@/components/editor/useEditorAppEventBridge";
+import { useEditorThemePersistence } from "@/components/editor/useEditorThemePersistence";
+import { useInitialEditorProjectLoad } from "@/components/editor/useInitialEditorProjectLoad";
 import { createEditorSdk } from "@/render/editor/sdk";
 import { useEditorStore } from "@/stores/editorStore";
 import { getEditorThemeTokens } from "@/components/editor/theme";
-import { syncEditorProjectSearchParam } from "@/components/editor/projectPersistence";
-import {
-  applyGroundFallbackFromViewHelperStorage,
-  restoreViewHelperVisibility
-} from "@/components/editor/viewHelperPreferences";
-import { getPolyhavenAssetDetail } from "@/frontend/api/externalAssets";
-import {
-  getPreferredHdriFormat,
-  getPreferredHdriResolution,
-  selectHdriFile
-} from "@/lib/externalAssets/source";
 
 type EditorCanvasViewProps = {
   userEmail: string | null;
@@ -38,222 +28,22 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
   const canvasHostRef = useRef<HTMLDivElement | null>(null);
   const setApp = useEditorStore((state) => state.setApp);
   const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
-  const setEditorThemeMode = useEditorStore((state) => state.setEditorThemeMode);
   const setSelectedEntityId = useEditorStore((state) => state.setSelectedEntityId);
-  const setCurrentProject = useEditorStore((state) => state.setCurrentProject);
-  const setProjectMeta = useEditorStore((state) => state.setProjectMeta);
-  const setLoadedAiLibrary = useEditorStore((state) => state.setLoadedAiLibrary);
-  const clearPendingAiAssets = useEditorStore((state) => state.clearPendingAiAssets);
-  const clearLocalProjectAssets = useEditorStore((state) => state.clearLocalProjectAssets);
-  const markUnsavedChanges = useEditorStore((state) => state.markUnsavedChanges);
-  const setSaveStatus = useEditorStore((state) => state.setSaveStatus);
-  const syncLightingConflictNotice = useEditorStore((state) => state.syncLightingConflictNotice);
-  const resetLightingConflictNotice = useEditorStore((state) => state.resetLightingConflictNotice);
-  const beginSceneLoading = useEditorStore((state) => state.beginSceneLoading);
-  const endSceneLoading = useEditorStore((state) => state.endSceneLoading);
-  const bumpProjectVersion = useEditorStore((state) => state.bumpProjectVersion);
-  const bumpEntityVersion = useEditorStore((state) => state.bumpEntityVersion);
-  const bumpSceneTreeVersion = useEditorStore((state) => state.bumpSceneTreeVersion);
-  const bumpMeshListVersion = useEditorStore((state) => state.bumpMeshListVersion);
-  const bumpEntityRenderVersion = useEditorStore((state) => state.bumpEntityRenderVersion);
-  const bumpProjectLoadVersion = useEditorStore((state) => state.bumpProjectLoadVersion);
-  const bumpCameraVersion = useEditorStore((state) => state.bumpCameraVersion);
-  const bumpViewStateVersion = useEditorStore((state) => state.bumpViewStateVersion);
-  const setAiInspectorMode = useEditorStore((state) => state.setAiInspectorMode);
   const setStudioSceneState = useEditorStore((state) => state.setStudioSceneState);
   const theme = getEditorThemeTokens(editorThemeMode);
+
+  useEditorThemePersistence();
 
   useEffect(() => {
     if (!canvasHostRef.current) return;
 
     const app = createEditorSdk(canvasHostRef.current, {
-      resolveStudioHdriUrl: async (input) => {
-        if (input.url) {
-          return {
-            url: input.url,
-            assetName: input.assetId ?? input.url
-          };
-        }
-        if (input.provider !== "polyhaven" || !input.assetId) {
-          return null;
-        }
-
-        const detail = await getPolyhavenAssetDetail(input.assetId, "hdri");
-        if (detail.assetType !== "hdri" || detail.fileOptions.length === 0) {
-          return null;
-        }
-        const resolution = getPreferredHdriResolution(detail.fileOptions);
-        const format = getPreferredHdriFormat(detail.fileOptions, resolution);
-        const file = selectHdriFile(detail.fileOptions, resolution, format);
-
-        return file
-          ? {
-              url: file.url,
-              assetName: file.fileName || file.url
-            }
-          : null;
-      }
+      resolveStudioHdriUrl
     });
     setApp(app);
-    let frameRequestId = 0;
-    const pendingRenderEntityIds = new Set<string>();
-    let disposed = false;
-
-    const syncLightingConflictState = (reset = false) => {
-      if (reset) {
-        resetLightingConflictNotice();
-      }
-      syncLightingConflictNotice(app.getLightingConflictState());
-    };
-
-    const flushRenderDrivenUpdates = () => {
-      frameRequestId = 0;
-      if (disposed) return;
-
-      if (pendingRenderEntityIds.size > 0) {
-        pendingRenderEntityIds.forEach((entityId) => {
-          bumpEntityVersion(entityId);
-        });
-        pendingRenderEntityIds.clear();
-        bumpEntityRenderVersion();
-      }
-    };
-
-    const scheduleRenderDrivenUpdates = () => {
-      if (frameRequestId !== 0 || disposed) return;
-      frameRequestId = window.requestAnimationFrame(flushRenderDrivenUpdates);
-    };
-
-    const unsubscribe = app.subscribe((event) => {
-      if (event.type === "selectionChanged") {
-        setSelectedEntityId(event.selectedEntityId);
-        if (event.selectedEntityId) {
-          setAiInspectorMode("entity");
-        }
-        return;
-      }
-
-      if (event.type === "projectLoaded") {
-        bumpProjectLoadVersion();
-        bumpProjectVersion();
-        bumpSceneTreeVersion();
-        bumpMeshListVersion();
-        bumpCameraVersion();
-        bumpViewStateVersion();
-        setStudioSceneState(app.getStudioSceneState());
-        markUnsavedChanges(false);
-        syncLightingConflictState(true);
-        return;
-      }
-
-      if (event.type === "entityUpdated") {
-        if (event.source === "render") {
-          pendingRenderEntityIds.add(event.entityId);
-          scheduleRenderDrivenUpdates();
-        } else {
-          bumpEntityVersion(event.entityId);
-        }
-
-        const affectsSceneTree = event.affectsSceneTree ?? true;
-        if (affectsSceneTree) {
-          bumpSceneTreeVersion();
-        }
-
-        const affectsMeshList = event.affectsMeshList ?? (affectsSceneTree && event.entityKind === "mesh");
-        if (affectsMeshList) {
-          bumpMeshListVersion();
-        }
-        markUnsavedChanges(true);
-        if (event.entityKind === "light") {
-          syncLightingConflictState();
-        }
-        return;
-      }
-
-      if (event.type === "cameraUpdated") {
-        if (event.source !== "render") {
-          bumpCameraVersion();
-        }
-        markUnsavedChanges(true);
-        return;
-      }
-
-      if (event.type === "sceneUpdated") {
-        bumpProjectVersion();
-        bumpViewStateVersion();
-        markUnsavedChanges(true);
-        syncLightingConflictState();
-        return;
-      }
-
-      if (event.type === "viewStateUpdated") {
-        bumpViewStateVersion();
-      }
-
-      if (event.type === "studioSceneChanged") {
-        setStudioSceneState(event.state);
-        bumpSceneTreeVersion();
-      }
-    });
-
     app.start();
-    void (async () => {
-      beginSceneLoading();
-      try {
-        const initialProjectId = new URL(window.location.href).searchParams.get("projectId");
-
-        if (initialProjectId) {
-          try {
-            const response = await getProject(initialProjectId);
-            const project = applyGroundFallbackFromViewHelperStorage(
-              response.project.snapshot,
-              response.project.id
-            );
-            await app.dispatch({
-              type: "project.load",
-              project
-            });
-            restoreViewHelperVisibility(app, response.project.id);
-            setCurrentProject(response.project.id);
-            setProjectMeta(project.meta ?? null);
-            setLoadedAiLibrary(response.project.aiSnapshot);
-            clearPendingAiAssets();
-            clearLocalProjectAssets();
-            syncEditorProjectSearchParam(response.project.id);
-            setSaveStatus({
-              phase: "idle",
-              message: null,
-              updatedAt: Date.now()
-            });
-            return;
-          } catch (error) {
-            console.error("[editor] Failed to load project from URL", error);
-            syncEditorProjectSearchParam(null);
-          }
-        }
-
-        const defaultProject = createDefaultEditorProjectJSON();
-        await app.dispatch({
-          type: "project.load",
-          project: defaultProject
-        });
-        restoreViewHelperVisibility(app, null);
-        setCurrentProject(null);
-        setProjectMeta(defaultProject.meta ?? null);
-        setLoadedAiLibrary(createEmptyProjectAiLibrary());
-        clearPendingAiAssets();
-        clearLocalProjectAssets();
-      } finally {
-        endSceneLoading();
-      }
-    })();
 
     return () => {
-      disposed = true;
-      if (frameRequestId !== 0) {
-        window.cancelAnimationFrame(frameRequestId);
-      }
-      unsubscribe();
       app.dispose();
       setApp(null);
       setSelectedEntityId(null);
@@ -272,42 +62,11 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
         hdriError: null
       });
     };
-  }, [
-    clearLocalProjectAssets,
-    clearPendingAiAssets,
-    bumpProjectLoadVersion,
-    bumpProjectVersion,
-    bumpEntityVersion,
-    bumpSceneTreeVersion,
-    bumpMeshListVersion,
-    bumpEntityRenderVersion,
-    bumpCameraVersion,
-    bumpViewStateVersion,
-    markUnsavedChanges,
-    syncLightingConflictNotice,
-    resetLightingConflictNotice,
-    setApp,
-    setCurrentProject,
-    setLoadedAiLibrary,
-    setProjectMeta,
-    setSaveStatus,
-    setSelectedEntityId,
-    setAiInspectorMode,
-    setStudioSceneState,
-    beginSceneLoading,
-    endSceneLoading
-  ]);
+  }, [setApp, setSelectedEntityId, setStudioSceneState]);
 
-  useEffect(() => {
-    const savedTheme = window.localStorage.getItem("editor-theme-mode");
-    if (savedTheme === "dark" || savedTheme === "light") {
-      setEditorThemeMode(savedTheme);
-    }
-  }, [setEditorThemeMode]);
-
-  useEffect(() => {
-    window.localStorage.setItem("editor-theme-mode", editorThemeMode);
-  }, [editorThemeMode]);
+  const app = useEditorStore((state) => state.app);
+  useEditorAppEventBridge({ app });
+  useInitialEditorProjectLoad({ app });
 
   return (
     <Box

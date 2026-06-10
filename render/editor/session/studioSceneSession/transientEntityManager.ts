@@ -1,4 +1,3 @@
-import * as THREE from "three";
 import type { BindingRegistry } from "../../bindings/bindingRegistry";
 import { updateLightBinding } from "../../bindings/lightBinding";
 import { updateMeshBindingMaterial } from "../../bindings/meshBinding";
@@ -17,7 +16,6 @@ import {
 } from "../../studioSceneLayoutGenerator";
 import {
   createStudioLightingDescriptors,
-  type StudioGeneratedLightRole,
   type StudioLightingModifierDescriptor
 } from "../../studioSceneLightingGenerator";
 import { resolveStudioSceneStyleProfile } from "../../studioSceneProfiles";
@@ -27,14 +25,18 @@ import {
   createStudioMeshFromDescriptor,
   createStudioModifierMeshFromDescriptor
 } from "./factories";
-import { createStudioFrameFromObject } from "./target";
+import { toGeneratorFrame } from "./transientEntityMetadata";
 import {
-  captureTransientEntityDefaultSnapshot,
-  getDefaultAllowDelete,
-  getDefaultAllowHide,
-  getDefaultGroupKind,
-  toGeneratorFrame
-} from "./transientEntityMetadata";
+  configureStudioTransientLightShadows,
+  configureStudioTransientMeshShadows,
+  markTransientObject,
+  placeTransientEntityAtSpawn
+} from "./transientEntityRenderConfig";
+import {
+  getStudioSceneEntityMetadata,
+  registerTransientEntity,
+  registerTransientGroupChildren
+} from "./transientEntityRegistry";
 import type {
   ActiveStudioSceneSession,
   StudioTransientEntityMetadata,
@@ -122,8 +124,7 @@ export class StudioSceneTransientEntityManager {
     session: ActiveStudioSceneSession | null,
     entityId: string | null
   ) {
-    if (!session || !entityId) return null;
-    return session.transientEntityMetadata.get(entityId) ?? null;
+    return getStudioSceneEntityMetadata(session, entityId);
   }
 
   createTransientStudioEntities(
@@ -195,7 +196,10 @@ export class StudioSceneTransientEntityManager {
       });
       session.transientLayoutEntityIds.add(model.id);
       this.markTransientObject(model.id, role);
-      this.configureStudioTransientMeshShadows(this.registry.get(model.id)?.object ?? null, role);
+      this.configureStudioTransientMeshShadows(
+        this.registry.get(model.id)?.object ?? null,
+        role
+      );
     };
 
     backgroundLayout.descriptors.forEach((descriptor) => {
@@ -413,7 +417,10 @@ export class StudioSceneTransientEntityManager {
     });
     session.transientLayoutEntityIds.add(model.id);
     this.markTransientObject(model.id, descriptor.role);
-    this.configureStudioTransientMeshShadows(this.registry.get(model.id)?.object ?? null, descriptor.role);
+    this.configureStudioTransientMeshShadows(
+      this.registry.get(model.id)?.object ?? null,
+      descriptor.role
+    );
     this.rebuildGroupHierarchy();
     this.emit({ type: "sceneUpdated", source, pathTraceInvalidation: "scene" });
     this.emitChanged();
@@ -428,23 +435,12 @@ export class StudioSceneTransientEntityManager {
       captureDefaultSnapshot?: boolean;
     } = {}
   ) {
-    session.transientEntityIds.add(entityId);
-    session.transientEntityRoles.set(entityId, role);
-    const groupKind = metadata.groupKind ?? getDefaultGroupKind(role);
-    const captureDefaultSnapshot = metadata.captureDefaultSnapshot ?? groupKind !== "user";
-    const defaultSnapshot = captureDefaultSnapshot ? this.captureDefaultSnapshot(entityId) : undefined;
-    session.transientEntityMetadata.set(entityId, {
+    registerTransientEntity({
+      session,
       entityId,
       role,
-      groupKind,
-      allowHide: metadata.allowHide ?? getDefaultAllowHide(role),
-      allowDelete: metadata.allowDelete ?? getDefaultAllowDelete(role),
-      plinthKind: metadata.plinthKind,
-      decorationKind: metadata.decorationKind,
-      lightRole: metadata.lightRole,
-      modifierRole: metadata.modifierRole,
-      hasDefaultSnapshot: Boolean(defaultSnapshot),
-      defaultSnapshot
+      getProjectModel: this.getProjectModel,
+      metadata
     });
   }
 
@@ -497,110 +493,33 @@ export class StudioSceneTransientEntityManager {
     return true;
   }
 
-  private captureDefaultSnapshot(entityId: string) {
-    const record = this.getProjectModel()?.getEntityById(entityId);
-    if (!record) return undefined;
-    return captureTransientEntityDefaultSnapshot(record);
-  }
-
   private markTransientObject(
     entityId: string,
     role: StudioTransientEntityRole
   ) {
-    const binding = this.registry.get(entityId);
-    if (!binding) return;
-    binding.object.userData.studioScene = true;
-    binding.object.userData.studioSceneRole = role;
-    binding.pickTargets?.forEach((target) => {
-      target.userData.studioScene = true;
-      target.userData.studioSceneRole = role;
-    });
+    markTransientObject(this.registry, entityId, role);
   }
 
   private configureStudioTransientMeshShadows(
-    object: THREE.Object3D | null,
+    object: Parameters<typeof configureStudioTransientMeshShadows>[0],
     role: StudioTransientEntityRole
   ) {
-    if (!object) return;
-    const receiveOnlyRoles = new Set<StudioTransientEntityRole>([
-      "floor",
-      "plinth"
-    ]);
-    const noShadowRoles = new Set<StudioTransientEntityRole>([
-      "background",
-      "cove",
-      "backWall",
-      "sideWall",
-      "reflector",
-      "negativeFill",
-      "stripPanel"
-    ]);
-
-    object.traverse((child) => {
-      if (!(child instanceof THREE.Mesh)) return;
-      if (noShadowRoles.has(role)) {
-        child.castShadow = false;
-        child.receiveShadow = false;
-        return;
-      }
-      if (receiveOnlyRoles.has(role)) {
-        child.castShadow = false;
-        child.receiveShadow = true;
-      }
-    });
+    configureStudioTransientMeshShadows(object, role);
   }
 
   private configureStudioTransientLightShadows(
-    object: THREE.Object3D,
-    lightRole: StudioGeneratedLightRole,
+    object: Parameters<typeof configureStudioTransientLightShadows>[0],
+    lightRole: Parameters<typeof configureStudioTransientLightShadows>[1],
     frame: StudioTargetFrame
   ) {
-    object.traverse((child) => {
-      if (child instanceof THREE.DirectionalLight) {
-        child.castShadow = lightRole === "keyShadow";
-        if (!child.castShadow) return;
-        const halfWidth = Math.max(frame.footprintRadius * 2.2, frame.radius * 1.9, 1.6);
-        const top = Math.max(frame.height * 1.35, frame.radius * 2.2, 1.8);
-        const bottom = -Math.max(frame.radius * 1.25, frame.footprintRadius * 1.4, 1.2);
-        child.shadow.mapSize.set(1536, 1536);
-        child.shadow.camera.left = -halfWidth;
-        child.shadow.camera.right = halfWidth;
-        child.shadow.camera.top = top;
-        child.shadow.camera.bottom = bottom;
-        child.shadow.camera.near = 0.5;
-        child.shadow.camera.far = Math.max(frame.radius * 8, frame.height * 4, 24);
-        child.shadow.bias = -0.00008;
-        child.shadow.normalBias = 0.008;
-        child.shadow.radius = 3;
-        child.shadow.camera.updateProjectionMatrix();
-        child.shadow.needsUpdate = true;
-        return;
-      }
-
-      if (child instanceof THREE.SpotLight || child instanceof THREE.PointLight) {
-        child.castShadow = false;
-      }
-    });
+    configureStudioTransientLightShadows(object, lightRole, frame);
   }
 
   private placeTransientEntityAtSpawn(
     session: ActiveStudioSceneSession,
     entityId: string
   ) {
-    const targetBinding = this.registry.get(session.targetEntityId);
-    const binding = this.registry.get(entityId);
-    if (!targetBinding || !binding) return;
-
-    const frame = createStudioFrameFromObject(targetBinding.object);
-    const offset = Math.max(frame.radius * 0.7, 0.7);
-    binding.model.patchTransform({
-      position: [
-        frame.center.x,
-        frame.floorY + Math.max(frame.radius * 0.35, 0.3),
-        frame.center.z + offset
-      ]
-    });
-    this.registry.syncModelTransformToObject(entityId);
+    placeTransientEntityAtSpawn(this.registry, session, entityId);
   }
 
   private registerTransientGroupChildren(
@@ -608,23 +527,15 @@ export class StudioSceneTransientEntityManager {
     groupId: string,
     role: StudioTransientEntityRole
   ) {
-    const projectModel = this.getProjectModel();
-    if (!projectModel) return;
-
-    projectModel.listDirectChildren(groupId).forEach((childId) => {
-      const childRecord = projectModel.getEntityById(childId);
-      if (!childRecord) return;
-
-      const childRole =
-        childRecord.kind === "light" && role === "userLightGroup"
-          ? "userLight"
-          : role;
-      this.registerTransientEntity(session, childId, childRole);
-      this.markTransientObject(childId, childRole);
-
-      if (childRecord.kind === "group") {
-        this.registerTransientGroupChildren(session, childId, childRole);
-      }
+    registerTransientGroupChildren({
+      session,
+      groupId,
+      role,
+      getProjectModel: this.getProjectModel,
+      registerEntity: (entityId, childRole) =>
+        this.registerTransientEntity(session, entityId, childRole),
+      markEntity: (entityId, childRole) =>
+        this.markTransientObject(entityId, childRole)
     });
   }
 }

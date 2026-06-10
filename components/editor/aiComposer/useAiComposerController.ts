@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
 import { useI18n } from "@/lib/i18n";
+import { createAiComposerViewModel } from "./createAiComposerViewModel";
 import { useAi3dComposer } from "./useAi3dComposer";
 import { useAiAssetRecommendationComposer } from "./useAiAssetRecommendationComposer";
 import { useAiComposerLifecycle } from "./useAiComposerLifecycle";
 import { useAiComposerModeNavigation } from "./useAiComposerModeNavigation";
 import { useAiComposerPromptRouting } from "./useAiComposerPromptRouting";
+import { useAiComposerUiState } from "./useAiComposerUiState";
 import { useAiComposerStoreState } from "./useAiComposerStoreState";
 import { useAiComposerSubmitRouting } from "./useAiComposerSubmitRouting";
 import { useAiImageComposer } from "./useAiImageComposer";
@@ -16,11 +17,13 @@ import { usePromptTransform } from "./usePromptTransform";
 
 export function useAiComposerController() {
   const { t } = useI18n();
-  const [isErrorToastOpen, setIsErrorToastOpen] = useState(false);
   const state = useAiComposerStoreState();
+  const { isErrorToastOpen, setIsErrorToastOpen, utilityIconButtonSx } =
+    useAiComposerUiState({
+      theme: state.theme
+    });
   const {
     app,
-    editorThemeMode,
     aiMode,
     isStudioSceneActive,
     selectedEntityId,
@@ -42,14 +45,11 @@ export function useAiComposerController() {
     aiPanoramaErrorMessage,
     aiAssetRecommendations,
     ai3dPrompt,
-    ai3dIntentDraft,
     ai3dIsGenerating,
     ai3dIsOptimizing,
     ai3dErrorMessage,
-    ai3dPreviewVariant,
     setAiMode,
     setAiPrompt,
-    setAiModel,
     setAiComposerOpen,
     setAiInspectorMode,
     setLastAiClearedEntityId,
@@ -59,14 +59,11 @@ export function useAiComposerController() {
     setAiPanoramaState,
     setAiAssetRecommendationPrompt,
     setAiAssetRecommendationState,
-    setAiAssetRecommendationItemSelected,
     setAi3dPrompt,
-    setAi3dIntentDraft,
     setAi3dState,
     setAiGeneratingState,
     appendPendingAiAsset,
     registerLocalProjectAsset,
-    theme,
     isPolyhavenEnabled,
     ai3d
   } = state;
@@ -79,24 +76,6 @@ export function useAiComposerController() {
     setAiComposerOpen,
     setIsErrorToastOpen
   });
-
-  const utilityIconButtonSx = useMemo(
-    () =>
-      ({
-        color: theme.pillText,
-        background: theme.iconButtonBg,
-        border: theme.sectionBorder,
-        "&:hover": {
-          background: theme.itemHoverBg
-        },
-        "&.Mui-disabled": {
-          color: theme.mutedText,
-          background: theme.itemBg,
-          border: theme.sectionBorder
-        }
-      }) as const,
-    [theme]
-  );
 
   const {
     focusAiMode,
@@ -264,27 +243,17 @@ export function useAiComposerController() {
     t
   });
 
-  return {
+  return createAiComposerViewModel({
+    state: {
+      ...state,
+      t
+    },
     activePlaceholder,
     activePrompt,
     activePromptAction,
     ai3dCreateCount,
-    ai3dErrorMessage,
-    ai3dIntentDraft,
-    ai3dIsGenerating,
-    ai3dIsOptimizing,
-    ai3dPreviewVariant,
-    ai3dPrompt,
-    aiAssetRecommendations,
-    aiMode,
-    aiPanoramaErrorMessage,
-    aiPanoramaIsGenerating,
-    aiPanoramaPrompt,
-    aiTextureIsGenerating,
-    aiTexturePrompt,
     canShowOptimized,
     canShowOriginal,
-    editorThemeMode,
     focusAiMode,
     handleAi3dApply,
     handleAi3dDiscard,
@@ -299,27 +268,15 @@ export function useAiComposerController() {
     handlePromptTransform,
     handleSubmitActive,
     hasAi3dPreview,
-    imageIsGenerating,
-    imageModel,
-    imagePrompt,
-    isComposerOpen,
+    isAi3dBusy,
     isErrorToastOpen,
-    isPolyhavenEnabled,
     isPromptActionPending,
-    isStudioSceneActive,
     isSubmitDisabled,
     isSubmitHighlighted,
     isSubmitLoading,
-    isAi3dBusy,
-    setAiAssetRecommendationItemSelected,
-    setAiComposerOpen,
-    setAi3dIntentDraft,
-    setAiModel,
     setIsErrorToastOpen,
-    t,
-    theme,
     utilityIconButtonSx
-  };
+  });
 }
 
 export type AiComposerController = ReturnType<typeof useAiComposerController>;
