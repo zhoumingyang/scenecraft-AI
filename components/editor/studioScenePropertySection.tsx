@@ -43,7 +43,15 @@ const STUDIO_DECORATION_KIND_OPTIONS: StudioDecorationKind[] = [
   "curvedPanel",
   "wavePanel",
   "floatingGeometry",
-  "extrudedShape"
+  "extrudedShape",
+  "sculpturalLoop",
+  "ribbonPanel",
+  "steppedTotem",
+  "foldedScreen",
+  "layeredArch",
+  "orbitCluster",
+  "organicShard",
+  "modularBlocks"
 ];
 
 type StudioScenePropertySectionProps = {

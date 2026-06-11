@@ -50,7 +50,15 @@ export type StudioDecorationKind =
   | "curvedPanel"
   | "wavePanel"
   | "floatingGeometry"
-  | "extrudedShape";
+  | "extrudedShape"
+  | "sculpturalLoop"
+  | "ribbonPanel"
+  | "steppedTotem"
+  | "foldedScreen"
+  | "layeredArch"
+  | "orbitCluster"
+  | "organicShard"
+  | "modularBlocks";
 
 export type StudioLayoutTargetFrame = {
   center: Vec3Tuple;

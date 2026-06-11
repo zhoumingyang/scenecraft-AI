@@ -95,18 +95,18 @@ export function useAiComposerSubmitRouting({
 
   const isSubmitHighlighted =
     aiMode === "image"
-      ? imagePrompt.trim() && !imageIsGenerating && !isPromptActionPending
+      ? Boolean(imagePrompt.trim()) && !imageIsGenerating && !isPromptActionPending
       : aiMode === "texture"
-        ? aiTexturePrompt.trim() && !aiTextureIsGenerating && !isPromptActionPending
+        ? Boolean(aiTexturePrompt.trim()) && !aiTextureIsGenerating && !isPromptActionPending
         : aiMode === "panorama"
-          ? aiPanoramaPrompt.trim() && !aiPanoramaIsGenerating && !isPromptActionPending
+          ? Boolean(aiPanoramaPrompt.trim()) && !aiPanoramaIsGenerating && !isPromptActionPending
           : aiMode === "assets"
-            ? aiAssetRecommendations.prompt.trim() &&
+            ? Boolean(aiAssetRecommendations.prompt.trim()) &&
               !aiAssetRecommendations.isGenerating &&
               !aiAssetRecommendations.isApplying &&
               isPolyhavenEnabled &&
               !isPromptActionPending
-            : ai3dPrompt.trim() && !isAi3dBusy;
+            : Boolean(ai3dPrompt.trim()) && !isAi3dBusy;
 
   return {
     handleSubmitActive,

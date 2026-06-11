@@ -115,7 +115,7 @@ export function useAiComposerPromptRouting({
     focusAi3dMode();
   };
 
-  const handlePromptKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+  const handlePromptKeyDown = (event: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
       event.preventDefault();
       handleSubmitActive();

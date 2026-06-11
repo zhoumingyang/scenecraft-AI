@@ -96,7 +96,15 @@ export type StudioLayoutProfile = {
       | "curvedPanel"
       | "wavePanel"
       | "floatingGeometry"
-      | "extrudedShape";
+      | "extrudedShape"
+      | "sculpturalLoop"
+      | "ribbonPanel"
+      | "steppedTotem"
+      | "foldedScreen"
+      | "layeredArch"
+      | "orbitCluster"
+      | "organicShard"
+      | "modularBlocks";
     count: number;
     placement: "back" | "side" | "floor" | "floating";
     brightnessRatioToProduct: number;

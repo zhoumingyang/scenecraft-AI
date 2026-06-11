@@ -1,15 +1,18 @@
 import type { KeyboardEvent } from "react";
+import type { AiExternalAssetRecommendationBundle } from "@/lib/api/contracts/ai";
+import type { useI18n } from "@/lib/i18n";
+import type { AiMode } from "@/stores/editorStore";
 import type { AiComposerStoreState } from "./useAiComposerStoreState";
 
 type AiComposerViewModelState = AiComposerStoreState & {
-  t: (key: string, params?: Record<string, unknown>) => string;
+  t: ReturnType<typeof useI18n>["t"];
 };
 
 type CreateAiComposerViewModelInput = {
   state: AiComposerViewModelState;
   activePlaceholder: string;
   activePrompt: string;
-  activePromptAction: string | null;
+  activePromptAction: "optimize" | "translate-en" | null;
   ai3dCreateCount: number;
   canShowOptimized: boolean;
   canShowOriginal: boolean;
@@ -19,13 +22,13 @@ type CreateAiComposerViewModelInput = {
   handleAi3dOptimize: () => Promise<void>;
   handleAi3dShowOptimized: () => void;
   handleAi3dShowOriginal: () => void;
-  handleAssetRecommendationApply: (id: string) => Promise<void>;
-  handleModeChange: (value: string) => void;
+  handleAssetRecommendationApply: (bundle: AiExternalAssetRecommendationBundle) => Promise<void>;
+  handleModeChange: (value: AiMode) => void;
   handlePromptChange: (value: string) => void;
   handlePromptFocus: () => void;
   handlePromptKeyDown: (event: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   handlePromptTransform: (action: "translate-en" | "optimize") => Promise<void>;
-  handleSubmitActive: () => Promise<void>;
+  handleSubmitActive: () => void;
   hasAi3dPreview: boolean;
   isAi3dBusy: boolean;
   isErrorToastOpen: boolean;

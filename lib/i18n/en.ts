@@ -180,6 +180,14 @@ const en = {
     "editor.studioScene.decoration.wavePanel": "Wave panel",
     "editor.studioScene.decoration.floatingGeometry": "Floating geometry",
     "editor.studioScene.decoration.extrudedShape": "Shape",
+    "editor.studioScene.decoration.sculpturalLoop": "Sculptural loop",
+    "editor.studioScene.decoration.ribbonPanel": "Ribbon panel",
+    "editor.studioScene.decoration.steppedTotem": "Stepped totem",
+    "editor.studioScene.decoration.foldedScreen": "Folded screen",
+    "editor.studioScene.decoration.layeredArch": "Layered arch",
+    "editor.studioScene.decoration.orbitCluster": "Orbit cluster",
+    "editor.studioScene.decoration.organicShard": "Organic shard",
+    "editor.studioScene.decoration.modularBlocks": "Modular blocks",
     "editor.studioScene.autoMatch": "Auto match",
     "editor.studioScene.styleSource.auto": "Auto",
     "editor.studioScene.styleSource.manual": "Manual",
@@ -583,6 +591,8 @@ const en = {
     "editor.ai3d.listPlaceholder": "Comma-separated, for example: tail, wings, backpack"
 } as const;
 
-export type TranslationDictionary = typeof en;
+export type TranslationDictionary = {
+  [Key in keyof typeof en]: string;
+};
 
 export default en;
