@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { EXRLoader } from "three/examples/jsm/loaders/EXRLoader.js";
 import { HDRLoader } from "three/examples/jsm/loaders/HDRLoader.js";
 
@@ -61,6 +62,7 @@ export class EditorRuntimeEnvironment {
   private lightHelpersVisible = true;
   private environmentTexture: THREE.Texture | null = null;
   private environmentMapTexture: THREE.Texture | null = null;
+  private defaultEnvironmentRenderTarget: THREE.WebGLRenderTarget | null = null;
   private sceneMaterialInvalidationState: SceneMaterialInvalidationState | null = null;
   private lastGroundMaterial: ResolvedEditorGroundConfigJSON["material"] | null = null;
 
@@ -221,6 +223,10 @@ export class EditorRuntimeEnvironment {
     return Boolean(this.environmentTexture);
   }
 
+  hasImageBasedLighting() {
+    return Boolean(this.scene.environment);
+  }
+
   async loadEnvironmentTexture(url: string, assetName = url) {
     const isHdrEnvironment =
       isHighDynamicRangeEnvironmentAssetName(assetName) ||
@@ -288,8 +294,7 @@ export class EditorRuntimeEnvironment {
     const previousToneMappingExposure = this.renderer.toneMappingExposure;
     const previousMaterialInvalidationState = this.sceneMaterialInvalidationState;
     const rotationY = envConfig.environmentRotationY;
-    this.scene.environment =
-      envConfig.environment === 1 && this.environmentMapTexture ? this.environmentMapTexture : null;
+    this.scene.environment = this.resolveEnvironmentMap(envConfig);
     this.scene.environmentIntensity = envConfig.environmentIntensity;
     this.scene.background =
       envConfig.backgroundShow === 1 && this.environmentTexture
@@ -338,6 +343,8 @@ export class EditorRuntimeEnvironment {
     this.groundPlane.geometry.dispose();
     disposeMeshStandardMaterialTextures(this.groundPlane.material);
     this.groundPlane.material.dispose();
+    this.defaultEnvironmentRenderTarget?.dispose();
+    this.defaultEnvironmentRenderTarget = null;
     this.pmremGenerator.dispose();
   }
 
@@ -358,4 +365,35 @@ export class EditorRuntimeEnvironment {
     this.groundPlane.material.needsUpdate = true;
     this.invalidatePathTraceMaterials();
   };
+
+  private resolveEnvironmentMap(envConfig: ResolvedEditorEnvConfigJSON) {
+    if (envConfig.environment !== 1) {
+      return null;
+    }
+
+    return this.environmentMapTexture ?? this.getDefaultEnvironmentMapTexture();
+  }
+
+  private getDefaultEnvironmentMapTexture() {
+    if (!this.defaultEnvironmentRenderTarget) {
+      const roomEnvironment = new RoomEnvironment();
+      this.defaultEnvironmentRenderTarget = this.pmremGenerator.fromScene(roomEnvironment);
+      this.disposeRoomEnvironment(roomEnvironment);
+    }
+
+    return this.defaultEnvironmentRenderTarget.texture;
+  }
+
+  private disposeRoomEnvironment(roomEnvironment: RoomEnvironment) {
+    roomEnvironment.traverse((object) => {
+      if (!(object instanceof THREE.Mesh)) return;
+
+      object.geometry?.dispose();
+      if (Array.isArray(object.material)) {
+        object.material.forEach((material) => material.dispose());
+      } else {
+        object.material?.dispose();
+      }
+    });
+  }
 }

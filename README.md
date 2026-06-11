@@ -41,6 +41,7 @@ This is not just a text-to-image demo, and it is not a full desktop-grade DCC to
 ### 2. Scene and Visual Controls
 
 - Panorama and HDR environment import
+- Local `RoomEnvironment` IBL fallback for neutral PBR lighting before a user HDRI is loaded
 - AI-generated 360 panorama environments applied directly to the selected scene
 - Poly Haven HDRI browsing from the editor top bar for authenticated users
 - Poly Haven texture browsing from the mesh material panel for authenticated users
@@ -50,6 +51,7 @@ This is not just a text-to-image demo, and it is not a full desktop-grade DCC to
 - Light creation and editing for ambient, hemisphere, directional, point, spot, and rect area lights
 - Built-in lighting presets for faster scene setup
 - Post-processing controls with entry points for effects such as Bloom, SSR, GTAO, Bokeh, Film, Glitch, and Halftone
+- A neutral real-time preview baseline with ACES tone mapping, light GTAO contact shading, and restrained default effect parameters
 
 ### 3. AI Image Workflow
 

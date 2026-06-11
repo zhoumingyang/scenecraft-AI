@@ -56,9 +56,9 @@ export class SceneEnvironmentSessionController {
       };
     }
 
-    const hasActiveEnvironmentMap =
-      projectModel.envConfig.environment === 1 && this.runtime.hasEnvironmentTexture();
-    if (!hasActiveEnvironmentMap) {
+    const hasActiveImageBasedLighting =
+      projectModel.envConfig.environment === 1 && this.runtime.hasImageBasedLighting();
+    if (!hasActiveImageBasedLighting) {
       return {
         hasConflict: false,
         hasAmbientLight: false,

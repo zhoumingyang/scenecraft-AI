@@ -392,6 +392,10 @@ export class EditorRuntime {
     return this.environment.hasEnvironmentTexture();
   }
 
+  hasImageBasedLighting() {
+    return this.environment.hasImageBasedLighting();
+  }
+
   async loadEnvironmentTexture(url: string, assetName = url) {
     return this.environment.loadEnvironmentTexture(url, assetName);
   }

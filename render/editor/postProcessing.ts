@@ -38,14 +38,14 @@ export function createDefaultEditorPostProcessingConfigJSON(): ResolvedEditorPos
         enabled: false,
         params: {
           focus: 15,
-          aperture: 0.01,
-          maxblur: 0.01
+          aperture: 0.004,
+          maxblur: 0.006
         }
       },
       film: {
         enabled: false,
         params: {
-          intensity: 0.35,
+          intensity: 0.12,
           grayscale: false
         }
       },
@@ -57,12 +57,12 @@ export function createDefaultEditorPostProcessingConfigJSON(): ResolvedEditorPos
         }
       },
       gtao: {
-        enabled: false,
+        enabled: true,
         params: {
-          blendIntensity: 1,
-          radius: 0.5,
-          distanceFallOff: 1,
-          thickness: 1
+          blendIntensity: 0.22,
+          radius: 0.55,
+          distanceFallOff: 1.25,
+          thickness: 0.75
         }
       },
       glitch: {
@@ -85,9 +85,9 @@ export function createDefaultEditorPostProcessingConfigJSON(): ResolvedEditorPos
       ssr: {
         enabled: false,
         params: {
-          opacity: 0.5,
-          maxDistance: 180,
-          thickness: 0.018,
+          opacity: 0.28,
+          maxDistance: 80,
+          thickness: 0.02,
           blur: true,
           distanceAttenuation: true,
           fresnel: true,
@@ -97,9 +97,9 @@ export function createDefaultEditorPostProcessingConfigJSON(): ResolvedEditorPos
       unrealBloom: {
         enabled: false,
         params: {
-          strength: 0.8,
-          radius: 0.2,
-          threshold: 0.85
+          strength: 0.25,
+          radius: 0.16,
+          threshold: 0.92
         }
       }
     }
