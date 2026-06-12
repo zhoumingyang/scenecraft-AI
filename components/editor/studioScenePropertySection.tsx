@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Box, FormControl, MenuItem, Select, Stack, Typography } from "@mui/material";
+import { FormControl, MenuItem, Select, Stack, Typography } from "@mui/material";
 import type { TranslationKey } from "@/lib/i18n";
 import { useI18n } from "@/lib/i18n";
 import type {
@@ -15,7 +15,7 @@ import type {
 } from "@/render/editor";
 import { SCENE_NODE_ID } from "@/render/editor";
 import type { getEditorThemeTokens } from "@/components/editor/theme";
-import { SliderField, ToggleField } from "@/components/editor/propertyPanelSections/sceneSettingsFields";
+import { SliderField } from "@/components/editor/propertyPanelSections/sceneSettingsFields";
 
 type EditorThemeTokens = ReturnType<typeof getEditorThemeTokens>;
 
