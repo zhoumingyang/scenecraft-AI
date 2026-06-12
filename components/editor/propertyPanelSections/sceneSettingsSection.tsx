@@ -7,13 +7,7 @@ import { getEditorThemeTokens } from "@/components/editor/theme";
 import PropertyPanelSection from "@/components/common/propertyPanelSection";
 import { useI18n } from "@/lib/i18n";
 import type { EditorPostProcessPassId, ResolvedEditorEnvConfigJSON } from "@/render/editor";
-import {
-  DEFAULT_EDITOR_BACKGROUND_BLURRINESS,
-  DEFAULT_EDITOR_BACKGROUND_INTENSITY,
-  DEFAULT_EDITOR_ENVIRONMENT_INTENSITY,
-  DEFAULT_EDITOR_ENVIRONMENT_ROTATION_Y,
-  isHighDynamicRangeEnvironmentAssetName
-} from "@/render/editor";
+import { isHighDynamicRangeEnvironmentAssetName } from "@/render/editor";
 import { DEFAULT_EDITOR_TONE_MAPPING } from "@/render/editor/runtime/colorManagement";
 import { useEditorStore } from "@/stores/editorStore";
 import { ScenePostProcessingPanel } from "./scenePostProcessingPanel";
@@ -64,10 +58,6 @@ export function SceneSettingsSection({
   };
 
   const getToneMappingLabel = (label: string, value: number) => {
-    if (value === DEFAULT_EDITOR_TONE_MAPPING) {
-      return `${label} • ${t("editor.properties.recommended")}`;
-    }
-
     if (value === THREE.CustomToneMapping) {
       return `${label} • ${t("editor.properties.experimental")}`;
     }
@@ -221,12 +211,6 @@ export function SceneSettingsSection({
           ))}
         </TextField>
 
-        <Typography sx={{ mt: -0.3, fontSize: 11, color: theme.mutedText }}>
-          {t("editor.properties.toneMappingRecommended", {
-            value: toneMappingOptions.find((option) => option.value === DEFAULT_EDITOR_TONE_MAPPING)?.label ?? "ACESFilmicToneMapping"
-          })}
-        </Typography>
-
         <SliderField
           label={t("editor.properties.environmentIntensity")}
           min={0}
@@ -238,8 +222,7 @@ export function SceneSettingsSection({
               environmentIntensity: value
             })
           }
-          formatter={(value) =>
-            value === DEFAULT_EDITOR_ENVIRONMENT_INTENSITY ? `${value.toFixed(2)} • ${t("editor.properties.recommended")}` : value.toFixed(2)
+          formatter={(value) => value.toFixed(2)
           }
         />
 
@@ -254,8 +237,7 @@ export function SceneSettingsSection({
               backgroundIntensity: value
             })
           }
-          formatter={(value) =>
-            value === DEFAULT_EDITOR_BACKGROUND_INTENSITY ? `${value.toFixed(2)} • ${t("editor.properties.recommended")}` : value.toFixed(2)
+          formatter={(value) => value.toFixed(2)
           }
         />
 
@@ -270,8 +252,7 @@ export function SceneSettingsSection({
               backgroundBlurriness: value
             })
           }
-          formatter={(value) =>
-            value === DEFAULT_EDITOR_BACKGROUND_BLURRINESS ? `${value.toFixed(2)} • ${t("editor.properties.recommended")}` : value.toFixed(2)
+          formatter={(value) => value.toFixed(2)
           }
         />
 
@@ -299,10 +280,7 @@ export function SceneSettingsSection({
               environmentRotationY: THREE.MathUtils.degToRad(value)
             })
           }
-          formatter={(value) =>
-            envConfig.environmentRotationY === DEFAULT_EDITOR_ENVIRONMENT_ROTATION_Y
-              ? `${Math.round(value)}° • ${t("editor.properties.recommended")}`
-              : `${Math.round(value)}°`
+          formatter={(value) => `${Math.round(value)}°`
           }
         />
 
