@@ -1,5 +1,4 @@
 import * as THREE from "three";
-import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { EXRLoader } from "three/examples/jsm/loaders/EXRLoader.js";
 import { HDRLoader } from "three/examples/jsm/loaders/HDRLoader.js";
 
@@ -62,7 +61,6 @@ export class EditorRuntimeEnvironment {
   private lightHelpersVisible = true;
   private environmentTexture: THREE.Texture | null = null;
   private environmentMapTexture: THREE.Texture | null = null;
-  private defaultEnvironmentRenderTarget: THREE.WebGLRenderTarget | null = null;
   private sceneMaterialInvalidationState: SceneMaterialInvalidationState | null = null;
   private lastGroundMaterial: ResolvedEditorGroundConfigJSON["material"] | null = null;
 
@@ -343,8 +341,6 @@ export class EditorRuntimeEnvironment {
     this.groundPlane.geometry.dispose();
     disposeMeshStandardMaterialTextures(this.groundPlane.material);
     this.groundPlane.material.dispose();
-    this.defaultEnvironmentRenderTarget?.dispose();
-    this.defaultEnvironmentRenderTarget = null;
     this.pmremGenerator.dispose();
   }
 
@@ -371,29 +367,6 @@ export class EditorRuntimeEnvironment {
       return null;
     }
 
-    return this.environmentMapTexture ?? this.getDefaultEnvironmentMapTexture();
-  }
-
-  private getDefaultEnvironmentMapTexture() {
-    if (!this.defaultEnvironmentRenderTarget) {
-      const roomEnvironment = new RoomEnvironment();
-      this.defaultEnvironmentRenderTarget = this.pmremGenerator.fromScene(roomEnvironment);
-      this.disposeRoomEnvironment(roomEnvironment);
-    }
-
-    return this.defaultEnvironmentRenderTarget.texture;
-  }
-
-  private disposeRoomEnvironment(roomEnvironment: RoomEnvironment) {
-    roomEnvironment.traverse((object) => {
-      if (!(object instanceof THREE.Mesh)) return;
-
-      object.geometry?.dispose();
-      if (Array.isArray(object.material)) {
-        object.material.forEach((material) => material.dispose());
-      } else {
-        object.material?.dispose();
-      }
-    });
+    return this.environmentMapTexture;
   }
 }
