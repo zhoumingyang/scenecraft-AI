@@ -196,7 +196,7 @@ function createSculpturalLoopGeometry() {
     true
   );
   const loop = new THREE.TubeGeometry(curve, 96, 0.07, 14, true);
-  const base = new THREE.CylinderGeometry(0.42, 0.54, 0.12, 40);
+  const base = new THREE.CylinderGeometry(0.42, 0.54, 0.12, 64);
   base.translate(0, -0.72, 0);
   return mergeBufferGeometries([loop, base]);
 }

@@ -13,7 +13,7 @@ export function createBuiltinGeometry(name: string): THREE.BufferGeometry {
   if (normalized === "cone") return new THREE.ConeGeometry(0.75, 1.6, 24);
   if (normalized === "sphere") return new THREE.SphereGeometry(0.8, 24, 16);
   if (normalized === "circle") return new THREE.CircleGeometry(0.9, 32);
-  if (normalized === "cylinder") return new THREE.CylinderGeometry(0.7, 0.7, 1.4, 24);
+  if (normalized === "cylinder") return new THREE.CylinderGeometry(0.7, 0.7, 1.4, 64);
   if (normalized === "dodecahedron") return new THREE.DodecahedronGeometry(0.9);
   if (normalized === "icosahedron") return new THREE.IcosahedronGeometry(0.9);
   if (normalized === "lathe") {

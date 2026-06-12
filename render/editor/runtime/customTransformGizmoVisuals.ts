@@ -44,7 +44,7 @@ export function createTranslateVisual(
   const base = new THREE.Group();
   const shaftMaterial = createHandleMaterial(tintHex(color, -0.16), 0.92);
   const tipMaterial = createHandleMaterial(tintHex(color, 0.08), 0.98);
-  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 0.92, 12), shaftMaterial);
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 0.92, 64), shaftMaterial);
   const tip = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.26, 18), tipMaterial);
 
   shaft.position.y = 0.46;
