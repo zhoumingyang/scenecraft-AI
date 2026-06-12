@@ -51,7 +51,11 @@ const STUDIO_DECORATION_KIND_OPTIONS: StudioDecorationKind[] = [
   "layeredArch",
   "orbitCluster",
   "organicShard",
-  "modularBlocks"
+  "modularBlocks",
+  "luminousRingBackdrop",
+  "transparentAcrylicCube",
+  "frostedGlassSphere",
+  "cutCrystalBlock"
 ];
 
 type StudioScenePropertySectionProps = {

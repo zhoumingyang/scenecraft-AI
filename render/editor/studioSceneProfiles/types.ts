@@ -104,7 +104,11 @@ export type StudioLayoutProfile = {
       | "layeredArch"
       | "orbitCluster"
       | "organicShard"
-      | "modularBlocks";
+      | "modularBlocks"
+      | "luminousRingBackdrop"
+      | "transparentAcrylicCube"
+      | "frostedGlassSphere"
+      | "cutCrystalBlock";
     count: number;
     placement: "back" | "side" | "floor" | "floating";
     brightnessRatioToProduct: number;
@@ -269,6 +273,7 @@ export type StudioScenePresetFromStyleProfile = {
   cameraPitch: number;
   cameraYaw: number;
   cameraDistanceMultiplier: number;
+  cameraTargetHeightRatio: number;
   hdri: {
     provider: "polyhaven";
     assetId: string;

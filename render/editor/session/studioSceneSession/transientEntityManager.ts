@@ -28,6 +28,7 @@ import {
 import { toGeneratorFrame } from "./transientEntityMetadata";
 import {
   configureStudioTransientLightShadows,
+  configureStudioTransientDecorationMaterial,
   configureStudioTransientMeshShadows,
   markTransientObject,
   placeTransientEntityAtSpawn
@@ -200,6 +201,12 @@ export class StudioSceneTransientEntityManager {
         this.registry.get(model.id)?.object ?? null,
         role
       );
+      if (role === "decoration") {
+        this.configureStudioTransientDecorationMaterial(
+          this.registry.get(model.id)?.object ?? null,
+          descriptor.decorationKind
+        );
+      }
     };
 
     backgroundLayout.descriptors.forEach((descriptor) => {
@@ -422,6 +429,12 @@ export class StudioSceneTransientEntityManager {
       this.registry.get(model.id)?.object ?? null,
       descriptor.role
     );
+    if (descriptor.role === "decoration") {
+      this.configureStudioTransientDecorationMaterial(
+        this.registry.get(model.id)?.object ?? null,
+        descriptor.decorationKind
+      );
+    }
     this.rebuildGroupHierarchy();
     this.emit({ type: "sceneUpdated", source, pathTraceInvalidation: "scene" });
     this.emitChanged();
@@ -506,6 +519,13 @@ export class StudioSceneTransientEntityManager {
     role: StudioTransientEntityRole
   ) {
     configureStudioTransientMeshShadows(object, role);
+  }
+
+  private configureStudioTransientDecorationMaterial(
+    object: Parameters<typeof configureStudioTransientDecorationMaterial>[0],
+    decorationKind: Parameters<typeof configureStudioTransientDecorationMaterial>[1]
+  ) {
+    configureStudioTransientDecorationMaterial(object, decorationKind);
   }
 
   private configureStudioTransientLightShadows(

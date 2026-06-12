@@ -8,7 +8,10 @@ import { isStudioScenePreviewEntity } from "../../studioSceneEligibility";
 import { resolveStudioSceneStyleProfile } from "../../studioSceneProfiles";
 import { createStudioColorGradingConfigFromStyleProfile } from "../../studioColorGrading";
 import { resolveStudioPlinthKind } from "../../studioSceneLayoutGenerator";
-import { frameStudioSceneCamera } from "./environment";
+import {
+  applyStudioBokehFocusFromDistance,
+  frameStudioSceneCamera
+} from "./environment";
 import {
   captureObjectVisibilitySnapshot,
   captureViewHelperSnapshot,
@@ -163,7 +166,8 @@ export function enterStudioScene(input: {
   deps.applyStudioColorGradingDefaults(nextSession, styleProfile);
   void deps.applyStudioIbl(nextSession, styleProfile, source);
   deps.transientEntityManager.createTransientStudioEntities(nextSession, studioFrame);
-  frameStudioSceneCamera(deps.runtime, preset, studioFrame);
+  const focusDistance = frameStudioSceneCamera(deps.runtime, preset, studioFrame);
+  applyStudioBokehFocusFromDistance(deps, styleProfile, focusDistance, source);
   deps.setSelectedEntity(entityId, source);
   deps.emitChanged();
   return true;

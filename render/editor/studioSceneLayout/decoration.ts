@@ -6,6 +6,7 @@ import {
   createExtrudedShapePresetGeometry,
   geometryToCustomMesh
 } from "../utils/geometry";
+import { createCleanCommerceDecorationDescriptors } from "./cleanCommerceDecorations";
 import { IDENTITY_QUATERNION } from "./descriptors";
 import { createExtrudedPlinthGeometry } from "./plinth";
 import {
@@ -343,13 +344,24 @@ function createModularBlocksGeometry() {
 function createDecorationGeometry(kind: StudioDecorationKind): StudioLayoutMeshGeometryDescriptor {
   if (kind === "sphere") return { mode: "builtin", geometryName: "Sphere" };
   if (kind === "cylinder") return { mode: "builtin", geometryName: "Cylinder" };
-  if (kind === "ring") return { mode: "builtin", geometryName: "Torus" };
-  if (kind === "box" || kind === "verticalPanel") return { mode: "builtin", geometryName: "Box" };
+  if (kind === "ring" || kind === "luminousRingBackdrop") {
+    return { mode: "builtin", geometryName: "Torus" };
+  }
+  if (
+    kind === "box" ||
+    kind === "verticalPanel" ||
+    kind === "transparentAcrylicCube"
+  ) {
+    return { mode: "builtin", geometryName: "Box" };
+  }
+  if (kind === "frostedGlassSphere") return { mode: "builtin", geometryName: "Sphere" };
   if (kind === "floatingGeometry") return { mode: "builtin", geometryName: "Icosahedron" };
 
   const geometry =
     kind === "sculpturalLoop"
       ? createSculpturalLoopGeometry()
+      : kind === "cutCrystalBlock"
+        ? createOrganicShardGeometry()
       : kind === "ribbonPanel"
         ? createRibbonPanelGeometry()
         : kind === "steppedTotem"
@@ -417,7 +429,11 @@ export function getStudioDecorationScale(kind: StudioDecorationKind, radius: num
   if (kind === "sphere") return [radius * 0.42, radius * 0.42, radius * 0.42];
   if (kind === "cylinder") return [radius * 0.38, radius * 0.74, radius * 0.38];
   if (kind === "ring") return [radius * 0.72, radius * 0.72, radius * 0.72];
+  if (kind === "luminousRingBackdrop") return [radius * 1.6, radius * 1.6, radius * 1.6];
   if (kind === "box") return [radius * 0.52, radius * 0.52, radius * 0.52];
+  if (kind === "transparentAcrylicCube") return [radius * 0.72, radius * 0.72, radius * 0.72];
+  if (kind === "frostedGlassSphere") return [radius * 0.48, radius * 0.48, radius * 0.48];
+  if (kind === "cutCrystalBlock") return [radius * 0.9, radius * 0.58, radius * 0.52];
   if (kind === "roundedBox") return [radius * 0.7, radius * 0.4, radius * 0.52];
   if (kind === "arch") return [radius * 1.1, radius * 1.2, radius * 0.7];
   if (kind === "semiDisc") return [radius * 0.92, radius * 0.72, radius * 0.45];
@@ -539,6 +555,15 @@ export function createStudioDecorationDescriptors(
     plinthTopY: number;
   }
 ): StudioLayoutMeshDescriptor[] {
+  if (input.styleProfile.id === "cleanCommerce") {
+    return createCleanCommerceDecorationDescriptors({
+      styleProfile: input.styleProfile,
+      bounds: input.bounds,
+      plinthTopY: input.plinthTopY,
+      targetFrame: input.targetFrame
+    });
+  }
+
   const kinds = getDefaultDecorationKinds(input).slice(0, 5);
   return kinds.map((kind, index) => {
     const placement = createStudioDecorationPlacement({

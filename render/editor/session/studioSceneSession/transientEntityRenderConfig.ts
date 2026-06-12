@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import type { BindingRegistry } from "../../bindings/bindingRegistry";
 import type { StudioLayoutBounds } from "../../studioSceneLayoutGenerator";
+import type { StudioDecorationKind } from "../../studioSceneLayoutGenerator";
 import { createStudioFrameFromObject } from "./target";
 import type {
   ActiveStudioSceneSession,
@@ -69,6 +70,86 @@ export function configureStudioTransientMeshShadows(
       return;
     }
   });
+}
+
+function disposeMaterial(material: THREE.Material | THREE.Material[]) {
+  if (Array.isArray(material)) {
+    material.forEach((entry) => entry.dispose());
+    return;
+  }
+  material.dispose();
+}
+
+function createCleanCommercePhysicalMaterial(kind: StudioDecorationKind) {
+  if (kind === "transparentAcrylicCube") {
+    return new THREE.MeshPhysicalMaterial({
+      color: "#dceeff",
+      opacity: 0.26,
+      transparent: true,
+      roughness: 0.05,
+      metalness: 0,
+      transmission: 0.72,
+      ior: 1.45,
+      thickness: 0.32,
+      envMapIntensity: 1.55,
+      depthWrite: false
+    });
+  }
+  if (kind === "frostedGlassSphere") {
+    return new THREE.MeshPhysicalMaterial({
+      color: "#edf5fb",
+      opacity: 0.44,
+      transparent: true,
+      roughness: 0.72,
+      metalness: 0,
+      transmission: 0.42,
+      ior: 1.38,
+      thickness: 0.5,
+      envMapIntensity: 1.3,
+      depthWrite: false
+    });
+  }
+  if (kind === "cutCrystalBlock") {
+    return new THREE.MeshPhysicalMaterial({
+      color: "#eaf7ff",
+      opacity: 0.54,
+      transparent: true,
+      roughness: 0.02,
+      metalness: 0,
+      transmission: 0.86,
+      ior: 1.52,
+      thickness: 0.42,
+      envMapIntensity: 1.8,
+      depthWrite: false
+    });
+  }
+  if (kind === "luminousRingBackdrop") {
+    return new THREE.MeshStandardMaterial({
+      color: "#ffffff",
+      roughness: 0.12,
+      metalness: 0,
+      emissive: "#ffffff",
+      emissiveIntensity: 1.85
+    });
+  }
+  return null;
+}
+
+export function configureStudioTransientDecorationMaterial(
+  object: THREE.Object3D | null,
+  kind?: StudioDecorationKind
+) {
+  if (!object || !kind) return;
+  const replacement = createCleanCommercePhysicalMaterial(kind);
+  if (!replacement) return;
+
+  object.traverse((child) => {
+    if (!(child instanceof THREE.Mesh)) return;
+    disposeMaterial(child.material);
+    child.material = replacement.clone();
+    child.material.needsUpdate = true;
+  });
+  replacement.dispose();
 }
 
 export function configureStudioTransientLightShadows(

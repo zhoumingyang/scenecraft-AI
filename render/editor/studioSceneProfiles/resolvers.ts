@@ -120,6 +120,7 @@ export function createStudioPresetFromStyleProfile(
     cameraPitch: profile.camera.pitch,
     cameraYaw: profile.camera.yaw,
     cameraDistanceMultiplier: profile.camera.distanceMultiplier,
+    cameraTargetHeightRatio: profile.camera.targetHeightRatio,
     hdri: {
       provider: "polyhaven",
       assetId: profile.lighting.ibl.assetId ?? "studio_small_09",
