@@ -98,7 +98,7 @@ export function PostProcessingPassParams({
           <SliderField
             label={t("editor.post.focus")}
             min={0.1}
-            max={200}
+            max={70}
             step={0.1}
             value={config.passes.bokeh.params.focus}
             onChange={(value) => onPatch("bokeh", { focus: value })}
