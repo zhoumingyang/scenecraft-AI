@@ -58,11 +58,7 @@ export type StudioDecorationKind =
   | "layeredArch"
   | "orbitCluster"
   | "organicShard"
-  | "modularBlocks"
-  | "luminousRingBackdrop"
-  | "transparentAcrylicCube"
-  | "frostedGlassSphere"
-  | "cutCrystalBlock";
+  | "modularBlocks";
 
 export type StudioLayoutTargetFrame = {
   center: Vec3Tuple;

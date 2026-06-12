@@ -26,11 +26,10 @@ export function frameStudioSceneCamera(
     cameraPitch: number;
     cameraYaw: number;
     cameraDistanceMultiplier: number;
-    cameraTargetHeightRatio: number;
   },
   frame: StudioTargetFrame
 ) {
-  return runtime.frameStudioCamera({
+  runtime.frameStudioCamera({
     center: frame.center,
     floorY: frame.floorY,
     height: frame.height,
@@ -38,56 +37,7 @@ export function frameStudioSceneCamera(
     fov: preset.cameraFov,
     pitch: preset.cameraPitch,
     yaw: preset.cameraYaw,
-    distanceMultiplier: preset.cameraDistanceMultiplier,
-    targetHeightRatio: preset.cameraTargetHeightRatio
-  });
-}
-
-export function createStudioBokehFocusPatch(
-  styleProfile: StudioSceneStyleProfile,
-  focusDistance: number
-) {
-  const bokeh = styleProfile.postProcessing.passes.bokeh;
-  if (!bokeh?.enabled) return null;
-
-  return {
-    postProcessing: {
-      passes: {
-        bokeh: {
-          enabled: true,
-          params: {
-            focus: focusDistance,
-            aperture: bokeh.aperture,
-            maxblur: bokeh.maxblur
-          }
-        }
-      }
-    }
-  };
-}
-
-export function applyStudioBokehFocusFromDistance(
-  deps: StudioSceneEnvironmentDeps,
-  styleProfile: StudioSceneStyleProfile,
-  focusDistance: number,
-  source: SyncSource
-) {
-  const projectModel = deps.getProjectModel();
-  const patch = createStudioBokehFocusPatch(styleProfile, focusDistance);
-  if (!projectModel || !patch) return;
-
-  projectModel.envConfig = {
-    ...projectModel.envConfig,
-    postProcessing: mergeEditorPostProcessingConfig(
-      projectModel.envConfig.postProcessing,
-      patch.postProcessing
-    )
-  };
-  deps.runtime.applyEnvConfig(projectModel.envConfig);
-  deps.emit({
-    type: "sceneUpdated",
-    source,
-    pathTraceInvalidation: "environment"
+    distanceMultiplier: preset.cameraDistanceMultiplier
   });
 }
 

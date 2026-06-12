@@ -234,12 +234,10 @@ export class EditorRuntime {
     pitch: number;
     yaw: number;
     distanceMultiplier: number;
-    targetHeightRatio?: number;
   }) {
     const radius = Math.max(input.radius, 1.2);
     const target = input.center.clone();
-    const targetHeightRatio = input.targetHeightRatio ?? 0.48;
-    target.y = input.floorY + Math.max(input.height * targetHeightRatio, radius * 0.65);
+    target.y = input.floorY + Math.max(input.height * 0.48, radius * 0.65);
     const distance = Math.max(radius * input.distanceMultiplier, 2.8);
     const cameraPosition = new THREE.Vector3(
       target.x + Math.sin(input.yaw) * Math.cos(input.pitch) * distance,
@@ -260,7 +258,6 @@ export class EditorRuntime {
     this.postProcessing.syncCameraState();
     this.pathTracer.invalidateCamera();
     this.requestFrame();
-    return cameraPosition.distanceTo(target);
   }
 
   attachTransformTarget(object: THREE.Object3D | null) {

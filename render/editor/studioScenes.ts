@@ -61,7 +61,6 @@ export type StudioScenePresetDefinition = {
   cameraPitch: number;
   cameraYaw: number;
   cameraDistanceMultiplier: number;
-  cameraTargetHeightRatio: number;
   hdri: StudioSceneHdriConfig;
   keyLight: StudioSceneLightConfig;
   fillLight: StudioSceneLightConfig;
