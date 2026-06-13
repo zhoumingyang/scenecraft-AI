@@ -1,7 +1,7 @@
 import * as THREE from "three";
 
 import type { Vec3Tuple } from "../core/types";
-import type { StudioSceneStyleProfile } from "../studioSceneProfiles";
+import type { PbrSurfaceConfig, StudioSceneStyleProfile } from "../studioSceneProfiles";
 import {
   createExtrudedShapePresetGeometry,
   geometryToCustomMesh
@@ -13,6 +13,7 @@ import {
   type StudioDecorationKind,
   type StudioLayoutBounds,
   type StudioLayoutGeneratorInput,
+  type StudioLayoutMaterialDescriptor,
   type StudioLayoutMeshDescriptor,
   type StudioLayoutMeshGeometryDescriptor
 } from "./types";
@@ -386,6 +387,9 @@ function getDefaultDecorationKinds(input: StudioLayoutGeneratorInput): StudioDec
       Array.from({ length: Math.max(1, decoration.count) }, () => decoration.role)
     );
   }
+  if (input.styleProfile.id === "cleanCommerce") {
+    return ["box", "sphere", "floatingGeometry"];
+  }
   if (input.productProfile.productType === "beauty" || input.productProfile.productType === "jewelry") {
     return ["sculpturalLoop", "ribbonPanel", "organicShard", "semiDisc"];
   }
@@ -406,9 +410,6 @@ function getDefaultDecorationKinds(input: StudioLayoutGeneratorInput): StudioDec
   }
   if (input.styleProfile.id === "darkTech") {
     return ["orbitCluster", "steppedTotem", "ribbonPanel"];
-  }
-  if (input.styleProfile.id === "cleanCommerce") {
-    return ["layeredArch", "foldedScreen", "modularBlocks"];
   }
   return ["verticalPanel", "sphere"];
 }
@@ -435,6 +436,31 @@ export function getStudioDecorationScale(kind: StudioDecorationKind, radius: num
   return [radius * 0.72, radius * 0.4, radius * 0.72];
 }
 
+function getCleanCommerceDecorationScale(kind: StudioDecorationKind, radius: number, index: number): Vec3Tuple {
+  if (index === 0 && kind === "box") {
+    return [radius * 0.62, radius * 0.62, radius * 0.62];
+  }
+  if (index === 1 && kind === "sphere") {
+    return [radius * 0.5, radius * 0.5, radius * 0.5];
+  }
+  if (index === 2 && kind === "floatingGeometry") {
+    return [radius * 1.05, radius * 0.42, radius * 0.42];
+  }
+  return getStudioDecorationScale(kind, radius);
+}
+
+function getStudioDecorationScaleForStyle(input: {
+  kind: StudioDecorationKind;
+  radius: number;
+  styleProfile: StudioSceneStyleProfile;
+  index: number;
+}): Vec3Tuple {
+  if (input.styleProfile.id === "cleanCommerce") {
+    return getCleanCommerceDecorationScale(input.kind, input.radius, input.index);
+  }
+  return getStudioDecorationScale(input.kind, input.radius);
+}
+
 export function createStudioDecorationDescriptorForKind(input: {
   styleProfile: StudioSceneStyleProfile;
   kind: StudioDecorationKind;
@@ -442,6 +468,7 @@ export function createStudioDecorationDescriptorForKind(input: {
   position: Vec3Tuple;
   scale: Vec3Tuple;
   quaternion?: [number, number, number, number];
+  material?: StudioLayoutMaterialDescriptor;
 }): StudioLayoutMeshDescriptor {
   return {
     kind: "mesh",
@@ -449,7 +476,9 @@ export function createStudioDecorationDescriptorForKind(input: {
     subRole: "decoration",
     label: `Studio ${input.kind}`,
     geometry: createDecorationGeometry(input.kind),
-    material: createStudioLayoutMaterial(input.styleProfile.materials.surfaces.decoration),
+    material:
+      input.material ??
+      createStudioLayoutMaterial(input.styleProfile.materials.surfaces.decoration),
     position: input.position,
     quaternion: input.quaternion ?? IDENTITY_QUATERNION,
     scale: input.scale,
@@ -460,6 +489,54 @@ export function createStudioDecorationDescriptorForKind(input: {
     resetKey: `decoration:${input.index}:${input.kind}`,
     decorationKind: input.kind
   };
+}
+
+function createDecorationMaterialFromSurface(
+  base: PbrSurfaceConfig,
+  patch: Partial<PbrSurfaceConfig>
+): StudioLayoutMaterialDescriptor {
+  return createStudioLayoutMaterial({
+    ...base,
+    ...patch
+  });
+}
+
+function createCleanCommerceDecorationMaterial(
+  styleProfile: StudioSceneStyleProfile,
+  index: number
+): StudioLayoutMaterialDescriptor | undefined {
+  const base = styleProfile.materials.surfaces.decoration;
+  if (index === 0) {
+    return createDecorationMaterialFromSurface(base, {
+      color: "#dcecff",
+      roughness: 0.08,
+      metalness: 0,
+      emissive: "#f3faff",
+      emissiveIntensity: 0.04,
+      opacity: 0.34
+    });
+  }
+  if (index === 1) {
+    return createDecorationMaterialFromSurface(base, {
+      color: "#edf3f8",
+      roughness: 0.9,
+      metalness: 0,
+      emissive: "#f9fcff",
+      emissiveIntensity: 0.03,
+      opacity: 0.62
+    });
+  }
+  if (index === 2) {
+    return createDecorationMaterialFromSurface(base, {
+      color: "#d5eaff",
+      roughness: 0.14,
+      metalness: 0,
+      emissive: "#edf8ff",
+      emissiveIntensity: 0.06,
+      opacity: 0.48
+    });
+  }
+  return undefined;
 }
 
 function createStudioDecorationPlacement(input: {
@@ -491,9 +568,9 @@ function createStudioDecorationPlacement(input: {
     Record<StudioSceneStyleProfile["id"], Array<{ position: Vec3Tuple; rotation: Vec3Tuple }>>
   > = {
     cleanCommerce: [
-      { position: [centerX - bounds.width * 0.18, y(0.5), backZ + radius * 0.04], rotation: [0, 0.04, 0] },
-      { position: [rightX, y(0.72), centerZ - radius * 0.16], rotation: [0, -Math.PI / 2.15, 0] },
-      { position: [centerX + bounds.width * 0.19, y(0.16), backZ + radius * 0.24], rotation: [0, -0.1, 0] }
+      { position: [centerX - radius * 1.12, y(0.92), centerZ - radius * 0.46], rotation: [0.02, 0.18, -0.04] },
+      { position: [centerX + radius * 1.08, y(0.7), centerZ - radius * 0.42], rotation: [0, -0.1, 0] },
+      { position: [centerX, y(0.24), centerZ - radius * 0.36], rotation: [0.1, Math.PI / 4, 0.22] }
     ],
     premiumBeauty: [
       { position: [centerX + bounds.width * 0.2, y(0.66), backZ + radius * 0.06], rotation: [0.05, -0.22, -0.08] },
@@ -553,7 +630,16 @@ export function createStudioDecorationDescriptors(
       index,
       position: placement.position,
       quaternion: placement.quaternion,
-      scale: getStudioDecorationScale(kind, input.bounds.radius)
+      scale: getStudioDecorationScaleForStyle({
+        kind,
+        radius: input.bounds.radius,
+        styleProfile: input.styleProfile,
+        index
+      }),
+      material:
+        input.styleProfile.id === "cleanCommerce"
+          ? createCleanCommerceDecorationMaterial(input.styleProfile, index)
+          : undefined
     });
   });
 }

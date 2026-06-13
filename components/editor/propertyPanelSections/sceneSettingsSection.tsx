@@ -8,7 +8,6 @@ import PropertyPanelSection from "@/components/common/propertyPanelSection";
 import { useI18n } from "@/lib/i18n";
 import type { EditorPostProcessPassId, ResolvedEditorEnvConfigJSON } from "@/render/editor";
 import { isHighDynamicRangeEnvironmentAssetName } from "@/render/editor";
-import { DEFAULT_EDITOR_TONE_MAPPING } from "@/render/editor/runtime/colorManagement";
 import { useEditorStore } from "@/stores/editorStore";
 import { ScenePostProcessingPanel } from "./scenePostProcessingPanel";
 import { SliderField } from "./sceneSettingsFields";

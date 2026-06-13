@@ -64,11 +64,9 @@ export const cleanCommerceStyleProfile: StudioSceneStyleProfile = {
         ceilingIntensity: 0.28
       })
     ],
-    modifiers: [
-      { role: "reflector", enabled: true, placement: "left", color: "#ffffff", intensityEffect: 0.55, size: [1.3, 1.7], position: [-2.05, 1.25, 0.75], rotation: [0, 0.54, 0], visibleInRender: true }
-    ]
+    modifiers: []
   },
-  camera: { mode: "birdViewOnly", fov: 42, pitch: 0.18, yaw: Math.PI / 4, distanceMultiplier: 2.75, targetHeightRatio: 0.48, allowFirstPerson: false, orbitEnabled: true },
+  camera: { mode: "birdViewOnly", fov: 28, pitch: 0.035, yaw: 0, distanceMultiplier: 4.15, targetHeightRatio: 0.5, allowFirstPerson: false, orbitEnabled: true },
   postProcessing: {
     toneMapping: DEFAULT_EDITOR_TONE_MAPPING,
     exposure: 1.04,
