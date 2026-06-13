@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Box, IconButton, InputBase, Stack, Tooltip, Typography } from "@mui/material";
 import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
@@ -78,6 +79,30 @@ export default function SceneTreePanelRow({
   const canToggleLock = !lockDisabled;
   const rowColor = !interactive || node.locked ? theme.mutedText : selected ? theme.pillText : theme.text;
   const canExpand = node.children.length > 0;
+  const labelRef = useRef<HTMLElement | null>(null);
+  const [isLabelOverflowing, setIsLabelOverflowing] = useState(false);
+
+  const updateLabelOverflow = useCallback(() => {
+    const element = labelRef.current;
+    if (!element) {
+      setIsLabelOverflowing(false);
+      return;
+    }
+    setIsLabelOverflowing(element.scrollWidth > element.clientWidth);
+  }, []);
+
+  useEffect(() => {
+    updateLabelOverflow();
+
+    if (typeof ResizeObserver !== "undefined" && labelRef.current) {
+      const observer = new ResizeObserver(updateLabelOverflow);
+      observer.observe(labelRef.current);
+      return () => observer.disconnect();
+    }
+
+    window.addEventListener("resize", updateLabelOverflow);
+    return () => window.removeEventListener("resize", updateLabelOverflow);
+  }, [node.label, updateLabelOverflow]);
 
   const iconButtonSx = {
     color: rowColor,
@@ -202,17 +227,21 @@ export default function SceneTreePanelRow({
               overflow: "hidden"
             }}
           >
-            <Typography
-              sx={{
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-                fontSize: 13,
-                color: rowColor
-              }}
-            >
-              {node.label}
-            </Typography>
+            <Tooltip title={node.label} arrow disableHoverListener={!isLabelOverflowing}>
+              <Typography
+                ref={labelRef}
+                onMouseEnter={updateLabelOverflow}
+                sx={{
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  fontSize: 13,
+                  color: rowColor
+                }}
+              >
+                {node.label}
+              </Typography>
+            </Tooltip>
           </Box>
         )}
       </Stack>

@@ -40,11 +40,8 @@ export function EntityInspectorContent(props: PropertyPanelContentProps) {
   if (!entityRecord) {
     return (
       <EmptyPropertyPanel
-        aiMode={props.aiMode}
-        aiTexture={props.aiTexture}
         theme={theme}
         t={t}
-        onAiLibraryOpen={onAiLibraryOpen}
       />
     );
   }

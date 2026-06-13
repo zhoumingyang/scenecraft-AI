@@ -111,7 +111,7 @@ export default function SceneTreePanel() {
             left: 20,
             bottom: 116,
             zIndex: 21,
-            width: 300,
+            width: 340,
             maxHeight: "42vh",
             overflowY: "auto",
             borderRadius: 1,

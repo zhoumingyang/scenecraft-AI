@@ -3,7 +3,7 @@
 import type { PendingAiAsset } from "@/stores/editorStore";
 import type { ProjectAiLibraryV2JSON, StudioTransientEntityRole } from "@/render/editor";
 
-export const PANEL_WIDTH = 272;
+export const PANEL_WIDTH = 320;
 export const COLLAPSED_VISIBLE_WIDTH = 44;
 export const CLOSED_AI_LIBRARY: ProjectAiLibraryV2JSON = { version: 2, assets: [] };
 export const CLOSED_PENDING_AI_ASSETS: PendingAiAsset[] = [];
