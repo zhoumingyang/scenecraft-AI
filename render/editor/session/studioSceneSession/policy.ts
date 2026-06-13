@@ -183,7 +183,7 @@ export function canUseStudioSceneEntityAction(
   if (!session) return true;
 
   if (session.visibleOriginalEntityIds.has(entityId)) {
-    return action === "select";
+    return action === "select" || (entityId === session.targetEntityId && action === "transform");
   }
 
   if (!session.transientEntityIds.has(entityId)) {

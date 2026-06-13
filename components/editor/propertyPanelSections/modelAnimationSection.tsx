@@ -56,6 +56,9 @@ export function ModelAnimationSection({
 }: ModelAnimationSectionProps) {
   const { t } = useI18n();
   const app = useEditorStore((state) => state.app);
+
+  if (animations.length === 0) return null;
+
   const controls: Array<{
     key: "play" | "pause" | "stop" | "step";
     icon: ReactNode;
@@ -82,42 +85,6 @@ export function ModelAnimationSection({
       active: false
     }
   ];
-
-  if (animations.length === 0) {
-    return (
-      <PropertyPanelSection title={t("editor.properties.animation")}>
-        <Stack spacing={0.8}>
-          {externalSource ? (
-            <Stack spacing={0.35}>
-              <Typography sx={{ fontSize: 11, color: "rgba(176,193,228,0.72)" }}>
-                {t("editor.assets.sourceLine", {
-                  provider: "Poly Haven",
-                  license: externalSource.licenseLabel
-                })}
-              </Typography>
-              <Box
-                component="a"
-                href={externalSource.pageUrl}
-                target="_blank"
-                rel="noreferrer"
-                sx={{
-                  fontSize: 11,
-                  color: "#dce7ff",
-                  textDecoration: "underline"
-                }}
-              >
-                {t("editor.assets.viewSource")}
-              </Box>
-            </Stack>
-          ) : null}
-
-          <Typography sx={{ fontSize: 12, color: "rgba(176,193,228,0.72)" }}>
-            {t("editor.properties.animationEmpty")}
-          </Typography>
-        </Stack>
-      </PropertyPanelSection>
-    );
-  }
 
   return (
     <PropertyPanelSection title={t("editor.properties.animation")}>

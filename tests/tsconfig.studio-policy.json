@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "skipLibCheck": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "jsx": "react-jsx",
+    "baseUrl": "..",
+    "paths": {
+      "@/*": ["./*"]
+    },
+    "types": ["node"],
+    "outDir": "/tmp/scenecraft-policy-test"
+  },
+  "files": [
+    "./studioScenePolicy.test.ts",
+    "../render/editor/session/studioSceneSession/policy.ts"
+  ]
+}
