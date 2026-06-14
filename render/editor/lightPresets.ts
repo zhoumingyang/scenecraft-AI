@@ -10,9 +10,13 @@ export type LightPresetId =
   | "nightStreet"
   | "moonlightExterior";
 
+type LightPresetRole = "key" | "fill" | "rim" | "ambient" | "accent";
+
 export type LightPresetLightDefinition = {
   label: string;
+  role: LightPresetRole;
   light: Omit<EditorLightJSON, "id">;
+  target?: Vec3Tuple;
 };
 
 export type LightPresetDefinition = {
@@ -28,6 +32,7 @@ export type LightPresetFrame = {
 };
 
 const MIN_ADAPTIVE_LIGHT_PRESET_RADIUS = 0.75;
+const MAX_ADAPTIVE_LIGHT_PRESET_RADIUS = 3.5;
 
 function isPointOrSpotLight(lightType: EditorLightJSON["type"]) {
   const normalizedType = typeof lightType === "string" ? lightType : Number(lightType);
@@ -47,7 +52,11 @@ function shouldAimAtFrameCenter(lightType: EditorLightJSON["type"]) {
 }
 
 function getLightPresetFrameRadius(frame: LightPresetFrame) {
-  return Math.max(frame.radius, MIN_ADAPTIVE_LIGHT_PRESET_RADIUS);
+  return THREE.MathUtils.clamp(
+    frame.radius,
+    MIN_ADAPTIVE_LIGHT_PRESET_RADIUS,
+    MAX_ADAPTIVE_LIGHT_PRESET_RADIUS
+  );
 }
 
 function resolveAdaptiveLightPosition(position: Vec3Tuple, frame: LightPresetFrame): Vec3Tuple {
@@ -59,6 +68,81 @@ function resolveAdaptiveLightPosition(position: Vec3Tuple, frame: LightPresetFra
   ];
 }
 
+function resolveAdaptiveLightTarget(target: Vec3Tuple, frame: LightPresetFrame): Vec3Tuple {
+  const radius = getLightPresetFrameRadius(frame);
+  return [
+    frame.center[0] + target[0] * radius,
+    frame.floorY + target[1] * radius,
+    frame.center[2] + target[2] * radius
+  ];
+}
+
+function getAdaptiveIntensityExponent(
+  definition: LightPresetLightDefinition,
+  lightType: EditorLightJSON["type"]
+) {
+  const normalizedType = typeof lightType === "string" ? lightType : Number(lightType);
+
+  if (normalizedType === 5 || normalizedType === "rectArea") {
+    switch (definition.role) {
+      case "key":
+        return 0.4;
+      case "rim":
+        return 0.3;
+      case "accent":
+        return 0.26;
+      case "ambient":
+        return 0.18;
+      case "fill":
+      default:
+        return 0.22;
+    }
+  }
+
+  if (normalizedType === 2 || normalizedType === "directional") {
+    switch (definition.role) {
+      case "key":
+        return 0.12;
+      case "rim":
+        return 0.1;
+      case "accent":
+        return 0.09;
+      case "ambient":
+        return 0.06;
+      case "fill":
+      default:
+        return 0.08;
+    }
+  }
+
+  if (normalizedType === 6 || normalizedType === "hemisphere" || normalizedType === 1 || normalizedType === "ambient") {
+    switch (definition.role) {
+      case "key":
+      case "fill":
+      case "rim":
+      case "accent":
+        return 0.06;
+      case "ambient":
+      default:
+        return 0.04;
+    }
+  }
+
+  switch (definition.role) {
+    case "key":
+      return 1.45;
+    case "rim":
+      return 1.2;
+    case "accent":
+      return 1.1;
+    case "ambient":
+      return 0.9;
+    case "fill":
+    default:
+      return 1.05;
+  }
+}
+
 function adaptLightPresetLight(
   definition: LightPresetLightDefinition,
   frame: LightPresetFrame
@@ -66,7 +150,10 @@ function adaptLightPresetLight(
   const radius = getLightPresetFrameRadius(frame);
   const source = definition.light;
   const position = resolveAdaptiveLightPosition((source.position ?? [0, 0, 0]) as Vec3Tuple, frame);
-  const target = frame.center;
+  const target = definition.target
+    ? resolveAdaptiveLightTarget(definition.target, frame)
+    : frame.center;
+  const intensityScale = Math.pow(radius, getAdaptiveIntensityExponent(definition, source.type));
   const light: Omit<EditorLightJSON, "id"> = {
     ...source,
     position,
@@ -74,9 +161,7 @@ function adaptLightPresetLight(
       ? createLightQuaternion(source.type, position, target)
       : source.quaternion,
     distance: isPointOrSpotLight(source.type) ? (source.distance ?? 0) * radius : source.distance,
-    intensity: isPointOrSpotLight(source.type)
-      ? (source.intensity ?? 1) * radius * radius
-      : source.intensity,
+    intensity: (source.intensity ?? 1) * intensityScale,
     width:
       source.type === "rectArea" || source.type === 5
         ? (source.width ?? 1) * radius
@@ -89,7 +174,9 @@ function adaptLightPresetLight(
 
   return {
     label: definition.label,
-    light
+    role: definition.role,
+    light,
+    target: definition.target
   };
 }
 
@@ -126,6 +213,7 @@ function createLightQuaternion(
 
 function createLightDefinition(
   label: string,
+  role: LightPresetRole,
   light: Partial<Omit<EditorLightJSON, "id" | "label">> & {
     type: EditorLightJSON["type"];
     position?: Vec3Tuple;
@@ -135,6 +223,8 @@ function createLightDefinition(
   const position = light.position ?? [0, 0, 0];
   return {
     label,
+    role,
+    target: light.target,
     light: {
       type: light.type,
       position,
@@ -158,28 +248,28 @@ export const LIGHT_PRESET_DEFINITIONS: Record<LightPresetId, LightPresetDefiniti
     id: "softDayInterior",
     label: "Soft Day Interior",
     lights: [
-      createLightDefinition("Sky Fill", {
+      createLightDefinition("Sky Fill", "ambient", {
         type: "hemisphere",
-        position: [0, 8, 0],
-        color: "#dfeeff",
-        groundColor: "#39455c",
-        intensity: 0.55
+        position: [0, 7.2, 0],
+        color: "#dce8ff",
+        groundColor: "#445269",
+        intensity: 0.24
       }),
-      createLightDefinition("Sun Key", {
+      createLightDefinition("Sun Direction", "fill", {
         type: "directional",
-        position: [6, 8, 5],
-        target: [0, 1, 0],
-        color: "#fff1d6",
-        intensity: 0.8
+        position: [5.6, 7.1, 4.4],
+        target: [0, 1.35, 0.15],
+        color: "#ffe6bf",
+        intensity: 0.46
       }),
-      createLightDefinition("Window Fill", {
+      createLightDefinition("Window Key", "key", {
         type: "rectArea",
-        position: [-3, 3, 2],
-        target: [0, 1.2, 0],
-        color: "#fff8ee",
-        intensity: 2.8,
-        width: 3,
-        height: 4.5
+        position: [-3.6, 3.1, 2.3],
+        target: [0, 1.25, 0.05],
+        color: "#fffaf3",
+        intensity: 3.8,
+        width: 3.4,
+        height: 5.1
       })
     ]
   },
@@ -187,28 +277,28 @@ export const LIGHT_PRESET_DEFINITIONS: Record<LightPresetId, LightPresetDefiniti
     id: "warmHome",
     label: "Warm Home",
     lights: [
-      createLightDefinition("Warm Ambient", {
+      createLightDefinition("Warm Ambient", "ambient", {
         type: "hemisphere",
-        position: [0, 6, 0],
-        color: "#ffe8c4",
-        groundColor: "#4a362c",
-        intensity: 0.28
+        position: [0, 5.8, 0],
+        color: "#ffdcb5",
+        groundColor: "#3a2d27",
+        intensity: 0.14
       }),
-      createLightDefinition("Ceiling Lamp", {
+      createLightDefinition("Ceiling Lamp", "key", {
         type: "rectArea",
-        position: [2.5, 2.8, 2.5],
-        target: [0, 1, 0],
-        color: "#ffd3a1",
-        intensity: 3.2,
-        width: 2,
-        height: 2
+        position: [1.6, 3.3, 1.6],
+        target: [0, 1.15, 0],
+        color: "#ffd7ab",
+        intensity: 4.1,
+        width: 2.6,
+        height: 2.4
       }),
-      createLightDefinition("Corner Glow", {
+      createLightDefinition("Corner Glow", "accent", {
         type: "point",
-        position: [-2, 1.8, -1.5],
-        color: "#ffb76a",
-        intensity: 26,
-        distance: 9,
+        position: [-2.1, 1.75, -1.4],
+        color: "#ffc181",
+        intensity: 9.5,
+        distance: 7.2,
         decay: 2
       })
     ]
@@ -217,36 +307,36 @@ export const LIGHT_PRESET_DEFINITIONS: Record<LightPresetId, LightPresetDefiniti
     id: "studioThreePoint",
     label: "Studio Three-Point",
     lights: [
-      createLightDefinition("Key Spot", {
+      createLightDefinition("Key Spot", "key", {
         type: "spot",
-        position: [3, 4, 3],
-        target: [0, 1.2, 0],
-        color: "#fff8f0",
-        intensity: 70,
+        position: [3.4, 4.6, 2.6],
+        target: [0, 1.25, 0],
+        color: "#fff8f2",
+        intensity: 55,
         distance: 14,
         decay: 2,
-        angle: 0.72,
-        penumbra: 0.35
-      }),
-      createLightDefinition("Fill Panel", {
-        type: "rectArea",
-        position: [-3, 2.6, 2],
-        target: [0, 1.1, 0],
-        color: "#f5fbff",
-        intensity: 2,
-        width: 2.5,
-        height: 2
-      }),
-      createLightDefinition("Rim Spot", {
-        type: "spot",
-        position: [0, 4, -3],
-        target: [0, 1.4, 0],
-        color: "#d7ebff",
-        intensity: 28,
-        distance: 12,
-        decay: 2,
         angle: 0.55,
-        penumbra: 0.3
+        penumbra: 0.4
+      }),
+      createLightDefinition("Fill Panel", "fill", {
+        type: "rectArea",
+        position: [-2.8, 2.8, 2.2],
+        target: [0, 1.15, 0],
+        color: "#eef6ff",
+        intensity: 1.35,
+        width: 3.4,
+        height: 2.4
+      }),
+      createLightDefinition("Rim Spot", "rim", {
+        type: "spot",
+        position: [0.6, 4.4, -3.6],
+        target: [0, 1.35, -0.1],
+        color: "#dbe9ff",
+        intensity: 34,
+        distance: 13,
+        decay: 2,
+        angle: 0.42,
+        penumbra: 0.28
       })
     ]
   },
@@ -254,30 +344,30 @@ export const LIGHT_PRESET_DEFINITIONS: Record<LightPresetId, LightPresetDefiniti
     id: "productShowcase",
     label: "Product Showcase",
     lights: [
-      createLightDefinition("Key Panel", {
+      createLightDefinition("Key Panel", "key", {
         type: "rectArea",
-        position: [3, 3, 2],
-        target: [0, 1, 0],
-        color: "#fffaf2",
-        intensity: 4.5,
-        width: 3,
-        height: 2
+        position: [3.2, 3.1, 2.1],
+        target: [0, 1.05, 0],
+        color: "#fffaf4",
+        intensity: 5.2,
+        width: 3.2,
+        height: 2.4
       }),
-      createLightDefinition("Fill Panel", {
+      createLightDefinition("Fill Panel", "fill", {
         type: "rectArea",
-        position: [-3, 2.5, 1.5],
-        target: [0, 1, 0],
-        color: "#edf6ff",
-        intensity: 2,
-        width: 2.5,
-        height: 2
+        position: [-3.2, 2.6, 1.8],
+        target: [0, 1, 0.05],
+        color: "#eef5ff",
+        intensity: 1.25,
+        width: 3.4,
+        height: 2.4
       }),
-      createLightDefinition("Top Rim", {
+      createLightDefinition("Top Rim", "rim", {
         type: "directional",
-        position: [0, 5, -4],
-        target: [0, 1, 0],
-        color: "#dceaff",
-        intensity: 0.45
+        position: [0.2, 5.6, -4.5],
+        target: [0, 1.1, -0.1],
+        color: "#d8e8ff",
+        intensity: 0.62
       })
     ]
   },
@@ -285,38 +375,38 @@ export const LIGHT_PRESET_DEFINITIONS: Record<LightPresetId, LightPresetDefiniti
     id: "nightStreet",
     label: "Night Street",
     lights: [
-      createLightDefinition("Night Sky", {
+      createLightDefinition("Night Sky", "ambient", {
         type: "hemisphere",
-        position: [0, 7, 0],
-        color: "#89a8ff",
-        groundColor: "#141b2c",
-        intensity: 0.16
+        position: [0, 7.2, 0],
+        color: "#7c97ee",
+        groundColor: "#11182a",
+        intensity: 0.08
       }),
-      createLightDefinition("Overhead Spot", {
+      createLightDefinition("Overhead Spot", "key", {
         type: "spot",
-        position: [0, 5, 0],
-        target: [0, 0.8, 0],
-        color: "#b9d1ff",
-        intensity: 60,
-        distance: 16,
+        position: [0.4, 5.8, 0.6],
+        target: [0, 1, 0],
+        color: "#bad4ff",
+        intensity: 48,
+        distance: 14,
         decay: 2,
-        angle: 0.7,
-        penumbra: 0.45
+        angle: 0.58,
+        penumbra: 0.52
       }),
-      createLightDefinition("Neon Left", {
+      createLightDefinition("Store Glow Left", "accent", {
         type: "point",
-        position: [-3, 2, 1],
-        color: "#ffbf66",
-        intensity: 34,
-        distance: 11,
+        position: [-3.8, 2.4, 2.3],
+        color: "#ffb263",
+        intensity: 18,
+        distance: 8,
         decay: 2
       }),
-      createLightDefinition("Neon Right", {
+      createLightDefinition("Sign Bounce Right", "accent", {
         type: "point",
-        position: [3, 2, -1],
-        color: "#ffcf7d",
-        intensity: 28,
-        distance: 9,
+        position: [3.4, 2.15, -2],
+        color: "#ffc98f",
+        intensity: 14,
+        distance: 7.5,
         decay: 2
       })
     ]
@@ -325,30 +415,30 @@ export const LIGHT_PRESET_DEFINITIONS: Record<LightPresetId, LightPresetDefiniti
     id: "moonlightExterior",
     label: "Moonlight Exterior",
     lights: [
-      createLightDefinition("Moon Key", {
+      createLightDefinition("Moon Key", "key", {
         type: "directional",
-        position: [-6, 8, 4],
-        target: [0, 1, 0],
-        color: "#adc8ff",
-        intensity: 0.55
+        position: [-6.5, 8.8, 4.8],
+        target: [0, 1.25, 0.1],
+        color: "#b7ccff",
+        intensity: 0.68
       }),
-      createLightDefinition("Night Hemisphere", {
+      createLightDefinition("Night Hemisphere", "ambient", {
         type: "hemisphere",
         position: [0, 8, 0],
-        color: "#7e9ee8",
-        groundColor: "#132034",
-        intensity: 0.22
+        color: "#708ed8",
+        groundColor: "#0f1829",
+        intensity: 0.12
       }),
-      createLightDefinition("Rim Accent", {
+      createLightDefinition("Rim Accent", "rim", {
         type: "spot",
-        position: [0, 3.5, -4],
-        target: [0, 1.1, 0],
-        color: "#bdd2ff",
-        intensity: 20,
-        distance: 12,
+        position: [1, 4.2, -4.6],
+        target: [0, 1.2, -0.15],
+        color: "#cad9ff",
+        intensity: 24,
+        distance: 14,
         decay: 2,
-        angle: 0.62,
-        penumbra: 0.3
+        angle: 0.48,
+        penumbra: 0.26
       })
     ]
   }
