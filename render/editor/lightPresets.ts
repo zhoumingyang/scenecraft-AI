@@ -21,6 +21,78 @@ export type LightPresetDefinition = {
   lights: LightPresetLightDefinition[];
 };
 
+export type LightPresetFrame = {
+  center: Vec3Tuple;
+  floorY: number;
+  radius: number;
+};
+
+const MIN_ADAPTIVE_LIGHT_PRESET_RADIUS = 0.75;
+
+function isPointOrSpotLight(lightType: EditorLightJSON["type"]) {
+  const normalizedType = typeof lightType === "string" ? lightType : Number(lightType);
+  return normalizedType === 3 || normalizedType === "point" || normalizedType === 4 || normalizedType === "spot";
+}
+
+function shouldAimAtFrameCenter(lightType: EditorLightJSON["type"]) {
+  const normalizedType = typeof lightType === "string" ? lightType : Number(lightType);
+  return (
+    normalizedType === 2 ||
+    normalizedType === "directional" ||
+    normalizedType === 4 ||
+    normalizedType === "spot" ||
+    normalizedType === 5 ||
+    normalizedType === "rectArea"
+  );
+}
+
+function getLightPresetFrameRadius(frame: LightPresetFrame) {
+  return Math.max(frame.radius, MIN_ADAPTIVE_LIGHT_PRESET_RADIUS);
+}
+
+function resolveAdaptiveLightPosition(position: Vec3Tuple, frame: LightPresetFrame): Vec3Tuple {
+  const radius = getLightPresetFrameRadius(frame);
+  return [
+    frame.center[0] + position[0] * radius,
+    frame.floorY + position[1] * radius,
+    frame.center[2] + position[2] * radius
+  ];
+}
+
+function adaptLightPresetLight(
+  definition: LightPresetLightDefinition,
+  frame: LightPresetFrame
+): LightPresetLightDefinition {
+  const radius = getLightPresetFrameRadius(frame);
+  const source = definition.light;
+  const position = resolveAdaptiveLightPosition((source.position ?? [0, 0, 0]) as Vec3Tuple, frame);
+  const target = frame.center;
+  const light: Omit<EditorLightJSON, "id"> = {
+    ...source,
+    position,
+    quaternion: shouldAimAtFrameCenter(source.type)
+      ? createLightQuaternion(source.type, position, target)
+      : source.quaternion,
+    distance: isPointOrSpotLight(source.type) ? (source.distance ?? 0) * radius : source.distance,
+    intensity: isPointOrSpotLight(source.type)
+      ? (source.intensity ?? 1) * radius * radius
+      : source.intensity,
+    width:
+      source.type === "rectArea" || source.type === 5
+        ? (source.width ?? 1) * radius
+        : source.width,
+    height:
+      source.type === "rectArea" || source.type === 5
+        ? (source.height ?? 1) * radius
+        : source.height
+  };
+
+  return {
+    label: definition.label,
+    light
+  };
+}
+
 function createLookAtQuaternion(position: Vec3Tuple, target: Vec3Tuple = [0, 0, 0]): QuatTuple {
   const helper = new THREE.Object3D();
   helper.position.set(position[0], position[1], position[2]);
@@ -286,4 +358,17 @@ export const LIGHT_PRESET_IDS = Object.keys(LIGHT_PRESET_DEFINITIONS) as LightPr
 
 export function getLightPresetDefinition(presetId: LightPresetId): LightPresetDefinition {
   return LIGHT_PRESET_DEFINITIONS[presetId];
+}
+
+export function createAdaptiveLightPresetDefinition(
+  presetId: LightPresetId,
+  frame: LightPresetFrame | null
+): LightPresetDefinition {
+  const preset = getLightPresetDefinition(presetId);
+  if (!frame) return preset;
+
+  return {
+    ...preset,
+    lights: preset.lights.map((light) => adaptLightPresetLight(light, frame))
+  };
 }
