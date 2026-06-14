@@ -2,6 +2,7 @@ import { strict as assert } from "node:assert";
 import test from "node:test";
 
 import {
+  getEditorDuplicatePositionOffset,
   getEditorShortcutAction,
   shouldIgnoreEditorShortcutTarget
 } from "../components/editor/keyboardShortcuts";
@@ -45,6 +46,12 @@ test("editor shortcut actions avoid browser history and address bar shortcuts", 
   assert.equal(getEditorShortcutAction(eventFor({ key: "l" })), null);
   assert.equal(getEditorShortcutAction(eventFor({ key: "h", ctrlKey: true })), null);
   assert.equal(getEditorShortcutAction(eventFor({ key: "l", ctrlKey: true })), null);
+});
+
+test("duplicate and paste shortcuts use the same position offset", () => {
+  assert.deepEqual(getEditorDuplicatePositionOffset("duplicate-selection"), [0.4, 0, 0.4]);
+  assert.deepEqual(getEditorDuplicatePositionOffset("paste-selection"), [0.4, 0, 0.4]);
+  assert.equal(getEditorDuplicatePositionOffset("copy-selection"), null);
 });
 
 test("editor shortcuts are ignored in editable targets and dialogs", () => {

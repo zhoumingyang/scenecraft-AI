@@ -6,7 +6,8 @@ import type {
   EditorMeshMaterialJSON,
   EditorProjectJSON,
   SyncSource,
-  TransformPatch
+  TransformPatch,
+  Vec3Tuple
 } from "./types";
 import type { LightPresetId } from "../lightPresets";
 
@@ -39,6 +40,7 @@ export type EditorCommand =
       type: "entity.duplicate";
       entityId: string;
       source?: SyncSource;
+      positionOffset?: Vec3Tuple;
     }
   | {
       type: "entity.lock";

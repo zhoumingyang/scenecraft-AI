@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import type { EditorApp } from "@/render/editor";
 import {
+  getEditorDuplicatePositionOffset,
   getEditorShortcutAction,
   shouldIgnoreEditorShortcutTarget
 } from "@/components/editor/keyboardShortcuts";
@@ -50,12 +51,16 @@ export function useEditorKeyboardShortcuts({
         case "paste-selection":
           if (!copiedEntityIdRef.current) return;
           event.preventDefault();
-          app.duplicateEntity(copiedEntityIdRef.current);
+          app.duplicateEntity(copiedEntityIdRef.current, "ui", {
+            positionOffset: getEditorDuplicatePositionOffset(action) ?? undefined
+          });
           return;
         case "duplicate-selection":
           if (!activeSelectedEntityId) return;
           event.preventDefault();
-          app.duplicateEntity(activeSelectedEntityId);
+          app.duplicateEntity(activeSelectedEntityId, "ui", {
+            positionOffset: getEditorDuplicatePositionOffset(action) ?? undefined
+          });
           return;
         case "clear-selection":
           if (!activeSelectedEntityId) return;

@@ -8,7 +8,10 @@ export type EditorShortcutAction =
   | "lock-selection"
   | "save-project";
 
+export type EditorDuplicatePositionOffset = [number, number, number];
+
 export const EDITOR_SAVE_SHORTCUT_EVENT = "scenecraft:editor-save-shortcut";
+export const EDITOR_DUPLICATE_POSITION_OFFSET: EditorDuplicatePositionOffset = [0.4, 0, 0.4];
 
 type ShortcutKeyboardEvent = Pick<
   KeyboardEvent,
@@ -65,6 +68,13 @@ export function getEditorShortcutAction(
   }
 
   return null;
+}
+
+export function getEditorDuplicatePositionOffset(
+  action: EditorShortcutAction
+): EditorDuplicatePositionOffset | null {
+  if (action !== "duplicate-selection" && action !== "paste-selection") return null;
+  return [...EDITOR_DUPLICATE_POSITION_OFFSET];
 }
 
 export function shouldIgnoreEditorShortcutTarget(target: EventTarget | null) {
