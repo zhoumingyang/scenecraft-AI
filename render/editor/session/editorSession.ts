@@ -1,3 +1,5 @@
+import * as THREE from "three";
+
 import type { Ai3DPlan } from "../ai3d/plan";
 import type { EditorCommand, MeshMaterialPatch } from "../core/commands";
 import type {
@@ -14,7 +16,7 @@ import type {
 import type { EditorAppEvent } from "../core/events";
 import { BindingRegistry } from "../bindings/bindingRegistry";
 import { updateMeshBindingMaterial } from "../bindings/meshBinding";
-import type { LightPresetId } from "../lightPresets";
+import type { LightPresetFrame, LightPresetId } from "../lightPresets";
 import {
   type StudioScenePresetId,
   type StudioSceneVariantId
@@ -548,7 +550,13 @@ export class EditorSession {
   }
 
   async createLightPreset(presetId: LightPresetId, source: SyncSource = "ui") {
-    const preset = await this.lightSession.createLightPreset(presetId, source);
+    await this.ensureProject();
+    const adaptiveFrame = this.studioScene.isActive()
+      ? null
+      : await this.createVisibleSceneLightPresetFrame();
+    const preset = await this.lightSession.createLightPreset(presetId, source, {
+      adaptiveFrame
+    });
     if (preset && this.studioScene.isActive()) {
       this.adoptStudioEntity(preset.groupId, "userLightGroup", {
         childRole: "userLightGroup",
@@ -556,6 +564,49 @@ export class EditorSession {
       });
       this.setSelectedEntity(preset.groupId, source);
     }
+  }
+
+  private async createVisibleSceneLightPresetFrame(): Promise<LightPresetFrame | null> {
+    const projectModel = this.projectModel;
+    if (!projectModel) return null;
+
+    const bindings = this.registry
+      .list()
+      .filter(
+        (binding) =>
+          (binding.kind === "model" || binding.kind === "mesh") &&
+          projectModel.isEntityEffectivelyVisible(binding.model.id)
+      );
+
+    if (bindings.length === 0) return null;
+
+    await Promise.allSettled(
+      bindings.map((binding) => binding.ready ?? Promise.resolve())
+    );
+
+    const sceneBox = new THREE.Box3();
+    const objectBox = new THREE.Box3();
+
+    bindings.forEach((binding) => {
+      binding.object.updateMatrixWorld(true);
+      objectBox.setFromObject(binding.object);
+      if (!objectBox.isEmpty()) {
+        sceneBox.union(objectBox);
+      }
+    });
+
+    if (sceneBox.isEmpty()) return null;
+
+    const center = new THREE.Vector3();
+    const size = new THREE.Vector3();
+    sceneBox.getCenter(center);
+    sceneBox.getSize(size);
+
+    return {
+      center: [center.x, center.y, center.z],
+      floorY: sceneBox.min.y,
+      radius: Math.max(size.x, size.y, size.z) * 0.5
+    };
   }
 
   private adoptStudioEntity(

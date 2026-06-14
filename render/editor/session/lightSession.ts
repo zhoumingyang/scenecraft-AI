@@ -2,8 +2,8 @@ import type { BindingRegistry } from "../bindings/bindingRegistry";
 import { updateLightBinding } from "../bindings/lightBinding";
 import type { EditorAppEvent } from "../core/events";
 import type { EditorLightJSON, SyncSource } from "../core/types";
-import { getLightPresetDefinition } from "../lightPresets";
-import type { LightPresetId } from "../lightPresets";
+import { createAdaptiveLightPresetDefinition } from "../lightPresets";
+import type { LightPresetFrame, LightPresetId } from "../lightPresets";
 import type { EditorProjectModel } from "../models";
 import type { EditorRuntime } from "../runtime/editorRuntime";
 import {
@@ -76,12 +76,16 @@ export class LightSessionController {
     return light.id;
   }
 
-  async createLightPreset(presetId: LightPresetId, source: SyncSource = "ui") {
+  async createLightPreset(
+    presetId: LightPresetId,
+    source: SyncSource = "ui",
+    options: { adaptiveFrame?: LightPresetFrame | null } = {}
+  ) {
     await this.ensureProject();
     const projectModel = this.getProjectModel();
     if (!projectModel) return null;
 
-    const preset = getLightPresetDefinition(presetId);
+    const preset = createAdaptiveLightPresetDefinition(presetId, options.adaptiveFrame ?? null);
     const group = projectModel.addGroup({
       id: createGroupEntityId(),
       label: preset.label,

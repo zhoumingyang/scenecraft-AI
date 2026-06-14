@@ -25,8 +25,18 @@ export {
   ModelEntityModel
 } from "./models";
 export { createDefaultEditorProjectJSON, createEmptyEditorProjectJSON } from "./factories/projectFactory";
-export { getLightPresetDefinition, LIGHT_PRESET_DEFINITIONS, LIGHT_PRESET_IDS } from "./lightPresets";
-export type { LightPresetDefinition, LightPresetId, LightPresetLightDefinition } from "./lightPresets";
+export {
+  createAdaptiveLightPresetDefinition,
+  getLightPresetDefinition,
+  LIGHT_PRESET_DEFINITIONS,
+  LIGHT_PRESET_IDS
+} from "./lightPresets";
+export type {
+  LightPresetDefinition,
+  LightPresetFrame,
+  LightPresetId,
+  LightPresetLightDefinition
+} from "./lightPresets";
 export {
   DEFAULT_STUDIO_SCENE_VARIANT_ID,
   DEFAULT_STUDIO_SCENE_PRESET_ID,
