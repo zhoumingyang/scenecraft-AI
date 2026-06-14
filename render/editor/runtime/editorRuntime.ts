@@ -80,6 +80,8 @@ export class EditorRuntime {
       antialias: false,
       stencil: true
     });
+    this.renderer.domElement.tabIndex = 0;
+    this.renderer.domElement.style.outline = "none";
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     configureRendererColorManagement(this.renderer);
     this.renderer.shadowMap.enabled = false;
