@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { Box } from "@mui/material";
 import {
   AiImageComposer,
@@ -14,8 +14,10 @@ import {
 } from "@/components/editor";
 import { resolveStudioHdriUrl } from "@/components/editor/editorHdriResolver";
 import { useEditorAppEventBridge } from "@/components/editor/useEditorAppEventBridge";
+import { useEditorKeyboardShortcuts } from "@/components/editor/useEditorKeyboardShortcuts";
 import { useEditorThemePersistence } from "@/components/editor/useEditorThemePersistence";
 import { useInitialEditorProjectLoad } from "@/components/editor/useInitialEditorProjectLoad";
+import { EDITOR_SAVE_SHORTCUT_EVENT } from "@/components/editor/keyboardShortcuts";
 import { createEditorSdk } from "@/render/editor/sdk";
 import { useEditorStore } from "@/stores/editorStore";
 import { getEditorThemeTokens } from "@/components/editor/theme";
@@ -30,6 +32,8 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
   const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
   const setSelectedEntityId = useEditorStore((state) => state.setSelectedEntityId);
   const setStudioSceneState = useEditorStore((state) => state.setStudioSceneState);
+  const selectedEntityId = useEditorStore((state) => state.selectedEntityId);
+  const isStudioSceneActive = useEditorStore((state) => state.studioScene.active);
   const theme = getEditorThemeTokens(editorThemeMode);
 
   useEditorThemePersistence();
@@ -67,6 +71,15 @@ export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
   const app = useEditorStore((state) => state.app);
   useEditorAppEventBridge({ app });
   useInitialEditorProjectLoad({ app });
+  const requestProjectSave = useCallback(() => {
+    window.dispatchEvent(new CustomEvent(EDITOR_SAVE_SHORTCUT_EVENT));
+  }, []);
+  useEditorKeyboardShortcuts({
+    app,
+    onSaveProject: requestProjectSave,
+    saveDisabled: isStudioSceneActive,
+    selectedEntityId
+  });
 
   return (
     <Box

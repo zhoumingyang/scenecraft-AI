@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import DropdownMenu from "@/components/common/dropdownMenu";
 import LightingConflictToast from "@/components/editor/lightingConflictToast";
 import {
@@ -9,6 +10,7 @@ import ProjectAiLibraryDialog from "@/components/editor/projectAiLibraryDialog";
 import ProjectSaveDialog from "@/components/editor/projectSaveDialog";
 import ProjectSaveProgressToast from "@/components/editor/projectSaveProgressToast";
 import ProjectSelectDialog from "@/components/editor/projectSelectDialog";
+import { EDITOR_SAVE_SHORTCUT_EVENT } from "@/components/editor/keyboardShortcuts";
 import { dropdownConfigs } from "@/components/editor/topBar/constants";
 import TopBarActionBar from "@/components/editor/topBar/topBarActionBar";
 import { useTopBarMenu } from "@/components/editor/topBar/useTopBarMenu";
@@ -28,6 +30,19 @@ export default function TopBar() {
   const studioDisabledMenuIds = isStudioSceneActive ? (["project", "camera"] as const) : [];
 
   const actions = useTopBarProjectActions(t);
+  useEffect(() => {
+    const handleSaveShortcut = () => {
+      if (isStudioSceneActive) return;
+      actions.onSaveScene();
+    };
+
+    window.addEventListener(EDITOR_SAVE_SHORTCUT_EVENT, handleSaveShortcut);
+
+    return () => {
+      window.removeEventListener(EDITOR_SAVE_SHORTCUT_EVENT, handleSaveShortcut);
+    };
+  }, [actions.onSaveScene, isStudioSceneActive]);
+
   const menu = useTopBarMenu({
     app: actions.app,
     disabled: false,

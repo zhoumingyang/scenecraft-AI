@@ -33,6 +33,7 @@ import {
   type EditorCommandHandlers
 } from "./commandDispatcher";
 import { EntityIsolationSessionController } from "./entityIsolationSession";
+import type { EntityDuplicateOptions } from "./entityDuplicator";
 import { EntityMutationSessionController } from "./entityMutationSession";
 import { createMeshEntityId, createMeshPayload } from "./entityFactories";
 import { LightSessionController } from "./lightSession";
@@ -184,7 +185,8 @@ export class EditorSession {
       importModel: (file, source) => this.importModel(file, source),
       setSelectedEntity: (entityId, source) => this.setSelectedEntity(entityId, source),
       removeEntity: (entityId, source) => this.removeEntity(entityId, source),
-      duplicateEntity: (entityId, source) => this.duplicateEntity(entityId, source),
+      duplicateEntity: (entityId, source, duplicateOptions) =>
+        this.duplicateEntity(entityId, source, duplicateOptions),
       setEntityLocked: (entityId, locked, source) =>
         this.setEntityLocked(entityId, locked, source),
       setEntityVisible: (entityId, visible, source) =>
@@ -610,9 +612,13 @@ export class EditorSession {
     this.entityMutation.remove(entityId, source);
   }
 
-  duplicateEntity(entityId: string, source: SyncSource = "ui") {
+  duplicateEntity(
+    entityId: string,
+    source: SyncSource = "ui",
+    duplicateOptions?: EntityDuplicateOptions
+  ) {
     if (this.studioScene.isActive() && !this.canUseStudioSceneEntityAction(entityId, "duplicate")) return;
-    this.entityMutation.duplicate(entityId, source);
+    this.entityMutation.duplicate(entityId, source, duplicateOptions);
   }
 
   setEntityLocked(entityId: string, locked: boolean, source: SyncSource = "ui") {

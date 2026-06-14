@@ -1,10 +1,26 @@
 import type { BindingRegistry } from "../bindings/bindingRegistry";
 import type { EditorAppEvent } from "../core/events";
-import type { SyncSource } from "../core/types";
+import type { SyncSource, Vec3Tuple } from "../core/types";
 import type { EditorProjectModel } from "../models";
 import { createEntityId } from "./entityFactories";
 
 type Emit = (event: EditorAppEvent) => void;
+
+export type EntityDuplicateOptions = {
+  positionOffset?: Vec3Tuple;
+};
+
+export function applyDuplicatePositionOffset(
+  position: Vec3Tuple,
+  offset: Vec3Tuple | undefined
+): Vec3Tuple {
+  if (!offset) return [...position];
+  return [
+    position[0] + offset[0],
+    position[1] + offset[1],
+    position[2] + offset[2]
+  ];
+}
 
 export function cloneEditorEntity(options: {
   projectModel: EditorProjectModel;
@@ -12,8 +28,9 @@ export function cloneEditorEntity(options: {
   entityId: string;
   source: SyncSource;
   emit: Emit;
+  duplicateOptions?: EntityDuplicateOptions;
 }): { id: string; kind: "group" | "model" | "mesh" | "light" } | null {
-  const { projectModel, registry, entityId, source, emit } = options;
+  const { projectModel, registry, entityId, source, emit, duplicateOptions } = options;
   const record = projectModel.getEntityById(entityId);
   if (!record || record.item.locked) return null;
 
@@ -36,7 +53,7 @@ export function cloneEditorEntity(options: {
       children: childIds,
       locked: false,
       visible: record.item.visible,
-      position: [...record.item.position],
+      position: applyDuplicatePositionOffset(record.item.position, duplicateOptions?.positionOffset),
       quaternion: [...record.item.quaternion],
       scale: [...record.item.scale]
     });
@@ -66,7 +83,7 @@ export function cloneEditorEntity(options: {
       animationPlaybackState: record.item.animationPlaybackState,
       locked: false,
       visible: record.item.visible,
-      position: [...record.item.position],
+      position: applyDuplicatePositionOffset(record.item.position, duplicateOptions?.positionOffset),
       quaternion: [...record.item.quaternion],
       scale: [...record.item.scale]
     });
@@ -150,7 +167,7 @@ export function cloneEditorEntity(options: {
       },
       locked: false,
       visible: record.item.visible,
-      position: [...record.item.position],
+      position: applyDuplicatePositionOffset(record.item.position, duplicateOptions?.positionOffset),
       quaternion: [...record.item.quaternion],
       scale: [...record.item.scale]
     });
@@ -173,7 +190,7 @@ export function cloneEditorEntity(options: {
     label: record.item.label,
     type: record.item.lightType,
     locked: false,
-    position: [...record.item.position],
+    position: applyDuplicatePositionOffset(record.item.position, duplicateOptions?.positionOffset),
     quaternion: [...record.item.quaternion],
     scale: [...record.item.scale],
     color: record.item.color,

@@ -1,5 +1,5 @@
 import type { EditorCommand } from "../core/commands";
-import type { EditorLightJSON, SyncSource } from "../core/types";
+import type { EditorLightJSON, SyncSource, Vec3Tuple } from "../core/types";
 import type { StudioSceneEntityAction } from "./studioSceneSession";
 
 export type EditorCommandHandlers = {
@@ -10,7 +10,11 @@ export type EditorCommandHandlers = {
   importModel: (file: File, source: SyncSource) => Promise<unknown>;
   setSelectedEntity: (entityId: string | null, source: SyncSource) => void;
   removeEntity: (entityId: string, source: SyncSource) => void;
-  duplicateEntity: (entityId: string, source: SyncSource) => void;
+  duplicateEntity: (
+    entityId: string,
+    source: SyncSource,
+    duplicateOptions?: { positionOffset?: Vec3Tuple }
+  ) => void;
   setEntityLocked: (entityId: string, locked: boolean, source: SyncSource) => void;
   setEntityVisible: (entityId: string, visible: boolean, source: SyncSource) => void;
   updateEntityTransform: (
@@ -107,7 +111,9 @@ export async function dispatchEditorCommand(
       handlers.removeEntity(command.entityId, source);
       return;
     case "entity.duplicate":
-      handlers.duplicateEntity(command.entityId, source);
+      handlers.duplicateEntity(command.entityId, source, {
+        positionOffset: command.positionOffset
+      });
       return;
     case "entity.lock":
       handlers.setEntityLocked(command.entityId, command.locked, source);

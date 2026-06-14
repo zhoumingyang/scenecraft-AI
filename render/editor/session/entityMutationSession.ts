@@ -3,7 +3,10 @@ import type { EditorAppEvent } from "../core/events";
 import type { SyncSource, TransformPatch } from "../core/types";
 import type { EditorProjectModel } from "../models";
 import type { EditorRuntime } from "../runtime/editorRuntime";
-import { cloneEditorEntity } from "./entityDuplicator";
+import {
+  cloneEditorEntity,
+  type EntityDuplicateOptions
+} from "./entityDuplicator";
 
 type Emit = (event: EditorAppEvent) => void;
 
@@ -121,7 +124,11 @@ export class EntityMutationSessionController {
     });
   }
 
-  duplicate(entityId: string, source: SyncSource = "ui") {
+  duplicate(
+    entityId: string,
+    source: SyncSource = "ui",
+    duplicateOptions?: EntityDuplicateOptions
+  ) {
     const projectModel = this.getProjectModel();
     if (!projectModel) return;
     this.clearEntityIsolation(source);
@@ -133,7 +140,8 @@ export class EntityMutationSessionController {
       registry: this.registry,
       entityId,
       source,
-      emit: this.emit
+      emit: this.emit,
+      duplicateOptions
     });
     if (!duplicate) return;
 

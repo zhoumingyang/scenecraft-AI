@@ -17,7 +17,8 @@ import type {
   StudioSceneState,
   EditorViewportCaptureMode,
   SyncSource,
-  TransformPatch
+  TransformPatch,
+  Vec3Tuple
 } from "./core/types";
 import { EditorRuntime } from "./runtime/editorRuntime";
 import { EditorSession } from "./session/editorSession";
@@ -293,11 +294,16 @@ export class EditorApp {
     });
   }
 
-  duplicateEntity(entityId: string, source: SyncSource = "ui") {
+  duplicateEntity(
+    entityId: string,
+    source: SyncSource = "ui",
+    options: { positionOffset?: Vec3Tuple } = {}
+  ) {
     void this.dispatch({
       type: "entity.duplicate",
       entityId,
-      source
+      source,
+      positionOffset: options.positionOffset
     });
   }
 
