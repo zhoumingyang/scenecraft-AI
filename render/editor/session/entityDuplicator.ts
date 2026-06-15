@@ -1,6 +1,7 @@
 import type { BindingRegistry } from "../bindings/bindingRegistry";
 import type { EditorAppEvent } from "../core/events";
 import type { SyncSource, Vec3Tuple } from "../core/types";
+import { serializeMeshMaterial } from "../materials/meshMaterial";
 import type { EditorProjectModel } from "../models";
 import { createEntityId } from "./entityFactories";
 
@@ -107,64 +108,7 @@ export function cloneEditorEntity(options: {
       uvs: record.item.uvs.map((uv) => ({ ...uv })),
       normals: record.item.normals.map((normal) => ({ ...normal })),
       indices: [...record.item.indices],
-      material: {
-        color: record.item.material.color,
-        opacity: record.item.material.opacity,
-        diffuseMap: {
-          assetId: record.item.material.diffuseMap.assetId,
-          url: record.item.material.diffuseMap.url,
-          externalSource: record.item.material.diffuseMap.externalSource ?? undefined,
-          offset: [...record.item.material.diffuseMap.offset],
-          repeat: [...record.item.material.diffuseMap.repeat],
-          rotation: record.item.material.diffuseMap.rotation
-        },
-        metalness: record.item.material.metalness,
-        metalnessMap: {
-          assetId: record.item.material.metalnessMap.assetId,
-          url: record.item.material.metalnessMap.url,
-          externalSource: record.item.material.metalnessMap.externalSource ?? undefined,
-          offset: [...record.item.material.metalnessMap.offset],
-          repeat: [...record.item.material.metalnessMap.repeat],
-          rotation: record.item.material.metalnessMap.rotation
-        },
-        roughness: record.item.material.roughness,
-        roughnessMap: {
-          assetId: record.item.material.roughnessMap.assetId,
-          url: record.item.material.roughnessMap.url,
-          externalSource: record.item.material.roughnessMap.externalSource ?? undefined,
-          offset: [...record.item.material.roughnessMap.offset],
-          repeat: [...record.item.material.roughnessMap.repeat],
-          rotation: record.item.material.roughnessMap.rotation
-        },
-        normalMap: {
-          assetId: record.item.material.normalMap.assetId,
-          url: record.item.material.normalMap.url,
-          externalSource: record.item.material.normalMap.externalSource ?? undefined,
-          offset: [...record.item.material.normalMap.offset],
-          repeat: [...record.item.material.normalMap.repeat],
-          rotation: record.item.material.normalMap.rotation
-        },
-        normalScale: [...record.item.material.normalScale],
-        aoMap: {
-          assetId: record.item.material.aoMap.assetId,
-          url: record.item.material.aoMap.url,
-          externalSource: record.item.material.aoMap.externalSource ?? undefined,
-          offset: [...record.item.material.aoMap.offset],
-          repeat: [...record.item.material.aoMap.repeat],
-          rotation: record.item.material.aoMap.rotation
-        },
-        aoMapIntensity: record.item.material.aoMapIntensity,
-        emissive: record.item.material.emissive,
-        emissiveIntensity: record.item.material.emissiveIntensity,
-        emissiveMap: {
-          assetId: record.item.material.emissiveMap.assetId,
-          url: record.item.material.emissiveMap.url,
-          externalSource: record.item.material.emissiveMap.externalSource ?? undefined,
-          offset: [...record.item.material.emissiveMap.offset],
-          repeat: [...record.item.material.emissiveMap.repeat],
-          rotation: record.item.material.emissiveMap.rotation
-        }
-      },
+      material: serializeMeshMaterial(record.item.material),
       locked: false,
       visible: record.item.visible,
       position: applyDuplicatePositionOffset(record.item.position, duplicateOptions?.positionOffset),

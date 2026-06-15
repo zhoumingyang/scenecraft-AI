@@ -7,9 +7,9 @@ import type {
 import type { MeshEntityModel } from "../models";
 import { ensureSecondaryUvAttribute } from "../runtime/colorManagement";
 import {
-  applyMeshStandardMaterialScalars,
-  applyMeshStandardMaterial,
-  disposeMeshStandardMaterialTextures,
+  applyMeshPhysicalMaterialScalars,
+  applyMeshPhysicalMaterial,
+  disposeMeshPhysicalMaterialTextures,
   hasTextureMaterialPatch
 } from "../materials/meshMaterial";
 import { createMeshGeometry } from "../utils/geometry";
@@ -17,19 +17,19 @@ import { captureObjectTransformState, removeObjectFromParent, setEntityId } from
 import type { BindingContext, RenderBinding } from "./types";
 
 function applyMeshMaterial(
-  material: THREE.MeshStandardMaterial,
+  material: THREE.MeshPhysicalMaterial,
   source: ResolvedMeshMaterialJSON,
   loader: THREE.TextureLoader,
   onTextureUpdate?: () => void
 ) {
-  applyMeshStandardMaterial(material, source, loader, onTextureUpdate);
+  applyMeshPhysicalMaterial(material, source, loader, onTextureUpdate);
 }
 
 export function createMeshBinding(context: BindingContext, model: MeshEntityModel): RenderBinding {
   const { scene, textureLoader } = context;
   const geometry = createMeshGeometry(model);
   ensureSecondaryUvAttribute(geometry);
-  const material = new THREE.MeshStandardMaterial();
+  const material = new THREE.MeshPhysicalMaterial();
   applyMeshMaterial(material, model.material, textureLoader, context.invalidateMaterials);
 
   const mesh = new THREE.Mesh(geometry, material);
@@ -54,7 +54,7 @@ export function createMeshBinding(context: BindingContext, model: MeshEntityMode
     dispose: () => {
       removeObjectFromParent(mesh);
       geometry.dispose();
-      disposeMeshStandardMaterialTextures(material);
+      disposeMeshPhysicalMaterialTextures(material);
       material.dispose();
     }
   };
@@ -73,15 +73,15 @@ export function updateMeshBindingMaterial(
 
   const mesh = binding.object as THREE.Mesh;
   const material = mesh.material;
-  if (!(material instanceof THREE.MeshStandardMaterial)) return;
+  if (!(material instanceof THREE.MeshPhysicalMaterial)) return;
 
   if (!hasTextureMaterialPatch(patch)) {
-    applyMeshStandardMaterialScalars(material, model.material);
+    applyMeshPhysicalMaterialScalars(material, model.material);
     onTextureUpdate?.();
     return;
   }
 
-  disposeMeshStandardMaterialTextures(material);
+  disposeMeshPhysicalMaterialTextures(material);
   applyMeshMaterial(material, model.material, textureLoader, onTextureUpdate);
   material.needsUpdate = true;
 }

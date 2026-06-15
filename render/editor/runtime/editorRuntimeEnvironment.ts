@@ -9,9 +9,9 @@ import type {
 } from "../core/types";
 import { isHighDynamicRangeEnvironmentAssetName } from "../constants/environment";
 import {
-  applyMeshStandardMaterialScalars,
-  applyMeshStandardMaterial,
-  disposeMeshStandardMaterialTextures
+  applyMeshPhysicalMaterialScalars,
+  applyMeshPhysicalMaterial,
+  disposeMeshPhysicalMaterialTextures
 } from "../materials/meshMaterial";
 import { applyTextureColorSpace } from "./colorManagement";
 
@@ -54,7 +54,7 @@ export class EditorRuntimeEnvironment {
   private readonly invalidateSceneMaterials: () => void;
   private readonly invalidatePathTraceMaterials: () => void;
   private readonly gridHelper: THREE.GridHelper;
-  private readonly groundPlane: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshStandardMaterial>;
+  private readonly groundPlane: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshPhysicalMaterial>;
   private readonly pmremGenerator: THREE.PMREMGenerator;
   private groundVisible = true;
   private groundMode: EditorGroundMode = "grid";
@@ -83,7 +83,7 @@ export class EditorRuntimeEnvironment {
 
     this.groundPlane = new THREE.Mesh(
       new THREE.PlaneGeometry(80, 80),
-      new THREE.MeshStandardMaterial({
+      new THREE.MeshPhysicalMaterial({
         color: new THREE.Color("#ffffff"),
         roughness: 1,
         metalness: 0,
@@ -178,8 +178,8 @@ export class EditorRuntimeEnvironment {
     this.groundPlane.scale.set(ground.scale[0], 1, ground.scale[2]);
 
     if (materialChanged) {
-      disposeMeshStandardMaterialTextures(this.groundPlane.material);
-      applyMeshStandardMaterial(
+      disposeMeshPhysicalMaterialTextures(this.groundPlane.material);
+      applyMeshPhysicalMaterial(
         this.groundPlane.material,
         ground.material,
         this.textureLoader,
@@ -199,7 +199,7 @@ export class EditorRuntimeEnvironment {
   }
 
   updateGroundMaterial(material: ResolvedEditorGroundConfigJSON["material"]) {
-    applyMeshStandardMaterialScalars(this.groundPlane.material, material);
+    applyMeshPhysicalMaterialScalars(this.groundPlane.material, material);
     this.invalidateGroundMaterial();
     this.lastGroundMaterial = material;
   }
@@ -339,7 +339,7 @@ export class EditorRuntimeEnvironment {
     this.scene.remove(this.gridHelper);
     this.scene.remove(this.groundPlane);
     this.groundPlane.geometry.dispose();
-    disposeMeshStandardMaterialTextures(this.groundPlane.material);
+    disposeMeshPhysicalMaterialTextures(this.groundPlane.material);
     this.groundPlane.material.dispose();
     this.pmremGenerator.dispose();
   }

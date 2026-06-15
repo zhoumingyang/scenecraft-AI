@@ -1,12 +1,10 @@
 import type {
   EditorEnvConfigJSON,
   EditorGroundConfigJSON,
-  EditorMeshMaterialJSON,
   EditorProjectJSON,
   EditorProjectMetaJSON,
   EditorProjectThumbnailJSON,
-  ResolvedEditorEnvConfigJSON,
-  ResolvedMeshMaterialJSON
+  ResolvedEditorEnvConfigJSON
 } from "../core/types";
 import {
   DEFAULT_EDITOR_BACKGROUND_BLURRINESS,
@@ -16,7 +14,11 @@ import {
 } from "../constants/environment";
 import { normalizeBoolean, normalizeString, normalizeVec3 } from "../utils/normalize";
 import { normalizeEditorPostProcessingConfig } from "../postProcessing";
-import { createDefaultMeshMaterialJSON, normalizeMeshMaterial } from "../materials/meshMaterial";
+import {
+  createDefaultMeshMaterialJSON,
+  normalizeMeshMaterial,
+  serializeMeshMaterial
+} from "../materials/meshMaterial";
 import {
   DEFAULT_EDITOR_TONE_MAPPING,
   DEFAULT_EDITOR_TONE_MAPPING_EXPOSURE
@@ -75,67 +77,6 @@ function normalizeGroundConfig(source?: EditorGroundConfigJSON) {
     visible: normalizeBoolean(source?.visible, true),
     scale: normalizeVec3(source?.scale, [1, 1, 1]),
     material: normalizeMeshMaterial(source?.material ?? createDefaultMeshMaterialJSON())
-  };
-}
-
-function serializeMaterial(source: ResolvedMeshMaterialJSON): EditorMeshMaterialJSON {
-  return {
-    color: source.color,
-    opacity: source.opacity,
-    diffuseMap: {
-      assetId: source.diffuseMap.assetId,
-      url: source.diffuseMap.url,
-      externalSource: cloneExternalSource(source.diffuseMap.externalSource) ?? undefined,
-      offset: [...source.diffuseMap.offset],
-      repeat: [...source.diffuseMap.repeat],
-      rotation: source.diffuseMap.rotation
-    },
-    metalness: source.metalness,
-    metalnessMap: {
-      assetId: source.metalnessMap.assetId,
-      url: source.metalnessMap.url,
-      externalSource: cloneExternalSource(source.metalnessMap.externalSource) ?? undefined,
-      offset: [...source.metalnessMap.offset],
-      repeat: [...source.metalnessMap.repeat],
-      rotation: source.metalnessMap.rotation
-    },
-    roughness: source.roughness,
-    roughnessMap: {
-      assetId: source.roughnessMap.assetId,
-      url: source.roughnessMap.url,
-      externalSource: cloneExternalSource(source.roughnessMap.externalSource) ?? undefined,
-      offset: [...source.roughnessMap.offset],
-      repeat: [...source.roughnessMap.repeat],
-      rotation: source.roughnessMap.rotation
-    },
-    normalMap: {
-      assetId: source.normalMap.assetId,
-      url: source.normalMap.url,
-      externalSource: cloneExternalSource(source.normalMap.externalSource) ?? undefined,
-      offset: [...source.normalMap.offset],
-      repeat: [...source.normalMap.repeat],
-      rotation: source.normalMap.rotation
-    },
-    normalScale: [...source.normalScale],
-    aoMap: {
-      assetId: source.aoMap.assetId,
-      url: source.aoMap.url,
-      externalSource: cloneExternalSource(source.aoMap.externalSource) ?? undefined,
-      offset: [...source.aoMap.offset],
-      repeat: [...source.aoMap.repeat],
-      rotation: source.aoMap.rotation
-    },
-    aoMapIntensity: source.aoMapIntensity,
-    emissive: source.emissive,
-    emissiveIntensity: source.emissiveIntensity,
-    emissiveMap: {
-      assetId: source.emissiveMap.assetId,
-      url: source.emissiveMap.url,
-      externalSource: cloneExternalSource(source.emissiveMap.externalSource) ?? undefined,
-      offset: [...source.emissiveMap.offset],
-      repeat: [...source.emissiveMap.repeat],
-      rotation: source.emissiveMap.rotation
-    }
   };
 }
 
@@ -227,7 +168,7 @@ export function serializeProjectModel(source: {
         mode: source.envConfig.ground.mode,
         visible: source.envConfig.ground.visible,
         scale: [...source.envConfig.ground.scale],
-        material: serializeMaterial(source.envConfig.ground.material)
+        material: serializeMeshMaterial(source.envConfig.ground.material)
       },
       postProcessing: {
         passes: {
@@ -322,7 +263,7 @@ export function serializeProjectModel(source: {
       uvs: item.uvs.map((uv) => ({ ...uv })),
       normals: item.normals.map((normal) => ({ ...normal })),
       indices: [...item.indices],
-      material: serializeMaterial(item.material),
+      material: serializeMeshMaterial(item.material),
       locked: item.locked,
       visible: item.visible,
       position: [...item.position],

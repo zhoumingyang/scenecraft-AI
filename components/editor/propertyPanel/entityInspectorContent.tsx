@@ -32,6 +32,7 @@ export function EntityInspectorContent(props: PropertyPanelContentProps) {
     theme,
     t,
     onAiLibraryOpen,
+    onAdvancedMaterialOpen,
     onMaterialLibraryOpen,
     onStudioEntryOpen,
     onTextureConfigOpen
@@ -150,6 +151,7 @@ export function EntityInspectorContent(props: PropertyPanelContentProps) {
           material={entityRecord.item.material}
           onTextureConfigOpen={onTextureConfigOpen}
           onMaterialLibraryOpen={onMaterialLibraryOpen}
+          onAdvancedMaterialOpen={onAdvancedMaterialOpen}
           materialLibraryEnabled={isPolyhavenEnabled}
         />
       ) : null}
@@ -160,6 +162,7 @@ export function EntityInspectorContent(props: PropertyPanelContentProps) {
           onMaterialPatch={(patch) => app?.updateGroundMaterial(patch)}
           onTextureConfigOpen={onTextureConfigOpen}
           onMaterialLibraryOpen={onMaterialLibraryOpen}
+          onAdvancedMaterialOpen={onAdvancedMaterialOpen}
           materialLibraryEnabled={isPolyhavenEnabled}
         />
       ) : null}

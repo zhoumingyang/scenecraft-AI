@@ -1,7 +1,8 @@
 "use client";
 
 import { ChangeEvent } from "react";
-import { Box, Button, Slider, Stack, Typography } from "@mui/material";
+import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
+import { Box, Button, IconButton, Slider, Stack, Tooltip, Typography } from "@mui/material";
 import PropertyPanelSection from "@/components/common/propertyPanelSection";
 import { ColorField } from "@/components/common/propertyFieldControls";
 import { getEditorThemeTokens } from "@/components/editor/theme";
@@ -123,6 +124,7 @@ type MeshAppearanceSectionProps = {
   onMaterialPatch?: (patch: MeshMaterialPatch) => void;
   onTextureConfigOpen: (key: TextureFieldKey) => void;
   onMaterialLibraryOpen: () => void;
+  onAdvancedMaterialOpen: () => void;
   materialLibraryEnabled: boolean;
 };
 
@@ -132,6 +134,7 @@ export function MeshAppearanceSection({
   onMaterialPatch,
   onTextureConfigOpen,
   onMaterialLibraryOpen,
+  onAdvancedMaterialOpen,
   materialLibraryEnabled
 }: MeshAppearanceSectionProps) {
   const { t } = useI18n();
@@ -158,7 +161,14 @@ export function MeshAppearanceSection({
   };
 
   const updateMaterialValue = (
-    key: "opacity" | "metalness" | "roughness" | "aoMapIntensity" | "emissiveIntensity",
+    key:
+      | "opacity"
+      | "metalness"
+      | "roughness"
+      | "aoMapIntensity"
+      | "emissiveIntensity"
+      | "clearcoat"
+      | "transmission",
     value: number
   ) => {
     const patch = { [key]: value };
@@ -180,7 +190,29 @@ export function MeshAppearanceSection({
   };
 
   return (
-    <PropertyPanelSection title={t("editor.properties.appearance")}>
+    <PropertyPanelSection
+      title={t("editor.properties.appearance")}
+      action={
+        <Tooltip title={t("editor.properties.advancedMaterial")} arrow>
+          <IconButton
+            size="small"
+            onClick={onAdvancedMaterialOpen}
+            sx={{
+              width: 26,
+              height: 26,
+              color: theme.titleText,
+              border: theme.sectionBorder,
+              background: theme.iconButtonBg,
+              "&:hover": {
+                background: theme.inputBg
+              }
+            }}
+          >
+            <TuneRoundedIcon sx={{ fontSize: 15 }} />
+          </IconButton>
+        </Tooltip>
+      }
+    >
       <Stack spacing={0.8}>
         {materialLibraryEnabled ? (
           <Button
@@ -229,6 +261,16 @@ export function MeshAppearanceSection({
           label={t("editor.properties.roughness")}
           value={material.roughness}
           onChange={(value) => updateMaterialValue("roughness", value)}
+        />
+        <MaterialSliderRow
+          label={t("editor.properties.clearcoat")}
+          value={material.clearcoat}
+          onChange={(value) => updateMaterialValue("clearcoat", value)}
+        />
+        <MaterialSliderRow
+          label={t("editor.properties.transmission")}
+          value={material.transmission}
+          onChange={(value) => updateMaterialValue("transmission", value)}
         />
         <MaterialSliderRow
           label={t("editor.properties.aoMapIntensity")}

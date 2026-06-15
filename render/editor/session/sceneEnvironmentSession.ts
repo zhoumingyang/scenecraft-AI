@@ -9,7 +9,7 @@ import type {
 } from "../core/types";
 import { GROUND_HELPER_NODE_ID } from "../core/types";
 import type { MeshMaterialPatch } from "../core/commands";
-import { hasTextureMaterialPatch, normalizeMeshMaterial } from "../materials/meshMaterial";
+import { hasTextureMaterialPatch, mergeMeshMaterialPatch } from "../materials/meshMaterial";
 import type { EditorProjectModel } from "../models";
 import { mergeEditorPostProcessingConfig } from "../postProcessing";
 import type { EditorRuntime } from "../runtime/editorRuntime";
@@ -174,26 +174,7 @@ export class SceneEnvironmentSessionController {
       ...projectModel.envConfig,
       ground: {
         ...projectModel.envConfig.ground,
-        material: normalizeMeshMaterial({
-          ...material,
-          ...patch,
-          diffuseMap: patch.diffuseMap
-            ? { ...material.diffuseMap, ...patch.diffuseMap }
-            : material.diffuseMap,
-          metalnessMap: patch.metalnessMap
-            ? { ...material.metalnessMap, ...patch.metalnessMap }
-            : material.metalnessMap,
-          roughnessMap: patch.roughnessMap
-            ? { ...material.roughnessMap, ...patch.roughnessMap }
-            : material.roughnessMap,
-          normalMap: patch.normalMap
-            ? { ...material.normalMap, ...patch.normalMap }
-            : material.normalMap,
-          aoMap: patch.aoMap ? { ...material.aoMap, ...patch.aoMap } : material.aoMap,
-          emissiveMap: patch.emissiveMap
-            ? { ...material.emissiveMap, ...patch.emissiveMap }
-            : material.emissiveMap
-        })
+        material: mergeMeshMaterialPatch(material, patch)
       }
     };
 
