@@ -6,11 +6,13 @@ import { useEditorStore } from "@/stores/editorStore";
 
 type PropertyPanelSectionProps = {
   title: string;
+  action?: React.ReactNode;
   children: React.ReactNode;
 };
 
 export default function PropertyPanelSection({
   title,
+  action,
   children
 }: PropertyPanelSectionProps) {
   const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
@@ -25,17 +27,20 @@ export default function PropertyPanelSection({
       }}
     >
       <Stack spacing={1.25} sx={{ p: 1.4 }}>
-        <Typography
-          sx={{
-            fontSize: 12,
-            fontWeight: 700,
-            letterSpacing: "0.08em",
-            textTransform: "uppercase",
-            color: theme.mutedText
-          }}
-        >
-          {title}
-        </Typography>
+        <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={0.8}>
+          <Typography
+            sx={{
+              fontSize: 12,
+              fontWeight: 700,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: theme.mutedText
+            }}
+          >
+            {title}
+          </Typography>
+          {action}
+        </Stack>
         {children}
       </Stack>
     </Box>

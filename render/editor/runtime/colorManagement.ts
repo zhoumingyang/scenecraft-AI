@@ -10,12 +10,30 @@ export type EditorTextureRole =
   | "roughness"
   | "metalness"
   | "ao"
+  | "physicalData"
   | "environmentLdr"
   | "environmentHdr";
 
 type TextureCarrier = Partial<
   Record<
-    "map" | "emissiveMap" | "normalMap" | "roughnessMap" | "metalnessMap" | "aoMap",
+    | "map"
+    | "emissiveMap"
+    | "normalMap"
+    | "roughnessMap"
+    | "metalnessMap"
+    | "aoMap"
+    | "specularIntensityMap"
+    | "specularColorMap"
+    | "clearcoatMap"
+    | "clearcoatRoughnessMap"
+    | "clearcoatNormalMap"
+    | "transmissionMap"
+    | "thicknessMap"
+    | "sheenColorMap"
+    | "sheenRoughnessMap"
+    | "iridescenceMap"
+    | "iridescenceThicknessMap"
+    | "anisotropyMap",
     THREE.Texture | null
   >
 >;
@@ -58,6 +76,18 @@ export function normalizeMaterialColorSpaces(material: THREE.Material) {
   applyTextureColorSpace(textureCarrier.roughnessMap, "roughness");
   applyTextureColorSpace(textureCarrier.metalnessMap, "metalness");
   applyTextureColorSpace(textureCarrier.aoMap, "ao");
+  applyTextureColorSpace(textureCarrier.specularIntensityMap, "physicalData");
+  applyTextureColorSpace(textureCarrier.specularColorMap, "color");
+  applyTextureColorSpace(textureCarrier.clearcoatMap, "physicalData");
+  applyTextureColorSpace(textureCarrier.clearcoatRoughnessMap, "physicalData");
+  applyTextureColorSpace(textureCarrier.clearcoatNormalMap, "normal");
+  applyTextureColorSpace(textureCarrier.transmissionMap, "physicalData");
+  applyTextureColorSpace(textureCarrier.thicknessMap, "physicalData");
+  applyTextureColorSpace(textureCarrier.sheenColorMap, "color");
+  applyTextureColorSpace(textureCarrier.sheenRoughnessMap, "physicalData");
+  applyTextureColorSpace(textureCarrier.iridescenceMap, "physicalData");
+  applyTextureColorSpace(textureCarrier.iridescenceThicknessMap, "physicalData");
+  applyTextureColorSpace(textureCarrier.anisotropyMap, "physicalData");
 
   if ("opacity" in material && typeof material.opacity === "number" && material.opacity < 1) {
     material.transparent = true;

@@ -17,9 +17,11 @@ import {
 } from "@/render/editor";
 import { useEditorStore } from "@/stores/editorStore";
 import {
+  AdvancedMaterialDialog,
   TextureConfigDialog,
   TextureFieldKey
 } from "@/components/editor/propertyPanelSections";
+import { BASE_MATERIAL_TEXTURE_FIELDS } from "@/render/editor/materials/materialFields";
 import ProjectAiLibraryDialog from "@/components/editor/projectAiLibraryDialog";
 import StudioSceneEntryDialog from "@/components/editor/studioSceneEntryDialog";
 import { getTextureDialogTitle } from "@/components/editor/propertyPanelSections/util";
@@ -36,6 +38,7 @@ export default function PropertyPanel() {
   const [open, setOpen] = useState(true);
   const [activeTextureField, setActiveTextureField] = useState<TextureFieldKey | null>(null);
   const [materialLibraryOpen, setMaterialLibraryOpen] = useState(false);
+  const [advancedMaterialOpen, setAdvancedMaterialOpen] = useState(false);
   const [aiLibraryOpen, setAiLibraryOpen] = useState(false);
   const [studioEntryTargetId, setStudioEntryTargetId] = useState<string | null>(null);
   const [studioEntryProfile, setStudioEntryProfile] = useState<StudioProductProfile | null>(null);
@@ -61,6 +64,11 @@ export default function PropertyPanel() {
   } = usePropertyPanelState(open, t);
   const theme = getEditorThemeTokens(editorThemeMode);
   const isPolyhavenEnabled = isPolyhavenProviderEnabled();
+  const materialPanelTarget =
+    entityRecord?.kind === "mesh" ||
+    (entityRecord?.kind === "gridHelper" && entityRecord.item.mode === "plane")
+      ? entityRecord
+      : null;
 
   const handleApplyTextureSet = ({ asset, selections }: ExternalTextureApplyPayload) => {
     if (!app || (entityRecord?.kind !== "mesh" && entityRecord?.kind !== "gridHelper")) {
@@ -193,6 +201,7 @@ export default function PropertyPanel() {
                 theme={theme}
                 t={t}
                 onAiLibraryOpen={() => setAiLibraryOpen(true)}
+                onAdvancedMaterialOpen={() => setAdvancedMaterialOpen(true)}
                 onMaterialLibraryOpen={() => setMaterialLibraryOpen(true)}
                 onStudioEntryOpen={handleStudioEntryOpen}
                 onTextureConfigOpen={setActiveTextureField}
@@ -201,41 +210,60 @@ export default function PropertyPanel() {
           </Stack>
         </Box>
 
-        {(entityRecord?.kind === "mesh" || entityRecord?.kind === "gridHelper") && activeTextureField ? (
+        {materialPanelTarget && activeTextureField ? (
           <TextureConfigDialog
             open
-            entityId={entityRecord.kind === "mesh" ? entityRecord.item.id : undefined}
+            entityId={materialPanelTarget.kind === "mesh" ? materialPanelTarget.item.id : undefined}
             textureField={activeTextureField}
             title={getTextureDialogTitle(activeTextureField, t)}
-            texture={entityRecord.item.material[activeTextureField]}
+            texture={materialPanelTarget.item.material[activeTextureField]}
             targetPath={
-              entityRecord.kind === "gridHelper"
+              materialPanelTarget.kind === "gridHelper"
                 ? `ground:${activeTextureField}`
-                : `mesh:${entityRecord.item.id}:${activeTextureField}`
+                : `mesh:${materialPanelTarget.item.id}:${activeTextureField}`
             }
             onTexturePatch={
-              entityRecord.kind === "gridHelper"
+              materialPanelTarget.kind === "gridHelper"
                 ? (texture) => app?.updateGroundMaterial({ [activeTextureField]: texture })
                 : undefined
             }
-            onApplyPbrAtlas={({ imageUrl, assetId }) => {
-              const patch = createPbrAtlasMaterialPatch({
-                url: imageUrl,
-                assetId
-              });
+            onApplyPbrAtlas={
+              (BASE_MATERIAL_TEXTURE_FIELDS as readonly string[]).includes(activeTextureField)
+                ? ({ imageUrl, assetId }) => {
+                    const patch = createPbrAtlasMaterialPatch({
+                      url: imageUrl,
+                      assetId
+                    });
 
-              if (entityRecord.kind === "gridHelper") {
-                app?.updateGroundMaterial(patch);
-                return;
-              }
+                    if (materialPanelTarget.kind === "gridHelper") {
+                      app?.updateGroundMaterial(patch);
+                      return;
+                    }
 
-              app?.updateMeshMaterial(entityRecord.item.id, patch);
-            }}
+                    app?.updateMeshMaterial(materialPanelTarget.item.id, patch);
+                  }
+                : undefined
+            }
             onClose={() => setActiveTextureField(null)}
           />
         ) : null}
 
-        {(entityRecord?.kind === "mesh" || entityRecord?.kind === "gridHelper") && isPolyhavenEnabled ? (
+        {materialPanelTarget ? (
+          <AdvancedMaterialDialog
+            open={advancedMaterialOpen}
+            entityId={materialPanelTarget.kind === "mesh" ? materialPanelTarget.item.id : undefined}
+            material={materialPanelTarget.item.material}
+            onMaterialPatch={
+              materialPanelTarget.kind === "gridHelper"
+                ? (patch) => app?.updateGroundMaterial(patch)
+                : undefined
+            }
+            onTextureConfigOpen={setActiveTextureField}
+            onClose={() => setAdvancedMaterialOpen(false)}
+          />
+        ) : null}
+
+        {materialPanelTarget && isPolyhavenEnabled ? (
           <ExternalAssetBrowserDialog
             open={materialLibraryOpen}
             theme={theme}

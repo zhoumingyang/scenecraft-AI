@@ -9,7 +9,7 @@ import {
   normalizeNumber,
   normalizeString
 } from "../utils/normalize";
-import { normalizeMeshMaterial } from "../materials/meshMaterial";
+import { mergeMeshMaterialPatch, normalizeMeshMaterial } from "../materials/meshMaterial";
 import { BaseEntityModel } from "./baseEntity";
 
 export class MeshEntityModel extends BaseEntityModel {
@@ -54,25 +54,6 @@ export class MeshEntityModel extends BaseEntityModel {
   }
 
   patchMaterial(source: Partial<EditorMeshMaterialJSON>) {
-    this.material = normalizeMeshMaterial({
-      ...this.material,
-      ...source,
-      diffuseMap: source.diffuseMap
-        ? { ...this.material.diffuseMap, ...source.diffuseMap }
-        : this.material.diffuseMap,
-      metalnessMap: source.metalnessMap
-        ? { ...this.material.metalnessMap, ...source.metalnessMap }
-        : this.material.metalnessMap,
-      roughnessMap: source.roughnessMap
-        ? { ...this.material.roughnessMap, ...source.roughnessMap }
-        : this.material.roughnessMap,
-      normalMap: source.normalMap
-        ? { ...this.material.normalMap, ...source.normalMap }
-        : this.material.normalMap,
-      aoMap: source.aoMap ? { ...this.material.aoMap, ...source.aoMap } : this.material.aoMap,
-      emissiveMap: source.emissiveMap
-        ? { ...this.material.emissiveMap, ...source.emissiveMap }
-        : this.material.emissiveMap
-    });
+    this.material = mergeMeshMaterialPatch(this.material, source);
   }
 }

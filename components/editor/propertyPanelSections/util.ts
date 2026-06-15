@@ -96,7 +96,19 @@ export function getTextureDialogTitle(
     roughnessMap: t("editor.properties.roughnessMap"),
     normalMap: t("editor.properties.normalMap"),
     aoMap: t("editor.properties.aoMap"),
-    emissiveMap: t("editor.properties.emissiveMap")
+    emissiveMap: t("editor.properties.emissiveMap"),
+    specularIntensityMap: t("editor.properties.specularIntensityMap"),
+    specularColorMap: t("editor.properties.specularColorMap"),
+    clearcoatMap: t("editor.properties.clearcoatMap"),
+    clearcoatRoughnessMap: t("editor.properties.clearcoatRoughnessMap"),
+    clearcoatNormalMap: t("editor.properties.clearcoatNormalMap"),
+    transmissionMap: t("editor.properties.transmissionMap"),
+    thicknessMap: t("editor.properties.thicknessMap"),
+    sheenColorMap: t("editor.properties.sheenColorMap"),
+    sheenRoughnessMap: t("editor.properties.sheenRoughnessMap"),
+    iridescenceMap: t("editor.properties.iridescenceMap"),
+    iridescenceThicknessMap: t("editor.properties.iridescenceThicknessMap"),
+    anisotropyMap: t("editor.properties.anisotropyMap")
   };
   return labels[key];
 }

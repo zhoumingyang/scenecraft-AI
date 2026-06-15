@@ -32,7 +32,7 @@ This is not just a text-to-image demo, and it is not a full desktop-grade DCC to
 - Real-time 3D viewport powered by `Three.js`
 - Scene tree management with selection, deletion, duplication, locking, visibility toggles, and isolation
 - Basic editor shortcuts for delete/backspace, copy/paste, duplicate, clear selection, save, visibility, and locking
-- Property panel editing for transforms, materials, lights, and scene settings
+- Property panel editing for transforms, `MeshPhysicalMaterial` controls, lights, and scene settings
 - Built-in primitive creation such as `box`, `sphere`, `cylinder`, and `torus`
 - Model import support for `gltf/glb`, `fbx`, `obj`, and `vrm`
 - Model animation controls including play, pause, stop, step, and playback speed adjustment
@@ -46,6 +46,7 @@ This is not just a text-to-image demo, and it is not a full desktop-grade DCC to
 - AI-generated 360 panorama environments applied directly to the selected scene
 - Poly Haven HDRI browsing from the editor top bar for authenticated users
 - Poly Haven texture browsing from the mesh material panel for authenticated users
+- Mesh and ground materials use `MeshPhysicalMaterial`, with common clearcoat/transmission controls in the property panel and advanced physical parameters in a dedicated material panel
 - AI-recommended Poly Haven asset kits with HDRI, ground material, and 3D prop suggestions
 - Temporary studio preview mode for selected models, meshes, and groups, with session-only editable studio room, plinth, and light entities, cylindrical plinth auto-fit, orbit camera inspection, and temporary model scale/rotation controls that do not persist into saved projects
 - Tone mapping and exposure controls

@@ -33,6 +33,7 @@ export type PropertyPanelContentProps = {
   theme: EditorThemeTokens;
   t: Translate;
   onAiLibraryOpen: () => void;
+  onAdvancedMaterialOpen: () => void;
   onMaterialLibraryOpen: () => void;
   onStudioEntryOpen: (entityId: string) => void;
   onTextureConfigOpen: (field: TextureFieldKey) => void;

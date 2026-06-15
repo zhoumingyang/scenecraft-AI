@@ -1,14 +1,6 @@
 import type { UploadedProjectAsset } from "@/lib/api/contracts/assets";
+import { MATERIAL_TEXTURE_FIELDS } from "@/render/editor/materials/materialFields";
 import type { EditorApp, EditorProjectJSON, ResolvedTextureSchema } from "@/render/editor";
-
-const TEXTURE_FIELDS = [
-  "diffuseMap",
-  "metalnessMap",
-  "roughnessMap",
-  "normalMap",
-  "aoMap",
-  "emissiveMap"
-] as const;
 
 export function createClientUuid(prefix = "asset") {
   if (typeof globalThis.crypto?.randomUUID === "function") {
@@ -73,7 +65,7 @@ export function applyUploadedAssetToProjectSnapshot(
     let nextMaterial = snapshot.envConfig.ground.material;
     let changed = false;
 
-    TEXTURE_FIELDS.forEach((field) => {
+    MATERIAL_TEXTURE_FIELDS.forEach((field) => {
       const texture = nextMaterial[field];
       if (!texture || texture.url !== sourceUrl) {
         return;
@@ -119,7 +111,7 @@ export function applyUploadedAssetToProjectSnapshot(
     let nextMaterial = mesh.material;
     let changed = false;
 
-    TEXTURE_FIELDS.forEach((field) => {
+    MATERIAL_TEXTURE_FIELDS.forEach((field) => {
       const texture = nextMaterial[field];
       if (!texture || texture.url !== sourceUrl) {
         return;
@@ -155,14 +147,14 @@ export function projectSnapshotUsesSourceUrl(snapshot: EditorProjectJSON, source
   }
 
   if (
-    TEXTURE_FIELDS.some((field) => snapshot.envConfig?.ground?.material?.[field]?.url === sourceUrl)
+    MATERIAL_TEXTURE_FIELDS.some((field) => snapshot.envConfig?.ground?.material?.[field]?.url === sourceUrl)
   ) {
     return true;
   }
 
   return (
     snapshot.mesh?.some((mesh) =>
-      TEXTURE_FIELDS.some((field) => mesh.material?.[field]?.url === sourceUrl)
+      MATERIAL_TEXTURE_FIELDS.some((field) => mesh.material?.[field]?.url === sourceUrl)
     ) ?? false
   );
 }
@@ -190,14 +182,14 @@ export function projectSnapshotUsesAssetReference(
   }
 
   if (
-    TEXTURE_FIELDS.some((field) => snapshot.envConfig?.ground?.material?.[field]?.assetId === assetId)
+    MATERIAL_TEXTURE_FIELDS.some((field) => snapshot.envConfig?.ground?.material?.[field]?.assetId === assetId)
   ) {
     return true;
   }
 
   return (
     snapshot.mesh?.some((mesh) =>
-      TEXTURE_FIELDS.some((field) => mesh.material?.[field]?.assetId === assetId)
+      MATERIAL_TEXTURE_FIELDS.some((field) => mesh.material?.[field]?.assetId === assetId)
     ) ?? false
   );
 }
@@ -218,9 +210,9 @@ export function clearProjectTextureReferencesByUrl(app: EditorApp, sourceUrl: st
   }
 
   let cleared = false;
-  const groundPatch: Partial<Record<(typeof TEXTURE_FIELDS)[number], ResolvedTextureSchema>> = {};
+  const groundPatch: Partial<Record<(typeof MATERIAL_TEXTURE_FIELDS)[number], ResolvedTextureSchema>> = {};
 
-  TEXTURE_FIELDS.forEach((field) => {
+  MATERIAL_TEXTURE_FIELDS.forEach((field) => {
     const texture = project.envConfig.ground.material[field];
     if (texture.url === sourceUrl) {
       groundPatch[field] = createClearedTexture(texture);
@@ -233,9 +225,9 @@ export function clearProjectTextureReferencesByUrl(app: EditorApp, sourceUrl: st
   }
 
   project.meshes.forEach((mesh) => {
-    const meshPatch: Partial<Record<(typeof TEXTURE_FIELDS)[number], ResolvedTextureSchema>> = {};
+    const meshPatch: Partial<Record<(typeof MATERIAL_TEXTURE_FIELDS)[number], ResolvedTextureSchema>> = {};
 
-    TEXTURE_FIELDS.forEach((field) => {
+    MATERIAL_TEXTURE_FIELDS.forEach((field) => {
       const texture = mesh.material[field];
       if (texture.url === sourceUrl) {
         meshPatch[field] = createClearedTexture(texture);

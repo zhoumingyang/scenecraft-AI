@@ -1,15 +1,7 @@
 import type { SaveProjectRequest } from "@/lib/api/contracts/projects";
 import { sanitizeAssetFileName } from "@/lib/server/assets/config";
+import { MATERIAL_TEXTURE_FIELDS } from "@/render/editor/materials/materialFields";
 import type { EditorMeshMaterialJSON } from "@/render/editor";
-
-const TEXTURE_FIELDS = [
-  "diffuseMap",
-  "metalnessMap",
-  "roughnessMap",
-  "normalMap",
-  "aoMap",
-  "emissiveMap"
-] as const;
 
 type AssertUploadedAssetsBelongToProjectInput = {
   projectId: string;
@@ -32,7 +24,7 @@ function collectMaterialAssetIds(
     return;
   }
 
-  TEXTURE_FIELDS.forEach((field) => {
+  MATERIAL_TEXTURE_FIELDS.forEach((field) => {
     addAssetId(assetIds, material[field]?.assetId);
   });
 }
