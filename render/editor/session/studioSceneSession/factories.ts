@@ -25,7 +25,15 @@ export function createStudioMeshFromDescriptor(input: {
     metalness: input.descriptor.material.metalness,
     roughness: input.descriptor.material.roughness,
     emissive: input.descriptor.material.emissive,
-    emissiveIntensity: input.descriptor.material.emissiveIntensity
+    emissiveIntensity: input.descriptor.material.emissiveIntensity,
+    ior: input.descriptor.material.ior,
+    specularIntensity: input.descriptor.material.specularIntensity,
+    specularColor: input.descriptor.material.specularColor,
+    clearcoat: input.descriptor.material.clearcoat,
+    clearcoatRoughness: input.descriptor.material.clearcoatRoughness,
+    sheen: input.descriptor.material.sheen,
+    sheenColor: input.descriptor.material.sheenColor,
+    sheenRoughness: input.descriptor.material.sheenRoughness
   };
   return {
     id: input.id,

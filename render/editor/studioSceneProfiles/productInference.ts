@@ -89,10 +89,18 @@ function sampleFromResolvedMaterial(
 }
 
 function sampleFromThreeMaterial(material: THREE.Material): MaterialSample | null {
-  const source = material as THREE.MeshStandardMaterial & {
+  const source = material as THREE.Material & {
     color?: THREE.Color;
     emissive?: THREE.Color;
     map?: THREE.Texture | null;
+    metalness?: number;
+    metalnessMap?: THREE.Texture | null;
+    roughness?: number;
+    roughnessMap?: THREE.Texture | null;
+    normalMap?: THREE.Texture | null;
+    aoMap?: THREE.Texture | null;
+    emissiveIntensity?: number;
+    emissiveMap?: THREE.Texture | null;
   };
   if (!source.color) return null;
 

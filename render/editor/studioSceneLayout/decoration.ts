@@ -513,7 +513,10 @@ function createCleanCommerceDecorationMaterial(
       metalness: 0,
       emissive: "#f3faff",
       emissiveIntensity: 0.04,
-      opacity: 0.34
+      opacity: 0.34,
+      clearcoat: 0.38,
+      clearcoatRoughness: 0.18,
+      specularIntensity: 0.72
     });
   }
   if (index === 1) {
@@ -523,7 +526,10 @@ function createCleanCommerceDecorationMaterial(
       metalness: 0,
       emissive: "#f9fcff",
       emissiveIntensity: 0.03,
-      opacity: 0.62
+      opacity: 0.62,
+      clearcoat: 0.04,
+      clearcoatRoughness: 0.78,
+      sheen: 0.12
     });
   }
   if (index === 2) {
@@ -533,7 +539,10 @@ function createCleanCommerceDecorationMaterial(
       metalness: 0,
       emissive: "#edf8ff",
       emissiveIntensity: 0.06,
-      opacity: 0.48
+      opacity: 0.48,
+      clearcoat: 0.32,
+      clearcoatRoughness: 0.22,
+      specularIntensity: 0.68
     });
   }
   return undefined;
