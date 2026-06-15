@@ -199,7 +199,15 @@ function createModifierMaterial(
     metalness: 0,
     roughness: modifier.role === "negativeFill" ? 0.9 : 0.42,
     emissive: modifier.role === "stripPanel" ? modifier.color : "#000000",
-    emissiveIntensity
+    emissiveIntensity,
+    ior: 1.38,
+    specularIntensity: modifier.role === "negativeFill" ? 0.12 : 0.38,
+    specularColor: "#ffffff",
+    clearcoat: modifier.role === "reflector" ? 0.16 : 0.04,
+    clearcoatRoughness: modifier.role === "negativeFill" ? 0.88 : 0.5,
+    sheen: modifier.role === "negativeFill" ? 0.18 : 0.04,
+    sheenColor: modifier.color,
+    sheenRoughness: modifier.role === "negativeFill" ? 0.95 : 0.7
   };
 }
 

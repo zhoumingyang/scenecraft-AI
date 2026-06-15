@@ -23,13 +23,24 @@ export function surface(
   emissive = "#000000",
   emissiveIntensity = 0
 ): PbrSurfaceConfig {
+  const isMetallic = metalness > 0.08;
+  const isGlossy = roughness < 0.58;
+
   return {
     color,
     roughness,
     metalness,
     emissive,
     emissiveIntensity,
-    opacity: 1
+    opacity: 1,
+    ior: 1.45,
+    specularIntensity: isMetallic ? 0.78 : 0.5,
+    specularColor: "#ffffff",
+    clearcoat: isGlossy ? 0.18 : 0.06,
+    clearcoatRoughness: isGlossy ? Math.min(0.44, roughness + 0.08) : 0.72,
+    sheen: isMetallic ? 0 : 0.06,
+    sheenColor: color,
+    sheenRoughness: 0.82
   };
 }
 

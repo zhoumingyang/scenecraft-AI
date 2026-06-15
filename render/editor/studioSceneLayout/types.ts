@@ -148,7 +148,15 @@ export function createStudioLayoutMaterial(
     metalness: surface.metalness,
     roughness: surface.roughness,
     emissive: surface.emissive,
-    emissiveIntensity: surface.emissiveIntensity
+    emissiveIntensity: surface.emissiveIntensity,
+    ior: surface.ior,
+    specularIntensity: surface.specularIntensity,
+    specularColor: surface.specularColor,
+    clearcoat: surface.clearcoat,
+    clearcoatRoughness: surface.clearcoatRoughness,
+    sheen: surface.sheen,
+    sheenColor: surface.sheenColor,
+    sheenRoughness: surface.sheenRoughness
   };
 }
 

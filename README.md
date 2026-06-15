@@ -236,7 +236,7 @@ Optional external asset settings:
 - `POLYHAVEN_ATTRIBUTION_ENABLED`
 - `POLYHAVEN_REQUEST_IDENTITY`
 
-Studio preview creates session-only editor entities for its studio room, plinth, and base studio lights so they can be selected and edited while studio mode is active. These transient entities are filtered from project snapshots and removed when studio mode exits. The selected product transform, studio camera framing, and generated studio setup remain temporary; they are restored or discarded on exit and do not write into saved project data.
+Studio preview creates session-only editor entities for its studio room, plinth, and base studio lights so they can be selected and edited while studio mode is active. Studio room, plinth, decoration, reflector, and light-panel meshes use physical material parameters tuned for product-style lighting. These transient entities are filtered from project snapshots and removed when studio mode exits. The selected product transform, studio camera framing, and generated studio setup remain temporary; they are restored or discarded on exit and do not write into saved project data.
 
 For social login support:
 

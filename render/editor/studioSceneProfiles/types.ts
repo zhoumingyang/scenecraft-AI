@@ -54,6 +54,14 @@ export type PbrSurfaceConfig = {
   emissive: string;
   emissiveIntensity: number;
   opacity: number;
+  ior?: number;
+  specularIntensity?: number;
+  specularColor?: string;
+  clearcoat?: number;
+  clearcoatRoughness?: number;
+  sheen?: number;
+  sheenColor?: string;
+  sheenRoughness?: number;
 };
 
 export type StudioLayoutProfile = {

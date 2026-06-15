@@ -31,12 +31,18 @@ export function createStudioRuntimeObjects({
 
   const roomMaterial = createMaterial(preset.backgroundColor, { side: THREE.DoubleSide });
   const accentMaterial = createMaterial(preset.accentColor, {
-    roughness: 0.72,
-    metalness: preset.id === "darkTech" ? 0.25 : 0
+    roughness: preset.id === "darkTech" ? 0.38 : 0.68,
+    metalness: preset.id === "darkTech" ? 0.28 : 0,
+    clearcoat: preset.id === "darkTech" ? 0.32 : 0.08,
+    clearcoatRoughness: preset.id === "darkTech" ? 0.28 : 0.68,
+    specularIntensity: preset.id === "darkTech" ? 0.85 : 0.48
   });
   const plinthMaterial = createMaterial(preset.plinthColor, {
-    roughness: preset.id === "darkTech" ? 0.45 : 0.68,
-    metalness: preset.id === "darkTech" ? 0.15 : 0
+    roughness: preset.id === "darkTech" ? 0.38 : 0.58,
+    metalness: preset.id === "darkTech" ? 0.16 : 0,
+    clearcoat: preset.id === "darkTech" ? 0.28 : 0.16,
+    clearcoatRoughness: preset.id === "darkTech" ? 0.3 : 0.46,
+    specularIntensity: preset.id === "darkTech" ? 0.78 : 0.56
   });
 
   objects.push(

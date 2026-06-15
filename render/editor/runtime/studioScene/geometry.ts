@@ -1,24 +1,59 @@
 import * as THREE from "three";
 
+function createStudioPhysicalMaterialParameters(
+  options: Partial<THREE.MeshPhysicalMaterialParameters>
+): Partial<THREE.MeshPhysicalMaterialParameters> {
+  const roughness = options.roughness ?? 0.82;
+  const metalness = options.metalness ?? 0;
+  const isMetallic = metalness > 0.08;
+  const isGlossy = roughness < 0.56;
+
+  return {
+    ior: 1.45,
+    specularIntensity: isMetallic ? 0.72 : 0.48,
+    specularColor: new THREE.Color("#ffffff"),
+    clearcoat: isGlossy ? 0.18 : 0.04,
+    clearcoatRoughness: isGlossy ? Math.min(0.42, roughness + 0.08) : 0.72,
+    sheen: isMetallic ? 0 : 0.08,
+    sheenRoughness: 0.82,
+    transmission: 0,
+    thickness: 0,
+    attenuationDistance: 1000,
+    attenuationColor: new THREE.Color("#ffffff")
+  };
+}
+
 export function createMaterial(
   color: string,
-  options: Partial<THREE.MeshStandardMaterialParameters> = {}
+  options: Partial<THREE.MeshPhysicalMaterialParameters> = {}
 ) {
-  return new THREE.MeshStandardMaterial({
+  const baseOptions = {
     color: new THREE.Color(color),
     roughness: 0.82,
     metalness: 0,
     ...options
+  };
+
+  return new THREE.MeshPhysicalMaterial({
+    ...createStudioPhysicalMaterialParameters(baseOptions),
+    ...baseOptions
   });
 }
 
 export function createEmissiveMaterial(color: string, intensity = 1.4) {
-  return new THREE.MeshStandardMaterial({
+  return new THREE.MeshPhysicalMaterial({
     color: new THREE.Color(color),
     emissive: new THREE.Color(color),
     emissiveIntensity: intensity,
-    roughness: 0.35,
-    metalness: 0
+    roughness: 0.28,
+    metalness: 0,
+    ior: 1.4,
+    specularIntensity: 0.35,
+    clearcoat: 0.12,
+    clearcoatRoughness: 0.36,
+    sheen: 0,
+    transmission: 0,
+    toneMapped: false
   });
 }
 
