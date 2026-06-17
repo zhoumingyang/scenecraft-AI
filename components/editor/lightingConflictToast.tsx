@@ -1,8 +1,9 @@
 "use client";
 
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
+import DeleteSweepRoundedIcon from "@mui/icons-material/DeleteSweepRounded";
 import LightModeRoundedIcon from "@mui/icons-material/LightModeRounded";
-import { Box, Fade, IconButton, Stack, Typography } from "@mui/material";
+import { Box, Button, Fade, IconButton, Stack, Typography } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import type { EditorThemeTokens } from "@/components/editor/theme";
 import { useI18n } from "@/lib/i18n";
@@ -12,12 +13,14 @@ type LightingConflictToastProps = {
   notice: LightingConflictNotice;
   theme: EditorThemeTokens;
   onClose: () => void;
+  onRemoveFillLights: () => void;
 };
 
 export default function LightingConflictToast({
   notice,
   theme,
-  onClose
+  onClose,
+  onRemoveFillLights
 }: LightingConflictToastProps) {
   const { t } = useI18n();
 
@@ -102,6 +105,35 @@ export default function LightingConflictToast({
               >
                 {message}
               </Typography>
+              <Button
+                size="small"
+                variant="text"
+                startIcon={<DeleteSweepRoundedIcon sx={{ fontSize: 15 }} />}
+                aria-label={t("editor.lightingConflict.removeFillLightsAria")}
+                onClick={onRemoveFillLights}
+                sx={{
+                  mt: 0.8,
+                  minHeight: 26,
+                  px: 0.9,
+                  py: 0.25,
+                  color: alpha("#ffbf66", 0.96),
+                  border: `1px solid ${alpha("#ffbf66", 0.32)}`,
+                  background: alpha("#ffbf66", 0.08),
+                  fontSize: 11.5,
+                  fontWeight: 600,
+                  lineHeight: 1.3,
+                  textTransform: "none",
+                  "& .MuiButton-startIcon": {
+                    mr: 0.55
+                  },
+                  "&:hover": {
+                    background: alpha("#ffbf66", 0.14),
+                    borderColor: alpha("#ffbf66", 0.48)
+                  }
+                }}
+              >
+                {t("editor.lightingConflict.removeFillLights")}
+              </Button>
             </Box>
 
             <IconButton

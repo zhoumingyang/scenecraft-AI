@@ -162,6 +162,9 @@ export default function TopBar() {
         notice={lightingConflictNotice}
         theme={theme}
         onClose={dismissLightingConflictNotice}
+        onRemoveFillLights={() => {
+          actions.app?.removeEnvironmentFillLights();
+        }}
       />
     </>
   );

@@ -124,6 +124,39 @@ export class EntityMutationSessionController {
     });
   }
 
+  removeEnvironmentFillLights(source: SyncSource = "ui") {
+    const projectModel = this.getProjectModel();
+    if (!projectModel) return 0;
+
+    const lightIds = Array.from(projectModel.lights.values())
+      .filter((light) => light.lightType === 1 || light.lightType === 6)
+      .map((light) => light.id);
+    if (lightIds.length === 0) return 0;
+
+    this.clearEntityIsolation(source);
+
+    lightIds.forEach((entityId) => {
+      projectModel.removeEntity(entityId);
+      this.registry.remove(entityId);
+      this.emit({
+        type: "entityUpdated",
+        entityId,
+        entityKind: "light",
+        source
+      });
+    });
+
+    this.rebuildGroupHierarchy();
+    this.runtime.syncLightHelperVisibility();
+
+    const selectedEntityId = this.getSelectedEntityId();
+    if (selectedEntityId && lightIds.includes(selectedEntityId)) {
+      this.setSelectedEntity(null, source);
+    }
+
+    return lightIds.length;
+  }
+
   duplicate(
     entityId: string,
     source: SyncSource = "ui",

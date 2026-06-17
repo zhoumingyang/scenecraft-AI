@@ -209,6 +209,10 @@ export class EditorApp {
     return this.session.getLightingConflictState();
   }
 
+  removeEnvironmentFillLights(source: SyncSource = "ui") {
+    return this.session.removeEnvironmentFillLights(source);
+  }
+
   getRenderMode() {
     return this.viewState.getRenderMode();
   }

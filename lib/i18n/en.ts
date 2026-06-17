@@ -456,6 +456,8 @@ const en = {
       "This scene uses both an environment map and a hemisphere light. Removing the hemisphere light can keep the lighting more physical.",
     "editor.lightingConflict.messageAmbientAndHemisphere":
       "This scene uses an environment map together with ambient and hemisphere lights. Removing those fill lights can keep the lighting more physical.",
+    "editor.lightingConflict.removeFillLights": "Remove fill lights",
+    "editor.lightingConflict.removeFillLightsAria": "Remove ambient and hemisphere lights",
     "editor.lightingConflict.dismiss": "Dismiss lighting conflict notice",
     "editor.project.delete": "Delete",
     "editor.project.deleteFailed": "Failed to delete project.",

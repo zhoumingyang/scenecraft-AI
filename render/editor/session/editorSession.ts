@@ -301,6 +301,10 @@ export class EditorSession {
     return this.sceneEnvironment.getLightingConflictState();
   }
 
+  removeEnvironmentFillLights(source: SyncSource = "ui") {
+    return this.entityMutation.removeEnvironmentFillLights(source);
+  }
+
   getIsolatedEntityId(): string | null {
     return this.entityIsolation.getIsolatedEntityId();
   }

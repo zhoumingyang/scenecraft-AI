@@ -456,6 +456,8 @@ const zh: TranslationDictionary = {
       "当前场景同时使用了 environment map 和半球光。移除半球光可以让整体光照更接近 physical 效果。",
     "editor.lightingConflict.messageAmbientAndHemisphere":
       "当前场景同时使用了 environment map、环境光和半球光。移除这些补光可以让整体光照更接近 physical 效果。",
+    "editor.lightingConflict.removeFillLights": "删除补光",
+    "editor.lightingConflict.removeFillLightsAria": "删除环境光和半球光",
     "editor.lightingConflict.dismiss": "关闭光照冲突提示",
     "editor.project.delete": "删除",
     "editor.project.deleteFailed": "删除项目失败。",
