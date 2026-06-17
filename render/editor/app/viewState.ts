@@ -102,7 +102,7 @@ export class EditorAppViewState {
     } else if (helper === "lightHelper") {
       this.runtime.setLightHelpersVisible(visible);
     } else {
-      this.session.updateGroundConfig({ mode: visible ? "plane" : "grid" }, "ui");
+      this.runtime.setShadowEnabled(visible);
     }
     this.emitViewStateUpdated();
   }
@@ -110,13 +110,13 @@ export class EditorAppViewState {
   setViewHelperVisibilityState(visibility: EditorViewHelperVisibility) {
     this.session.updateGroundConfig(
       {
-        visible: visibility.gridHelper,
-        mode: visibility.shadow ? "plane" : "grid"
+        visible: visibility.gridHelper
       },
       "ui"
     );
     this.runtime.setTransformGizmoVisible(visibility.transformGizmo);
     this.runtime.setLightHelpersVisible(visibility.lightHelper);
+    this.runtime.setShadowEnabled(visibility.shadow);
     this.emitViewStateUpdated();
   }
 }

@@ -69,9 +69,16 @@ export function persistViewHelperVisibility(
 
 export function restoreViewHelperVisibility(app: EditorApp, projectId: string | null) {
   const visibility = loadViewHelperVisibility(projectId);
+  const hasStoredVisibility = hasStoredViewHelperVisibility(projectId);
 
+  if (hasStoredVisibility) {
+    app.setViewHelperVisibility("gridHelper", visibility.gridHelper);
+  }
   app.setViewHelperVisibility("transformGizmo", visibility.transformGizmo);
   app.setViewHelperVisibility("lightHelper", visibility.lightHelper);
+  if (hasStoredVisibility) {
+    app.setViewHelperVisibility("shadow", visibility.shadow);
+  }
   persistViewHelperVisibility(projectId, app.getViewHelperVisibility());
 }
 
@@ -90,7 +97,7 @@ export function applyGroundFallbackFromViewHelperStorage(
     envConfig: {
       ...project.envConfig,
       ground: {
-        mode: visibility.shadow ? "plane" : "grid",
+        mode: "grid",
         visible: visibility.gridHelper,
         scale: [1, 1, 1]
       }

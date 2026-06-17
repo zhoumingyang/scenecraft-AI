@@ -156,7 +156,7 @@ export function EntityInspectorContent(props: PropertyPanelContentProps) {
         />
       ) : null}
 
-      {entityRecord.kind === "gridHelper" && entityRecord.item.mode === "plane" ? (
+      {entityRecord.kind === "gridHelper" ? (
         <MeshAppearanceSection
           material={entityRecord.item.material}
           onMaterialPatch={(patch) => app?.updateGroundMaterial(patch)}

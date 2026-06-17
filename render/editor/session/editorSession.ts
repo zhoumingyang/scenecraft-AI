@@ -237,7 +237,9 @@ export class EditorSession {
     } else {
       this.runtime.clearEnvironment();
     }
-    this.runtime.applyEnvConfig(this.projectModel.envConfig);
+    this.runtime.applyEnvConfig(this.projectModel.envConfig, {
+      syncShadowFromGroundMode: true
+    });
     this.runtime.applyCameraModel(this.projectModel.camera);
 
     const pendingBindingReady = createProjectBindings(this.projectModel, this.registry);

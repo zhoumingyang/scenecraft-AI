@@ -449,8 +449,11 @@ export class EditorRuntime {
     }
   }
 
-  applyEnvConfig(envConfig: ResolvedEditorEnvConfigJSON) {
-    const result = this.environment.applyEnvConfig(envConfig);
+  applyEnvConfig(
+    envConfig: ResolvedEditorEnvConfigJSON,
+    options: { syncShadowFromGroundMode?: boolean } = {}
+  ) {
+    const result = this.environment.applyEnvConfig(envConfig, options);
     this.postProcessing.applyConfig(envConfig.postProcessing);
     if (result.groundSceneChanged) {
       this.pathTracer.invalidateScene();

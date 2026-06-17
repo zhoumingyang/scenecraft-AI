@@ -66,7 +66,7 @@ export default function PropertyPanel() {
   const isPolyhavenEnabled = isPolyhavenProviderEnabled();
   const materialPanelTarget =
     entityRecord?.kind === "mesh" ||
-    (entityRecord?.kind === "gridHelper" && entityRecord.item.mode === "plane")
+    entityRecord?.kind === "gridHelper"
       ? entityRecord
       : null;
 
