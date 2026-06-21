@@ -25,6 +25,11 @@ import { EditorRuntimePostProcessing } from "./editorRuntimePostProcessing";
 import { EditorRuntimeStudioScene } from "./editorRuntimeStudioScene";
 import { FirstPersonController } from "./firstPersonController";
 import { ModelLoaderFactory } from "./modelLoaderFactory";
+import { EditorPreviewLighting } from "./previewLighting";
+import type {
+  PreviewLightingEnvState,
+  PreviewLightingLightState
+} from "./previewLightingRules";
 import {
   startRuntimeLifecycle,
   stopRuntimeLifecycle,
@@ -54,6 +59,7 @@ export class EditorRuntime {
   private readonly environment: EditorRuntimeEnvironment;
   private readonly pathTracer: EditorRuntimePathTracer;
   private readonly postProcessing: EditorRuntimePostProcessing;
+  private readonly previewLighting: EditorPreviewLighting;
   private disposed = false;
   private startOptions: RuntimeStartOptions | null = null;
   private frameDirty = true;
@@ -114,6 +120,11 @@ export class EditorRuntime {
     this.orbitControls.enableDamping = true;
     this.orbitControls.enablePan = true;
     this.orbitControls.target.set(0, 0, 0);
+    this.previewLighting = new EditorPreviewLighting({
+      scene: this.scene,
+      camera: this.camera,
+      orbitControls: this.orbitControls
+    });
     this.firstPersonController = new FirstPersonController(this.camera, this.renderer.domElement, {
       onChange: this.requestFrame
     });
@@ -147,6 +158,7 @@ export class EditorRuntime {
     this.disposed = true;
     this.stop();
     this.studioScene.dispose();
+    this.previewLighting.dispose();
     this.transformGizmo.dispose();
     this.scene.remove(this.transformGizmo.root);
     this.orbitControls.dispose();
@@ -295,10 +307,12 @@ export class EditorRuntime {
       if (this.orbitDampingFramesRemaining > 0) {
         this.orbitDampingFramesRemaining -= 1;
       }
+      this.previewLighting.syncFromCamera();
       return changed;
     }
 
     changed = this.firstPersonController.update(deltaSeconds);
+    this.previewLighting.syncFromCamera();
     return changed;
   }
 
@@ -412,6 +426,19 @@ export class EditorRuntime {
     this.environment.clearEnvironment();
     this.pathTracer.invalidateEnvironment();
     this.requestFrame();
+  }
+
+  syncPreviewLighting(input: {
+    lights: PreviewLightingLightState[];
+    environment: PreviewLightingEnvState;
+  }) {
+    if (!this.previewLighting.syncFromSceneState(input)) return;
+    this.pathTracer.invalidateLights();
+    this.requestFrame();
+  }
+
+  isPreviewLightingEnabled() {
+    return this.previewLighting.isEnabled();
   }
 
   setOutlineSelection(objects: THREE.Object3D[]) {

@@ -255,6 +255,7 @@ export class EditorSession {
     const pendingBindingReady = createProjectBindings(this.projectModel, this.registry);
     this.rebuildGroupHierarchy();
     this.runtime.syncLightHelperVisibility();
+    this.syncPreviewLighting();
 
     if (pendingBindingReady.length > 0) {
       const readyResults = await Promise.allSettled(pendingBindingReady);
@@ -314,7 +315,11 @@ export class EditorSession {
   }
 
   removeEnvironmentFillLights(source: SyncSource = "ui") {
-    return this.entityMutation.removeEnvironmentFillLights(source);
+    const removedCount = this.entityMutation.removeEnvironmentFillLights(source);
+    if (removedCount > 0) {
+      this.syncPreviewLighting();
+    }
+    return removedCount;
   }
 
   getIsolatedEntityId(): string | null {
@@ -495,6 +500,7 @@ export class EditorSession {
     options?: { panoAssetName?: string }
   ) {
     await this.sceneEnvironment.updateSceneEnvConfig(patch, source, options);
+    this.syncPreviewLighting();
   }
 
   updateMeshMaterial(
@@ -555,10 +561,12 @@ export class EditorSession {
   updateLight(entityId: string, patch: Partial<EditorLightJSON>, source: SyncSource = "ui") {
     if (this.studioScene.isActive() && !this.canUseStudioSceneEntityAction(entityId, "light")) return;
     this.lightSession.updateLight(entityId, patch, source);
+    this.syncPreviewLighting();
   }
 
   createLight(lightType: EditorLightJSON["type"], source: SyncSource = "ui") {
     const lightId = this.lightSession.createLight(lightType, source);
+    this.syncPreviewLighting();
     if (lightId && this.studioScene.isActive()) {
       this.adoptStudioEntity(lightId, "userLight", { source });
       this.setSelectedEntity(lightId, source);
@@ -580,6 +588,7 @@ export class EditorSession {
       });
       this.setSelectedEntity(preset.groupId, source);
     }
+    this.syncPreviewLighting();
   }
 
   private async createVisibleSceneLightPresetFrame(): Promise<LightPresetFrame | null> {
@@ -677,6 +686,7 @@ export class EditorSession {
   removeEntity(entityId: string, source: SyncSource = "ui") {
     if (this.studioScene.isActive() && !this.canUseStudioSceneEntityAction(entityId, "delete")) return;
     this.entityMutation.remove(entityId, source);
+    this.syncPreviewLighting();
   }
 
   duplicateEntity(
@@ -686,6 +696,7 @@ export class EditorSession {
   ) {
     if (this.studioScene.isActive() && !this.canUseStudioSceneEntityAction(entityId, "duplicate")) return;
     this.entityMutation.duplicate(entityId, source, duplicateOptions);
+    this.syncPreviewLighting();
   }
 
   setEntityLocked(entityId: string, locked: boolean, source: SyncSource = "ui") {
@@ -695,12 +706,17 @@ export class EditorSession {
 
   toggleEntityIsolation(entityId: string, source: SyncSource = "ui") {
     this.entityIsolation.toggle(entityId, source);
+    this.syncPreviewLighting();
   }
 
   setEntityVisible(entityId: string, visible: boolean, source: SyncSource = "ui") {
     if (this.studioScene.isActive() && !this.canUseStudioSceneEntityAction(entityId, "visibility")) return;
-    if (this.studioScene.setTransientEntityVisible(entityId, visible, source)) return;
+    if (this.studioScene.setTransientEntityVisible(entityId, visible, source)) {
+      this.syncPreviewLighting();
+      return;
+    }
     this.entityIsolation.setVisible(entityId, visible, source);
+    this.syncPreviewLighting();
   }
 
   private clearProjectObjects() {
@@ -720,4 +736,17 @@ export class EditorSession {
     });
   }
 
+  private syncPreviewLighting() {
+    if (!this.projectModel) return;
+    this.runtime.syncPreviewLighting({
+      lights: Array.from(this.projectModel.lights.values()).map((light) => ({
+        visible: this.projectModel!.isEntityEffectivelyVisible(light.id),
+        intensity: light.intensity
+      })),
+      environment: {
+        hasImageBasedLighting: this.runtime.hasImageBasedLighting(),
+        environmentIntensity: this.projectModel.envConfig.environmentIntensity
+      }
+    });
+  }
 }
