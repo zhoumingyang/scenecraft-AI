@@ -13,6 +13,10 @@ import {
   disposeMeshPhysicalMaterialTextures
 } from "../materials/meshMaterial";
 import { applyTextureColorSpace } from "./colorManagement";
+import {
+  withEditorHelperVisibility,
+  withPathTraceCompatibleEnvironment
+} from "./pathTraceSceneState";
 
 const DEFAULT_SCENE_ROTATION = new THREE.Euler();
 const GROUND_PLANE_SIZE = 80;
@@ -68,6 +72,7 @@ export class EditorRuntimeEnvironment {
   private lightHelpersVisible = true;
   private environmentTexture: THREE.Texture | null = null;
   private environmentMapTexture: THREE.Texture | null = null;
+  private pathTraceEnvironmentTexture: THREE.Texture | null = null;
   private sceneMaterialInvalidationState: SceneMaterialInvalidationState | null = null;
   private lastGroundMaterial: ResolvedEditorGroundConfigJSON["material"] | null = null;
 
@@ -124,26 +129,29 @@ export class EditorRuntimeEnvironment {
     this.syncLightHelperVisibility();
   }
 
-  withEditorHelpersHidden<T>(callback: () => T): T {
-    const previousGroundVisible = this.groundPlane.visible;
-    const lightHelperSnapshots: Array<{ object: THREE.Object3D; visible: boolean }> = [];
+  withEditorHelpersHidden<T>(
+    callback: () => T,
+    options: { hideGroundPlane?: boolean } = {}
+  ): T {
+    return withEditorHelperVisibility(
+      this.scene,
+      {
+        groundPlane: this.groundPlane,
+        hideGroundPlane: options.hideGroundPlane ?? true
+      },
+      callback
+    );
+  }
 
-    this.scene.traverse((object) => {
-      if (object.userData?.editorLightHelper !== true) return;
-      lightHelperSnapshots.push({ object, visible: object.visible });
-      object.visible = false;
-    });
-
-    this.groundPlane.visible = false;
-
-    try {
-      return callback();
-    } finally {
-      this.groundPlane.visible = previousGroundVisible;
-      lightHelperSnapshots.forEach(({ object, visible }) => {
-        object.visible = visible;
-      });
-    }
+  withPathTraceSceneState<T>(
+    sourceEnvironmentTexture: THREE.Texture | null,
+    callback: () => T
+  ): T {
+    return withPathTraceCompatibleEnvironment(
+      this.scene,
+      sourceEnvironmentTexture ?? this.pathTraceEnvironmentTexture,
+      () => this.withEditorHelpersHidden(callback, { hideGroundPlane: false })
+    );
   }
 
   getShadowEnabled() {
@@ -264,13 +272,19 @@ export class EditorRuntimeEnvironment {
   async setEnvironmentFromUrl(url: string, assetName = url) {
     const texture = await this.loadEnvironmentTexture(url, assetName);
     const environmentMapTexture = this.pmremGenerator.fromEquirectangular(texture).texture;
+    const pathTraceEnvironmentTexture = this.createPathTraceEnvironmentTexture(texture);
 
     const previousTexture = this.environmentTexture;
     const previousEnvironmentMapTexture = this.environmentMapTexture;
+    const previousPathTraceEnvironmentTexture = this.pathTraceEnvironmentTexture;
     this.environmentTexture = texture;
     this.environmentMapTexture = environmentMapTexture;
+    this.pathTraceEnvironmentTexture = pathTraceEnvironmentTexture;
     previousTexture?.dispose();
     previousEnvironmentMapTexture?.dispose();
+    if (previousPathTraceEnvironmentTexture && previousPathTraceEnvironmentTexture !== previousTexture) {
+      previousPathTraceEnvironmentTexture.dispose();
+    }
   }
 
   clearEnvironment() {
@@ -283,8 +297,12 @@ export class EditorRuntimeEnvironment {
     this.scene.backgroundRotation.copy(DEFAULT_SCENE_ROTATION);
     this.environmentTexture?.dispose();
     this.environmentMapTexture?.dispose();
+    if (this.pathTraceEnvironmentTexture && this.pathTraceEnvironmentTexture !== this.environmentTexture) {
+      this.pathTraceEnvironmentTexture.dispose();
+    }
     this.environmentTexture = null;
     this.environmentMapTexture = null;
+    this.pathTraceEnvironmentTexture = null;
     this.sceneMaterialInvalidationState = null;
     this.invalidateSceneMaterials();
   }
@@ -417,5 +435,75 @@ export class EditorRuntimeEnvironment {
     }
 
     return this.environmentMapTexture;
+  }
+
+  private createPathTraceEnvironmentTexture(texture: THREE.Texture) {
+    if (this.hasReadableTextureData(texture)) {
+      return texture;
+    }
+
+    const image = texture.image as CanvasImageSource | undefined;
+    const width = this.getImageWidth(image);
+    const height = this.getImageHeight(image);
+    if (!image || !width || !height) {
+      return null;
+    }
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+    if (!context) return null;
+
+    try {
+      context.drawImage(image, 0, 0, width, height);
+      const imageData = context.getImageData(0, 0, width, height);
+      const data = new Uint8Array(imageData.data);
+      const dataTexture = new THREE.DataTexture(
+        data,
+        width,
+        height,
+        THREE.RGBAFormat,
+        THREE.UnsignedByteType
+      );
+      dataTexture.mapping = THREE.EquirectangularReflectionMapping;
+      dataTexture.wrapS = THREE.RepeatWrapping;
+      dataTexture.wrapT = THREE.ClampToEdgeWrapping;
+      dataTexture.minFilter = THREE.LinearFilter;
+      dataTexture.magFilter = THREE.LinearFilter;
+      dataTexture.generateMipmaps = false;
+      applyTextureColorSpace(dataTexture, "environmentLdr");
+      dataTexture.needsUpdate = true;
+      return dataTexture;
+    } catch {
+      return null;
+    }
+  }
+
+  private hasReadableTextureData(texture: THREE.Texture) {
+    const image = texture.image as { data?: ArrayLike<number> } | undefined;
+    return Boolean(image?.data?.length);
+  }
+
+  private getImageWidth(image: CanvasImageSource | undefined) {
+    if (!image) return 0;
+    if ("naturalWidth" in image && typeof image.naturalWidth === "number") {
+      return image.naturalWidth;
+    }
+    if ("videoWidth" in image && typeof image.videoWidth === "number") {
+      return image.videoWidth;
+    }
+    return "width" in image && typeof image.width === "number" ? image.width : 0;
+  }
+
+  private getImageHeight(image: CanvasImageSource | undefined) {
+    if (!image) return 0;
+    if ("naturalHeight" in image && typeof image.naturalHeight === "number") {
+      return image.naturalHeight;
+    }
+    if ("videoHeight" in image && typeof image.videoHeight === "number") {
+      return image.videoHeight;
+    }
+    return "height" in image && typeof image.height === "number" ? image.height : 0;
   }
 }

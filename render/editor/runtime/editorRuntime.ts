@@ -529,9 +529,12 @@ export class EditorRuntime {
     this.transformGizmo.root.visible = false;
 
     try {
-      this.environment.withEditorHelpersHidden(() => {
-        this.pathTracer.renderSample();
-      });
+      this.environment.withPathTraceSceneState(
+        this.studioScene.getPathTraceEnvironmentTexture(),
+        () => {
+          this.pathTracer.renderSample();
+        }
+      );
     } finally {
       this.transformGizmo.root.visible = previousTransformGizmoVisible;
     }

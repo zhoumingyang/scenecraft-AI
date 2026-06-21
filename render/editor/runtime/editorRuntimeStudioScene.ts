@@ -74,6 +74,10 @@ export class EditorRuntimeStudioScene {
     };
   }
 
+  getPathTraceEnvironmentTexture() {
+    return this.active ? this.environment.getPathTraceEnvironmentTexture() : null;
+  }
+
   activate(
     preset: StudioScenePresetDefinition,
     variant: StudioSceneVariantDefinition,

@@ -55,6 +55,10 @@ export class StudioSceneEnvironmentController {
     return this.hdriError;
   }
 
+  getPathTraceEnvironmentTexture() {
+    return this.environmentTexture;
+  }
+
   captureSnapshotIfNeeded() {
     if (this.snapshot) return;
     this.snapshot = captureStudioEnvironmentSnapshot(this.scene);
