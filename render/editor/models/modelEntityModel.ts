@@ -32,6 +32,8 @@ export class ModelEntityModel extends BaseEntityModel {
   activeAnimationId: string | null;
   animationTimeScale: number;
   animationPlaybackState: ModelAnimationPlaybackState;
+  hasSkeleton: boolean;
+  skeletonVisible: boolean;
   visible: boolean;
 
   constructor(index: number, source: EditorModelJSON) {
@@ -52,6 +54,8 @@ export class ModelEntityModel extends BaseEntityModel {
       source.animationPlaybackState,
       this.activeAnimationId ? "playing" : "stopped"
     );
+    this.hasSkeleton = false;
+    this.skeletonVisible = false;
     this.visible = normalizeBoolean(source.visible, true);
   }
 

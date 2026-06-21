@@ -254,6 +254,8 @@ const zh: TranslationDictionary = {
     "editor.properties.animation.pause": "暂停",
     "editor.properties.animation.stop": "停止",
     "editor.properties.animation.step": "单步",
+    "editor.properties.animation.showSkeleton": "显示骨骼",
+    "editor.properties.animation.hideSkeleton": "隐藏骨骼",
     "editor.properties.position": "Position",
     "editor.properties.rotation": "Rotation",
     "editor.properties.scale": "Scale",

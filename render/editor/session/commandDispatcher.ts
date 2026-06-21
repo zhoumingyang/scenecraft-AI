@@ -75,6 +75,7 @@ export type EditorCommandHandlers = {
     action: Extract<EditorCommand, { type: "model.animation.control" }>["action"],
     source: SyncSource
   ) => void;
+  setModelSkeletonVisible: (entityId: string, visible: boolean, source: SyncSource) => void;
 };
 
 function canUseModelAnimationCommand(handlers: EditorCommandHandlers, entityId: string) {
@@ -165,6 +166,10 @@ export async function dispatchEditorCommand(
     case "model.animation.control":
       if (!canUseModelAnimationCommand(handlers, command.entityId)) return;
       handlers.controlModelAnimation(command.entityId, command.action, source);
+      return;
+    case "model.animation.skeletonVisibility":
+      if (!canUseModelAnimationCommand(handlers, command.entityId)) return;
+      handlers.setModelSkeletonVisible(command.entityId, command.visible, source);
       return;
   }
 }

@@ -174,6 +174,8 @@ export function EntityInspectorContent(props: PropertyPanelContentProps) {
           activeAnimationId={entityRecord.item.activeAnimationId}
           timeScale={entityRecord.item.animationTimeScale}
           playbackState={entityRecord.item.animationPlaybackState}
+          hasSkeleton={entityRecord.item.hasSkeleton}
+          skeletonVisible={entityRecord.item.skeletonVisible}
           externalSource={entityRecord.item.externalSource}
         />
       ) : null}

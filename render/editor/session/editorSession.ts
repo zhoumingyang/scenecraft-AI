@@ -97,7 +97,15 @@ export class EditorSession {
       modelLoaderFactory: runtime.modelLoaderFactory,
       textureLoader: runtime.textureLoader,
       invalidateScene: () => runtime.invalidatePathTraceScene(),
-      invalidateMaterials: () => runtime.invalidatePathTraceMaterials()
+      invalidateMaterials: () => runtime.invalidatePathTraceMaterials(),
+      onModelRuntimeStateChanged: (entityId) =>
+        emit({
+          type: "entityUpdated",
+          entityId,
+          entityKind: "model",
+          source: "render",
+          affectsSceneTree: false
+        })
     });
     this.ai3dPreview = new Ai3DPreviewSession(runtime, this.registry);
     this.ai3dPlan = new Ai3DPlanSessionController({
@@ -216,7 +224,9 @@ export class EditorSession {
       updateModelAnimationTimeScale: (entityId, timeScale, source) =>
         this.modelAnimation.updateTimeScale(entityId, timeScale, source),
       controlModelAnimation: (entityId, action, source) =>
-        this.modelAnimation.control(entityId, action, source)
+        this.modelAnimation.control(entityId, action, source),
+      setModelSkeletonVisible: (entityId, visible, source) =>
+        this.modelAnimation.setSkeletonVisible(entityId, visible, source)
     };
   }
 

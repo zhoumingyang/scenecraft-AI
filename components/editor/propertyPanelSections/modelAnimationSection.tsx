@@ -15,6 +15,7 @@ import PauseRoundedIcon from "@mui/icons-material/PauseRounded";
 import PlayArrowRoundedIcon from "@mui/icons-material/PlayArrowRounded";
 import SkipNextRoundedIcon from "@mui/icons-material/SkipNextRounded";
 import StopRoundedIcon from "@mui/icons-material/StopRounded";
+import AccountTreeRoundedIcon from "@mui/icons-material/AccountTreeRounded";
 import PropertyPanelSection from "@/components/common/propertyPanelSection";
 import { useI18n } from "@/lib/i18n";
 import type { ExternalAssetSourceJSON } from "@/lib/externalAssets/types";
@@ -27,6 +28,8 @@ type ModelAnimationSectionProps = {
   activeAnimationId: string | null;
   timeScale: number;
   playbackState: ModelAnimationPlaybackState;
+  hasSkeleton: boolean;
+  skeletonVisible: boolean;
   externalSource?: ExternalAssetSourceJSON | null;
 };
 
@@ -52,6 +55,8 @@ export function ModelAnimationSection({
   activeAnimationId,
   timeScale,
   playbackState,
+  hasSkeleton,
+  skeletonVisible,
   externalSource
 }: ModelAnimationSectionProps) {
   const { t } = useI18n();
@@ -87,7 +92,47 @@ export function ModelAnimationSection({
   ];
 
   return (
-    <PropertyPanelSection title={t("editor.properties.animation")}>
+    <PropertyPanelSection
+      title={t("editor.properties.animation")}
+      action={
+        hasSkeleton ? (
+          <Tooltip
+            title={t(
+              skeletonVisible
+                ? "editor.properties.animation.hideSkeleton"
+                : "editor.properties.animation.showSkeleton"
+            )}
+          >
+            <IconButton
+              size="small"
+              aria-label={t(
+                skeletonVisible
+                  ? "editor.properties.animation.hideSkeleton"
+                  : "editor.properties.animation.showSkeleton"
+              )}
+              onClick={() => app?.setModelSkeletonVisible(entityId, !skeletonVisible)}
+              sx={{
+                width: 24,
+                height: 24,
+                color: skeletonVisible ? "#e8f1ff" : "rgba(222,234,255,0.78)",
+                border: "1px solid rgba(160,190,255,0.18)",
+                borderRadius: 0.8,
+                background: skeletonVisible
+                  ? "rgba(120,172,255,0.24)"
+                  : "rgba(255,255,255,0.03)",
+                "&:hover": {
+                  background: skeletonVisible
+                    ? "rgba(120,172,255,0.32)"
+                    : "rgba(255,255,255,0.08)"
+                }
+              }}
+            >
+              <AccountTreeRoundedIcon sx={{ fontSize: 15 }} />
+            </IconButton>
+          </Tooltip>
+        ) : null
+      }
+    >
       <Stack spacing={1.05}>
         {externalSource ? (
           <Stack spacing={0.35}>

@@ -254,6 +254,8 @@ const en = {
     "editor.properties.animation.pause": "Pause",
     "editor.properties.animation.stop": "Stop",
     "editor.properties.animation.step": "Step",
+    "editor.properties.animation.showSkeleton": "Show skeleton",
+    "editor.properties.animation.hideSkeleton": "Hide skeleton",
     "editor.properties.position": "Position",
     "editor.properties.rotation": "Rotation",
     "editor.properties.scale": "Scale",

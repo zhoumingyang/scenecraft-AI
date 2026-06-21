@@ -16,6 +16,8 @@ export type RenderBinding = {
     applyState: () => void;
     step: () => boolean;
     hasClip: (animationId: string | null) => boolean;
+    hasSkeleton: () => boolean;
+    setSkeletonVisible: (visible: boolean) => boolean;
   };
   dispose: () => void;
   lastTransformState: ObjectTransformState;
@@ -28,4 +30,5 @@ export type BindingContext = {
   textureLoader: THREE.TextureLoader;
   invalidateScene?: () => void;
   invalidateMaterials?: () => void;
+  onModelRuntimeStateChanged?: (entityId: string) => void;
 };

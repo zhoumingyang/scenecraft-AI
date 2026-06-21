@@ -28,6 +28,16 @@ function poseAllSkeletons(root: THREE.Object3D) {
   });
 }
 
+function hasSkeleton(root: THREE.Object3D) {
+  let result = false;
+  root.traverse((object) => {
+    if (result) return;
+    const skinnedMesh = object as THREE.SkinnedMesh;
+    result = Boolean(skinnedMesh.skeleton?.bones.length);
+  });
+  return result;
+}
+
 function disposeLoadedAsset(
   object: THREE.Object3D,
   customDispose: ((object: THREE.Object3D) => void) | null | undefined
@@ -65,6 +75,7 @@ export function createModelBinding(context: BindingContext, model: ModelEntityMo
   let clipsById = new Map<string, THREE.AnimationClip>();
   let actionsById = new Map<string, THREE.AnimationAction>();
   let currentActionId: string | null = null;
+  let skeletonHelper: THREE.SkeletonHelper | null = null;
 
   const stopAction = (action: THREE.AnimationAction) => {
     action.stop();
@@ -81,6 +92,44 @@ export function createModelBinding(context: BindingContext, model: ModelEntityMo
       action.paused = false;
       action.enabled = true;
     });
+  };
+
+  const disposeSkeletonHelper = () => {
+    if (!skeletonHelper) return;
+    removeObjectFromParent(skeletonHelper);
+    skeletonHelper.geometry.dispose();
+    const material = skeletonHelper.material;
+    if (Array.isArray(material)) {
+      material.forEach((item) => item.dispose());
+    } else {
+      material.dispose();
+    }
+    skeletonHelper = null;
+  };
+
+  const setSkeletonVisible = (visible: boolean) => {
+    if (!currentAssetRoot || !model.hasSkeleton) {
+      model.skeletonVisible = false;
+      disposeSkeletonHelper();
+      return false;
+    }
+
+    model.skeletonVisible = visible;
+    if (!visible) {
+      disposeSkeletonHelper();
+      context.invalidateScene?.();
+      return false;
+    }
+
+    if (!skeletonHelper) {
+      skeletonHelper = new THREE.SkeletonHelper(currentAssetRoot);
+      skeletonHelper.name = `skeleton-helper:${model.id}`;
+      skeletonHelper.userData.editorRuntimeHelper = true;
+      scene.add(skeletonHelper);
+    }
+    skeletonHelper.visible = true;
+    context.invalidateScene?.();
+    return true;
   };
 
   const applyAnimationState = () => {
@@ -150,6 +199,10 @@ export function createModelBinding(context: BindingContext, model: ModelEntityMo
       currentAssetDispose = asset.dispose ?? null;
       enableShadowForAsset(asset.object);
       normalizeObject3DMaterials(asset.object);
+      model.hasSkeleton = hasSkeleton(asset.object);
+      if (!model.hasSkeleton) {
+        model.skeletonVisible = false;
+      }
       mixer = new THREE.AnimationMixer(asset.object);
       clipsById = new Map(asset.animations.map((clip, index) => [clip.id, asset.clips[index]]));
       actionsById = new Map(
@@ -160,7 +213,9 @@ export function createModelBinding(context: BindingContext, model: ModelEntityMo
       assetRoot.add(asset.object);
       setEntityId(group, model.id);
       applyAnimationState();
+      setSkeletonVisible(model.skeletonVisible);
       context.invalidateScene?.();
+      context.onModelRuntimeStateChanged?.(model.id);
     });
 
   return {
@@ -172,7 +227,9 @@ export function createModelBinding(context: BindingContext, model: ModelEntityMo
     modelAnimation: {
       applyState: applyAnimationState,
       step: stepAnimation,
-      hasClip: (animationId: string | null) => (animationId ? clipsById.has(animationId) : false)
+      hasClip: (animationId: string | null) => (animationId ? clipsById.has(animationId) : false),
+      hasSkeleton: () => model.hasSkeleton,
+      setSkeletonVisible
     },
     lastTransformState: captureObjectTransformState(group),
     refresh: (deltaSeconds) => {
@@ -197,6 +254,7 @@ export function createModelBinding(context: BindingContext, model: ModelEntityMo
       mixer?.stopAllAction();
       mixer = null;
       currentActionId = null;
+      disposeSkeletonHelper();
       clipsById.clear();
       actionsById.clear();
       removeObjectFromParent(group);

@@ -130,4 +130,10 @@ export type EditorCommand =
       entityId: string;
       action: "play" | "pause" | "stop" | "step";
       source?: SyncSource;
+    }
+  | {
+      type: "model.animation.skeletonVisibility";
+      entityId: string;
+      visible: boolean;
+      source?: SyncSource;
     };

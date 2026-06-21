@@ -536,6 +536,15 @@ export class EditorApp {
     });
   }
 
+  setModelSkeletonVisible(entityId: string, visible: boolean, source: SyncSource = "ui") {
+    void this.dispatch({
+      type: "model.animation.skeletonVisibility",
+      entityId,
+      visible,
+      source
+    });
+  }
+
   syncEntityModelFromRenderObject(entityId: string) {
     this.session.syncEntityModelFromRenderObject(entityId);
   }

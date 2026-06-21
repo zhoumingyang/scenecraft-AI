@@ -90,4 +90,22 @@ export class ModelAnimationSessionController {
       affectsSceneTree: false
     });
   }
+
+  setSkeletonVisible(entityId: string, visible: boolean, source: SyncSource = "ui") {
+    const binding = this.registry.get(entityId);
+    if (!binding || binding.kind !== "model" || binding.model.locked) return;
+    const model = binding.model as ModelEntityModel;
+    const previousVisible = model.skeletonVisible;
+    const nextVisible = binding.modelAnimation?.setSkeletonVisible(visible) ?? false;
+    if (previousVisible === nextVisible) return;
+
+    model.skeletonVisible = nextVisible;
+    this.emit({
+      type: "entityUpdated",
+      entityId,
+      entityKind: "model",
+      source,
+      affectsSceneTree: false
+    });
+  }
 }
