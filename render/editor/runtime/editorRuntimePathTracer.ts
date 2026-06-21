@@ -1,5 +1,11 @@
 import * as THREE from "three";
 import { WebGLPathTracer } from "three-gpu-pathtracer";
+import {
+  PATH_TRACE_CAPTURE_MAX_ITERATIONS,
+  PATH_TRACE_CAPTURE_SAMPLES,
+  configureEditorPathTracer
+} from "./pathTraceRendererConfig";
+import { renderPathTraceSamplesUntil } from "./pathTraceSampling";
 
 type EditorRuntimePathTracerOptions = {
   scene: THREE.Scene;
@@ -55,20 +61,35 @@ export class EditorRuntimePathTracer {
 
   renderSample() {
     const pathTracer = this.ensurePathTracer();
+    this.preparePathTracer(pathTracer);
+    pathTracer.renderSample();
+  }
 
+  renderCaptureSamples() {
+    const pathTracer = this.ensurePathTracer();
+    return renderPathTraceSamplesUntil({
+      targetSamples: PATH_TRACE_CAPTURE_SAMPLES,
+      maxIterations: PATH_TRACE_CAPTURE_MAX_ITERATIONS,
+      getSamples: () => pathTracer.samples,
+      renderSample: () => {
+        this.preparePathTracer(pathTracer);
+        pathTracer.renderSample();
+      }
+    });
+  }
+
+  dispose() {
+    this.pathTracer?.dispose();
+    this.pathTracer = null;
+  }
+
+  private preparePathTracer(pathTracer: WebGLPathTracer) {
     if (this.sceneDirty) {
       pathTracer.setScene(this.scene, this.camera);
       this.clearDirtyState();
     } else {
       this.flushIncrementalUpdates(pathTracer);
     }
-
-    pathTracer.renderSample();
-  }
-
-  dispose() {
-    this.pathTracer?.dispose();
-    this.pathTracer = null;
   }
 
   private ensurePathTracer() {
@@ -77,10 +98,7 @@ export class EditorRuntimePathTracer {
     const pathTracer = new WebGLPathTracer(this.renderer);
     pathTracer.bounces = 5;
     pathTracer.filterGlossyFactor = 0.5;
-    pathTracer.tiles.set(3, 3);
-    pathTracer.dynamicLowRes = true;
-    pathTracer.lowResScale = 0.25;
-    pathTracer.renderScale = 1;
+    configureEditorPathTracer(pathTracer);
     this.pathTracer = pathTracer;
     this.sceneDirty = true;
     return pathTracer;

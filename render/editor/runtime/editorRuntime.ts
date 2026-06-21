@@ -450,7 +450,11 @@ export class EditorRuntime {
     this.update(0);
 
     if (mode === "viewport") {
-      this.renderFrame();
+      if (this.renderMode === "pathTrace") {
+        this.renderPathTraceCaptureSamples();
+      } else {
+        this.renderFrame();
+      }
       return this.renderer.domElement.toDataURL("image/png");
     }
 
@@ -465,7 +469,11 @@ export class EditorRuntime {
     this.postProcessing.setOutlineEnabled(false);
 
     try {
-      this.renderFrame();
+      if (this.renderMode === "pathTrace") {
+        this.renderPathTraceCaptureSamples();
+      } else {
+        this.renderFrame();
+      }
       return this.renderer.domElement.toDataURL("image/png");
     } finally {
       this.environment.setGridHelperVisible(previousGridHelperVisible);
@@ -533,6 +541,22 @@ export class EditorRuntime {
         this.studioScene.getPathTraceEnvironmentTexture(),
         () => {
           this.pathTracer.renderSample();
+        }
+      );
+    } finally {
+      this.transformGizmo.root.visible = previousTransformGizmoVisible;
+    }
+  }
+
+  private renderPathTraceCaptureSamples() {
+    const previousTransformGizmoVisible = this.transformGizmo.root.visible;
+    this.transformGizmo.root.visible = false;
+
+    try {
+      this.environment.withPathTraceSceneState(
+        this.studioScene.getPathTraceEnvironmentTexture(),
+        () => {
+          this.pathTracer.renderCaptureSamples();
         }
       );
     } finally {
