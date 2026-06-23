@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { configureEditorPathTracer } from "./pathTraceRendererConfig.ts";
+import { configureEditorPathTracer } from "../../../../render/editor/runtime/pathTraceRendererConfig.ts";
 
 test("configures path tracing to show the interactive path traced image immediately", () => {
   const calls = [];
@@ -21,6 +21,18 @@ test("configures path tracing to show the interactive path traced image immediat
   assert.equal(pathTracer.renderScale, 1);
   assert.equal(pathTracer.minSamples, 1);
   assert.equal(pathTracer.fadeDuration, 0);
+});
+
+test("uses the display-pixel render scale supplied by the editor renderer", () => {
+  const pathTracer = {
+    tiles: {
+      set() {}
+    }
+  };
+
+  configureEditorPathTracer(pathTracer, { renderScale: 0.5 });
+
+  assert.equal(pathTracer.renderScale, 0.5);
 });
 
 test("clears the shared editor canvas before presenting the path traced target", () => {

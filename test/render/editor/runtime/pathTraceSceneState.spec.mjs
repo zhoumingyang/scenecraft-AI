@@ -5,7 +5,7 @@ import * as THREE from "three";
 import {
   withEditorHelperVisibility,
   withPathTraceCompatibleEnvironment
-} from "./pathTraceSceneState.ts";
+} from "../../../../render/editor/runtime/pathTraceSceneState.ts";
 
 test("keeps the ground visible when preparing a path traced scene", () => {
   const scene = new THREE.Scene();

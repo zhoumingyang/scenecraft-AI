@@ -317,6 +317,8 @@ npm run lint
 
 Every completed development task must also include a real local browser smoke test unless it is impossible or irrelevant. Start the local dev server, open the affected UI in a browser, and exercise the changed workflow enough to catch integration problems. For editor changes, this means using `npm run dev`, opening `/editor` with an authenticated local session when needed, interacting with the relevant controls, and checking for visible errors or console errors.
 
+Place repository test files under `test/`, mirroring the source path they cover, for example `test/render/editor/runtime/...`. Do not colocate `*.spec.*` or `*.test.*` files beside production source files.
+
 After every completed task, check whether `AGENTS.md` and `README.md` should be updated. Update them in the same task when behavior, commands, setup, architecture, routes, feature surface, verification expectations, or contributor guidance changed. If no doc update is needed, mention that in the handoff.
 
 If a task touches only a narrow area and full verification is not possible, explain:

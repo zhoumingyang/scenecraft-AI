@@ -9,6 +9,7 @@ import {
   removeObjectFromParent,
   setEntityId
 } from "../utils/object3d";
+import { shouldInvalidatePathTraceForModelRuntimeFrame } from "./modelBindingRefreshPolicy";
 import type { BindingContext, RenderBinding } from "./types";
 
 const STEP_SECONDS = 1 / 30;
@@ -233,18 +234,27 @@ export function createModelBinding(context: BindingContext, model: ModelEntityMo
     },
     lastTransformState: captureObjectTransformState(group),
     refresh: (deltaSeconds) => {
-      let sceneChanged = false;
+      let animationUpdated = false;
+      let assetUpdated = false;
       if (mixer && model.animationPlaybackState === "playing") {
         mixer.timeScale = model.animationTimeScale;
         mixer.update(deltaSeconds);
-        sceneChanged = true;
+        animationUpdated = true;
       }
       if (currentAssetUpdate) {
         currentAssetUpdate(deltaSeconds);
-        sceneChanged = true;
+        assetUpdated = true;
       }
+      const sceneChanged = animationUpdated || assetUpdated;
       if (sceneChanged) {
-        context.invalidateScene?.();
+        if (
+          shouldInvalidatePathTraceForModelRuntimeFrame({
+            animationUpdated,
+            assetUpdated
+          })
+        ) {
+          context.invalidateScene?.();
+        }
       }
       return sceneChanged;
     },

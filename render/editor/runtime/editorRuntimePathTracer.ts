@@ -1,8 +1,13 @@
 import * as THREE from "three";
 import { WebGLPathTracer } from "three-gpu-pathtracer";
 import {
+  shouldContinueInteractivePathTrace,
+  shouldRenderInteractivePathTraceSample
+} from "./pathTraceFrameBudget";
+import {
   PATH_TRACE_CAPTURE_MAX_ITERATIONS,
   PATH_TRACE_CAPTURE_SAMPLES,
+  PATH_TRACE_INTERACTIVE_TARGET_SAMPLES,
   configureEditorPathTracer
 } from "./pathTraceRendererConfig";
 import { renderPathTraceSamplesUntil } from "./pathTraceSampling";
@@ -62,7 +67,18 @@ export class EditorRuntimePathTracer {
   renderSample() {
     const pathTracer = this.ensurePathTracer();
     this.preparePathTracer(pathTracer);
+    this.syncRenderScale(pathTracer);
+    if (
+      !shouldRenderInteractivePathTraceSample({
+        samples: pathTracer.samples,
+        targetSamples: PATH_TRACE_INTERACTIVE_TARGET_SAMPLES
+      })
+    ) {
+      return false;
+    }
+
     pathTracer.renderSample();
+    return this.shouldContinueRendering();
   }
 
   renderCaptureSamples() {
@@ -73,8 +89,18 @@ export class EditorRuntimePathTracer {
       getSamples: () => pathTracer.samples,
       renderSample: () => {
         this.preparePathTracer(pathTracer);
+        this.syncRenderScale(pathTracer);
         pathTracer.renderSample();
       }
+    });
+  }
+
+  shouldContinueRendering() {
+    const pathTracer = this.pathTracer;
+    return shouldContinueInteractivePathTrace({
+      dirty: this.hasDirtyState(),
+      samples: pathTracer?.samples ?? 0,
+      targetSamples: PATH_TRACE_INTERACTIVE_TARGET_SAMPLES
     });
   }
 
@@ -98,7 +124,9 @@ export class EditorRuntimePathTracer {
     const pathTracer = new WebGLPathTracer(this.renderer);
     pathTracer.bounces = 5;
     pathTracer.filterGlossyFactor = 0.5;
-    configureEditorPathTracer(pathTracer);
+    configureEditorPathTracer(pathTracer, {
+      renderScale: this.getDisplayPixelRenderScale()
+    });
     this.pathTracer = pathTracer;
     this.sceneDirty = true;
     return pathTracer;
@@ -132,5 +160,23 @@ export class EditorRuntimePathTracer {
     this.materialsDirty = false;
     this.lightsDirty = false;
     this.environmentDirty = false;
+  }
+
+  private hasDirtyState() {
+    return (
+      this.sceneDirty ||
+      this.cameraDirty ||
+      this.materialsDirty ||
+      this.lightsDirty ||
+      this.environmentDirty
+    );
+  }
+
+  private syncRenderScale(pathTracer: WebGLPathTracer) {
+    pathTracer.renderScale = this.getDisplayPixelRenderScale();
+  }
+
+  private getDisplayPixelRenderScale() {
+    return Math.min(1, 1 / Math.max(this.renderer.getPixelRatio(), 1));
   }
 }

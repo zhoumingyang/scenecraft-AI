@@ -173,11 +173,11 @@ export class EditorRuntime {
 
   renderFrame(deltaSeconds = 0) {
     if (this.renderMode === "pathTrace") {
-      this.renderPathTraceFrame();
-      return;
+      return this.renderPathTraceFrame();
     }
 
     this.postProcessing.render(deltaSeconds);
+    return false;
   }
 
   requestFrame = () => {
@@ -535,17 +535,20 @@ export class EditorRuntime {
   private renderPathTraceFrame() {
     const previousTransformGizmoVisible = this.transformGizmo.root.visible;
     this.transformGizmo.root.visible = false;
+    let shouldContinueRendering = false;
 
     try {
       this.environment.withPathTraceSceneState(
         this.studioScene.getPathTraceEnvironmentTexture(),
         () => {
-          this.pathTracer.renderSample();
+          shouldContinueRendering = this.pathTracer.renderSample();
         }
       );
     } finally {
       this.transformGizmo.root.visible = previousTransformGizmoVisible;
     }
+
+    return shouldContinueRendering;
   }
 
   private renderPathTraceCaptureSamples() {
@@ -620,20 +623,25 @@ export class EditorRuntime {
     this.processingFrame = false;
     const shouldRender =
       this.frameDirty || runtimeChanged || sessionChanged || this.renderMode === "pathTrace";
+    let pathTraceNeedsMoreSamples = false;
 
     if (shouldRender) {
-      this.renderFrame(deltaSeconds);
+      pathTraceNeedsMoreSamples = this.renderFrame(deltaSeconds);
       this.frameDirty = false;
     }
 
-    if (this.shouldContinueAnimating(runtimeChanged, sessionChanged)) {
+    if (this.shouldContinueAnimating(runtimeChanged, sessionChanged, pathTraceNeedsMoreSamples)) {
       this.rafId = window.requestAnimationFrame(this.animate);
     }
   };
 
-  private shouldContinueAnimating(runtimeChanged: boolean, sessionChanged: boolean) {
+  private shouldContinueAnimating(
+    runtimeChanged: boolean,
+    sessionChanged: boolean,
+    pathTraceNeedsMoreSamples: boolean
+  ) {
     return (
-      this.renderMode === "pathTrace" ||
+      (this.renderMode === "pathTrace" && pathTraceNeedsMoreSamples) ||
       this.transformDragging ||
       this.firstPersonController.hasActiveInput() ||
       this.orbitDampingFramesRemaining > 0 ||

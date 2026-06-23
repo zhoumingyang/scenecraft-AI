@@ -36,6 +36,7 @@ export class EditorAppEventHub {
     }
 
     if (event.type === "cameraUpdated") {
+      if (event.source === "render") return;
       this.runtime.invalidatePathTraceCamera();
       return;
     }

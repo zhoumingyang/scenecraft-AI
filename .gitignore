@@ -11,7 +11,3 @@ coverage
 .env.*
 !.env.example
 docs/
-
-# Tests
-tests/
-**/*.test.*

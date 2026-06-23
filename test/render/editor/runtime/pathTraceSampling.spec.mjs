@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { renderPathTraceSamplesUntil } from "./pathTraceSampling.ts";
+import { renderPathTraceSamplesUntil } from "../../../../render/editor/runtime/pathTraceSampling.ts";
 
 test("renders until the requested path trace sample count is reached", () => {
   let samples = 0;
