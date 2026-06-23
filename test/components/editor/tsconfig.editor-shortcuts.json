@@ -9,15 +9,15 @@
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "jsx": "react-jsx",
-    "baseUrl": "..",
+    "baseUrl": "../../..",
     "paths": {
       "@/*": ["./*"]
     },
     "types": ["node"],
-    "outDir": "/tmp/scenecraft-view-state-test"
+    "outDir": "/tmp/scenecraft-editor-shortcuts-test"
   },
   "files": [
-    "./viewState.test.ts",
-    "../render/editor/app/viewState.ts"
+    "./editorShortcuts.test.ts",
+    "../../../components/editor/keyboardShortcuts.ts"
   ]
 }

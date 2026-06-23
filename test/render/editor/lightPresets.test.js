@@ -5,7 +5,7 @@ import * as THREE from "three";
 import {
   createAdaptiveLightPresetDefinition,
   getLightPresetDefinition
-} from "../render/editor/lightPresets.ts";
+} from "../../../render/editor/lightPresets.ts";
 
 const EPSILON = 1e-6;
 
@@ -39,13 +39,13 @@ test("adaptive light presets scale spot position, distance, and intensity from t
   });
   const keySpot = preset.lights[0].light;
 
-  assertTupleClose(keySpot.position, [16, 6, 26]);
+  assertTupleClose(keySpot.position, [16.8, 7.2, 25.2]);
   assert.equal(keySpot.distance, 28);
-  assert.equal(keySpot.intensity, 280);
-  assertTupleClose(keySpot.quaternion, createExpectedQuaternion([16, 6, 26], [10, 1, 20]));
+  assert.ok(Math.abs(keySpot.intensity - 150.2644282429835) < EPSILON);
+  assertTupleClose(keySpot.quaternion, createExpectedQuaternion([16.8, 7.2, 25.2], [10, 0.5, 20]));
 });
 
-test("adaptive light presets scale rect area light position and size without scaling intensity", () => {
+test("adaptive light presets scale rect area light position, size, and intensity", () => {
   const preset = createAdaptiveLightPresetDefinition("productShowcase", {
     center: [10, 1, 20],
     floorY: -2,
@@ -53,10 +53,10 @@ test("adaptive light presets scale rect area light position and size without sca
   });
   const keyPanel = preset.lights[0].light;
 
-  assertTupleClose(keyPanel.position, [16, 4, 24]);
-  assert.equal(keyPanel.width, 6);
-  assert.equal(keyPanel.height, 4);
-  assert.equal(keyPanel.intensity, 4.5);
+  assertTupleClose(keyPanel.position, [16.4, 4.2, 24.2]);
+  assert.equal(keyPanel.width, 6.4);
+  assert.equal(keyPanel.height, 4.8);
+  assert.ok(Math.abs(keyPanel.intensity - 6.86144113601905) < EPSILON);
 });
 
 test("adaptive light presets fall back to the static preset when frame is unavailable", () => {

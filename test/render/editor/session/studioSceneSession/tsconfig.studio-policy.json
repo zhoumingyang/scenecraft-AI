@@ -9,15 +9,15 @@
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "jsx": "react-jsx",
-    "baseUrl": "..",
+    "baseUrl": "../../../../..",
     "paths": {
       "@/*": ["./*"]
     },
     "types": ["node"],
-    "outDir": "/tmp/scenecraft-entity-duplicator-test"
+    "outDir": "/tmp/scenecraft-policy-test"
   },
   "files": [
-    "./entityDuplicator.test.ts",
-    "../render/editor/session/entityDuplicator.ts"
+    "./studioScenePolicy.test.ts",
+    "../../../../../render/editor/session/studioSceneSession/policy.ts"
   ]
 }

@@ -1,7 +1,7 @@
 import { strict as assert } from "node:assert";
 import test from "node:test";
 
-import { EditorAppViewState } from "../render/editor/app/viewState";
+import { EditorAppViewState } from "../../../../render/editor/app/viewState";
 
 test("shadow helper toggles runtime shadows without changing ground mode", () => {
   const groundPatches: unknown[] = [];

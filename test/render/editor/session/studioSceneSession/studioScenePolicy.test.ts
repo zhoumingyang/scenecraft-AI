@@ -1,8 +1,8 @@
 import { strict as assert } from "node:assert";
 import test from "node:test";
 
-import { canUseStudioSceneEntityAction } from "../render/editor/session/studioSceneSession/policy";
-import type { ActiveStudioSceneSession } from "../render/editor/session/studioSceneSession/types";
+import { canUseStudioSceneEntityAction } from "../../../../../render/editor/session/studioSceneSession/policy";
+import type { ActiveStudioSceneSession } from "../../../../../render/editor/session/studioSceneSession/types";
 
 function createPolicySession() {
   return {

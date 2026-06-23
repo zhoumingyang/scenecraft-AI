@@ -5,7 +5,7 @@ import {
   getEditorDuplicatePositionOffset,
   getEditorShortcutAction,
   shouldIgnoreEditorShortcutTarget
-} from "../components/editor/keyboardShortcuts";
+} from "../../../components/editor/keyboardShortcuts";
 
 function eventFor(input: {
   key: string;
