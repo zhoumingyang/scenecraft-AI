@@ -11,11 +11,16 @@ export function withEditorHelperVisibility<T>(
   callback: () => T
 ): T {
   const previousGroundVisible = options.groundPlane.visible;
-  const lightHelperSnapshots: Array<{ object: THREE.Object3D; visible: boolean }> = [];
+  const helperSnapshots: Array<{ object: THREE.Object3D; visible: boolean }> = [];
 
   scene.traverse((object) => {
-    if (object.userData?.editorLightHelper !== true) return;
-    lightHelperSnapshots.push({ object, visible: object.visible });
+    if (
+      object.userData?.editorLightHelper !== true &&
+      object.userData?.editorRuntimeHelper !== true
+    ) {
+      return;
+    }
+    helperSnapshots.push({ object, visible: object.visible });
     object.visible = false;
   });
 
@@ -27,7 +32,7 @@ export function withEditorHelperVisibility<T>(
     return callback();
   } finally {
     options.groundPlane.visible = previousGroundVisible;
-    lightHelperSnapshots.forEach(({ object, visible }) => {
+    helperSnapshots.forEach(({ object, visible }) => {
       object.visible = visible;
     });
   }

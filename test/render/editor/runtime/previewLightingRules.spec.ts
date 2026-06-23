@@ -5,7 +5,7 @@ import {
   shouldUsePreviewLighting,
   type PreviewLightingEnvState,
   type PreviewLightingLightState
-} from "./previewLightingRules";
+} from "../../../../render/editor/runtime/previewLightingRules";
 
 const darkEnv: PreviewLightingEnvState = {
   hasImageBasedLighting: false,

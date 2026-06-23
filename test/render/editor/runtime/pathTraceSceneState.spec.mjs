@@ -32,6 +32,31 @@ test("keeps the ground visible when preparing a path traced scene", () => {
   assert.equal(lightHelper.visible, true);
 });
 
+test("hides runtime helper objects when preparing a path traced scene", () => {
+  const scene = new THREE.Scene();
+  const runtimeHelper = new THREE.Group();
+  const userLight = new THREE.DirectionalLight();
+  runtimeHelper.userData.editorRuntimeHelper = true;
+  runtimeHelper.visible = true;
+  userLight.visible = true;
+  scene.add(runtimeHelper, userLight);
+
+  withEditorHelperVisibility(
+    scene,
+    {
+      groundPlane: new THREE.Object3D(),
+      hideGroundPlane: false
+    },
+    () => {
+      assert.equal(runtimeHelper.visible, false);
+      assert.equal(userLight.visible, true);
+    }
+  );
+
+  assert.equal(runtimeHelper.visible, true);
+  assert.equal(userLight.visible, true);
+});
+
 test("uses the source equirect texture for path traced image based lighting", () => {
   const scene = new THREE.Scene();
   const pmremTexture = new THREE.Texture();
