@@ -35,10 +35,13 @@ test("keeps the ground visible when preparing a path traced scene", () => {
 test("hides runtime helper objects when preparing a path traced scene", () => {
   const scene = new THREE.Scene();
   const runtimeHelper = new THREE.Group();
+  const runtimeHelperLight = new THREE.DirectionalLight();
   const userLight = new THREE.DirectionalLight();
   runtimeHelper.userData.editorRuntimeHelper = true;
   runtimeHelper.visible = true;
+  runtimeHelperLight.visible = true;
   userLight.visible = true;
+  runtimeHelper.add(runtimeHelperLight);
   scene.add(runtimeHelper, userLight);
 
   withEditorHelperVisibility(
@@ -49,11 +52,13 @@ test("hides runtime helper objects when preparing a path traced scene", () => {
     },
     () => {
       assert.equal(runtimeHelper.visible, false);
+      assert.equal(runtimeHelperLight.visible, false);
       assert.equal(userLight.visible, true);
     }
   );
 
   assert.equal(runtimeHelper.visible, true);
+  assert.equal(runtimeHelperLight.visible, true);
   assert.equal(userLight.visible, true);
 });
 

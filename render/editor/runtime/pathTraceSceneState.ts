@@ -14,12 +14,7 @@ export function withEditorHelperVisibility<T>(
   const helperSnapshots: Array<{ object: THREE.Object3D; visible: boolean }> = [];
 
   scene.traverse((object) => {
-    if (
-      object.userData?.editorLightHelper !== true &&
-      object.userData?.editorRuntimeHelper !== true
-    ) {
-      return;
-    }
+    if (!isEditorHelperObject(object)) return;
     helperSnapshots.push({ object, visible: object.visible });
     object.visible = false;
   });
@@ -36,6 +31,20 @@ export function withEditorHelperVisibility<T>(
       object.visible = visible;
     });
   }
+}
+
+function isEditorHelperObject(object: THREE.Object3D) {
+  let current: THREE.Object3D | null = object;
+  while (current) {
+    if (
+      current.userData?.editorLightHelper === true ||
+      current.userData?.editorRuntimeHelper === true
+    ) {
+      return true;
+    }
+    current = current.parent;
+  }
+  return false;
 }
 
 export function withPathTraceCompatibleEnvironment<T>(
