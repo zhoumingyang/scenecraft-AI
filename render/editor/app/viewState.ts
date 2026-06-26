@@ -53,6 +53,15 @@ export class EditorAppViewState {
     this.emitViewStateUpdated();
   }
 
+  getPathTraceDenoiseEnabled() {
+    return this.runtime.getPathTraceDenoiseEnabled();
+  }
+
+  setPathTraceDenoiseEnabled(enabled: boolean) {
+    if (!this.runtime.setPathTraceDenoiseEnabled(enabled)) return;
+    this.emitViewStateUpdated();
+  }
+
   isFirstPersonCamera() {
     return this.runtime.isFirstPersonCamera();
   }

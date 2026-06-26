@@ -1,12 +1,15 @@
 import * as THREE from "three";
-import { WebGLPathTracer } from "three-gpu-pathtracer";
+import { DenoiseMaterial, WebGLPathTracer } from "three-gpu-pathtracer";
+import { FullScreenQuad } from "three/examples/jsm/postprocessing/Pass.js";
 import {
   shouldContinueInteractivePathTrace,
   shouldRenderInteractivePathTraceSample
 } from "./pathTraceFrameBudget";
+import { renderPathTraceDenoisedTexture } from "./pathTraceDenoise";
 import {
   PATH_TRACE_CAPTURE_MAX_ITERATIONS,
   PATH_TRACE_CAPTURE_SAMPLES,
+  PATH_TRACE_GLOSSY_FILTER_FACTOR,
   PATH_TRACE_INTERACTIVE_TARGET_SAMPLES,
   configureEditorPathTracer
 } from "./pathTraceRendererConfig";
@@ -23,6 +26,11 @@ export class EditorRuntimePathTracer {
   private readonly camera: THREE.PerspectiveCamera;
   private readonly renderer: THREE.WebGLRenderer;
   private pathTracer: WebGLPathTracer | null = null;
+  private denoiseMaterial: DenoiseMaterial | null = null;
+  private denoiseQuad: FullScreenQuad | null = null;
+  private displayQuad: { render: (renderer: THREE.WebGLRenderer) => void } | null = null;
+  private displayTexture: THREE.Texture | null = null;
+  private denoiseEnabled = true;
   private sceneDirty = true;
   private cameraDirty = true;
   private materialsDirty = true;
@@ -95,6 +103,24 @@ export class EditorRuntimePathTracer {
     });
   }
 
+  renderDenoisedCapture() {
+    const pathTracer = this.pathTracer;
+    if (!pathTracer || !this.denoiseEnabled) return;
+
+    this.renderDenoisedTexture(pathTracer.target.texture, this.renderer);
+  }
+
+  getDenoiseEnabled() {
+    return this.denoiseEnabled;
+  }
+
+  setDenoiseEnabled(enabled: boolean) {
+    if (this.denoiseEnabled === enabled) return false;
+    this.denoiseEnabled = enabled;
+    this.renderCurrentDisplayTexture();
+    return true;
+  }
+
   shouldContinueRendering() {
     const pathTracer = this.pathTracer;
     return shouldContinueInteractivePathTrace({
@@ -105,6 +131,12 @@ export class EditorRuntimePathTracer {
   }
 
   dispose() {
+    this.denoiseQuad?.dispose();
+    this.denoiseMaterial?.dispose();
+    this.denoiseQuad = null;
+    this.denoiseMaterial = null;
+    this.displayQuad = null;
+    this.displayTexture = null;
     this.pathTracer?.dispose();
     this.pathTracer = null;
   }
@@ -123,13 +155,68 @@ export class EditorRuntimePathTracer {
 
     const pathTracer = new WebGLPathTracer(this.renderer);
     pathTracer.bounces = 5;
-    pathTracer.filterGlossyFactor = 0.5;
+    pathTracer.filterGlossyFactor = PATH_TRACE_GLOSSY_FILTER_FACTOR;
     configureEditorPathTracer(pathTracer, {
       renderScale: this.getDisplayPixelRenderScale()
     });
+    pathTracer.renderToCanvasCallback = (target, renderer, quad) => {
+      this.displayTexture = target.texture;
+      this.displayQuad = quad;
+      if (this.denoiseEnabled) {
+        this.renderDenoisedTexture(target.texture, renderer);
+        return;
+      }
+      this.renderRawTexture(renderer, quad);
+    };
     this.pathTracer = pathTracer;
     this.sceneDirty = true;
     return pathTracer;
+  }
+
+  private renderCurrentDisplayTexture() {
+    if (!this.displayTexture) return;
+
+    if (this.denoiseEnabled) {
+      this.renderDenoisedTexture(this.displayTexture, this.renderer);
+      return;
+    }
+
+    if (this.displayQuad) {
+      this.renderRawTexture(this.renderer, this.displayQuad);
+    }
+  }
+
+  private ensureDenoiseMaterial() {
+    if (this.denoiseMaterial) return this.denoiseMaterial;
+
+    const denoiseMaterial = new DenoiseMaterial();
+    this.denoiseMaterial = denoiseMaterial;
+    this.denoiseQuad = new FullScreenQuad(denoiseMaterial);
+    return denoiseMaterial;
+  }
+
+  private renderDenoisedTexture(texture: THREE.Texture, renderer: THREE.WebGLRenderer) {
+    const denoiseMaterial = this.ensureDenoiseMaterial();
+    const denoiseQuad = this.denoiseQuad;
+    if (!denoiseQuad) return;
+
+    renderPathTraceDenoisedTexture({
+      material: denoiseMaterial,
+      quad: denoiseQuad,
+      renderer,
+      texture
+    });
+  }
+
+  private renderRawTexture(
+    renderer: THREE.WebGLRenderer,
+    quad: { render: (renderer: THREE.WebGLRenderer) => void }
+  ) {
+    const previousAutoClear = renderer.autoClear;
+    renderer.autoClear = true;
+    renderer.clear();
+    quad.render(renderer);
+    renderer.autoClear = previousAutoClear;
   }
 
   private flushIncrementalUpdates(pathTracer: WebGLPathTracer) {

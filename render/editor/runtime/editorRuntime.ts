@@ -334,6 +334,16 @@ export class EditorRuntime {
     return true;
   }
 
+  getPathTraceDenoiseEnabled() {
+    return this.pathTracer.getDenoiseEnabled();
+  }
+
+  setPathTraceDenoiseEnabled(enabled: boolean) {
+    if (!this.pathTracer.setDenoiseEnabled(enabled)) return false;
+    this.requestFrame();
+    return true;
+  }
+
   invalidatePathTraceScene() {
     this.pathTracer.invalidateScene();
     this.requestFrame();
@@ -560,6 +570,7 @@ export class EditorRuntime {
         this.studioScene.getPathTraceEnvironmentTexture(),
         () => {
           this.pathTracer.renderCaptureSamples();
+          this.pathTracer.renderDenoisedCapture();
         }
       );
     } finally {

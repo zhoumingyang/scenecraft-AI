@@ -8,6 +8,7 @@ import GridViewRoundedIcon from "@mui/icons-material/GridViewRounded";
 import OpenWithRoundedIcon from "@mui/icons-material/OpenWithRounded";
 import LightModeRoundedIcon from "@mui/icons-material/LightModeRounded";
 import DarkModeRoundedIcon from "@mui/icons-material/DarkModeRounded";
+import AutoFixHighRoundedIcon from "@mui/icons-material/AutoFixHighRounded";
 import KeyboardArrowUpRoundedIcon from "@mui/icons-material/KeyboardArrowUpRounded";
 import type { EditorApp, EditorRenderMode } from "@/render/editor";
 import { useI18n } from "@/lib/i18n";
@@ -31,6 +32,10 @@ export default function ViewControl({ app, disabled = false, viewStateVersion }:
   const [open, setOpen] = useState(false);
   const theme = getEditorThemeTokens(editorThemeMode);
   const renderMode = useMemo(() => app?.getRenderMode() ?? "webgl", [app, viewStateVersion]);
+  const pathTraceDenoiseEnabled = useMemo(
+    () => app?.getPathTraceDenoiseEnabled() ?? true,
+    [app, viewStateVersion]
+  );
 
   const helperVisibility = useMemo(
     () =>
@@ -147,6 +152,37 @@ export default function ViewControl({ app, disabled = false, viewStateVersion }:
                     {renderMode === "webgl"
                       ? t("editor.view.renderer.webgl")
                       : t("editor.view.renderer.pathTrace")}
+                  </Typography>
+                </Stack>
+              </Button>
+              <Button
+                color="inherit"
+                disabled={!app || disabled || renderMode !== "pathTrace"}
+                onClick={() => {
+                  if (!app || disabled || renderMode !== "pathTrace") return;
+                  app.setPathTraceDenoiseEnabled(!pathTraceDenoiseEnabled);
+                }}
+                sx={{
+                  justifyContent: "flex-start",
+                  px: 1.1,
+                  py: 0.9,
+                  borderRadius: 1.6,
+                  background: theme.itemBg,
+                  color: theme.text,
+                  textTransform: "none",
+                  "&.Mui-disabled": {
+                    color: theme.mutedText,
+                    opacity: 0.55
+                  }
+                }}
+              >
+                <Stack direction="row" spacing={1} alignItems="center" sx={{ width: "100%" }}>
+                  <AutoFixHighRoundedIcon sx={{ fontSize: 16 }} />
+                  <Typography sx={{ flex: 1, fontSize: 13, textAlign: "left" }}>
+                    {t("editor.view.pathTraceDenoise")}
+                  </Typography>
+                  <Typography sx={{ fontSize: 12, color: theme.mutedText }}>
+                    {pathTraceDenoiseEnabled ? t("editor.view.on") : t("editor.view.off")}
                   </Typography>
                 </Stack>
               </Button>

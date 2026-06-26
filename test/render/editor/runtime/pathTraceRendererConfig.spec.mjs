@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { configureEditorPathTracer } from "../../../../render/editor/runtime/pathTraceRendererConfig.ts";
+import {
+  PATH_TRACE_CAPTURE_MAX_ITERATIONS,
+  PATH_TRACE_CAPTURE_SAMPLES,
+  PATH_TRACE_GLOSSY_FILTER_FACTOR,
+  PATH_TRACE_INTERACTIVE_TARGET_SAMPLES,
+  configureEditorPathTracer
+} from "../../../../render/editor/runtime/pathTraceRendererConfig.ts";
 
 test("configures path tracing to show the interactive path traced image immediately", () => {
   const calls = [];
@@ -21,6 +27,14 @@ test("configures path tracing to show the interactive path traced image immediat
   assert.equal(pathTracer.renderScale, 1);
   assert.equal(pathTracer.minSamples, 1);
   assert.equal(pathTracer.fadeDuration, 0);
+  assert.equal(pathTracer.stableNoise, true);
+});
+
+test("uses the original path trace sample budgets", () => {
+  assert.equal(PATH_TRACE_INTERACTIVE_TARGET_SAMPLES, 128);
+  assert.equal(PATH_TRACE_CAPTURE_SAMPLES, 192);
+  assert.equal(PATH_TRACE_CAPTURE_MAX_ITERATIONS, 256);
+  assert.equal(PATH_TRACE_GLOSSY_FILTER_FACTOR, 1);
 });
 
 test("uses the display-pixel render scale supplied by the editor renderer", () => {

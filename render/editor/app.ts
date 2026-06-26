@@ -221,6 +221,14 @@ export class EditorApp {
     this.viewState.setRenderMode(mode);
   }
 
+  getPathTraceDenoiseEnabled() {
+    return this.viewState.getPathTraceDenoiseEnabled();
+  }
+
+  setPathTraceDenoiseEnabled(enabled: boolean) {
+    this.viewState.setPathTraceDenoiseEnabled(enabled);
+  }
+
   isFirstPersonCamera() {
     return this.viewState.isFirstPersonCamera();
   }

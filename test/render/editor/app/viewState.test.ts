@@ -42,3 +42,44 @@ test("shadow helper toggles runtime shadows without changing ground mode", () =>
   assert.deepEqual(groundPatches, []);
   assert.equal(viewUpdates, 1);
 });
+
+test("path trace denoise toggles runtime denoise and emits a view update", () => {
+  const denoiseStates: boolean[] = [];
+  let viewUpdates = 0;
+
+  const viewState = new EditorAppViewState({
+    runtime: {
+      getRenderMode: () => "pathTrace",
+      setRenderMode: () => false,
+      isFirstPersonCamera: () => false,
+      getPathTraceDenoiseEnabled: () => true,
+      setPathTraceDenoiseEnabled: (enabled: boolean) => {
+        denoiseStates.push(enabled);
+        return true;
+      },
+      getGridHelperVisible: () => true,
+      getTransformGizmoVisible: () => true,
+      getLightHelpersVisible: () => true,
+      getShadowEnabled: () => false,
+      getActiveTransformRotationDrag: () => null,
+      setShadowEnabled: () => undefined,
+      setTransformGizmoVisible: () => undefined,
+      setLightHelpersVisible: () => undefined
+    } as never,
+    session: {
+      updateGroundConfig: () => undefined
+    } as never,
+    getProjectModel: () => null,
+    updateCamera: () => undefined,
+    emitViewStateUpdated: () => {
+      viewUpdates += 1;
+    }
+  });
+
+  assert.equal(viewState.getPathTraceDenoiseEnabled(), true);
+
+  viewState.setPathTraceDenoiseEnabled(false);
+
+  assert.deepEqual(denoiseStates, [false]);
+  assert.equal(viewUpdates, 1);
+});
