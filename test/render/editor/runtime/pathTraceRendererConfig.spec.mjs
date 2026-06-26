@@ -30,10 +30,10 @@ test("configures path tracing to show the interactive path traced image immediat
   assert.equal(pathTracer.stableNoise, true);
 });
 
-test("uses the original path trace sample budgets", () => {
-  assert.equal(PATH_TRACE_INTERACTIVE_TARGET_SAMPLES, 128);
-  assert.equal(PATH_TRACE_CAPTURE_SAMPLES, 192);
-  assert.equal(PATH_TRACE_CAPTURE_MAX_ITERATIONS, 256);
+test("uses balanced realtime samples and high quality capture samples", () => {
+  assert.equal(PATH_TRACE_INTERACTIVE_TARGET_SAMPLES, 256);
+  assert.equal(PATH_TRACE_CAPTURE_SAMPLES, 2048);
+  assert.equal(PATH_TRACE_CAPTURE_MAX_ITERATIONS, 2048);
   assert.equal(PATH_TRACE_GLOSSY_FILTER_FACTOR, 1);
 });
 

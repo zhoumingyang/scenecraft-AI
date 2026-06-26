@@ -328,6 +328,7 @@ export class EditorRuntime {
     if (this.renderMode === mode) return false;
     this.renderMode = mode;
     if (mode === "pathTrace") {
+      this.pathTracer.setDenoiseEnabled(false, { redraw: false });
       this.pathTracer.invalidateScene();
     }
     this.requestFrame();

@@ -5,7 +5,10 @@ import {
   shouldContinueInteractivePathTrace,
   shouldRenderInteractivePathTraceSample
 } from "./pathTraceFrameBudget";
-import { renderPathTraceDenoisedTexture } from "./pathTraceDenoise";
+import {
+  PATH_TRACE_CAPTURE_DENOISE_SETTINGS,
+  renderPathTraceDenoisedTexture
+} from "./pathTraceDenoise";
 import {
   PATH_TRACE_CAPTURE_MAX_ITERATIONS,
   PATH_TRACE_CAPTURE_SAMPLES,
@@ -30,7 +33,7 @@ export class EditorRuntimePathTracer {
   private denoiseQuad: FullScreenQuad | null = null;
   private displayQuad: { render: (renderer: THREE.WebGLRenderer) => void } | null = null;
   private displayTexture: THREE.Texture | null = null;
-  private denoiseEnabled = true;
+  private denoiseEnabled = false;
   private sceneDirty = true;
   private cameraDirty = true;
   private materialsDirty = true;
@@ -105,19 +108,25 @@ export class EditorRuntimePathTracer {
 
   renderDenoisedCapture() {
     const pathTracer = this.pathTracer;
-    if (!pathTracer || !this.denoiseEnabled) return;
+    if (!pathTracer) return;
 
-    this.renderDenoisedTexture(pathTracer.target.texture, this.renderer);
+    this.renderDenoisedTexture(
+      pathTracer.target.texture,
+      this.renderer,
+      PATH_TRACE_CAPTURE_DENOISE_SETTINGS
+    );
   }
 
   getDenoiseEnabled() {
     return this.denoiseEnabled;
   }
 
-  setDenoiseEnabled(enabled: boolean) {
+  setDenoiseEnabled(enabled: boolean, options: { redraw?: boolean } = {}) {
     if (this.denoiseEnabled === enabled) return false;
     this.denoiseEnabled = enabled;
-    this.renderCurrentDisplayTexture();
+    if (options.redraw !== false) {
+      this.renderCurrentDisplayTexture();
+    }
     return true;
   }
 
@@ -195,7 +204,11 @@ export class EditorRuntimePathTracer {
     return denoiseMaterial;
   }
 
-  private renderDenoisedTexture(texture: THREE.Texture, renderer: THREE.WebGLRenderer) {
+  private renderDenoisedTexture(
+    texture: THREE.Texture,
+    renderer: THREE.WebGLRenderer,
+    settings?: Parameters<typeof renderPathTraceDenoisedTexture>[0]["settings"]
+  ) {
     const denoiseMaterial = this.ensureDenoiseMaterial();
     const denoiseQuad = this.denoiseQuad;
     if (!denoiseQuad) return;
@@ -204,6 +217,7 @@ export class EditorRuntimePathTracer {
       material: denoiseMaterial,
       quad: denoiseQuad,
       renderer,
+      settings,
       texture
     });
   }

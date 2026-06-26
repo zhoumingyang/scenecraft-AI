@@ -33,7 +33,7 @@ export default function ViewControl({ app, disabled = false, viewStateVersion }:
   const theme = getEditorThemeTokens(editorThemeMode);
   const renderMode = useMemo(() => app?.getRenderMode() ?? "webgl", [app, viewStateVersion]);
   const pathTraceDenoiseEnabled = useMemo(
-    () => app?.getPathTraceDenoiseEnabled() ?? true,
+    () => app?.getPathTraceDenoiseEnabled() ?? false,
     [app, viewStateVersion]
   );
 

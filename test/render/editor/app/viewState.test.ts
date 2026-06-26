@@ -52,7 +52,7 @@ test("path trace denoise toggles runtime denoise and emits a view update", () =>
       getRenderMode: () => "pathTrace",
       setRenderMode: () => false,
       isFirstPersonCamera: () => false,
-      getPathTraceDenoiseEnabled: () => true,
+      getPathTraceDenoiseEnabled: () => false,
       setPathTraceDenoiseEnabled: (enabled: boolean) => {
         denoiseStates.push(enabled);
         return true;
@@ -76,10 +76,10 @@ test("path trace denoise toggles runtime denoise and emits a view update", () =>
     }
   });
 
-  assert.equal(viewState.getPathTraceDenoiseEnabled(), true);
+  assert.equal(viewState.getPathTraceDenoiseEnabled(), false);
 
-  viewState.setPathTraceDenoiseEnabled(false);
+  viewState.setPathTraceDenoiseEnabled(true);
 
-  assert.deepEqual(denoiseStates, [false]);
+  assert.deepEqual(denoiseStates, [true]);
   assert.equal(viewUpdates, 1);
 });
