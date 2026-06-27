@@ -32,7 +32,7 @@ export function TransformSection({
   const app = useEditorStore((state) => state.app);
   const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
   const theme = getEditorThemeTokens(editorThemeMode);
-  const [isUniformScaleEnabled, setIsUniformScaleEnabled] = useState(false);
+  const [isUniformScaleEnabled, setIsUniformScaleEnabled] = useState(true);
   const [activePositionAxis, setActivePositionAxis] = useState<Axis | null>(null);
   const [activeRotationAxis, setActiveRotationAxis] = useState<Axis | null>(null);
   const [positionDraft, setPositionDraft] = useState(buildDefaultPositionDraft);
