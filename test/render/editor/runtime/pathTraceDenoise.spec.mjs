@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   PATH_TRACE_CAPTURE_DENOISE_SETTINGS,
   PATH_TRACE_REALTIME_DENOISE_SETTINGS,
+  normalizePathTraceDenoiseSettings,
   configurePathTraceDenoiseMaterial,
   renderPathTraceDenoisedTexture
 } from "../../../../render/editor/runtime/pathTraceDenoise.ts";
@@ -50,6 +51,42 @@ test("configures stronger path trace denoise settings for capture output", () =>
   assert.equal(material.uniforms.threshold.value, 0.08);
   assert.equal(material.uniforms.kSigma.value, 1);
   assert.equal(material.uniforms.opacity.value, 1);
+});
+
+test("normalizes editable realtime path trace denoise settings", () => {
+  const settings = normalizePathTraceDenoiseSettings(
+    {
+      sigma: 12,
+      threshold: -0.4
+    },
+    {
+      sigma: 3.2,
+      threshold: 0.045
+    }
+  );
+
+  assert.deepEqual(settings, {
+    sigma: 8,
+    threshold: 0
+  });
+});
+
+test("keeps previous denoise values when editable settings are invalid", () => {
+  const settings = normalizePathTraceDenoiseSettings(
+    {
+      sigma: Number.NaN,
+      threshold: Number.POSITIVE_INFINITY
+    },
+    {
+      sigma: 2.5,
+      threshold: 0.06
+    }
+  );
+
+  assert.deepEqual(settings, {
+    sigma: 2.5,
+    threshold: 0.06
+  });
 });
 
 test("renders a denoised path trace texture to the canvas", () => {

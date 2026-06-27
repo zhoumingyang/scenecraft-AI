@@ -39,6 +39,7 @@ import {
   EditorAppViewState,
   type EditorViewHelperVisibility
 } from "./app/viewState";
+import type { PathTraceDenoiseSettings } from "./runtime/pathTraceDenoise";
 
 export type { EditorMeshListItem };
 export type { EditorViewHelperVisibility };
@@ -225,8 +226,16 @@ export class EditorApp {
     return this.viewState.getPathTraceDenoiseEnabled();
   }
 
+  getPathTraceDenoiseSettings() {
+    return this.viewState.getPathTraceDenoiseSettings();
+  }
+
   setPathTraceDenoiseEnabled(enabled: boolean) {
     this.viewState.setPathTraceDenoiseEnabled(enabled);
+  }
+
+  setPathTraceDenoiseSettings(settings: Partial<PathTraceDenoiseSettings>) {
+    this.viewState.setPathTraceDenoiseSettings(settings);
   }
 
   isFirstPersonCamera() {

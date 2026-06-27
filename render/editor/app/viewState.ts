@@ -5,6 +5,7 @@ import type {
 } from "../core/types";
 import type { EditorProjectModel } from "../models";
 import type { EditorRuntime } from "../runtime/editorRuntime";
+import type { PathTraceDenoiseSettings } from "../runtime/pathTraceDenoise";
 import type { EditorSession } from "../session/editorSession";
 
 export type EditorViewHelperVisibility = {
@@ -57,8 +58,17 @@ export class EditorAppViewState {
     return this.runtime.getPathTraceDenoiseEnabled();
   }
 
+  getPathTraceDenoiseSettings() {
+    return this.runtime.getPathTraceDenoiseSettings();
+  }
+
   setPathTraceDenoiseEnabled(enabled: boolean) {
     if (!this.runtime.setPathTraceDenoiseEnabled(enabled)) return;
+    this.emitViewStateUpdated();
+  }
+
+  setPathTraceDenoiseSettings(settings: Partial<PathTraceDenoiseSettings>) {
+    if (!this.runtime.setPathTraceDenoiseSettings(settings)) return;
     this.emitViewStateUpdated();
   }
 

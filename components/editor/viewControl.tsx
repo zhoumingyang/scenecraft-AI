@@ -1,7 +1,7 @@
 "use client";
 
 import { MouseEvent, useEffect, useMemo, useState } from "react";
-import { Box, Button, ClickAwayListener, Stack, Typography } from "@mui/material";
+import { Box, Button, ClickAwayListener, Slider, Stack, Typography } from "@mui/material";
 import VisibilityRoundedIcon from "@mui/icons-material/VisibilityRounded";
 import BlurOnRoundedIcon from "@mui/icons-material/BlurOnRounded";
 import GridViewRoundedIcon from "@mui/icons-material/GridViewRounded";
@@ -10,7 +10,7 @@ import LightModeRoundedIcon from "@mui/icons-material/LightModeRounded";
 import DarkModeRoundedIcon from "@mui/icons-material/DarkModeRounded";
 import AutoFixHighRoundedIcon from "@mui/icons-material/AutoFixHighRounded";
 import KeyboardArrowUpRoundedIcon from "@mui/icons-material/KeyboardArrowUpRounded";
-import type { EditorApp, EditorRenderMode } from "@/render/editor";
+import { PATH_TRACE_DENOISE_LIMITS, type EditorApp, type EditorRenderMode } from "@/render/editor";
 import { useI18n } from "@/lib/i18n";
 import { useEditorStore } from "@/stores/editorStore";
 import { getEditorThemeTokens } from "@/components/editor/theme";
@@ -18,6 +18,15 @@ import { persistViewHelperVisibility } from "@/components/editor/viewHelperPrefe
 import { getViewportPillSx } from "./viewportControlStyles";
 
 type HelperKey = "gridHelper" | "transformGizmo" | "lightHelper" | "shadow";
+
+const PATH_TRACE_DENOISE_SLIDERS = {
+  sigma: {
+    step: 0.1
+  },
+  threshold: {
+    step: 0.005
+  }
+};
 
 type ViewControlProps = {
   app: EditorApp | null;
@@ -34,6 +43,10 @@ export default function ViewControl({ app, disabled = false, viewStateVersion }:
   const renderMode = useMemo(() => app?.getRenderMode() ?? "webgl", [app, viewStateVersion]);
   const pathTraceDenoiseEnabled = useMemo(
     () => app?.getPathTraceDenoiseEnabled() ?? false,
+    [app, viewStateVersion]
+  );
+  const pathTraceDenoiseSettings = useMemo(
+    () => app?.getPathTraceDenoiseSettings() ?? { sigma: 3.2, threshold: 0.045 },
     [app, viewStateVersion]
   );
 
@@ -88,6 +101,8 @@ export default function ViewControl({ app, disabled = false, viewStateVersion }:
   };
 
   const nextRenderMode: EditorRenderMode = renderMode === "webgl" ? "pathTrace" : "webgl";
+  const showPathTraceDenoiseSettings =
+    open && renderMode === "pathTrace" && pathTraceDenoiseEnabled;
 
   useEffect(() => {
     if (disabled) {
@@ -99,102 +114,91 @@ export default function ViewControl({ app, disabled = false, viewStateVersion }:
     <ClickAwayListener onClickAway={() => setOpen(false)}>
       <Box sx={{ position: "relative" }}>
         {open ? (
-          <Box
-            sx={{
-              position: "absolute",
-              right: 0,
-              bottom: 39.3,
-              minWidth: 220,
-              p: 1,
-              borderRadius: 1,
-              border: theme.panelBorder,
-              background: theme.panelBg,
-              backdropFilter: "blur(12px)",
-              boxShadow: theme.panelShadow
-            }}
-          >
-            <Stack spacing={0.75}>
-              <Typography
+          <>
+            {showPathTraceDenoiseSettings ? (
+              <Box
                 sx={{
-                  px: 1,
-                  pb: 0.4,
-                  fontSize: 12,
-                  fontWeight: 700,
-                  letterSpacing: "0.06em",
-                  textTransform: "uppercase",
-                  color: theme.titleText
+                  position: "absolute",
+                  right: 232,
+                  bottom: 39.3,
+                  width: 240,
+                  p: 1.1,
+                  borderRadius: 1,
+                  border: theme.panelBorder,
+                  background: theme.panelBg,
+                  backdropFilter: "blur(12px)",
+                  boxShadow: theme.panelShadow
                 }}
               >
-                {t("editor.view.title")}
-              </Typography>
-              <Button
-                color="inherit"
-                disabled={!app || disabled}
-                onClick={() => {
-                  app?.setRenderMode(nextRenderMode);
-                }}
-                sx={{
-                  justifyContent: "flex-start",
-                  px: 1.1,
-                  py: 0.9,
-                  borderRadius: 1.6,
-                  background: theme.itemBg,
-                  color: theme.text,
-                  textTransform: "none"
-                }}
-              >
-                <Stack direction="row" spacing={1} alignItems="center" sx={{ width: "100%" }}>
-                  <BlurOnRoundedIcon sx={{ fontSize: 16 }} />
-                  <Typography sx={{ flex: 1, fontSize: 13, textAlign: "left" }}>
-                    {t("editor.view.renderer")}
+                <Stack spacing={1.15}>
+                  <Typography
+                    sx={{
+                      px: 0.2,
+                      fontSize: 12,
+                      fontWeight: 700,
+                      letterSpacing: "0.06em",
+                      textTransform: "uppercase",
+                      color: theme.titleText
+                    }}
+                  >
+                    {t("editor.view.pathTraceDenoiseSettings")}
                   </Typography>
-                  <Typography sx={{ fontSize: 12, color: theme.mutedText }}>
-                    {renderMode === "webgl"
-                      ? t("editor.view.renderer.webgl")
-                      : t("editor.view.renderer.pathTrace")}
-                  </Typography>
+                  <PathTraceDenoiseSlider
+                    label={t("editor.view.pathTraceDenoiseSigma")}
+                    value={pathTraceDenoiseSettings.sigma}
+                    min={PATH_TRACE_DENOISE_LIMITS.sigma.min}
+                    max={PATH_TRACE_DENOISE_LIMITS.sigma.max}
+                    step={PATH_TRACE_DENOISE_SLIDERS.sigma.step}
+                    disabled={!app || disabled}
+                    onChange={(value) => app?.setPathTraceDenoiseSettings({ sigma: value })}
+                  />
+                  <PathTraceDenoiseSlider
+                    label={t("editor.view.pathTraceDenoiseThreshold")}
+                    value={pathTraceDenoiseSettings.threshold}
+                    min={PATH_TRACE_DENOISE_LIMITS.threshold.min}
+                    max={PATH_TRACE_DENOISE_LIMITS.threshold.max}
+                    step={PATH_TRACE_DENOISE_SLIDERS.threshold.step}
+                    disabled={!app || disabled}
+                    onChange={(value) =>
+                      app?.setPathTraceDenoiseSettings({ threshold: value })
+                    }
+                  />
                 </Stack>
-              </Button>
-              <Button
-                color="inherit"
-                disabled={!app || disabled || renderMode !== "pathTrace"}
-                onClick={() => {
-                  if (!app || disabled || renderMode !== "pathTrace") return;
-                  app.setPathTraceDenoiseEnabled(!pathTraceDenoiseEnabled);
-                }}
-                sx={{
-                  justifyContent: "flex-start",
-                  px: 1.1,
-                  py: 0.9,
-                  borderRadius: 1.6,
-                  background: theme.itemBg,
-                  color: theme.text,
-                  textTransform: "none",
-                  "&.Mui-disabled": {
-                    color: theme.mutedText,
-                    opacity: 0.55
-                  }
-                }}
-              >
-                <Stack direction="row" spacing={1} alignItems="center" sx={{ width: "100%" }}>
-                  <AutoFixHighRoundedIcon sx={{ fontSize: 16 }} />
-                  <Typography sx={{ flex: 1, fontSize: 13, textAlign: "left" }}>
-                    {t("editor.view.pathTraceDenoise")}
-                  </Typography>
-                  <Typography sx={{ fontSize: 12, color: theme.mutedText }}>
-                    {pathTraceDenoiseEnabled ? t("editor.view.on") : t("editor.view.off")}
-                  </Typography>
-                </Stack>
-              </Button>
-              {helperItems.map((item) => (
+              </Box>
+            ) : null}
+            <Box
+              sx={{
+                position: "absolute",
+                right: 0,
+                bottom: 39.3,
+                minWidth: 220,
+                p: 1,
+                borderRadius: 1,
+                border: theme.panelBorder,
+                background: theme.panelBg,
+                backdropFilter: "blur(12px)",
+                boxShadow: theme.panelShadow
+              }}
+            >
+              <Stack spacing={0.75}>
+                <Typography
+                  sx={{
+                    px: 1,
+                    pb: 0.4,
+                    fontSize: 12,
+                    fontWeight: 700,
+                    letterSpacing: "0.06em",
+                    textTransform: "uppercase",
+                    color: theme.titleText
+                  }}
+                >
+                  {t("editor.view.title")}
+                </Typography>
                 <Button
-                  key={item.key}
                   color="inherit"
-                  disabled={item.disabled}
+                  disabled={!app || disabled}
                   onClick={() => {
-                    if (!app || disabled) return;
-                    app.setViewHelperVisibility(item.key, !item.visible);
-                    persistViewHelperVisibility(currentProjectId, app.getViewHelperVisibility());
+                    app?.setRenderMode(nextRenderMode);
                   }}
                   sx={{
                     justifyContent: "flex-start",
@@ -207,18 +211,82 @@ export default function ViewControl({ app, disabled = false, viewStateVersion }:
                   }}
                 >
                   <Stack direction="row" spacing={1} alignItems="center" sx={{ width: "100%" }}>
-                    <item.icon sx={{ fontSize: 16 }} />
+                    <BlurOnRoundedIcon sx={{ fontSize: 16 }} />
                     <Typography sx={{ flex: 1, fontSize: 13, textAlign: "left" }}>
-                      {item.label}
+                      {t("editor.view.renderer")}
                     </Typography>
                     <Typography sx={{ fontSize: 12, color: theme.mutedText }}>
-                      {item.visible ? t("editor.view.hide") : t("editor.view.show")}
+                      {renderMode === "webgl"
+                        ? t("editor.view.renderer.webgl")
+                        : t("editor.view.renderer.pathTrace")}
                     </Typography>
                   </Stack>
                 </Button>
-              ))}
-            </Stack>
-          </Box>
+                <Button
+                  color="inherit"
+                  disabled={!app || disabled || renderMode !== "pathTrace"}
+                  onClick={() => {
+                    if (!app || disabled || renderMode !== "pathTrace") return;
+                    app.setPathTraceDenoiseEnabled(!pathTraceDenoiseEnabled);
+                  }}
+                  sx={{
+                    justifyContent: "flex-start",
+                    px: 1.1,
+                    py: 0.9,
+                    borderRadius: 1.6,
+                    background: theme.itemBg,
+                    color: theme.text,
+                    textTransform: "none",
+                    "&.Mui-disabled": {
+                      color: theme.mutedText,
+                      opacity: 0.55
+                    }
+                  }}
+                >
+                  <Stack direction="row" spacing={1} alignItems="center" sx={{ width: "100%" }}>
+                    <AutoFixHighRoundedIcon sx={{ fontSize: 16 }} />
+                    <Typography sx={{ flex: 1, fontSize: 13, textAlign: "left" }}>
+                      {t("editor.view.pathTraceDenoise")}
+                    </Typography>
+                    <Typography sx={{ fontSize: 12, color: theme.mutedText }}>
+                      {pathTraceDenoiseEnabled ? t("editor.view.on") : t("editor.view.off")}
+                    </Typography>
+                  </Stack>
+                </Button>
+                {helperItems.map((item) => (
+                  <Button
+                    key={item.key}
+                    color="inherit"
+                    disabled={item.disabled}
+                    onClick={() => {
+                      if (!app || disabled) return;
+                      app.setViewHelperVisibility(item.key, !item.visible);
+                      persistViewHelperVisibility(currentProjectId, app.getViewHelperVisibility());
+                    }}
+                    sx={{
+                      justifyContent: "flex-start",
+                      px: 1.1,
+                      py: 0.9,
+                      borderRadius: 1.6,
+                      background: theme.itemBg,
+                      color: theme.text,
+                      textTransform: "none"
+                    }}
+                  >
+                    <Stack direction="row" spacing={1} alignItems="center" sx={{ width: "100%" }}>
+                      <item.icon sx={{ fontSize: 16 }} />
+                      <Typography sx={{ flex: 1, fontSize: 13, textAlign: "left" }}>
+                        {item.label}
+                      </Typography>
+                      <Typography sx={{ fontSize: 12, color: theme.mutedText }}>
+                        {item.visible ? t("editor.view.hide") : t("editor.view.show")}
+                      </Typography>
+                    </Stack>
+                  </Button>
+                ))}
+              </Stack>
+            </Box>
+          </>
         ) : null}
 
         <Button
@@ -241,5 +309,46 @@ export default function ViewControl({ app, disabled = false, viewStateVersion }:
         </Button>
       </Box>
     </ClickAwayListener>
+  );
+}
+
+function PathTraceDenoiseSlider({
+  disabled,
+  label,
+  max,
+  min,
+  onChange,
+  step,
+  value
+}: {
+  disabled: boolean;
+  label: string;
+  max: number;
+  min: number;
+  onChange: (value: number) => void;
+  step: number;
+  value: number;
+}) {
+  const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
+  const theme = getEditorThemeTokens(editorThemeMode);
+
+  return (
+    <Stack spacing={0.55}>
+      <Stack direction="row" justifyContent="space-between" alignItems="center">
+        <Typography sx={{ fontSize: 11, color: theme.text }}>{label}</Typography>
+        <Typography sx={{ fontSize: 11, color: theme.titleText, fontWeight: 600 }}>
+          {value.toFixed(3)}
+        </Typography>
+      </Stack>
+      <Slider
+        size="small"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        disabled={disabled}
+        onChange={(_, nextValue) => onChange(nextValue as number)}
+      />
+    </Stack>
   );
 }

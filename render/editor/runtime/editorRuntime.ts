@@ -25,6 +25,7 @@ import { EditorRuntimePostProcessing } from "./editorRuntimePostProcessing";
 import { EditorRuntimeStudioScene } from "./editorRuntimeStudioScene";
 import { FirstPersonController } from "./firstPersonController";
 import { ModelLoaderFactory } from "./modelLoaderFactory";
+import type { PathTraceDenoiseSettings } from "./pathTraceDenoise";
 import { EditorPreviewLighting } from "./previewLighting";
 import type {
   PreviewLightingEnvState,
@@ -339,8 +340,18 @@ export class EditorRuntime {
     return this.pathTracer.getDenoiseEnabled();
   }
 
+  getPathTraceDenoiseSettings() {
+    return this.pathTracer.getDenoiseSettings();
+  }
+
   setPathTraceDenoiseEnabled(enabled: boolean) {
     if (!this.pathTracer.setDenoiseEnabled(enabled)) return false;
+    this.requestFrame();
+    return true;
+  }
+
+  setPathTraceDenoiseSettings(settings: Partial<PathTraceDenoiseSettings>) {
+    if (!this.pathTracer.setDenoiseSettings(settings)) return false;
     this.requestFrame();
     return true;
   }
