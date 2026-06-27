@@ -4,6 +4,7 @@ import * as THREE from "three";
 
 import {
   withEditorHelperVisibility,
+  withPathTraceCompatibleEnvironmentAsync,
   withPathTraceCompatibleEnvironment
 } from "../../../../render/editor/runtime/pathTraceSceneState.ts";
 
@@ -72,6 +73,23 @@ test("uses the source equirect texture for path traced image based lighting", ()
     assert.equal(scene.environment, sourceTexture);
   });
 
+  assert.equal(scene.environment, pmremTexture);
+});
+
+test("keeps the source environment active until async path trace work completes", async () => {
+  const scene = new THREE.Scene();
+  const pmremTexture = new THREE.Texture();
+  const sourceTexture = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1);
+  const observed = [];
+  scene.environment = pmremTexture;
+
+  await withPathTraceCompatibleEnvironmentAsync(scene, sourceTexture, async () => {
+    observed.push(scene.environment);
+    await Promise.resolve();
+    observed.push(scene.environment);
+  });
+
+  assert.deepEqual(observed, [sourceTexture, sourceTexture]);
   assert.equal(scene.environment, pmremTexture);
 });
 

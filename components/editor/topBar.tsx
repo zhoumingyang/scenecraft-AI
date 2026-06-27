@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import DropdownMenu from "@/components/common/dropdownMenu";
 import LightingConflictToast from "@/components/editor/lightingConflictToast";
 import {
@@ -10,6 +10,9 @@ import ProjectAiLibraryDialog from "@/components/editor/projectAiLibraryDialog";
 import ProjectSaveDialog from "@/components/editor/projectSaveDialog";
 import ProjectSaveProgressToast from "@/components/editor/projectSaveProgressToast";
 import ProjectSelectDialog from "@/components/editor/projectSelectDialog";
+import RenderExportProgressToast, {
+  type RenderExportProgressStatus
+} from "@/components/editor/renderExportProgressToast";
 import { EDITOR_SAVE_SHORTCUT_EVENT } from "@/components/editor/keyboardShortcuts";
 import { dropdownConfigs } from "@/components/editor/topBar/constants";
 import TopBarActionBar from "@/components/editor/topBar/topBarActionBar";
@@ -28,6 +31,12 @@ export default function TopBar() {
   const dismissLightingConflictNotice = useEditorStore((state) => state.dismissLightingConflictNotice);
   const theme = getEditorThemeTokens(editorThemeMode);
   const studioDisabledMenuIds = isStudioSceneActive ? (["project", "camera"] as const) : [];
+  const renderExportControllerRef = useRef<AbortController | null>(null);
+  const [renderExportStatus, setRenderExportStatus] = useState<RenderExportProgressStatus>({
+    active: false,
+    progress: 0,
+    message: ""
+  });
 
   const actions = useTopBarProjectActions(t);
   useEffect(() => {
@@ -43,6 +52,12 @@ export default function TopBar() {
     };
   }, [actions.onSaveScene, isStudioSceneActive]);
 
+  useEffect(() => {
+    return () => {
+      renderExportControllerRef.current?.abort();
+    };
+  }, []);
+
   const menu = useTopBarMenu({
     app: actions.app,
     disabled: false,
@@ -57,6 +72,55 @@ export default function TopBar() {
     projectLoadVersion,
     t
   });
+
+  const handleExportRender = async () => {
+    if (!actions.app || renderExportStatus.active) return;
+
+    const controller = new AbortController();
+    renderExportControllerRef.current = controller;
+    setRenderExportStatus({
+      active: true,
+      progress: 0,
+      message: t("editor.export.preparing")
+    });
+
+    try {
+      const dataUrl = await actions.app.captureViewportImageAsync("clean", {
+        signal: controller.signal,
+        onProgress: (progress) => {
+          setRenderExportStatus({
+            active: true,
+            progress: progress.progress,
+            message: t("editor.export.rendering")
+          });
+        }
+      });
+      downloadDataUrl(dataUrl, createRenderExportFileName());
+      setRenderExportStatus({
+        active: false,
+        progress: 0,
+        message: ""
+      });
+    } catch (error) {
+      if (!(error instanceof Error && error.name === "AbortError")) {
+        console.error("[editor] Render export failed.", error);
+        window.alert(t("editor.export.failed"));
+      }
+      setRenderExportStatus({
+        active: false,
+        progress: 0,
+        message: ""
+      });
+    } finally {
+      if (renderExportControllerRef.current === controller) {
+        renderExportControllerRef.current = null;
+      }
+    }
+  };
+
+  const handleCancelRenderExport = () => {
+    renderExportControllerRef.current?.abort();
+  };
 
   return (
     <>
@@ -95,10 +159,12 @@ export default function TopBar() {
         aiLibraryAssetCount={actions.aiLibraryAssetCount}
         disabled={false}
         disabledMenuIds={[...studioDisabledMenuIds]}
+        exportDisabled={renderExportStatus.active || !actions.app}
         saveDisabled={isStudioSceneActive}
         clearDisabled={isStudioSceneActive}
         dropdownConfigs={dropdownConfigs}
         onClearProject={actions.onClearProject}
+        onExportRender={handleExportRender}
         onOpenAiLibrary={actions.openAiLibraryDialog}
         onOpenMenu={menu.openMenu}
         onSaveScene={actions.onSaveScene}
@@ -158,6 +224,12 @@ export default function TopBar() {
         onClose={actions.resetSaveStatus}
       />
 
+      <RenderExportProgressToast
+        status={renderExportStatus}
+        theme={theme}
+        onCancel={handleCancelRenderExport}
+      />
+
       <LightingConflictToast
         notice={lightingConflictNotice}
         theme={theme}
@@ -168,4 +240,19 @@ export default function TopBar() {
       />
     </>
   );
+}
+
+function createRenderExportFileName() {
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  return `scenecraft-render-${timestamp}.png`;
+}
+
+function downloadDataUrl(dataUrl: string, fileName: string) {
+  const link = document.createElement("a");
+  link.href = dataUrl;
+  link.download = fileName;
+  link.rel = "noreferrer";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }

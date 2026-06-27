@@ -33,6 +33,34 @@ export function withEditorHelperVisibility<T>(
   }
 }
 
+export async function withEditorHelperVisibilityAsync<T>(
+  scene: THREE.Scene,
+  options: EditorHelperVisibilityOptions,
+  callback: () => Promise<T>
+): Promise<T> {
+  const previousGroundVisible = options.groundPlane.visible;
+  const helperSnapshots: Array<{ object: THREE.Object3D; visible: boolean }> = [];
+
+  scene.traverse((object) => {
+    if (!isEditorHelperObject(object)) return;
+    helperSnapshots.push({ object, visible: object.visible });
+    object.visible = false;
+  });
+
+  if (options.hideGroundPlane) {
+    options.groundPlane.visible = false;
+  }
+
+  try {
+    return await callback();
+  } finally {
+    options.groundPlane.visible = previousGroundVisible;
+    helperSnapshots.forEach(({ object, visible }) => {
+      object.visible = visible;
+    });
+  }
+}
+
 function isEditorHelperObject(object: THREE.Object3D) {
   let current: THREE.Object3D | null = object;
   while (current) {
@@ -63,6 +91,29 @@ export function withPathTraceCompatibleEnvironment<T>(
 
   try {
     return callback();
+  } finally {
+    if (shouldPatchEnvironment) {
+      scene.environment = previousEnvironment;
+    }
+  }
+}
+
+export async function withPathTraceCompatibleEnvironmentAsync<T>(
+  scene: THREE.Scene,
+  sourceEnvironmentTexture: THREE.Texture | null,
+  callback: () => Promise<T>
+): Promise<T> {
+  const previousEnvironment = scene.environment;
+  const shouldPatchEnvironment = previousEnvironment !== null;
+
+  if (shouldPatchEnvironment) {
+    scene.environment = isPathTraceReadableEnvironmentTexture(sourceEnvironmentTexture)
+      ? sourceEnvironmentTexture
+      : null;
+  }
+
+  try {
+    return await callback();
   } finally {
     if (shouldPatchEnvironment) {
       scene.environment = previousEnvironment;

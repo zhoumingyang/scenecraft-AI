@@ -24,7 +24,11 @@ import {
   PATH_TRACE_GLOSSY_FILTER_FACTOR,
   configureEditorPathTracer
 } from "./pathTraceRendererConfig";
-import { renderPathTraceSamplesUntil } from "./pathTraceSampling";
+import {
+  renderPathTraceSamplesUntil,
+  renderPathTraceSamplesUntilAsync,
+  type PathTraceSampleProgress
+} from "./pathTraceSampling";
 
 type EditorRuntimePathTracerOptions = {
   scene: THREE.Scene;
@@ -109,6 +113,26 @@ export class EditorRuntimePathTracer {
     return renderPathTraceSamplesUntil({
       targetSamples: PATH_TRACE_CAPTURE_SAMPLES,
       maxIterations: PATH_TRACE_CAPTURE_MAX_ITERATIONS,
+      getSamples: () => pathTracer.samples,
+      renderSample: () => {
+        this.preparePathTracer(pathTracer);
+        this.syncAdaptiveQuality(pathTracer, { interactive: false });
+        pathTracer.renderSample();
+      }
+    });
+  }
+
+  async renderCaptureSamplesAsync(options: {
+    signal?: AbortSignal;
+    onProgress?: (progress: PathTraceSampleProgress) => void;
+  } = {}) {
+    const pathTracer = this.ensurePathTracer();
+    this.syncAdaptiveQuality(pathTracer, { interactive: false });
+    return renderPathTraceSamplesUntilAsync({
+      targetSamples: PATH_TRACE_CAPTURE_SAMPLES,
+      maxIterations: PATH_TRACE_CAPTURE_MAX_ITERATIONS,
+      signal: options.signal,
+      onProgress: options.onProgress,
       getSamples: () => pathTracer.samples,
       renderSample: () => {
         this.preparePathTracer(pathTracer);

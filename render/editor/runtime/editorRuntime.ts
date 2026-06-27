@@ -6,6 +6,7 @@ import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer
 import { CameraModel } from "../models";
 import type {
   EditorRenderMode,
+  EditorViewportCaptureOptions,
   EditorViewportCaptureMode,
   ResolvedEditorEnvConfigJSON,
   ResolvedMeshMaterialJSON
@@ -506,6 +507,47 @@ export class EditorRuntime {
     }
   }
 
+  async captureViewportImageAsync(
+    mode: EditorViewportCaptureMode = "clean",
+    options: EditorViewportCaptureOptions = {}
+  ) {
+    this.update(0);
+
+    if (mode === "viewport") {
+      if (this.renderMode === "pathTrace") {
+        await this.renderPathTraceCaptureSamplesAsync(options);
+      } else {
+        this.renderFrame();
+      }
+      return this.renderer.domElement.toDataURL("image/png");
+    }
+
+    const previousGridHelperVisible = this.getGridHelperVisible();
+    const previousTransformGizmoVisible = this.getTransformGizmoVisible();
+    const previousLightHelpersVisible = this.getLightHelpersVisible();
+    const previousOutlineEnabled = this.postProcessing.getOutlineEnabled();
+
+    this.environment.setGridHelperVisible(false);
+    this.transformGizmo.setVisible(false);
+    this.environment.setLightHelpersVisible(false);
+    this.postProcessing.setOutlineEnabled(false);
+
+    try {
+      if (this.renderMode === "pathTrace") {
+        await this.renderPathTraceCaptureSamplesAsync(options);
+      } else {
+        this.renderFrame();
+      }
+      return this.renderer.domElement.toDataURL("image/png");
+    } finally {
+      this.environment.setGridHelperVisible(previousGridHelperVisible);
+      this.transformGizmo.setVisible(previousTransformGizmoVisible);
+      this.environment.setLightHelpersVisible(previousLightHelpersVisible);
+      this.postProcessing.setOutlineEnabled(previousOutlineEnabled);
+      this.renderFrame();
+    }
+  }
+
   applyEnvConfig(
     envConfig: ResolvedEditorEnvConfigJSON,
     options: { syncShadowFromGroundMode?: boolean } = {}
@@ -582,6 +624,23 @@ export class EditorRuntime {
         this.studioScene.getPathTraceEnvironmentTexture(),
         () => {
           this.pathTracer.renderCaptureSamples();
+          this.pathTracer.renderDenoisedCapture();
+        }
+      );
+    } finally {
+      this.transformGizmo.root.visible = previousTransformGizmoVisible;
+    }
+  }
+
+  private async renderPathTraceCaptureSamplesAsync(options: EditorViewportCaptureOptions = {}) {
+    const previousTransformGizmoVisible = this.transformGizmo.root.visible;
+    this.transformGizmo.root.visible = false;
+
+    try {
+      await this.environment.withPathTraceSceneStateAsync(
+        this.studioScene.getPathTraceEnvironmentTexture(),
+        async () => {
+          await this.pathTracer.renderCaptureSamplesAsync(options);
           this.pathTracer.renderDenoisedCapture();
         }
       );

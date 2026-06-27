@@ -1,5 +1,6 @@
 import { Button, Stack, Tooltip } from "@mui/material";
 import SaveRoundedIcon from "@mui/icons-material/SaveRounded";
+import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import DeleteSweepRoundedIcon from "@mui/icons-material/DeleteSweepRounded";
 import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
 import CollectionsRoundedIcon from "@mui/icons-material/CollectionsRounded";
@@ -11,11 +12,13 @@ type TopBarActionBarProps = {
   disabled?: boolean;
   disabledMenuIds?: DropdownConfig["id"][];
   saveDisabled?: boolean;
+  exportDisabled?: boolean;
   clearDisabled?: boolean;
   dropdownConfigs: DropdownConfig[];
   onClearProject: () => void;
   onOpenAiLibrary: () => void;
   onOpenMenu: (id: DropdownConfig["id"], anchor: HTMLElement) => void;
+  onExportRender: () => void;
   onSaveScene: () => void;
   t: TopBarTranslate;
   theme: EditorThemeTokens;
@@ -26,11 +29,13 @@ export default function TopBarActionBar({
   disabled = false,
   disabledMenuIds = [],
   saveDisabled = disabled,
+  exportDisabled = disabled,
   clearDisabled = disabled,
   dropdownConfigs,
   onClearProject,
   onOpenAiLibrary,
   onOpenMenu,
+  onExportRender,
   onSaveScene,
   t,
   theme
@@ -80,6 +85,16 @@ export default function TopBarActionBar({
         onClick={onSaveScene}
       >
         {t("editor.top.save")}
+      </Button>
+
+      <Button
+        size="small"
+        color="inherit"
+        disabled={exportDisabled}
+        startIcon={<DownloadRoundedIcon />}
+        onClick={onExportRender}
+      >
+        {t("editor.top.exportRender")}
       </Button>
 
       <Button

@@ -15,6 +15,8 @@ import {
 import { applyTextureColorSpace } from "./colorManagement";
 import {
   withEditorHelperVisibility,
+  withEditorHelperVisibilityAsync,
+  withPathTraceCompatibleEnvironmentAsync,
   withPathTraceCompatibleEnvironment
 } from "./pathTraceSceneState";
 
@@ -151,6 +153,25 @@ export class EditorRuntimeEnvironment {
       this.scene,
       sourceEnvironmentTexture ?? this.pathTraceEnvironmentTexture,
       () => this.withEditorHelpersHidden(callback, { hideGroundPlane: false })
+    );
+  }
+
+  async withPathTraceSceneStateAsync<T>(
+    sourceEnvironmentTexture: THREE.Texture | null,
+    callback: () => Promise<T>
+  ): Promise<T> {
+    return withPathTraceCompatibleEnvironmentAsync(
+      this.scene,
+      sourceEnvironmentTexture ?? this.pathTraceEnvironmentTexture,
+      () =>
+        withEditorHelperVisibilityAsync(
+          this.scene,
+          {
+            groundPlane: this.groundPlane,
+            hideGroundPlane: false
+          },
+          callback
+        )
     );
   }
 

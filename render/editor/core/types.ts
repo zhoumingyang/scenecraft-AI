@@ -381,6 +381,16 @@ export type ResolvedEditorPostProcessingConfigJSON = {
 };
 
 export type EditorViewportCaptureMode = "viewport" | "clean";
+export type EditorViewportCaptureProgress = {
+  samples: number;
+  targetSamples: number;
+  progress: number;
+  renderedIterations: number;
+};
+export type EditorViewportCaptureOptions = {
+  signal?: AbortSignal;
+  onProgress?: (progress: EditorViewportCaptureProgress) => void;
+};
 export type EditorRenderMode = "webgl" | "pathTrace";
 
 export type EditorEnvConfigJSON = {

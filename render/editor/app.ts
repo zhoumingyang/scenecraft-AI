@@ -10,6 +10,7 @@ import type {
   EditorGroundConfigJSON,
   EditorLightJSON,
   EditorRenderMode,
+  EditorViewportCaptureOptions,
   LightingConflictState,
   EditorPostProcessPassId,
   EditorPostProcessingPassParamsMap,
@@ -572,6 +573,13 @@ export class EditorApp {
 
   captureViewportImage(mode: EditorViewportCaptureMode = "clean") {
     return this.runtime.captureViewportImage(mode);
+  }
+
+  captureViewportImageAsync(
+    mode: EditorViewportCaptureMode = "clean",
+    options: EditorViewportCaptureOptions = {}
+  ) {
+    return this.runtime.captureViewportImageAsync(mode, options);
   }
 
   setOutlineEntity(entityId: string | null) {
