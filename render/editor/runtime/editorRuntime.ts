@@ -649,6 +649,11 @@ export class EditorRuntime {
     let pathTraceNeedsMoreSamples = false;
 
     if (shouldRender) {
+      if (this.renderMode === "pathTrace") {
+        this.pathTracer.setInteractionActive(
+          this.isPathTraceInteractionActive(runtimeChanged, sessionChanged)
+        );
+      }
       pathTraceNeedsMoreSamples = this.renderFrame(deltaSeconds);
       this.frameDirty = false;
     }
@@ -665,6 +670,16 @@ export class EditorRuntime {
   ) {
     return (
       (this.renderMode === "pathTrace" && pathTraceNeedsMoreSamples) ||
+      this.transformDragging ||
+      this.firstPersonController.hasActiveInput() ||
+      this.orbitDampingFramesRemaining > 0 ||
+      runtimeChanged ||
+      sessionChanged
+    );
+  }
+
+  private isPathTraceInteractionActive(runtimeChanged: boolean, sessionChanged: boolean) {
+    return (
       this.transformDragging ||
       this.firstPersonController.hasActiveInput() ||
       this.orbitDampingFramesRemaining > 0 ||

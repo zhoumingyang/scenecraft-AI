@@ -2,6 +2,12 @@ import * as THREE from "three";
 import { DenoiseMaterial, WebGLPathTracer } from "three-gpu-pathtracer";
 import { FullScreenQuad } from "three/examples/jsm/postprocessing/Pass.js";
 import {
+  getInteractivePathTraceQuality,
+  getPathTraceQualityTransition,
+  type PathTraceAdaptiveQuality,
+  type PathTraceAdaptiveQualityMode
+} from "./pathTraceAdaptiveQuality";
+import {
   shouldContinueInteractivePathTrace,
   shouldRenderInteractivePathTraceSample
 } from "./pathTraceFrameBudget";
@@ -16,7 +22,6 @@ import {
   PATH_TRACE_CAPTURE_MAX_ITERATIONS,
   PATH_TRACE_CAPTURE_SAMPLES,
   PATH_TRACE_GLOSSY_FILTER_FACTOR,
-  PATH_TRACE_INTERACTIVE_TARGET_SAMPLES,
   configureEditorPathTracer
 } from "./pathTraceRendererConfig";
 import { renderPathTraceSamplesUntil } from "./pathTraceSampling";
@@ -43,6 +48,8 @@ export class EditorRuntimePathTracer {
   private materialsDirty = true;
   private lightsDirty = true;
   private environmentDirty = true;
+  private interactionActive = false;
+  private adaptiveQualityMode: PathTraceAdaptiveQualityMode = "settled";
 
   constructor({ scene, camera, renderer }: EditorRuntimePathTracerOptions) {
     this.scene = scene;
@@ -82,11 +89,11 @@ export class EditorRuntimePathTracer {
   renderSample() {
     const pathTracer = this.ensurePathTracer();
     this.preparePathTracer(pathTracer);
-    this.syncRenderScale(pathTracer);
+    const quality = this.syncAdaptiveQuality(pathTracer);
     if (
       !shouldRenderInteractivePathTraceSample({
         samples: pathTracer.samples,
-        targetSamples: PATH_TRACE_INTERACTIVE_TARGET_SAMPLES
+        targetSamples: quality.targetSamples
       })
     ) {
       return false;
@@ -98,13 +105,14 @@ export class EditorRuntimePathTracer {
 
   renderCaptureSamples() {
     const pathTracer = this.ensurePathTracer();
+    this.syncAdaptiveQuality(pathTracer, { interactive: false });
     return renderPathTraceSamplesUntil({
       targetSamples: PATH_TRACE_CAPTURE_SAMPLES,
       maxIterations: PATH_TRACE_CAPTURE_MAX_ITERATIONS,
       getSamples: () => pathTracer.samples,
       renderSample: () => {
         this.preparePathTracer(pathTracer);
-        this.syncRenderScale(pathTracer);
+        this.syncAdaptiveQuality(pathTracer, { interactive: false });
         pathTracer.renderSample();
       }
     });
@@ -157,12 +165,17 @@ export class EditorRuntimePathTracer {
     return true;
   }
 
+  setInteractionActive(active: boolean) {
+    this.interactionActive = active;
+  }
+
   shouldContinueRendering() {
     const pathTracer = this.pathTracer;
+    const quality = this.getAdaptiveQuality();
     return shouldContinueInteractivePathTrace({
       dirty: this.hasDirtyState(),
       samples: pathTracer?.samples ?? 0,
-      targetSamples: PATH_TRACE_INTERACTIVE_TARGET_SAMPLES
+      targetSamples: quality.targetSamples
     });
   }
 
@@ -300,8 +313,31 @@ export class EditorRuntimePathTracer {
     );
   }
 
-  private syncRenderScale(pathTracer: WebGLPathTracer) {
-    pathTracer.renderScale = this.getDisplayPixelRenderScale();
+  private syncAdaptiveQuality(
+    pathTracer: WebGLPathTracer,
+    options: { interactive?: boolean } = {}
+  ) {
+    const quality = this.getAdaptiveQuality(options);
+    const transition = getPathTraceQualityTransition({
+      currentMode: this.adaptiveQualityMode,
+      nextMode: quality.mode
+    });
+    const renderScaleChanged = pathTracer.renderScale !== quality.renderScale;
+    pathTracer.renderScale = quality.renderScale;
+
+    if (transition.shouldResetSamples || renderScaleChanged) {
+      pathTracer.reset();
+    }
+
+    this.adaptiveQualityMode = quality.mode;
+    return quality;
+  }
+
+  private getAdaptiveQuality(options: { interactive?: boolean } = {}): PathTraceAdaptiveQuality {
+    return getInteractivePathTraceQuality({
+      displayPixelRenderScale: this.getDisplayPixelRenderScale(),
+      interactive: options.interactive ?? this.interactionActive
+    });
   }
 
   private getDisplayPixelRenderScale() {
