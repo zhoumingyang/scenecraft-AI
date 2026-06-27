@@ -4,6 +4,7 @@ import type { SyntheticEvent } from "react";
 import { Stack } from "@mui/material";
 import { useEditorStore } from "@/stores/editorStore";
 import FirstPersonHeightControl from "./firstPersonHeightControl";
+import PathTraceSampleHud from "./pathTraceSampleHud";
 import ViewControl from "./viewControl";
 
 export default function ViewportControls() {
@@ -20,9 +21,9 @@ export default function ViewportControls() {
 
   return (
     <Stack
-      direction="row"
+      direction="column"
       spacing={1}
-      alignItems="center"
+      alignItems="flex-end"
       onPointerDown={stopCanvasInteraction}
       onMouseDown={stopCanvasInteraction}
       onClick={stopCanvasInteraction}
@@ -33,8 +34,15 @@ export default function ViewportControls() {
         zIndex: 22
       }}
     >
-      <ViewControl app={app} disabled={isStudioSceneActive} viewStateVersion={viewStateVersion} />
-      {isStudioSceneActive ? null : <FirstPersonHeightControl app={app} isFirstPerson={isFirstPerson} />}
+      <PathTraceSampleHud
+        app={app}
+        disabled={isStudioSceneActive}
+        viewStateVersion={viewStateVersion}
+      />
+      <Stack direction="row" spacing={1} alignItems="center">
+        <ViewControl app={app} disabled={isStudioSceneActive} viewStateVersion={viewStateVersion} />
+        {isStudioSceneActive ? null : <FirstPersonHeightControl app={app} isFirstPerson={isFirstPerson} />}
+      </Stack>
     </Stack>
   );
 }

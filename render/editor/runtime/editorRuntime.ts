@@ -345,6 +345,10 @@ export class EditorRuntime {
     return this.pathTracer.getDenoiseSettings();
   }
 
+  getPathTraceSampleStatus() {
+    return this.pathTracer.getSampleStatus();
+  }
+
   setPathTraceDenoiseEnabled(enabled: boolean) {
     if (!this.pathTracer.setDenoiseEnabled(enabled)) return false;
     this.requestFrame();

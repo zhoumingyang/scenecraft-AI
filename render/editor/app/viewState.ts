@@ -62,6 +62,10 @@ export class EditorAppViewState {
     return this.runtime.getPathTraceDenoiseSettings();
   }
 
+  getPathTraceSampleStatus() {
+    return this.runtime.getPathTraceSampleStatus();
+  }
+
   setPathTraceDenoiseEnabled(enabled: boolean) {
     if (!this.runtime.setPathTraceDenoiseEnabled(enabled)) return;
     this.emitViewStateUpdated();

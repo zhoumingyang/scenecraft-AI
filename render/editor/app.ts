@@ -231,6 +231,10 @@ export class EditorApp {
     return this.viewState.getPathTraceDenoiseSettings();
   }
 
+  getPathTraceSampleStatus() {
+    return this.viewState.getPathTraceSampleStatus();
+  }
+
   setPathTraceDenoiseEnabled(enabled: boolean) {
     this.viewState.setPathTraceDenoiseEnabled(enabled);
   }

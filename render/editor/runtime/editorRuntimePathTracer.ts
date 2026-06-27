@@ -29,6 +29,7 @@ import {
   renderPathTraceSamplesUntilAsync,
   type PathTraceSampleProgress
 } from "./pathTraceSampling";
+import { createPathTraceSampleStatus, type PathTraceSampleStatus } from "./pathTraceSampleStatus";
 
 type EditorRuntimePathTracerOptions = {
   scene: THREE.Scene;
@@ -198,6 +199,17 @@ export class EditorRuntimePathTracer {
     const quality = this.getAdaptiveQuality();
     return shouldContinueInteractivePathTrace({
       dirty: this.hasDirtyState(),
+      samples: pathTracer?.samples ?? 0,
+      targetSamples: quality.targetSamples
+    });
+  }
+
+  getSampleStatus(): PathTraceSampleStatus {
+    const pathTracer = this.pathTracer;
+    const quality = this.getAdaptiveQuality();
+    return createPathTraceSampleStatus({
+      dirty: this.hasDirtyState(),
+      mode: quality.mode,
       samples: pathTracer?.samples ?? 0,
       targetSamples: quality.targetSamples
     });
