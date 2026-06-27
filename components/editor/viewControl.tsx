@@ -15,6 +15,7 @@ import { useI18n } from "@/lib/i18n";
 import { useEditorStore } from "@/stores/editorStore";
 import { getEditorThemeTokens } from "@/components/editor/theme";
 import { persistViewHelperVisibility } from "@/components/editor/viewHelperPreferences";
+import { createRafThrottledCommitter } from "@/components/editor/pathTraceDenoiseThrottle";
 import { getViewportPillSx } from "./viewportControlStyles";
 
 type HelperKey = "gridHelper" | "transformGizmo" | "lightHelper" | "shadow";
@@ -49,6 +50,18 @@ export default function ViewControl({ app, disabled = false, viewStateVersion }:
     () => app?.getPathTraceDenoiseSettings() ?? { sigma: 3.2, threshold: 0.045 },
     [app, viewStateVersion]
   );
+  const pathTraceDenoiseCommitters = useMemo(() => {
+    if (!app) return null;
+
+    return {
+      sigma: createRafThrottledCommitter((value: number) => {
+        app.setPathTraceDenoiseSettings({ sigma: value });
+      }),
+      threshold: createRafThrottledCommitter((value: number) => {
+        app.setPathTraceDenoiseSettings({ threshold: value });
+      })
+    };
+  }, [app]);
 
   const helperVisibility = useMemo(
     () =>
@@ -110,6 +123,13 @@ export default function ViewControl({ app, disabled = false, viewStateVersion }:
     }
   }, [disabled]);
 
+  useEffect(() => {
+    return () => {
+      pathTraceDenoiseCommitters?.sigma.flush();
+      pathTraceDenoiseCommitters?.threshold.flush();
+    };
+  }, [pathTraceDenoiseCommitters]);
+
   return (
     <ClickAwayListener onClickAway={() => setOpen(false)}>
       <Box sx={{ position: "relative" }}>
@@ -150,7 +170,7 @@ export default function ViewControl({ app, disabled = false, viewStateVersion }:
                     max={PATH_TRACE_DENOISE_LIMITS.sigma.max}
                     step={PATH_TRACE_DENOISE_SLIDERS.sigma.step}
                     disabled={!app || disabled}
-                    onChange={(value) => app?.setPathTraceDenoiseSettings({ sigma: value })}
+                    onChange={(value) => pathTraceDenoiseCommitters?.sigma.schedule(value)}
                   />
                   <PathTraceDenoiseSlider
                     label={t("editor.view.pathTraceDenoiseThreshold")}
@@ -160,7 +180,7 @@ export default function ViewControl({ app, disabled = false, viewStateVersion }:
                     step={PATH_TRACE_DENOISE_SLIDERS.threshold.step}
                     disabled={!app || disabled}
                     onChange={(value) =>
-                      app?.setPathTraceDenoiseSettings({ threshold: value })
+                      pathTraceDenoiseCommitters?.threshold.schedule(value)
                     }
                   />
                 </Stack>
@@ -331,6 +351,11 @@ function PathTraceDenoiseSlider({
 }) {
   const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
   const theme = getEditorThemeTokens(editorThemeMode);
+  const [draftValue, setDraftValue] = useState(value);
+
+  useEffect(() => {
+    setDraftValue(value);
+  }, [value]);
 
   return (
     <Stack spacing={0.55}>
@@ -345,9 +370,13 @@ function PathTraceDenoiseSlider({
         min={min}
         max={max}
         step={step}
-        value={value}
+        value={draftValue}
         disabled={disabled}
-        onChange={(_, nextValue) => onChange(nextValue as number)}
+        onChange={(_, nextValue) => {
+          const nextNumber = nextValue as number;
+          setDraftValue(nextNumber);
+          onChange(nextNumber);
+        }}
       />
     </Stack>
   );
