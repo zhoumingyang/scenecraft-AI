@@ -21,9 +21,9 @@ export default function ViewportControls() {
 
   return (
     <Stack
-      direction="column"
+      direction="row"
       spacing={1}
-      alignItems="flex-end"
+      alignItems="center"
       onPointerDown={stopCanvasInteraction}
       onMouseDown={stopCanvasInteraction}
       onClick={stopCanvasInteraction}
@@ -39,10 +39,8 @@ export default function ViewportControls() {
         disabled={isStudioSceneActive}
         viewStateVersion={viewStateVersion}
       />
-      <Stack direction="row" spacing={1} alignItems="center">
-        <ViewControl app={app} disabled={isStudioSceneActive} viewStateVersion={viewStateVersion} />
-        {isStudioSceneActive ? null : <FirstPersonHeightControl app={app} isFirstPerson={isFirstPerson} />}
-      </Stack>
+      <ViewControl app={app} disabled={isStudioSceneActive} viewStateVersion={viewStateVersion} />
+      {isStudioSceneActive ? null : <FirstPersonHeightControl app={app} isFirstPerson={isFirstPerson} />}
     </Stack>
   );
 }
