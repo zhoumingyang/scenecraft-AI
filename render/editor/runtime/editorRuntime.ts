@@ -37,6 +37,7 @@ import {
   stopRuntimeLifecycle,
   type RuntimeStartOptions
 } from "./editorRuntimeLifecycle";
+import { canvasToPngDataUrlAsync } from "./canvasImageCapture";
 
 const ORBIT_DAMPING_FRAME_BUDGET = 45;
 
@@ -523,7 +524,7 @@ export class EditorRuntime {
       } else {
         this.renderFrame();
       }
-      return this.renderer.domElement.toDataURL("image/png");
+      return canvasToPngDataUrlAsync(this.renderer.domElement);
     }
 
     const previousGridHelperVisible = this.getGridHelperVisible();
@@ -542,7 +543,7 @@ export class EditorRuntime {
       } else {
         this.renderFrame();
       }
-      return this.renderer.domElement.toDataURL("image/png");
+      return canvasToPngDataUrlAsync(this.renderer.domElement);
     } finally {
       this.environment.setGridHelperVisible(previousGridHelperVisible);
       this.transformGizmo.setVisible(previousTransformGizmoVisible);
