@@ -26,6 +26,7 @@ import { EditorRuntimePostProcessing } from "./editorRuntimePostProcessing";
 import { EditorRuntimeStudioScene } from "./editorRuntimeStudioScene";
 import { FirstPersonController } from "./firstPersonController";
 import { ModelLoaderFactory } from "./modelLoaderFactory";
+import { shouldUseInteractivePathTraceQuality } from "./pathTraceAdaptiveQuality";
 import type { PathTraceDenoiseSettings } from "./pathTraceDenoise";
 import { EditorPreviewLighting } from "./previewLighting";
 import type {
@@ -743,13 +744,13 @@ export class EditorRuntime {
   }
 
   private isPathTraceInteractionActive(runtimeChanged: boolean, sessionChanged: boolean) {
-    return (
-      this.transformDragging ||
-      this.firstPersonController.hasActiveInput() ||
-      this.orbitDampingFramesRemaining > 0 ||
-      runtimeChanged ||
+    return shouldUseInteractivePathTraceQuality({
+      transformDragging: this.transformDragging,
+      firstPersonInputActive: this.firstPersonController.hasActiveInput(),
+      orbitDampingFramesRemaining: this.orbitDampingFramesRemaining,
+      runtimeChanged,
       sessionChanged
-    );
+    });
   }
 
   private getLifecycleBindings() {

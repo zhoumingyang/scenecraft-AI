@@ -3,7 +3,8 @@ import test from "node:test";
 
 import {
   getInteractivePathTraceQuality,
-  getPathTraceQualityTransition
+  getPathTraceQualityTransition,
+  shouldUseInteractivePathTraceQuality
 } from "../../../../render/editor/runtime/pathTraceAdaptiveQuality.ts";
 
 test("uses a lower render scale and sample target while the editor is interactive", () => {
@@ -49,5 +50,41 @@ test("resets accumulated samples when the adaptive quality mode changes", () => 
       modeChanged: false,
       shouldResetSamples: false
     }
+  );
+});
+
+test("does not treat render-to-model sync pulses as path trace interaction", () => {
+  assert.equal(
+    shouldUseInteractivePathTraceQuality({
+      transformDragging: false,
+      firstPersonInputActive: false,
+      orbitDampingFramesRemaining: 0,
+      runtimeChanged: false,
+      sessionChanged: true
+    }),
+    false
+  );
+});
+
+test("treats direct editor input and camera movement as path trace interaction", () => {
+  assert.equal(
+    shouldUseInteractivePathTraceQuality({
+      transformDragging: false,
+      firstPersonInputActive: false,
+      orbitDampingFramesRemaining: 1,
+      runtimeChanged: false,
+      sessionChanged: false
+    }),
+    true
+  );
+  assert.equal(
+    shouldUseInteractivePathTraceQuality({
+      transformDragging: false,
+      firstPersonInputActive: false,
+      orbitDampingFramesRemaining: 0,
+      runtimeChanged: true,
+      sessionChanged: false
+    }),
+    true
   );
 });
