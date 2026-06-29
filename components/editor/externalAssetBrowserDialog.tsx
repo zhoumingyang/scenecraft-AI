@@ -15,6 +15,7 @@ import {
 import { useI18n } from "@/lib/i18n";
 import type { ExternalAssetDetail, ExternalAssetType } from "@/lib/externalAssets/types";
 import { useEditorStore } from "@/stores/editorStore";
+import { useEditorConfirmationDialog } from "./editorConfirmationDialog";
 import type { EditorThemeTokens } from "./theme";
 import { ExternalAssetApplyOverlay } from "./externalAssets/externalAssetApplyOverlay";
 import { ExternalAssetBrowserFilterBar } from "./externalAssets/externalAssetBrowserFilterBar";
@@ -56,6 +57,7 @@ export function ExternalAssetBrowserDialog({
   onApplyModel
 }: ExternalAssetBrowserDialogProps) {
   const { t } = useI18n();
+  const { confirmationDialog, notify } = useEditorConfirmationDialog({ theme, t });
   const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
   const beginSceneLoading = useEditorStore((state) => state.beginSceneLoading);
   const endSceneLoading = useEditorStore((state) => state.endSceneLoading);
@@ -129,6 +131,7 @@ export function ExternalAssetBrowserDialog({
 
     setIsApplying(true);
     let sceneLoadingStarted = false;
+    let applyErrorMessage: string | null = null;
 
     try {
       const selection = getExternalAssetApplySelection({
@@ -160,12 +163,16 @@ export function ExternalAssetBrowserDialog({
       await preloadTextureSelections(selection.payload.selections, t("editor.assets.loadFailed"));
       await onApplyTexture?.(selection.payload);
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : t("editor.import.modelLoadError"));
+      applyErrorMessage = error instanceof Error ? error.message : t("editor.import.modelLoadError");
     } finally {
       if (sceneLoadingStarted) {
         endSceneLoading();
       }
       setIsApplying(false);
+    }
+
+    if (applyErrorMessage) {
+      await notify({ message: applyErrorMessage });
     }
   };
 
@@ -301,6 +308,8 @@ export function ExternalAssetBrowserDialog({
         theme={theme}
         editorThemeMode={editorThemeMode}
       />
+
+      {confirmationDialog}
     </>
   );
 }

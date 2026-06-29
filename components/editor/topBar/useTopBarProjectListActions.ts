@@ -9,6 +9,7 @@ import { createIdleSaveStatus, type PersistedProject } from "./topBarProjectActi
 type UseTopBarProjectListActionsOptions = {
   app: EditorApp | null;
   applyPersistedProjectState: (project: PersistedProject) => void;
+  confirm: (options: { message: string; title?: string; confirmLabel?: string; confirmColor?: "primary" | "error" }) => Promise<boolean>;
   currentProjectId: string | null;
   hasUnsavedChanges: boolean;
   loadDefaultProject: () => Promise<void>;
@@ -22,6 +23,7 @@ type UseTopBarProjectListActionsOptions = {
 export function useTopBarProjectListActions({
   app,
   applyPersistedProjectState,
+  confirm,
   currentProjectId,
   hasUnsavedChanges,
   loadDefaultProject,
@@ -61,7 +63,7 @@ export function useTopBarProjectListActions({
       return;
     }
 
-    if (hasUnsavedChanges && !window.confirm(t("editor.project.confirmDiscardChanges"))) {
+    if (hasUnsavedChanges && !(await confirm({ message: t("editor.project.confirmDiscardChanges") }))) {
       return;
     }
 
@@ -92,12 +94,17 @@ export function useTopBarProjectListActions({
     const projectTitle = project?.title ?? t("editor.project.untitled");
 
     if (currentProjectId === projectId && hasUnsavedChanges) {
-      if (!window.confirm(t("editor.project.confirmDiscardChanges"))) {
+      if (!(await confirm({ message: t("editor.project.confirmDiscardChanges") }))) {
         return;
       }
     }
 
-    if (!window.confirm(t("editor.project.deleteConfirm", { title: projectTitle }))) {
+    if (
+      !(await confirm({
+        message: t("editor.project.deleteConfirm", { title: projectTitle }),
+        confirmColor: "error"
+      }))
+    ) {
       return;
     }
 

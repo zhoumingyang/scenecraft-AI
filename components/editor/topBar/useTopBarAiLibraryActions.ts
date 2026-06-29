@@ -11,6 +11,7 @@ type UseTopBarAiLibraryActionsOptions = {
   app: EditorApp | null;
   loadedAiLibrary: ProjectAiLibraryV2JSON;
   markUnsavedChanges: EditorStoreState["markUnsavedChanges"];
+  notify: (options: { message: string; title?: string; confirmLabel?: string }) => Promise<void>;
   pendingAiAssets: PendingAiAsset[];
   removeAiLibraryAsset: EditorStoreState["removeAiLibraryAsset"];
   t: TopBarTranslate;
@@ -20,6 +21,7 @@ export function useTopBarAiLibraryActions({
   app,
   loadedAiLibrary,
   markUnsavedChanges,
+  notify,
   pendingAiAssets,
   removeAiLibraryAsset,
   t
@@ -27,7 +29,7 @@ export function useTopBarAiLibraryActions({
   const [aiLibraryDialogOpen, setAiLibraryDialogOpen] = useState(false);
   const aiLibraryAssetCount = loadedAiLibrary.assets.length + pendingAiAssets.length;
 
-  const onDeleteAiLibraryAsset = (payload: {
+  const onDeleteAiLibraryAsset = async (payload: {
     source: "loaded" | "pending";
     assetId: string;
   }) => {
@@ -44,7 +46,7 @@ export function useTopBarAiLibraryActions({
 
     const snapshot = app?.getProjectJSON() ?? null;
     if (snapshot && projectSnapshotUsesAssetReference(snapshot, assetReference)) {
-      window.alert(t("editor.project.aiAssetInUseDeleteBlocked"));
+      await notify({ message: t("editor.project.aiAssetInUseDeleteBlocked") });
       return;
     }
 

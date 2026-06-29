@@ -18,6 +18,7 @@ type UseTopBarImportActionsOptions = {
   app: EditorApp | null;
   isPolyhavenEnabled: boolean;
   isStudioSceneActive: boolean;
+  notify: (options: { message: string; title?: string; confirmLabel?: string }) => Promise<void>;
   registerLocalProjectAsset: EditorStoreState["registerLocalProjectAsset"];
   t: TopBarTranslate;
 };
@@ -26,6 +27,7 @@ export function useTopBarImportActions({
   app,
   isPolyhavenEnabled,
   isStudioSceneActive,
+  notify,
   registerLocalProjectAsset,
   t
 }: UseTopBarImportActionsOptions) {
@@ -97,7 +99,7 @@ export function useTopBarImportActions({
           });
         }
       } catch {
-        window.alert(t("editor.import.panoLoadError"));
+        await notify({ message: t("editor.import.panoLoadError") });
       }
       return;
     }
@@ -107,7 +109,7 @@ export function useTopBarImportActions({
     try {
       const dimensions = await readImageDimensions(imageUrl);
       if (dimensions.width !== dimensions.height * 2) {
-        window.alert(t("editor.import.panoRatioError"));
+        await notify({ message: t("editor.import.panoRatioError") });
         return;
       }
 
@@ -121,7 +123,7 @@ export function useTopBarImportActions({
         });
       }
     } catch {
-      window.alert(t("editor.import.panoLoadError"));
+      await notify({ message: t("editor.import.panoLoadError") });
     } finally {
       URL.revokeObjectURL(imageUrl);
     }

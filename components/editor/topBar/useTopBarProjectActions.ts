@@ -8,7 +8,17 @@ import { useTopBarProjectLoadActions } from "./useTopBarProjectLoadActions";
 import { useTopBarProjectSaveActions } from "./useTopBarProjectSaveActions";
 import { useTopBarProjectStoreState } from "./useTopBarProjectStoreState";
 
-export function useTopBarProjectActions(t: TopBarTranslate) {
+type UseTopBarProjectActionsOptions = {
+  confirm: (options: { message: string; title?: string; confirmLabel?: string; confirmColor?: "primary" | "error" }) => Promise<boolean>;
+  notify: (options: { message: string; title?: string; confirmLabel?: string }) => Promise<void>;
+  t: TopBarTranslate;
+};
+
+export function useTopBarProjectActions({
+  confirm,
+  notify,
+  t
+}: UseTopBarProjectActionsOptions) {
   const state = useTopBarProjectStoreState();
   const {
     app,
@@ -57,6 +67,7 @@ export function useTopBarProjectActions(t: TopBarTranslate) {
     setLoadedAiLibrary,
     setProjectMeta,
     setSaveStatus,
+    confirm,
     t
   });
   const { executeSave, onSaveScene } = useTopBarProjectSaveActions({
@@ -85,6 +96,7 @@ export function useTopBarProjectActions(t: TopBarTranslate) {
   } = useTopBarProjectListActions({
     app,
     applyPersistedProjectState,
+    confirm,
     currentProjectId,
     hasUnsavedChanges,
     loadDefaultProject,
@@ -98,6 +110,7 @@ export function useTopBarProjectActions(t: TopBarTranslate) {
     app,
     isPolyhavenEnabled,
     isStudioSceneActive,
+    notify,
     registerLocalProjectAsset,
     t
   });
@@ -105,6 +118,7 @@ export function useTopBarProjectActions(t: TopBarTranslate) {
     app,
     loadedAiLibrary,
     markUnsavedChanges,
+    notify,
     pendingAiAssets,
     removeAiLibraryAsset,
     t

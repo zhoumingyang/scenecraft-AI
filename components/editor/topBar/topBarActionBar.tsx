@@ -15,7 +15,7 @@ type TopBarActionBarProps = {
   exportDisabled?: boolean;
   clearDisabled?: boolean;
   dropdownConfigs: DropdownConfig[];
-  onClearProject: () => void;
+  onClearProject: () => void | Promise<void>;
   onOpenAiLibrary: () => void;
   onOpenMenu: (id: DropdownConfig["id"], anchor: HTMLElement) => void;
   onExportRender: () => void;

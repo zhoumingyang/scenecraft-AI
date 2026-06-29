@@ -26,6 +26,7 @@ type UseTopBarProjectLoadActionsOptions = {
   setLoadedAiLibrary: EditorStoreState["setLoadedAiLibrary"];
   setProjectMeta: EditorStoreState["setProjectMeta"];
   setSaveStatus: EditorStoreState["setSaveStatus"];
+  confirm: (options: { message: string; title?: string; confirmLabel?: string; confirmColor?: "primary" | "error" }) => Promise<boolean>;
   t: TopBarTranslate;
 };
 
@@ -41,6 +42,7 @@ export function useTopBarProjectLoadActions({
   setLoadedAiLibrary,
   setProjectMeta,
   setSaveStatus,
+  confirm,
   t
 }: UseTopBarProjectLoadActionsOptions) {
   const runWithSceneLoading = async <T,>(task: () => Promise<T>) => {
@@ -62,8 +64,8 @@ export function useTopBarProjectLoadActions({
     clearLocalProjectAssets();
   };
 
-  const confirmDiscardUnsavedChanges = () => {
-    return !hasUnsavedChanges || window.confirm(t("editor.project.confirmDiscardChanges"));
+  const confirmDiscardUnsavedChanges = async () => {
+    return !hasUnsavedChanges || confirm({ message: t("editor.project.confirmDiscardChanges") });
   };
 
   const applyPersistedProjectState = (
@@ -106,7 +108,7 @@ export function useTopBarProjectLoadActions({
   };
 
   const onCreateProject = async () => {
-    if (!confirmDiscardUnsavedChanges()) {
+    if (!(await confirmDiscardUnsavedChanges())) {
       return;
     }
 
@@ -115,7 +117,7 @@ export function useTopBarProjectLoadActions({
 
   const onClearProject = async () => {
     if (!app) return;
-    if (!confirmDiscardUnsavedChanges()) {
+    if (!(await confirmDiscardUnsavedChanges())) {
       return;
     }
 

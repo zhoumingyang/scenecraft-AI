@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import DropdownMenu from "@/components/common/dropdownMenu";
 import LightingConflictToast from "@/components/editor/lightingConflictToast";
+import { useEditorConfirmationDialog } from "@/components/editor/editorConfirmationDialog";
 import {
   ExternalAssetBrowserDialog
 } from "@/components/editor/externalAssetBrowserDialog";
@@ -30,6 +31,7 @@ export default function TopBar() {
   const isStudioSceneActive = useEditorStore((state) => state.studioScene.active);
   const dismissLightingConflictNotice = useEditorStore((state) => state.dismissLightingConflictNotice);
   const theme = getEditorThemeTokens(editorThemeMode);
+  const { confirm, confirmationDialog, notify } = useEditorConfirmationDialog({ theme, t });
   const studioDisabledMenuIds = isStudioSceneActive ? (["project", "camera"] as const) : [];
   const renderExportControllerRef = useRef<AbortController | null>(null);
   const [renderExportStatus, setRenderExportStatus] = useState<RenderExportProgressStatus>({
@@ -38,7 +40,7 @@ export default function TopBar() {
     message: ""
   });
 
-  const actions = useTopBarProjectActions(t);
+  const actions = useTopBarProjectActions({ confirm, notify, t });
   useEffect(() => {
     const handleSaveShortcut = () => {
       if (isStudioSceneActive) return;
@@ -104,7 +106,7 @@ export default function TopBar() {
     } catch (error) {
       if (!(error instanceof Error && error.name === "AbortError")) {
         console.error("[editor] Render export failed.", error);
-        window.alert(t("editor.export.failed"));
+        await notify({ message: t("editor.export.failed") });
       }
       setRenderExportStatus({
         active: false,
@@ -154,6 +156,8 @@ export default function TopBar() {
         onClose={actions.closePolyhavenModelDialog}
         onApplyModel={actions.onApplyExternalModel}
       />
+
+      {confirmationDialog}
 
       <TopBarActionBar
         aiLibraryAssetCount={actions.aiLibraryAssetCount}

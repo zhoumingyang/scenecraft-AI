@@ -13,7 +13,7 @@ export type ProjectAiLibraryDialogProps = {
   onDeleteAsset?: (payload: {
     source: "loaded" | "pending";
     assetId: string;
-  }) => void;
+  }) => void | Promise<void>;
   onApplyAsset?: (payload: { imageUrl: string; assetId?: string }) => void;
   onApplyPbrAtlas?: (payload: { imageUrl: string; assetId?: string }) => void;
   onApplyPanorama?: (payload: { imageUrl: string; assetId?: string; assetName?: string }) => void;
