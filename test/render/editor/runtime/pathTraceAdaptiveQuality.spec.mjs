@@ -40,6 +40,19 @@ test("uses configurable realtime samples once the editor is idle", () => {
   assert.equal(quality.targetSamples, 640);
 });
 
+test("uses configurable interactive preview quality while the editor is active", () => {
+  const quality = getInteractivePathTraceQuality({
+    displayPixelRenderScale: 1.5,
+    interactive: true,
+    interactiveRenderScale: 0.75,
+    interactiveTargetSamples: 24
+  });
+
+  assert.equal(quality.mode, "interactive");
+  assert.equal(quality.renderScale, 1.125);
+  assert.equal(quality.targetSamples, 24);
+});
+
 test("resets accumulated samples when the adaptive quality mode changes", () => {
   assert.deepEqual(
     getPathTraceQualityTransition({

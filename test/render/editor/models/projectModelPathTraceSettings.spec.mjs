@@ -12,6 +12,10 @@ test("declares and serializes path trace settings in scene env config", () => {
 
   assert.match(coreTypes, /pathTrace\?: EditorPathTraceConfigJSON/);
   assert.match(coreTypes, /pathTrace: ResolvedEditorPathTraceConfigJSON/);
+  assert.match(coreTypes, /interactiveRenderScale\?: number/);
+  assert.match(coreTypes, /interactiveSamples\?: number/);
   assert.match(serialization, /pathTrace: normalizePathTraceSettings\(source\?\.pathTrace\)/);
   assert.match(serialization, /pathTrace: \{\s*bounces: source\.envConfig\.pathTrace\.bounces,/);
+  assert.match(serialization, /interactiveRenderScale: source\.envConfig\.pathTrace\.interactiveRenderScale/);
+  assert.match(serialization, /interactiveSamples: source\.envConfig\.pathTrace\.interactiveSamples/);
 });

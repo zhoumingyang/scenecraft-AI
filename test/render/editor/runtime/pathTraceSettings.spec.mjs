@@ -16,12 +16,16 @@ test("clamps path trace scene settings to safe editor ranges", () => {
     normalizePathTraceSettings({
       bounces: 99,
       filterGlossyFactor: -4,
+      interactiveRenderScale: 9,
+      interactiveSamples: 0,
       realtimeSamples: 4.4,
       exportSamples: 99999
     }),
     {
       bounces: 12,
       filterGlossyFactor: 0,
+      interactiveRenderScale: 1,
+      interactiveSamples: 1,
       realtimeSamples: 32,
       exportSamples: 8192
     }

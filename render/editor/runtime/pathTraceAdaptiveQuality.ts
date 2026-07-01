@@ -22,10 +22,14 @@ export type PathTraceInteractionQualityInput = {
 export function getInteractivePathTraceQuality({
   displayPixelRenderScale,
   interactive,
+  interactiveRenderScale = PATH_TRACE_INTERACTIVE_RENDER_SCALE_FACTOR,
+  interactiveTargetSamples = PATH_TRACE_INTERACTIVE_ACTIVE_TARGET_SAMPLES,
   settledTargetSamples = PATH_TRACE_INTERACTIVE_SETTLED_TARGET_SAMPLES
 }: {
   displayPixelRenderScale: number;
   interactive: boolean;
+  interactiveRenderScale?: number;
+  interactiveTargetSamples?: number;
   settledTargetSamples?: number;
 }): PathTraceAdaptiveQuality {
   if (!interactive) {
@@ -40,9 +44,9 @@ export function getInteractivePathTraceQuality({
     mode: "interactive",
     renderScale: Math.max(
       PATH_TRACE_INTERACTIVE_MIN_RENDER_SCALE,
-      displayPixelRenderScale * PATH_TRACE_INTERACTIVE_RENDER_SCALE_FACTOR
+      displayPixelRenderScale * interactiveRenderScale
     ),
-    targetSamples: PATH_TRACE_INTERACTIVE_ACTIVE_TARGET_SAMPLES
+    targetSamples: interactiveTargetSamples
   };
 }
 

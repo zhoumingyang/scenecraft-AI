@@ -383,6 +383,8 @@ export type ResolvedEditorPostProcessingConfigJSON = {
 export type EditorPathTraceConfigJSON = {
   bounces?: number;
   filterGlossyFactor?: number;
+  interactiveRenderScale?: number;
+  interactiveSamples?: number;
   realtimeSamples?: number;
   exportSamples?: number;
 };
@@ -390,6 +392,8 @@ export type EditorPathTraceConfigJSON = {
 export type ResolvedEditorPathTraceConfigJSON = {
   bounces: number;
   filterGlossyFactor: number;
+  interactiveRenderScale: number;
+  interactiveSamples: number;
   realtimeSamples: number;
   exportSamples: number;
 };

@@ -169,6 +169,8 @@ export function serializeProjectModel(source: {
       pathTrace: {
         bounces: source.envConfig.pathTrace.bounces,
         filterGlossyFactor: source.envConfig.pathTrace.filterGlossyFactor,
+        interactiveRenderScale: source.envConfig.pathTrace.interactiveRenderScale,
+        interactiveSamples: source.envConfig.pathTrace.interactiveSamples,
         realtimeSamples: source.envConfig.pathTrace.realtimeSamples,
         exportSamples: source.envConfig.pathTrace.exportSamples
       },

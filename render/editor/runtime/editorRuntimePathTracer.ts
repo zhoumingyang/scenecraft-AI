@@ -201,6 +201,8 @@ export class EditorRuntimePathTracer {
     const changed =
       nextSettings.bounces !== this.settings.bounces ||
       nextSettings.filterGlossyFactor !== this.settings.filterGlossyFactor ||
+      nextSettings.interactiveRenderScale !== this.settings.interactiveRenderScale ||
+      nextSettings.interactiveSamples !== this.settings.interactiveSamples ||
       nextSettings.realtimeSamples !== this.settings.realtimeSamples ||
       nextSettings.exportSamples !== this.settings.exportSamples;
     if (!changed) return false;
@@ -399,6 +401,8 @@ export class EditorRuntimePathTracer {
     return getInteractivePathTraceQuality({
       displayPixelRenderScale: this.getDisplayPixelRenderScale(),
       interactive: options.interactive ?? this.interactionActive,
+      interactiveRenderScale: this.settings.interactiveRenderScale,
+      interactiveTargetSamples: this.settings.interactiveSamples,
       settledTargetSamples: this.settings.realtimeSamples
     });
   }

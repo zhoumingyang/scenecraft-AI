@@ -2,7 +2,19 @@
 
 import { useEffect, useMemo, useState } from "react";
 import * as THREE from "three";
-import { Box, Checkbox, FormControlLabel, MenuItem, Stack, TextField, Typography } from "@mui/material";
+import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
+import {
+  Box,
+  Checkbox,
+  FormControlLabel,
+  IconButton,
+  MenuItem,
+  Popover,
+  Stack,
+  TextField,
+  Tooltip,
+  Typography
+} from "@mui/material";
 import { getEditorThemeTokens } from "@/components/editor/theme";
 import PropertyPanelSection from "@/components/common/propertyPanelSection";
 import { useI18n } from "@/lib/i18n";
@@ -37,8 +49,11 @@ export function SceneSettingsSection({
   const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
   const theme = getEditorThemeTokens(editorThemeMode);
   const [panoPreviewFailed, setPanoPreviewFailed] = useState(false);
+  const [pathTraceAdvancedAnchorEl, setPathTraceAdvancedAnchorEl] =
+    useState<HTMLButtonElement | null>(null);
   const panoAssetDisplayName = envConfig.panoAssetName || envConfig.panoUrl;
   const isHdrPanorama = isHighDynamicRangeEnvironmentAssetName(panoAssetDisplayName);
+  const pathTraceAdvancedOpen = Boolean(pathTraceAdvancedAnchorEl);
 
   useEffect(() => {
     setPanoPreviewFailed(false);
@@ -290,9 +305,32 @@ export function SceneSettingsSection({
         />
 
         <Stack spacing={0.8}>
-          <Typography sx={{ fontSize: 11, color: theme.titleText, fontWeight: 700 }}>
-            {t("editor.properties.pathTrace")}
-          </Typography>
+          <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
+            <Typography sx={{ fontSize: 11, color: theme.titleText, fontWeight: 700 }}>
+              {t("editor.properties.pathTrace")}
+            </Typography>
+            <Tooltip title={t("editor.properties.pathTraceAdvancedSettings")} arrow>
+              <IconButton
+                size="small"
+                aria-label={t("editor.properties.pathTraceAdvancedSettings")}
+                onClick={(event) => setPathTraceAdvancedAnchorEl(event.currentTarget)}
+                sx={{
+                  width: 24,
+                  height: 24,
+                  color: pathTraceAdvancedOpen ? theme.titleText : theme.mutedText,
+                  border: pathTraceAdvancedOpen ? theme.itemSelectedBorder : theme.sectionBorder,
+                  background: pathTraceAdvancedOpen ? theme.itemSelectedBg : "transparent",
+                  "&:hover": {
+                    color: theme.titleText,
+                    background: theme.itemSelectedBg,
+                    border: theme.itemSelectedBorder
+                  }
+                }}
+              >
+                <TuneRoundedIcon sx={{ fontSize: 14 }} />
+              </IconButton>
+            </Tooltip>
+          </Stack>
 
           <SliderField
             label={t("editor.properties.pathTraceBounces")}
@@ -333,6 +371,58 @@ export function SceneSettingsSection({
             onChange={(value) => patchPathTraceSettings({ exportSamples: Math.round(value) })}
             formatter={(value) => `${Math.round(value)}`}
           />
+
+          <Popover
+            open={pathTraceAdvancedOpen}
+            anchorEl={pathTraceAdvancedAnchorEl}
+            onClose={() => setPathTraceAdvancedAnchorEl(null)}
+            anchorOrigin={{
+              vertical: "bottom",
+              horizontal: "right"
+            }}
+            transformOrigin={{
+              vertical: "top",
+              horizontal: "right"
+            }}
+            slotProps={{
+              paper: {
+                sx: {
+                  width: 272,
+                  p: 1.2,
+                  border: theme.sectionBorder,
+                  background: theme.panelBg,
+                  color: theme.text,
+                  boxShadow: "0 18px 44px rgba(0, 0, 0, 0.28)"
+                }
+              }
+            }}
+          >
+            <Stack spacing={1.1}>
+              <Typography sx={{ fontSize: 11, color: theme.titleText, fontWeight: 700 }}>
+                {t("editor.properties.pathTraceAdvancedSettings")}
+              </Typography>
+              <SliderField
+                label={t("editor.properties.pathTraceInteractiveSamples")}
+                min={PATH_TRACE_SETTINGS_LIMITS.interactiveSamples.min}
+                max={PATH_TRACE_SETTINGS_LIMITS.interactiveSamples.max}
+                step={1}
+                value={envConfig.pathTrace.interactiveSamples}
+                onChange={(value) =>
+                  patchPathTraceSettings({ interactiveSamples: Math.round(value) })
+                }
+                formatter={(value) => `${Math.round(value)}`}
+              />
+              <SliderField
+                label={t("editor.properties.pathTraceInteractiveRenderScale")}
+                min={PATH_TRACE_SETTINGS_LIMITS.interactiveRenderScale.min}
+                max={PATH_TRACE_SETTINGS_LIMITS.interactiveRenderScale.max}
+                step={0.05}
+                value={envConfig.pathTrace.interactiveRenderScale}
+                onChange={(value) => patchPathTraceSettings({ interactiveRenderScale: value })}
+                formatter={(value) => `${Math.round(value * 100)}%`}
+              />
+            </Stack>
+          </Popover>
         </Stack>
 
         <ScenePostProcessingPanel

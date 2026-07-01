@@ -1,6 +1,8 @@
 export type PathTraceSettings = {
   bounces: number;
   filterGlossyFactor: number;
+  interactiveRenderScale: number;
+  interactiveSamples: number;
   realtimeSamples: number;
   exportSamples: number;
 };
@@ -13,6 +15,14 @@ export const PATH_TRACE_SETTINGS_LIMITS = {
   filterGlossyFactor: {
     min: 0,
     max: 2
+  },
+  interactiveRenderScale: {
+    min: 0.25,
+    max: 1
+  },
+  interactiveSamples: {
+    min: 1,
+    max: 128
   },
   realtimeSamples: {
     min: 32,
@@ -27,6 +37,8 @@ export const PATH_TRACE_SETTINGS_LIMITS = {
 export const DEFAULT_PATH_TRACE_SETTINGS: PathTraceSettings = {
   bounces: 5,
   filterGlossyFactor: 1,
+  interactiveRenderScale: 0.5,
+  interactiveSamples: 48,
   realtimeSamples: 256,
   exportSamples: 2048
 };
@@ -47,6 +59,18 @@ export function normalizePathTraceSettings(
       fallback.filterGlossyFactor,
       PATH_TRACE_SETTINGS_LIMITS.filterGlossyFactor.min,
       PATH_TRACE_SETTINGS_LIMITS.filterGlossyFactor.max
+    ),
+    interactiveRenderScale: normalizeNumber(
+      source?.interactiveRenderScale,
+      fallback.interactiveRenderScale,
+      PATH_TRACE_SETTINGS_LIMITS.interactiveRenderScale.min,
+      PATH_TRACE_SETTINGS_LIMITS.interactiveRenderScale.max
+    ),
+    interactiveSamples: normalizeInteger(
+      source?.interactiveSamples,
+      fallback.interactiveSamples,
+      PATH_TRACE_SETTINGS_LIMITS.interactiveSamples.min,
+      PATH_TRACE_SETTINGS_LIMITS.interactiveSamples.max
     ),
     realtimeSamples: normalizeInteger(
       source?.realtimeSamples,
