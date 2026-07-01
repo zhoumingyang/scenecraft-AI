@@ -18,6 +18,11 @@ test("clamps path trace scene settings to safe editor ranges", () => {
       filterGlossyFactor: -4,
       interactiveRenderScale: 9,
       interactiveSamples: 0,
+      renderScale: 0,
+      tiles: 99,
+      minSamples: 0,
+      fadeDuration: 99,
+      renderDelay: -1,
       realtimeSamples: 4.4,
       exportSamples: 99999
     }),
@@ -26,6 +31,11 @@ test("clamps path trace scene settings to safe editor ranges", () => {
       filterGlossyFactor: 0,
       interactiveRenderScale: 1,
       interactiveSamples: 1,
+      renderScale: 0.25,
+      tiles: 4,
+      minSamples: 1,
+      fadeDuration: 2,
+      renderDelay: 0,
       realtimeSamples: 32,
       exportSamples: 8192
     }

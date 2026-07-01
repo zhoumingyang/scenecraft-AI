@@ -377,8 +377,8 @@ export function SceneSettingsSection({
             anchorEl={pathTraceAdvancedAnchorEl}
             onClose={() => setPathTraceAdvancedAnchorEl(null)}
             anchorOrigin={{
-              vertical: "bottom",
-              horizontal: "right"
+              vertical: "top",
+              horizontal: "left"
             }}
             transformOrigin={{
               vertical: "top",
@@ -387,8 +387,9 @@ export function SceneSettingsSection({
             slotProps={{
               paper: {
                 sx: {
-                  width: 272,
+                  width: 300,
                   p: 1.2,
+                  mr: 1,
                   border: theme.sectionBorder,
                   background: theme.panelBg,
                   color: theme.text,
@@ -402,15 +403,13 @@ export function SceneSettingsSection({
                 {t("editor.properties.pathTraceAdvancedSettings")}
               </Typography>
               <SliderField
-                label={t("editor.properties.pathTraceInteractiveSamples")}
-                min={PATH_TRACE_SETTINGS_LIMITS.interactiveSamples.min}
-                max={PATH_TRACE_SETTINGS_LIMITS.interactiveSamples.max}
-                step={1}
-                value={envConfig.pathTrace.interactiveSamples}
-                onChange={(value) =>
-                  patchPathTraceSettings({ interactiveSamples: Math.round(value) })
-                }
-                formatter={(value) => `${Math.round(value)}`}
+                label={t("editor.properties.pathTraceRenderScale")}
+                min={PATH_TRACE_SETTINGS_LIMITS.renderScale.min}
+                max={PATH_TRACE_SETTINGS_LIMITS.renderScale.max}
+                step={0.05}
+                value={envConfig.pathTrace.renderScale}
+                onChange={(value) => patchPathTraceSettings({ renderScale: value })}
+                formatter={(value) => `${Math.round(value * 100)}%`}
               />
               <SliderField
                 label={t("editor.properties.pathTraceInteractiveRenderScale")}
@@ -420,6 +419,53 @@ export function SceneSettingsSection({
                 value={envConfig.pathTrace.interactiveRenderScale}
                 onChange={(value) => patchPathTraceSettings({ interactiveRenderScale: value })}
                 formatter={(value) => `${Math.round(value * 100)}%`}
+              />
+              <SliderField
+                label={t("editor.properties.pathTraceTiles")}
+                min={PATH_TRACE_SETTINGS_LIMITS.tiles.min}
+                max={PATH_TRACE_SETTINGS_LIMITS.tiles.max}
+                step={1}
+                value={envConfig.pathTrace.tiles}
+                onChange={(value) => patchPathTraceSettings({ tiles: Math.round(value) })}
+                formatter={(value) => `${Math.round(value)}x${Math.round(value)}`}
+              />
+              <SliderField
+                label={t("editor.properties.pathTraceMinSamples")}
+                min={PATH_TRACE_SETTINGS_LIMITS.minSamples.min}
+                max={PATH_TRACE_SETTINGS_LIMITS.minSamples.max}
+                step={1}
+                value={envConfig.pathTrace.minSamples}
+                onChange={(value) => patchPathTraceSettings({ minSamples: Math.round(value) })}
+                formatter={(value) => `${Math.round(value)}`}
+              />
+              <SliderField
+                label={t("editor.properties.pathTraceFadeDuration")}
+                min={PATH_TRACE_SETTINGS_LIMITS.fadeDuration.min}
+                max={PATH_TRACE_SETTINGS_LIMITS.fadeDuration.max}
+                step={0.05}
+                value={envConfig.pathTrace.fadeDuration}
+                onChange={(value) => patchPathTraceSettings({ fadeDuration: value })}
+                formatter={(value) => `${value.toFixed(2)}s`}
+              />
+              <SliderField
+                label={t("editor.properties.pathTraceRenderDelay")}
+                min={PATH_TRACE_SETTINGS_LIMITS.renderDelay.min}
+                max={PATH_TRACE_SETTINGS_LIMITS.renderDelay.max}
+                step={10}
+                value={envConfig.pathTrace.renderDelay}
+                onChange={(value) => patchPathTraceSettings({ renderDelay: value })}
+                formatter={(value) => `${Math.round(value)}ms`}
+              />
+              <SliderField
+                label={t("editor.properties.pathTraceInteractiveSamples")}
+                min={PATH_TRACE_SETTINGS_LIMITS.interactiveSamples.min}
+                max={PATH_TRACE_SETTINGS_LIMITS.interactiveSamples.max}
+                step={1}
+                value={envConfig.pathTrace.interactiveSamples}
+                onChange={(value) =>
+                  patchPathTraceSettings({ interactiveSamples: Math.round(value) })
+                }
+                formatter={(value) => `${Math.round(value)}`}
               />
             </Stack>
           </Popover>

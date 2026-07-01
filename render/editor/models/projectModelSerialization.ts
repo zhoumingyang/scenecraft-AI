@@ -171,6 +171,11 @@ export function serializeProjectModel(source: {
         filterGlossyFactor: source.envConfig.pathTrace.filterGlossyFactor,
         interactiveRenderScale: source.envConfig.pathTrace.interactiveRenderScale,
         interactiveSamples: source.envConfig.pathTrace.interactiveSamples,
+        renderScale: source.envConfig.pathTrace.renderScale,
+        tiles: source.envConfig.pathTrace.tiles,
+        minSamples: source.envConfig.pathTrace.minSamples,
+        fadeDuration: source.envConfig.pathTrace.fadeDuration,
+        renderDelay: source.envConfig.pathTrace.renderDelay,
         realtimeSamples: source.envConfig.pathTrace.realtimeSamples,
         exportSamples: source.envConfig.pathTrace.exportSamples
       },

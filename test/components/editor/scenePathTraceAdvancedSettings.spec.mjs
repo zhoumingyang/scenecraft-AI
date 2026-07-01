@@ -13,8 +13,15 @@ test("exposes path trace advanced settings from the scene panel", () => {
 
   assert.match(sceneSettingsSection, /TuneRoundedIcon/);
   assert.match(sceneSettingsSection, /<Popover/);
+  assert.match(sceneSettingsSection, /horizontal: "left"/);
+  assert.match(sceneSettingsSection, /horizontal: "right"/);
+  assert.match(sceneSettingsSection, /pathTraceRenderScale/);
   assert.match(sceneSettingsSection, /pathTraceInteractiveSamples/);
   assert.match(sceneSettingsSection, /pathTraceInteractiveRenderScale/);
+  assert.match(sceneSettingsSection, /pathTraceTiles/);
+  assert.match(sceneSettingsSection, /pathTraceMinSamples/);
+  assert.match(sceneSettingsSection, /pathTraceFadeDuration/);
+  assert.match(sceneSettingsSection, /pathTraceRenderDelay/);
   assert.match(enMessages, /editor\.properties\.pathTraceAdvancedSettings/);
   assert.match(zhMessages, /editor\.properties\.pathTraceAdvancedSettings/);
 });

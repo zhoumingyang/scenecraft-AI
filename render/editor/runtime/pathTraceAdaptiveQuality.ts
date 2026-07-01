@@ -24,18 +24,23 @@ export function getInteractivePathTraceQuality({
   interactive,
   interactiveRenderScale = PATH_TRACE_INTERACTIVE_RENDER_SCALE_FACTOR,
   interactiveTargetSamples = PATH_TRACE_INTERACTIVE_ACTIVE_TARGET_SAMPLES,
+  settledRenderScale = 1,
   settledTargetSamples = PATH_TRACE_INTERACTIVE_SETTLED_TARGET_SAMPLES
 }: {
   displayPixelRenderScale: number;
   interactive: boolean;
   interactiveRenderScale?: number;
   interactiveTargetSamples?: number;
+  settledRenderScale?: number;
   settledTargetSamples?: number;
 }): PathTraceAdaptiveQuality {
   if (!interactive) {
     return {
       mode: "settled",
-      renderScale: displayPixelRenderScale,
+      renderScale: Math.max(
+        PATH_TRACE_INTERACTIVE_MIN_RENDER_SCALE,
+        displayPixelRenderScale * settledRenderScale
+      ),
       targetSamples: settledTargetSamples
     };
   }

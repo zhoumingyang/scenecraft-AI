@@ -385,6 +385,11 @@ export type EditorPathTraceConfigJSON = {
   filterGlossyFactor?: number;
   interactiveRenderScale?: number;
   interactiveSamples?: number;
+  renderScale?: number;
+  tiles?: number;
+  minSamples?: number;
+  fadeDuration?: number;
+  renderDelay?: number;
   realtimeSamples?: number;
   exportSamples?: number;
 };
@@ -394,6 +399,11 @@ export type ResolvedEditorPathTraceConfigJSON = {
   filterGlossyFactor: number;
   interactiveRenderScale: number;
   interactiveSamples: number;
+  renderScale: number;
+  tiles: number;
+  minSamples: number;
+  fadeDuration: number;
+  renderDelay: number;
   realtimeSamples: number;
   exportSamples: number;
 };

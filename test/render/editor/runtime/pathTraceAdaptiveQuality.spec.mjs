@@ -40,6 +40,17 @@ test("uses configurable realtime samples once the editor is idle", () => {
   assert.equal(quality.targetSamples, 640);
 });
 
+test("uses configurable settled render scale once the editor is idle", () => {
+  const quality = getInteractivePathTraceQuality({
+    displayPixelRenderScale: 1,
+    interactive: false,
+    settledRenderScale: 0.75
+  });
+
+  assert.equal(quality.mode, "settled");
+  assert.equal(quality.renderScale, 0.75);
+});
+
 test("uses configurable interactive preview quality while the editor is active", () => {
   const quality = getInteractivePathTraceQuality({
     displayPixelRenderScale: 1.5,

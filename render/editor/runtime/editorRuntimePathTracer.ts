@@ -203,6 +203,11 @@ export class EditorRuntimePathTracer {
       nextSettings.filterGlossyFactor !== this.settings.filterGlossyFactor ||
       nextSettings.interactiveRenderScale !== this.settings.interactiveRenderScale ||
       nextSettings.interactiveSamples !== this.settings.interactiveSamples ||
+      nextSettings.renderScale !== this.settings.renderScale ||
+      nextSettings.tiles !== this.settings.tiles ||
+      nextSettings.minSamples !== this.settings.minSamples ||
+      nextSettings.fadeDuration !== this.settings.fadeDuration ||
+      nextSettings.renderDelay !== this.settings.renderDelay ||
       nextSettings.realtimeSamples !== this.settings.realtimeSamples ||
       nextSettings.exportSamples !== this.settings.exportSamples;
     if (!changed) return false;
@@ -262,10 +267,10 @@ export class EditorRuntimePathTracer {
     if (this.pathTracer) return this.pathTracer;
 
     const pathTracer = new WebGLPathTracer(this.renderer);
-    this.applySettingsToPathTracer(pathTracer);
     configureEditorPathTracer(pathTracer, {
       renderScale: this.getDisplayPixelRenderScale()
     });
+    this.applySettingsToPathTracer(pathTracer);
     pathTracer.renderToCanvasCallback = (target, renderer, quad) => {
       this.displayTexture = target.texture;
       this.displayQuad = quad;
@@ -306,6 +311,10 @@ export class EditorRuntimePathTracer {
     if (!pathTracer) return;
     pathTracer.bounces = this.settings.bounces;
     pathTracer.filterGlossyFactor = this.settings.filterGlossyFactor;
+    pathTracer.minSamples = this.settings.minSamples;
+    pathTracer.fadeDuration = this.settings.fadeDuration;
+    pathTracer.renderDelay = this.settings.renderDelay;
+    pathTracer.tiles.set(this.settings.tiles, this.settings.tiles);
   }
 
   private renderDenoisedTexture(
@@ -403,6 +412,7 @@ export class EditorRuntimePathTracer {
       interactive: options.interactive ?? this.interactionActive,
       interactiveRenderScale: this.settings.interactiveRenderScale,
       interactiveTargetSamples: this.settings.interactiveSamples,
+      settledRenderScale: this.settings.renderScale,
       settledTargetSamples: this.settings.realtimeSamples
     });
   }
