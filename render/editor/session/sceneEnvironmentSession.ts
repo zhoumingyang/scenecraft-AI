@@ -13,6 +13,7 @@ import { hasTextureMaterialPatch, mergeMeshMaterialPatch } from "../materials/me
 import type { EditorProjectModel } from "../models";
 import { mergeEditorPostProcessingConfig } from "../postProcessing";
 import type { EditorRuntime } from "../runtime/editorRuntime";
+import { normalizePathTraceSettings } from "../runtime/pathTraceSettings";
 
 type Emit = (event: EditorAppEvent) => void;
 
@@ -108,6 +109,9 @@ export class SceneEnvironmentSessionController {
       postProcessing: patch.postProcessing
         ? mergeEditorPostProcessingConfig(projectModel.envConfig.postProcessing, patch.postProcessing)
         : projectModel.envConfig.postProcessing,
+      pathTrace: patch.pathTrace
+        ? normalizePathTraceSettings(patch.pathTrace, projectModel.envConfig.pathTrace)
+        : projectModel.envConfig.pathTrace,
       ground: projectModel.envConfig.ground
     };
 

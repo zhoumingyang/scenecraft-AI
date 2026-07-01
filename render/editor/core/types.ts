@@ -380,6 +380,20 @@ export type ResolvedEditorPostProcessingConfigJSON = {
   passes: ResolvedEditorPostProcessingPasses;
 };
 
+export type EditorPathTraceConfigJSON = {
+  bounces?: number;
+  filterGlossyFactor?: number;
+  realtimeSamples?: number;
+  exportSamples?: number;
+};
+
+export type ResolvedEditorPathTraceConfigJSON = {
+  bounces: number;
+  filterGlossyFactor: number;
+  realtimeSamples: number;
+  exportSamples: number;
+};
+
 export type EditorViewportCaptureMode = "viewport" | "clean";
 export type EditorViewportCaptureProgress = {
   samples: number;
@@ -406,15 +420,17 @@ export type EditorEnvConfigJSON = {
   environmentRotationY?: number;
   toneMapping?: number;
   toneMappingExposure?: number;
+  pathTrace?: EditorPathTraceConfigJSON;
   postProcessing?: EditorPostProcessingConfigJSON;
   ground?: EditorGroundConfigJSON;
 };
 
 export type ResolvedEditorEnvConfigJSON = Omit<
   Required<EditorEnvConfigJSON>,
-  "postProcessing" | "externalSource" | "ground"
+  "postProcessing" | "externalSource" | "ground" | "pathTrace"
 > & {
   externalSource: ExternalAssetSourceJSON | null;
+  pathTrace: ResolvedEditorPathTraceConfigJSON;
   postProcessing: ResolvedEditorPostProcessingConfigJSON;
   ground: ResolvedEditorGroundConfigJSON;
 };

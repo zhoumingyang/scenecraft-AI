@@ -19,11 +19,14 @@ import {
   type PathTraceDenoiseSettings
 } from "./pathTraceDenoise";
 import {
-  PATH_TRACE_CAPTURE_MAX_ITERATIONS,
-  PATH_TRACE_CAPTURE_SAMPLES,
-  PATH_TRACE_GLOSSY_FILTER_FACTOR,
   configureEditorPathTracer
 } from "./pathTraceRendererConfig";
+import {
+  DEFAULT_PATH_TRACE_SETTINGS,
+  getPathTraceCaptureSampleBudget,
+  normalizePathTraceSettings,
+  type PathTraceSettings
+} from "./pathTraceSettings";
 import {
   renderPathTraceSamplesUntil,
   renderPathTraceSamplesUntilAsync,
@@ -48,6 +51,7 @@ export class EditorRuntimePathTracer {
   private displayTexture: THREE.Texture | null = null;
   private denoiseEnabled = false;
   private denoiseSettings = { ...PATH_TRACE_REALTIME_DENOISE_SETTINGS };
+  private settings = { ...DEFAULT_PATH_TRACE_SETTINGS };
   private sceneDirty = true;
   private cameraDirty = true;
   private materialsDirty = true;
@@ -110,10 +114,11 @@ export class EditorRuntimePathTracer {
 
   renderCaptureSamples() {
     const pathTracer = this.ensurePathTracer();
+    const sampleBudget = getPathTraceCaptureSampleBudget(this.settings);
     this.syncAdaptiveQuality(pathTracer, { interactive: false });
     return renderPathTraceSamplesUntil({
-      targetSamples: PATH_TRACE_CAPTURE_SAMPLES,
-      maxIterations: PATH_TRACE_CAPTURE_MAX_ITERATIONS,
+      targetSamples: sampleBudget.targetSamples,
+      maxIterations: sampleBudget.maxIterations,
       getSamples: () => pathTracer.samples,
       renderSample: () => {
         this.preparePathTracer(pathTracer);
@@ -128,10 +133,11 @@ export class EditorRuntimePathTracer {
     onProgress?: (progress: PathTraceSampleProgress) => void;
   } = {}) {
     const pathTracer = this.ensurePathTracer();
+    const sampleBudget = getPathTraceCaptureSampleBudget(this.settings);
     this.syncAdaptiveQuality(pathTracer, { interactive: false });
     return renderPathTraceSamplesUntilAsync({
-      targetSamples: PATH_TRACE_CAPTURE_SAMPLES,
-      maxIterations: PATH_TRACE_CAPTURE_MAX_ITERATIONS,
+      targetSamples: sampleBudget.targetSamples,
+      maxIterations: sampleBudget.maxIterations,
       signal: options.signal,
       onProgress: options.onProgress,
       getSamples: () => pathTracer.samples,
@@ -190,6 +196,21 @@ export class EditorRuntimePathTracer {
     return true;
   }
 
+  setSettings(settings: Partial<PathTraceSettings>) {
+    const nextSettings = normalizePathTraceSettings(settings, this.settings);
+    const changed =
+      nextSettings.bounces !== this.settings.bounces ||
+      nextSettings.filterGlossyFactor !== this.settings.filterGlossyFactor ||
+      nextSettings.realtimeSamples !== this.settings.realtimeSamples ||
+      nextSettings.exportSamples !== this.settings.exportSamples;
+    if (!changed) return false;
+
+    this.settings = nextSettings;
+    this.applySettingsToPathTracer();
+    this.pathTracer?.reset();
+    return true;
+  }
+
   setInteractionActive(active: boolean) {
     this.interactionActive = active;
   }
@@ -239,8 +260,7 @@ export class EditorRuntimePathTracer {
     if (this.pathTracer) return this.pathTracer;
 
     const pathTracer = new WebGLPathTracer(this.renderer);
-    pathTracer.bounces = 5;
-    pathTracer.filterGlossyFactor = PATH_TRACE_GLOSSY_FILTER_FACTOR;
+    this.applySettingsToPathTracer(pathTracer);
     configureEditorPathTracer(pathTracer, {
       renderScale: this.getDisplayPixelRenderScale()
     });
@@ -278,6 +298,12 @@ export class EditorRuntimePathTracer {
     this.denoiseMaterial = denoiseMaterial;
     this.denoiseQuad = new FullScreenQuad(denoiseMaterial);
     return denoiseMaterial;
+  }
+
+  private applySettingsToPathTracer(pathTracer = this.pathTracer) {
+    if (!pathTracer) return;
+    pathTracer.bounces = this.settings.bounces;
+    pathTracer.filterGlossyFactor = this.settings.filterGlossyFactor;
   }
 
   private renderDenoisedTexture(
@@ -372,7 +398,8 @@ export class EditorRuntimePathTracer {
   private getAdaptiveQuality(options: { interactive?: boolean } = {}): PathTraceAdaptiveQuality {
     return getInteractivePathTraceQuality({
       displayPixelRenderScale: this.getDisplayPixelRenderScale(),
-      interactive: options.interactive ?? this.interactionActive
+      interactive: options.interactive ?? this.interactionActive,
+      settledTargetSamples: this.settings.realtimeSamples
     });
   }
 

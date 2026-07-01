@@ -21,16 +21,18 @@ export type PathTraceInteractionQualityInput = {
 
 export function getInteractivePathTraceQuality({
   displayPixelRenderScale,
-  interactive
+  interactive,
+  settledTargetSamples = PATH_TRACE_INTERACTIVE_SETTLED_TARGET_SAMPLES
 }: {
   displayPixelRenderScale: number;
   interactive: boolean;
+  settledTargetSamples?: number;
 }): PathTraceAdaptiveQuality {
   if (!interactive) {
     return {
       mode: "settled",
       renderScale: displayPixelRenderScale,
-      targetSamples: PATH_TRACE_INTERACTIVE_SETTLED_TARGET_SAMPLES
+      targetSamples: settledTargetSamples
     };
   }
 

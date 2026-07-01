@@ -23,6 +23,7 @@ import {
   DEFAULT_EDITOR_TONE_MAPPING,
   DEFAULT_EDITOR_TONE_MAPPING_EXPOSURE
 } from "../runtime/colorManagement";
+import { normalizePathTraceSettings } from "../runtime/pathTraceSettings";
 import type { CameraModel } from "./cameraModel";
 import type { GroupEntityModel } from "./groupEntityModel";
 import type { LightEntityModel } from "./lightEntityModel";
@@ -66,6 +67,7 @@ export function normalizeEnvConfig(source?: EditorEnvConfigJSON): ResolvedEditor
     environmentRotationY: source?.environmentRotationY ?? DEFAULT_EDITOR_ENVIRONMENT_ROTATION_Y,
     toneMapping: source?.toneMapping ?? DEFAULT_EDITOR_TONE_MAPPING,
     toneMappingExposure: source?.toneMappingExposure ?? DEFAULT_EDITOR_TONE_MAPPING_EXPOSURE,
+    pathTrace: normalizePathTraceSettings(source?.pathTrace),
     postProcessing: normalizeEditorPostProcessingConfig(source?.postProcessing),
     ground: normalizeGroundConfig(source?.ground)
   };
@@ -164,6 +166,12 @@ export function serializeProjectModel(source: {
       environmentRotationY: source.envConfig.environmentRotationY,
       toneMapping: source.envConfig.toneMapping,
       toneMappingExposure: source.envConfig.toneMappingExposure,
+      pathTrace: {
+        bounces: source.envConfig.pathTrace.bounces,
+        filterGlossyFactor: source.envConfig.pathTrace.filterGlossyFactor,
+        realtimeSamples: source.envConfig.pathTrace.realtimeSamples,
+        exportSamples: source.envConfig.pathTrace.exportSamples
+      },
       ground: {
         mode: source.envConfig.ground.mode,
         visible: source.envConfig.ground.visible,

@@ -6,8 +6,8 @@ import { Box, Checkbox, FormControlLabel, MenuItem, Stack, TextField, Typography
 import { getEditorThemeTokens } from "@/components/editor/theme";
 import PropertyPanelSection from "@/components/common/propertyPanelSection";
 import { useI18n } from "@/lib/i18n";
-import type { EditorPostProcessPassId, ResolvedEditorEnvConfigJSON } from "@/render/editor";
-import { isHighDynamicRangeEnvironmentAssetName } from "@/render/editor";
+import type { EditorPathTraceConfigJSON, EditorPostProcessPassId, ResolvedEditorEnvConfigJSON } from "@/render/editor";
+import { isHighDynamicRangeEnvironmentAssetName, PATH_TRACE_SETTINGS_LIMITS } from "@/render/editor";
 import { useEditorStore } from "@/stores/editorStore";
 import { ScenePostProcessingPanel } from "./scenePostProcessingPanel";
 import { SliderField } from "./sceneSettingsFields";
@@ -54,6 +54,12 @@ export function SceneSettingsSection({
       passId,
       patch as never
     );
+  };
+
+  const patchPathTraceSettings = (patch: EditorPathTraceConfigJSON) => {
+    app?.updateSceneEnvConfig({
+      pathTrace: patch
+    });
   };
 
   const getToneMappingLabel = (label: string, value: number) => {
@@ -282,6 +288,52 @@ export function SceneSettingsSection({
           formatter={(value) => `${Math.round(value)}°`
           }
         />
+
+        <Stack spacing={0.8}>
+          <Typography sx={{ fontSize: 11, color: theme.titleText, fontWeight: 700 }}>
+            {t("editor.properties.pathTrace")}
+          </Typography>
+
+          <SliderField
+            label={t("editor.properties.pathTraceBounces")}
+            min={PATH_TRACE_SETTINGS_LIMITS.bounces.min}
+            max={PATH_TRACE_SETTINGS_LIMITS.bounces.max}
+            step={1}
+            value={envConfig.pathTrace.bounces}
+            onChange={(value) => patchPathTraceSettings({ bounces: Math.round(value) })}
+            formatter={(value) => `${Math.round(value)}`}
+          />
+
+          <SliderField
+            label={t("editor.properties.pathTraceFilterGlossyFactor")}
+            min={PATH_TRACE_SETTINGS_LIMITS.filterGlossyFactor.min}
+            max={PATH_TRACE_SETTINGS_LIMITS.filterGlossyFactor.max}
+            step={0.01}
+            value={envConfig.pathTrace.filterGlossyFactor}
+            onChange={(value) => patchPathTraceSettings({ filterGlossyFactor: value })}
+            formatter={(value) => value.toFixed(2)}
+          />
+
+          <SliderField
+            label={t("editor.properties.pathTraceRealtimeSamples")}
+            min={PATH_TRACE_SETTINGS_LIMITS.realtimeSamples.min}
+            max={PATH_TRACE_SETTINGS_LIMITS.realtimeSamples.max}
+            step={16}
+            value={envConfig.pathTrace.realtimeSamples}
+            onChange={(value) => patchPathTraceSettings({ realtimeSamples: Math.round(value) })}
+            formatter={(value) => `${Math.round(value)}`}
+          />
+
+          <SliderField
+            label={t("editor.properties.pathTraceExportSamples")}
+            min={PATH_TRACE_SETTINGS_LIMITS.exportSamples.min}
+            max={PATH_TRACE_SETTINGS_LIMITS.exportSamples.max}
+            step={128}
+            value={envConfig.pathTrace.exportSamples}
+            onChange={(value) => patchPathTraceSettings({ exportSamples: Math.round(value) })}
+            formatter={(value) => `${Math.round(value)}`}
+          />
+        </Stack>
 
         <ScenePostProcessingPanel
           config={envConfig.postProcessing}

@@ -29,6 +29,17 @@ test("restores full display-pixel quality once the editor is idle", () => {
   assert.equal(quality.targetSamples, 256);
 });
 
+test("uses configurable realtime samples once the editor is idle", () => {
+  const quality = getInteractivePathTraceQuality({
+    displayPixelRenderScale: 1,
+    interactive: false,
+    settledTargetSamples: 640
+  });
+
+  assert.equal(quality.mode, "settled");
+  assert.equal(quality.targetSamples, 640);
+});
+
 test("resets accumulated samples when the adaptive quality mode changes", () => {
   assert.deepEqual(
     getPathTraceQualityTransition({

@@ -39,10 +39,11 @@ function applyEnvPatch(
   projectModel: EditorProjectModel,
   patch: Partial<EditorEnvConfigJSON>
 ) {
-  const { postProcessing, ground: _ground, ...envPatch } = patch;
+  const { postProcessing, ground: _ground, pathTrace: _pathTrace, ...envPatch } = patch;
   projectModel.envConfig = {
     ...projectModel.envConfig,
     ...envPatch,
+    pathTrace: projectModel.envConfig.pathTrace,
     postProcessing: postProcessing
       ? mergeEditorPostProcessingConfig(
           projectModel.envConfig.postProcessing,

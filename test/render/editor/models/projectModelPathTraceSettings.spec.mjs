@@ -1,0 +1,17 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import test from "node:test";
+
+test("declares and serializes path trace settings in scene env config", () => {
+  const coreTypes = readFileSync(join(process.cwd(), "render/editor/core/types.ts"), "utf8");
+  const serialization = readFileSync(
+    join(process.cwd(), "render/editor/models/projectModelSerialization.ts"),
+    "utf8"
+  );
+
+  assert.match(coreTypes, /pathTrace\?: EditorPathTraceConfigJSON/);
+  assert.match(coreTypes, /pathTrace: ResolvedEditorPathTraceConfigJSON/);
+  assert.match(serialization, /pathTrace: normalizePathTraceSettings\(source\?\.pathTrace\)/);
+  assert.match(serialization, /pathTrace: \{\s*bounces: source\.envConfig\.pathTrace\.bounces,/);
+});

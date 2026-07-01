@@ -560,6 +560,7 @@ export class EditorRuntime {
   ) {
     const result = this.environment.applyEnvConfig(envConfig, options);
     this.postProcessing.applyConfig(envConfig.postProcessing);
+    this.pathTracer.setSettings(envConfig.pathTrace);
     if (result.groundSceneChanged) {
       this.pathTracer.invalidateScene();
     } else {

@@ -50,15 +50,17 @@ export function applyStudioStyleProfileToSceneEnv(
   if (!projectModel) return;
 
   const patch = createStudioEnvPatchFromStyleProfile(styleProfile);
+  const { pathTrace: _pathTrace, ...envPatch } = patch;
   projectModel.envConfig = {
     ...projectModel.envConfig,
-    ...patch,
+    ...envPatch,
     postProcessing: patch.postProcessing
       ? mergeEditorPostProcessingConfig(
           projectModel.envConfig.postProcessing,
           patch.postProcessing
         )
       : projectModel.envConfig.postProcessing,
+    pathTrace: projectModel.envConfig.pathTrace,
     ground: {
       ...projectModel.envConfig.ground,
       visible: false,

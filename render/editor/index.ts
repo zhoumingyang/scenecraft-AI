@@ -18,6 +18,8 @@ export type { EditorSdk } from "./sdk";
 export type { EditorCommand, MeshMaterialPatch } from "./core/commands";
 export { PATH_TRACE_DENOISE_LIMITS } from "./runtime/pathTraceDenoise";
 export type { PathTraceDenoiseSettings } from "./runtime/pathTraceDenoise";
+export { PATH_TRACE_SETTINGS_LIMITS } from "./runtime/pathTraceSettings";
+export type { PathTraceSettings } from "./runtime/pathTraceSettings";
 export {
   BaseEntityModel,
   CameraModel,
