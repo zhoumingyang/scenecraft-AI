@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Box } from "@mui/material";
 import DropdownMenu from "@/components/common/dropdownMenu";
 import LightingConflictToast from "@/components/editor/lightingConflictToast";
 import { useEditorConfirmationDialog } from "@/components/editor/editorConfirmationDialog";
@@ -17,6 +18,7 @@ import RenderExportProgressToast, {
 import { EDITOR_SAVE_SHORTCUT_EVENT } from "@/components/editor/keyboardShortcuts";
 import { dropdownConfigs } from "@/components/editor/topBar/constants";
 import TopBarActionBar from "@/components/editor/topBar/topBarActionBar";
+import TopBarHistoryControls from "@/components/editor/topBar/topBarHistoryControls";
 import { useTopBarMenu } from "@/components/editor/topBar/useTopBarMenu";
 import { useTopBarProjectActions } from "@/components/editor/topBar/useTopBarProjectActions";
 import { getEditorThemeTokens } from "@/components/editor/theme";
@@ -168,25 +170,50 @@ export default function TopBar() {
 
       {confirmationDialog}
 
-      <TopBarActionBar
-        aiLibraryAssetCount={actions.aiLibraryAssetCount}
-        historyState={historyState}
-        disabled={false}
-        disabledMenuIds={[...studioDisabledMenuIds]}
-        exportDisabled={renderExportStatus.active || !actions.app}
-        saveDisabled={isStudioSceneActive}
-        clearDisabled={isStudioSceneActive}
-        dropdownConfigs={dropdownConfigs}
-        onClearProject={actions.onClearProject}
-        onRedo={handleRedo}
-        onExportRender={handleExportRender}
-        onOpenAiLibrary={actions.openAiLibraryDialog}
-        onOpenMenu={menu.openMenu}
-        onSaveScene={actions.onSaveScene}
-        onUndo={handleUndo}
-        t={t}
-        theme={theme}
-      />
+      <Box
+        sx={{
+          position: "absolute",
+          top: 16,
+          left: 0,
+          right: 0,
+          zIndex: 20,
+          display: "grid",
+          gridTemplateColumns: "minmax(0, 1fr) auto minmax(0, 1fr)",
+          columnGap: 1,
+          alignItems: "start",
+          px: 2,
+          pointerEvents: "none"
+        }}
+      >
+        <Box />
+        <TopBarActionBar
+          aiLibraryAssetCount={actions.aiLibraryAssetCount}
+          disabled={false}
+          disabledMenuIds={[...studioDisabledMenuIds]}
+          exportDisabled={renderExportStatus.active || !actions.app}
+          saveDisabled={isStudioSceneActive}
+          clearDisabled={isStudioSceneActive}
+          dropdownConfigs={dropdownConfigs}
+          onClearProject={actions.onClearProject}
+          onExportRender={handleExportRender}
+          onOpenAiLibrary={actions.openAiLibraryDialog}
+          onOpenMenu={menu.openMenu}
+          onSaveScene={actions.onSaveScene}
+          t={t}
+          theme={theme}
+        />
+        <TopBarHistoryControls
+          disabled={false}
+          historyState={historyState}
+          onRedo={handleRedo}
+          onUndo={handleUndo}
+          t={t}
+          theme={theme}
+          sx={{
+            justifySelf: "start"
+          }}
+        />
+      </Box>
 
       <DropdownMenu
         anchorEl={menu.anchorEl}
