@@ -95,6 +95,7 @@ export class EditorSession {
   private readonly selection: EditorSelectionSessionController;
   private readonly history: EditorHistorySession;
   private readonly commandHandlers: EditorCommandHandlers;
+  private historyTransactionDepth = 0;
   private selectedEntityId: string | null = null;
 
   projectModel: EditorProjectModel | null = null;
@@ -163,7 +164,8 @@ export class EditorSession {
       emit,
       getProjectModel: () => this.projectModel,
       ensureProject: () => this.ensureProject(),
-      setSelectedEntity: (entityId, source) => this.setSelectedEntity(entityId, source)
+      setSelectedEntity: (entityId, source) => this.setSelectedEntity(entityId, source),
+      isModelUrlRetained: (url) => this.history.hasReferencedAssetUrl(url)
     });
     this.modelAnimation = new ModelAnimationSessionController(this.registry, emit);
     this.lightSession = new LightSessionController({
@@ -255,6 +257,9 @@ export class EditorSession {
   }
 
   async loadProject(projectJson: EditorProjectJSON) {
+    if (!this.history.isRestoring()) {
+      this.history.clear();
+    }
     this.modelImport.releaseUnusedOwnedModelUrls(projectJson);
     this.clearAi3DPreview();
     this.clearProjectObjects();
@@ -288,9 +293,6 @@ export class EditorSession {
     }
 
     this.emit({ type: "projectLoaded", projectId: this.projectModel.id });
-    if (!this.history.isRestoring()) {
-      this.history.clear();
-    }
   }
 
   async clearProject() {
@@ -331,6 +333,10 @@ export class EditorSession {
     return this.history.getState();
   }
 
+  hasReferencedHistoryAssetUrl(url: string) {
+    return this.history.hasReferencedAssetUrl(url);
+  }
+
   async undo() {
     const restore = this.history.undo();
     if (!restore) return false;
@@ -354,11 +360,13 @@ export class EditorSession {
   }
 
   removeEnvironmentFillLights(source: SyncSource = "ui") {
-    const removedCount = this.entityMutation.removeEnvironmentFillLights(source);
-    if (removedCount > 0) {
-      this.syncPreviewLighting();
-    }
-    return removedCount;
+    return this.captureHistoryTransactionSync("Remove fill lights", () => {
+      const removedCount = this.entityMutation.removeEnvironmentFillLights(source);
+      if (removedCount > 0) {
+        this.syncPreviewLighting();
+      }
+      return removedCount;
+    });
   }
 
   getIsolatedEntityId(): string | null {
@@ -401,7 +409,9 @@ export class EditorSession {
   }
 
   async applyAi3DPlan(plan: Ai3DPlan, source: SyncSource = "ui") {
-    await this.ai3dPlan.applyPlan(plan, source);
+    await this.captureHistoryTransaction("Apply AI 3D plan", async () => {
+      await this.ai3dPlan.applyPlan(plan, source);
+    });
   }
 
   async enterStudioScene(
@@ -490,17 +500,62 @@ export class EditorSession {
 
   async dispatch(command: EditorCommand) {
     if (shouldCaptureEditorCommandHistory(command)) {
-      const before = this.createHistorySnapshot();
-      await dispatchEditorCommand(this.commandHandlers, command);
-      const after = this.createHistorySnapshot();
       const metadata = getEditorCommandHistoryMetadata(command);
-      this.history.capture(metadata.label, before, after, {
+      await this.captureHistoryTransaction(metadata.label, async () => {
+        await dispatchEditorCommand(this.commandHandlers, command);
+      }, {
         coalesceKey: metadata.coalesceKey
       });
       return;
     }
 
     await dispatchEditorCommand(this.commandHandlers, command);
+  }
+
+  private async captureHistoryTransaction<T>(
+    label: string,
+    callback: () => Promise<T>,
+    options: { coalesceKey?: string | null } = {}
+  ) {
+    if (this.history.isRestoring() || this.historyTransactionDepth > 0) {
+      return callback();
+    }
+
+    const before = this.createHistorySnapshot();
+    this.historyTransactionDepth += 1;
+    try {
+      const result = await callback();
+      const after = this.createHistorySnapshot();
+      this.history.capture(label, before, after, {
+        coalesceKey: options.coalesceKey ?? null
+      });
+      return result;
+    } finally {
+      this.historyTransactionDepth -= 1;
+    }
+  }
+
+  private captureHistoryTransactionSync<T>(
+    label: string,
+    callback: () => T,
+    options: { coalesceKey?: string | null } = {}
+  ) {
+    if (this.history.isRestoring() || this.historyTransactionDepth > 0) {
+      return callback();
+    }
+
+    const before = this.createHistorySnapshot();
+    this.historyTransactionDepth += 1;
+    try {
+      const result = callback();
+      const after = this.createHistorySnapshot();
+      this.history.capture(label, before, after, {
+        coalesceKey: options.coalesceKey ?? null
+      });
+      return result;
+    } finally {
+      this.historyTransactionDepth -= 1;
+    }
   }
 
   private createHistorySnapshot(): EditorHistorySnapshot | null {
@@ -522,12 +577,14 @@ export class EditorSession {
   }
 
   async importModel(file: File, source: SyncSource = "ui") {
-    const imported = await this.modelImport.importFile(file, source);
-    if (imported && this.studioScene.isActive()) {
-      this.adoptStudioEntity(imported.entityId, "userModel", { placeAtSpawn: true, source });
-      this.setSelectedEntity(imported.entityId, source);
-    }
-    return imported;
+    return this.captureHistoryTransaction("Import model", async () => {
+      const imported = await this.modelImport.importFile(file, source);
+      if (imported && this.studioScene.isActive()) {
+        this.adoptStudioEntity(imported.entityId, "userModel", { placeAtSpawn: true, source });
+        this.setSelectedEntity(imported.entityId, source);
+      }
+      return imported;
+    });
   }
 
   async importModelFromSource(
@@ -539,12 +596,14 @@ export class EditorSession {
     },
     source: SyncSource = "ui"
   ) {
-    const imported = await this.modelImport.importFromSource(input, source);
-    if (imported && this.studioScene.isActive()) {
-      this.adoptStudioEntity(imported.entityId, "userModel", { placeAtSpawn: true, source });
-      this.setSelectedEntity(imported.entityId, source);
-    }
-    return imported;
+    return this.captureHistoryTransaction("Import model", async () => {
+      const imported = await this.modelImport.importFromSource(input, source);
+      if (imported && this.studioScene.isActive()) {
+        this.adoptStudioEntity(imported.entityId, "userModel", { placeAtSpawn: true, source });
+        this.setSelectedEntity(imported.entityId, source);
+      }
+      return imported;
+    });
   }
 
   updateEntityTransform(entityId: string, patch: TransformPatch, source: SyncSource = "ui") {
@@ -567,8 +626,10 @@ export class EditorSession {
     source: SyncSource = "ui",
     options?: { panoAssetName?: string }
   ) {
-    await this.sceneEnvironment.updateSceneEnvConfig(patch, source, options);
-    this.syncPreviewLighting();
+    await this.captureHistoryTransaction("Update scene", async () => {
+      await this.sceneEnvironment.updateSceneEnvConfig(patch, source, options);
+      this.syncPreviewLighting();
+    });
   }
 
   updateMeshMaterial(

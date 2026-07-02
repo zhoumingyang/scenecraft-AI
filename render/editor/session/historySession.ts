@@ -127,6 +127,11 @@ export class EditorHistorySession {
     this.emitChange();
   }
 
+  hasReferencedAssetUrl(url: string) {
+    if (!url) return false;
+    return this.getReferencedAssetUrls().has(url);
+  }
+
   isRestoring() {
     return this.restoring;
   }
@@ -152,6 +157,13 @@ export class EditorHistorySession {
   private emitChange() {
     this.onChange?.(this.getState());
   }
+
+  private getReferencedAssetUrls() {
+    const urls = new Set<string>();
+    this.undoStack.forEach((entry) => collectEntryAssetUrls(entry, urls));
+    this.redoStack.forEach((entry) => collectEntryAssetUrls(entry, urls));
+    return urls;
+  }
 }
 
 function cloneSnapshot(snapshot: EditorHistorySnapshot): EditorHistorySnapshot {
@@ -166,4 +178,25 @@ function snapshotsEqual(
   right: EditorHistorySnapshot
 ) {
   return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function collectEntryAssetUrls(entry: EditorHistoryEntry, urls: Set<string>) {
+  collectBlobUrls(entry.before.project, urls);
+  collectBlobUrls(entry.after.project, urls);
+}
+
+function collectBlobUrls(value: unknown, urls: Set<string>) {
+  if (!value) return;
+  if (typeof value === "string") {
+    if (value.startsWith("blob:")) {
+      urls.add(value);
+    }
+    return;
+  }
+  if (Array.isArray(value)) {
+    value.forEach((entry) => collectBlobUrls(entry, urls));
+    return;
+  }
+  if (typeof value !== "object") return;
+  Object.values(value).forEach((entry) => collectBlobUrls(entry, urls));
 }

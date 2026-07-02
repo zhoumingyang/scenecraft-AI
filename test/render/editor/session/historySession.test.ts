@@ -88,3 +88,29 @@ test("history enforces maximum stack size and supports restore guard", () => {
   assert.equal(value, 42);
   assert.equal(history.isRestoring(), false);
 });
+
+test("history reports blob asset urls retained by undo and redo stacks", () => {
+  const history = new EditorHistorySession();
+  const before = snapshot("empty");
+  const after = snapshot("mesh");
+  after.project.model = [
+    {
+      id: "model-1",
+      source: "blob:model-url"
+    }
+  ];
+  after.project.envConfig = {
+    panoUrl: "blob:pano-url"
+  };
+
+  history.capture("Import assets", before, after);
+
+  assert.equal(history.hasReferencedAssetUrl("blob:model-url"), true);
+  assert.equal(history.hasReferencedAssetUrl("blob:pano-url"), true);
+  assert.equal(history.hasReferencedAssetUrl("blob:missing"), false);
+
+  history.clear();
+
+  assert.equal(history.hasReferencedAssetUrl("blob:model-url"), false);
+  assert.equal(history.hasReferencedAssetUrl("blob:pano-url"), false);
+});
