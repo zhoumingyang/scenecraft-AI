@@ -50,6 +50,10 @@ import {
   getSerializableProjectJSON,
   syncRenderChangesToModel as syncRenderStateChangesToModel
 } from "./renderSync";
+import {
+  EditorHistorySession,
+  type EditorHistoryState
+} from "./historySession";
 import { SceneEnvironmentSessionController } from "./sceneEnvironmentSession";
 import { EditorSelectionSessionController } from "./selection";
 import {
@@ -84,6 +88,7 @@ export class EditorSession {
   private readonly modelAnimation: ModelAnimationSessionController;
   private readonly studioScene: StudioSceneSessionController;
   private readonly selection: EditorSelectionSessionController;
+  private readonly history: EditorHistorySession;
   private readonly commandHandlers: EditorCommandHandlers;
   private selectedEntityId: string | null = null;
 
@@ -92,6 +97,14 @@ export class EditorSession {
   constructor(runtime: EditorRuntime, emit: Emit, options: EditorSessionOptions = {}) {
     this.runtime = runtime;
     this.emit = emit;
+    this.history = new EditorHistorySession({
+      onChange: (state) => {
+        this.emit({
+          type: "historyChanged",
+          state
+        });
+      }
+    });
     this.registry = new BindingRegistry({
       scene: runtime.scene,
       modelLoaderFactory: runtime.modelLoaderFactory,
@@ -306,6 +319,24 @@ export class EditorSession {
     return this.selectedEntityId;
   }
 
+  getHistoryState(): EditorHistoryState {
+    return this.history.getState();
+  }
+
+  async undo() {
+    const restore = this.history.undo();
+    if (!restore) return false;
+    await this.restoreHistorySnapshot(restore.snapshot);
+    return true;
+  }
+
+  async redo() {
+    const restore = this.history.redo();
+    if (!restore) return false;
+    await this.restoreHistorySnapshot(restore.snapshot);
+    return true;
+  }
+
   getGroundConfig() {
     return this.sceneEnvironment.getGroundConfig();
   }
@@ -451,6 +482,14 @@ export class EditorSession {
 
   async dispatch(command: EditorCommand) {
     await dispatchEditorCommand(this.commandHandlers, command);
+  }
+
+  private async restoreHistorySnapshot(snapshot: Parameters<EditorHistorySession["capture"]>[1]) {
+    if (!snapshot) return;
+    await this.history.withRestoreGuardAsync(async () => {
+      await this.loadProject(snapshot.project);
+      this.setSelectedEntity(snapshot.selectedEntityId, "ui");
+    });
   }
 
   async importModel(file: File, source: SyncSource = "ui") {

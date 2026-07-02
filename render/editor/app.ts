@@ -21,6 +21,7 @@ import type {
   TransformPatch,
   Vec3Tuple
 } from "./core/types";
+import type { EditorHistoryState } from "./session/historySession";
 import { EditorRuntime } from "./runtime/editorRuntime";
 import { EditorSession } from "./session/editorSession";
 import type { StudioScenePresetId, StudioSceneVariantId } from "./studioScenes";
@@ -177,6 +178,26 @@ export class EditorApp {
 
   getSelectedEntityId(): string | null {
     return this.session.getSelectedEntityId();
+  }
+
+  getHistoryState(): EditorHistoryState {
+    return this.session.getHistoryState();
+  }
+
+  canUndoRedo() {
+    const state = this.getHistoryState();
+    return {
+      canUndo: state.canUndo,
+      canRedo: state.canRedo
+    };
+  }
+
+  undo() {
+    return this.session.undo();
+  }
+
+  redo() {
+    return this.session.redo();
   }
 
   getGroundConfig() {

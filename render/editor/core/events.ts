@@ -1,3 +1,4 @@
+import type { EditorHistoryState } from "../session/historySession";
 import type { EntityKind, StudioSceneState, SyncSource } from "./types";
 
 export type EntityUpdatedEvent = {
@@ -40,6 +41,11 @@ export type StudioSceneChangedEvent = {
   state: StudioSceneState;
 };
 
+export type HistoryChangedEvent = {
+  type: "historyChanged";
+  state: EditorHistoryState;
+};
+
 export type EditorAppEvent =
   | EntityUpdatedEvent
   | CameraUpdatedEvent
@@ -47,6 +53,7 @@ export type EditorAppEvent =
   | SelectionChangedEvent
   | ProjectLoadedEvent
   | ViewStateUpdatedEvent
-  | StudioSceneChangedEvent;
+  | StudioSceneChangedEvent
+  | HistoryChangedEvent;
 
 export type EditorAppListener = (event: EditorAppEvent) => void;
