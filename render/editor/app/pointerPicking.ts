@@ -1,6 +1,11 @@
 import { PICK_POINTER_MOVE_THRESHOLD_PX } from "../constants/input";
 import type { EditorRuntime } from "../runtime/editorRuntime";
 
+type PointerPickingRuntime = Pick<
+  EditorRuntime,
+  "beginTransformInteraction" | "isFirstPersonCamera" | "isTransformGizmoHit"
+>;
+
 type PendingPick = {
   pointerId: number;
   startX: number;
@@ -9,23 +14,32 @@ type PendingPick = {
 };
 
 export class EditorAppPointerPicking {
-  private readonly runtime: EditorRuntime;
+  private readonly runtime: PointerPickingRuntime;
   private readonly pickEntity: (clientX: number, clientY: number) => string | null;
   private readonly setSelectedEntity: (entityId: string | null) => void;
+  private readonly onTransformInteractionStart: () => void;
+  private readonly onTransformInteractionEnd: () => void;
   private pendingPick: PendingPick | null = null;
+  private activeTransformPointerId: number | null = null;
 
   constructor({
     runtime,
     pickEntity,
-    setSelectedEntity
+    setSelectedEntity,
+    onTransformInteractionStart,
+    onTransformInteractionEnd
   }: {
-    runtime: EditorRuntime;
+    runtime: PointerPickingRuntime;
     pickEntity: (clientX: number, clientY: number) => string | null;
     setSelectedEntity: (entityId: string | null) => void;
+    onTransformInteractionStart?: () => void;
+    onTransformInteractionEnd?: () => void;
   }) {
     this.runtime = runtime;
     this.pickEntity = pickEntity;
     this.setSelectedEntity = setSelectedEntity;
+    this.onTransformInteractionStart = onTransformInteractionStart ?? (() => {});
+    this.onTransformInteractionEnd = onTransformInteractionEnd ?? (() => {});
   }
 
   addWindowListeners() {
@@ -39,12 +53,20 @@ export class EditorAppPointerPicking {
     window.removeEventListener("pointerup", this.onPointerUp);
     window.removeEventListener("pointercancel", this.onPointerCancel);
     this.pendingPick = null;
+    this.activeTransformPointerId = null;
   }
 
   onPointerDown = (event: PointerEvent) => {
     if (event.button !== 0) return;
     this.pendingPick = null;
-    if (this.runtime.beginTransformInteraction(event.clientX, event.clientY)) return;
+    if (this.runtime.isTransformGizmoHit(event.clientX, event.clientY)) {
+      this.onTransformInteractionStart();
+      if (this.runtime.beginTransformInteraction(event.clientX, event.clientY)) {
+        this.activeTransformPointerId = event.pointerId;
+        return;
+      }
+      this.onTransformInteractionEnd();
+    }
     if (this.runtime.isFirstPersonCamera()) return;
 
     this.pendingPick = {
@@ -65,6 +87,12 @@ export class EditorAppPointerPicking {
   };
 
   private onPointerUp = (event: PointerEvent) => {
+    if (this.activeTransformPointerId === event.pointerId) {
+      this.activeTransformPointerId = null;
+      this.onTransformInteractionEnd();
+      return;
+    }
+
     if (!this.pendingPick || this.pendingPick.pointerId !== event.pointerId) return;
     const shouldPick = !this.pendingPick.moved;
     this.pendingPick = null;
@@ -74,6 +102,12 @@ export class EditorAppPointerPicking {
   };
 
   private onPointerCancel = (event: PointerEvent) => {
+    if (this.activeTransformPointerId === event.pointerId) {
+      this.activeTransformPointerId = null;
+      this.onTransformInteractionEnd();
+      return;
+    }
+
     if (!this.pendingPick || this.pendingPick.pointerId !== event.pointerId) return;
     this.pendingPick = null;
   };

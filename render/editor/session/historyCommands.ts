@@ -23,8 +23,29 @@ export function getEditorCommandHistoryMetadata(
 ): EditorCommandHistoryMetadata {
   return {
     label: getEditorCommandHistoryLabel(command),
-    coalesceKey: null
+    coalesceKey: getEditorCommandCoalesceKey(command)
   };
+}
+
+function getEditorCommandCoalesceKey(command: EditorCommand) {
+  switch (command.type) {
+    case "entity.transform":
+      return `entity.transform:${command.entityId}`;
+    case "camera.patch":
+      return "camera.patch";
+    case "scene.envConfig.patch":
+      return "scene.envConfig.patch";
+    case "ground.patch":
+      return "ground.patch";
+    case "ground.material":
+      return "ground.material";
+    case "mesh.material":
+      return `mesh.material:${command.entityId}`;
+    case "light.patch":
+      return `light.patch:${command.entityId}`;
+    default:
+      return null;
+  }
 }
 
 function getEditorCommandHistoryLabel(command: EditorCommand) {

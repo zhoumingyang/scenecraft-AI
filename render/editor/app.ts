@@ -82,6 +82,12 @@ export class EditorApp {
           entityId,
           source: "render"
         });
+      },
+      onTransformInteractionStart: () => {
+        this.session.beginRenderHistoryTransaction("Transform entity");
+      },
+      onTransformInteractionEnd: () => {
+        this.session.commitRenderHistoryTransaction();
       }
     });
     this.viewState = new EditorAppViewState({

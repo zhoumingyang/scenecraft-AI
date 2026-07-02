@@ -30,6 +30,25 @@ test("captures project-mutating editor commands", () => {
   );
 });
 
+test("adds coalescing keys for repeated property edits", () => {
+  assert.equal(
+    getEditorCommandHistoryMetadata(command("entity.transform", { entityId: "mesh-1", patch: {} })).coalesceKey,
+    "entity.transform:mesh-1"
+  );
+  assert.equal(
+    getEditorCommandHistoryMetadata(command("mesh.material", { entityId: "mesh-1", patch: {} })).coalesceKey,
+    "mesh.material:mesh-1"
+  );
+  assert.equal(
+    getEditorCommandHistoryMetadata(command("light.patch", { entityId: "light-1", patch: {} })).coalesceKey,
+    "light.patch:light-1"
+  );
+  assert.equal(
+    getEditorCommandHistoryMetadata(command("scene.envConfig.patch", { patch: {} })).coalesceKey,
+    "scene.envConfig.patch"
+  );
+});
+
 test("skips non-project history commands", () => {
   assert.equal(shouldCaptureEditorCommandHistory(command("project.load", { project: {} })), false);
   assert.equal(shouldCaptureEditorCommandHistory(command("selection.set", { entityId: "mesh-1" })), false);
@@ -46,4 +65,3 @@ test("skips non-project history commands", () => {
     false
   );
 });
-

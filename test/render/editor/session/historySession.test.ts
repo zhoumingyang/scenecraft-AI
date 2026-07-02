@@ -69,6 +69,36 @@ test("history ignores unchanged snapshots and clears redo after new edits", () =
   });
 });
 
+test("history coalesces repeated edits only inside the configured time window", () => {
+  let now = 1000;
+  const history = new EditorHistorySession({
+    coalesceWindowMs: 250,
+    now: () => now
+  });
+
+  history.capture("Move once", snapshot("empty"), snapshot("one"), {
+    coalesceKey: "entity.transform:mesh-1"
+  });
+  now += 100;
+  history.capture("Move twice", snapshot("one"), snapshot("two"), {
+    coalesceKey: "entity.transform:mesh-1"
+  });
+
+  const undoCoalesced = history.undo();
+  assert.equal(undoCoalesced?.label, "Move twice");
+  assert.deepEqual(undoCoalesced?.snapshot, snapshot("empty"));
+  assert.equal(history.undo(), null);
+
+  history.redo();
+  now += 300;
+  history.capture("Move later", snapshot("two"), snapshot("three"), {
+    coalesceKey: "entity.transform:mesh-1"
+  });
+
+  assert.equal(history.undo()?.label, "Move later");
+  assert.equal(history.undo()?.label, "Move twice");
+});
+
 test("history enforces maximum stack size and supports restore guard", () => {
   const history = new EditorHistorySession({ maxEntries: 2 });
 

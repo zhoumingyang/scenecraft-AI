@@ -96,6 +96,10 @@ export class EditorSession {
   private readonly history: EditorHistorySession;
   private readonly commandHandlers: EditorCommandHandlers;
   private historyTransactionDepth = 0;
+  private pendingRenderHistoryTransaction: {
+    label: string;
+    before: EditorHistorySnapshot | null;
+  } | null = null;
   private selectedEntityId: string | null = null;
 
   projectModel: EditorProjectModel | null = null;
@@ -351,6 +355,27 @@ export class EditorSession {
     return true;
   }
 
+  beginRenderHistoryTransaction(label: string) {
+    if (this.history.isRestoring() || this.historyTransactionDepth > 0) return;
+    this.pendingRenderHistoryTransaction = {
+      label,
+      before: this.createHistorySnapshot()
+    };
+  }
+
+  commitRenderHistoryTransaction() {
+    const pending = this.pendingRenderHistoryTransaction;
+    this.pendingRenderHistoryTransaction = null;
+    if (!pending || this.history.isRestoring()) return;
+
+    if (this.selectedEntityId && this.selectedEntityId !== SCENE_SELECTION_ID) {
+      this.syncEntityModelFromRenderObject(this.selectedEntityId);
+    }
+
+    const after = this.createHistorySnapshot();
+    this.history.capture(pending.label, pending.before, after);
+  }
+
   getGroundConfig() {
     return this.sceneEnvironment.getGroundConfig();
   }
@@ -573,6 +598,11 @@ export class EditorSession {
     await this.history.withRestoreGuardAsync(async () => {
       await this.loadProject(snapshot.project);
       this.setSelectedEntity(snapshot.selectedEntityId, "ui");
+      this.emit({
+        type: "sceneUpdated",
+        source: "ui",
+        pathTraceInvalidation: "scene"
+      });
     });
   }
 

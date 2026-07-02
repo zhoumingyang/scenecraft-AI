@@ -23,10 +23,13 @@ type EditorHistoryEntry = {
   before: EditorHistorySnapshot;
   after: EditorHistorySnapshot;
   coalesceKey: string | null;
+  updatedAt: number;
 };
 
 type EditorHistorySessionOptions = {
   maxEntries?: number;
+  coalesceWindowMs?: number;
+  now?: () => number;
   onChange?: (state: EditorHistoryState) => void;
 };
 
@@ -35,9 +38,12 @@ type CaptureOptions = {
 };
 
 const DEFAULT_MAX_HISTORY_ENTRIES = 100;
+const DEFAULT_COALESCE_WINDOW_MS = 600;
 
 export class EditorHistorySession {
   private readonly maxEntries: number;
+  private readonly coalesceWindowMs: number;
+  private readonly now: () => number;
   private readonly onChange: ((state: EditorHistoryState) => void) | null;
   private readonly undoStack: EditorHistoryEntry[] = [];
   private readonly redoStack: EditorHistoryEntry[] = [];
@@ -45,6 +51,8 @@ export class EditorHistorySession {
 
   constructor(options: EditorHistorySessionOptions = {}) {
     this.maxEntries = Math.max(1, Math.floor(options.maxEntries ?? DEFAULT_MAX_HISTORY_ENTRIES));
+    this.coalesceWindowMs = Math.max(0, options.coalesceWindowMs ?? DEFAULT_COALESCE_WINDOW_MS);
+    this.now = options.now ?? (() => Date.now());
     this.onChange = options.onChange ?? null;
   }
 
@@ -72,9 +80,15 @@ export class EditorHistorySession {
 
     const coalesceKey = options.coalesceKey ?? null;
     const previous = this.undoStack[this.undoStack.length - 1] ?? null;
-    if (coalesceKey && previous?.coalesceKey === coalesceKey) {
+    const capturedAt = this.now();
+    if (
+      coalesceKey &&
+      previous?.coalesceKey === coalesceKey &&
+      capturedAt - previous.updatedAt <= this.coalesceWindowMs
+    ) {
       previous.after = cloneSnapshot(after);
       previous.label = label;
+      previous.updatedAt = capturedAt;
       this.redoStack.length = 0;
       this.emitChange();
       return true;
@@ -84,7 +98,8 @@ export class EditorHistorySession {
       label,
       before: cloneSnapshot(before),
       after: cloneSnapshot(after),
-      coalesceKey
+      coalesceKey,
+      updatedAt: capturedAt
     });
     if (this.undoStack.length > this.maxEntries) {
       this.undoStack.splice(0, this.undoStack.length - this.maxEntries);
