@@ -5,6 +5,7 @@ import type { Ai3DIntentInput, Ai3DPlanDiagnostics } from "@/lib/ai/ai3d/intent"
 import type {
   Ai3DPlan,
   EditorApp,
+  EditorHistoryState,
   LightingConflictState,
   EditorProjectMetaJSON,
   ProjectAiAssetKindJSON,
@@ -180,6 +181,7 @@ export type EditorStoreState = {
   saveStatus: ProjectSaveStatus;
   sceneLoadingStatus: SceneLoadingStatus;
   lightingConflictNotice: LightingConflictNotice;
+  historyState: EditorHistoryState;
   studioScene: StudioSceneState;
   hasUnsavedChanges: boolean;
   projectListDialogOpen: boolean;
@@ -219,6 +221,7 @@ export type EditorStoreState = {
   syncLightingConflictNotice: (state: LightingConflictState) => void;
   dismissLightingConflictNotice: () => void;
   resetLightingConflictNotice: () => void;
+  setHistoryState: (state: EditorHistoryState) => void;
   setStudioSceneState: (state: StudioSceneState) => void;
   beginSceneLoading: (message?: string | null) => void;
   endSceneLoading: () => void;

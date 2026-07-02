@@ -6,7 +6,9 @@ export type EditorShortcutAction =
   | "clear-selection"
   | "toggle-visibility"
   | "lock-selection"
-  | "save-project";
+  | "save-project"
+  | "undo"
+  | "redo";
 
 export type EditorDuplicatePositionOffset = [number, number, number];
 
@@ -59,7 +61,13 @@ export function getEditorShortcutAction(
     if (key === "v") return "paste-selection";
     if (key === "d") return "duplicate-selection";
     if (key === "s") return "save-project";
+    if (key === "z") return "undo";
+    if (key === "y") return "redo";
     return null;
+  }
+
+  if (hasCommandModifier(event) && event.shiftKey && !event.altKey) {
+    if (key === "z") return "redo";
   }
 
   if (event.ctrlKey && event.shiftKey && !event.metaKey && !event.altKey) {

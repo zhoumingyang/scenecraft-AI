@@ -21,6 +21,7 @@ import type {
   TransformPatch,
   Vec3Tuple
 } from "./core/types";
+import type { EditorHistoryState } from "./session/historySession";
 import { EditorRuntime } from "./runtime/editorRuntime";
 import { EditorSession } from "./session/editorSession";
 import type { StudioScenePresetId, StudioSceneVariantId } from "./studioScenes";
@@ -81,6 +82,12 @@ export class EditorApp {
           entityId,
           source: "render"
         });
+      },
+      onTransformInteractionStart: () => {
+        this.session.beginRenderHistoryTransaction("Transform entity");
+      },
+      onTransformInteractionEnd: () => {
+        this.session.commitRenderHistoryTransaction();
       }
     });
     this.viewState = new EditorAppViewState({
@@ -135,7 +142,8 @@ export class EditorApp {
     }
 
     if (command.type === "project.clear") {
-      await this.clearProject();
+      this.environmentAssets.beforeClearProject();
+      await this.session.dispatch(command);
       return;
     }
 
@@ -177,6 +185,26 @@ export class EditorApp {
 
   getSelectedEntityId(): string | null {
     return this.session.getSelectedEntityId();
+  }
+
+  getHistoryState(): EditorHistoryState {
+    return this.session.getHistoryState();
+  }
+
+  canUndoRedo() {
+    const state = this.getHistoryState();
+    return {
+      canUndo: state.canUndo,
+      canRedo: state.canRedo
+    };
+  }
+
+  undo() {
+    return this.session.undo();
+  }
+
+  redo() {
+    return this.session.redo();
   }
 
   getGroundConfig() {

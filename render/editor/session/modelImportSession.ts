@@ -17,6 +17,7 @@ export class ModelImportSessionController {
   private readonly getProjectModel: () => EditorProjectModel | null;
   private readonly ensureProject: () => Promise<void>;
   private readonly setSelectedEntity: (entityId: string | null, source: SyncSource) => void;
+  private readonly isModelUrlRetained: (url: string) => boolean;
   private readonly ownedModelUrls = new Set<string>();
 
   constructor(options: {
@@ -26,6 +27,7 @@ export class ModelImportSessionController {
     getProjectModel: () => EditorProjectModel | null;
     ensureProject: () => Promise<void>;
     setSelectedEntity: (entityId: string | null, source: SyncSource) => void;
+    isModelUrlRetained?: (url: string) => boolean;
   }) {
     this.runtime = options.runtime;
     this.registry = options.registry;
@@ -33,6 +35,7 @@ export class ModelImportSessionController {
     this.getProjectModel = options.getProjectModel;
     this.ensureProject = options.ensureProject;
     this.setSelectedEntity = options.setSelectedEntity;
+    this.isModelUrlRetained = options.isModelUrlRetained ?? (() => false);
   }
 
   async importFile(file: File, source: SyncSource = "ui") {
@@ -132,6 +135,7 @@ export class ModelImportSessionController {
     const nextSources = new Set((projectJson.model || []).map((item) => item.source));
     Array.from(this.ownedModelUrls).forEach((url) => {
       if (nextSources.has(url)) return;
+      if (this.isModelUrlRetained(url)) return;
       const model = this.getProjectModel()
         ? Array.from(this.getProjectModel()!.models.values()).find((item) => item.source === url)
         : null;

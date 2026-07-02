@@ -6,7 +6,7 @@ import type { EditorSession } from "../session/editorSession";
 export class EditorAppEnvironmentAssets {
   private readonly session: EditorSession;
   private readonly getProjectModel: () => EditorProjectModel | null;
-  private environmentUrl: string | null = null;
+  private readonly ownedEnvironmentUrls = new Set<string>();
 
   constructor({
     session,
@@ -20,16 +20,16 @@ export class EditorAppEnvironmentAssets {
   }
 
   beforeLoadProject(projectJson: EditorProjectJSON) {
-    this.revokeEnvironmentUrlIfChanged(projectJson.envConfig?.panoUrl ?? "");
+    this.releaseUnusedEnvironmentUrls(projectJson.envConfig?.panoUrl ?? "");
   }
 
   beforeClearProject() {
-    this.revokeEnvironmentUrl();
+    this.releaseUnusedEnvironmentUrls("");
   }
 
   beforeSceneEnvConfigPatch(patch: Partial<EditorEnvConfigJSON>) {
     if (patch.panoUrl !== undefined) {
-      this.revokeEnvironmentUrlIfChanged(patch.panoUrl);
+      this.releaseUnusedEnvironmentUrls(patch.panoUrl);
     }
   }
 
@@ -47,8 +47,8 @@ export class EditorAppEnvironmentAssets {
         "ui",
         { panoAssetName: file.name }
       );
-      this.revokeEnvironmentUrl();
-      this.environmentUrl = nextUrl;
+      this.ownedEnvironmentUrls.add(nextUrl);
+      this.releaseUnusedEnvironmentUrls(nextUrl);
       this.session.setSelectedEntity(SCENE_SELECTION_ID, "ui");
       return {
         sourceUrl: nextUrl
@@ -60,22 +60,15 @@ export class EditorAppEnvironmentAssets {
   }
 
   dispose() {
-    this.revokeEnvironmentUrl();
+    this.ownedEnvironmentUrls.forEach((url) => URL.revokeObjectURL(url));
+    this.ownedEnvironmentUrls.clear();
   }
 
-  private revokeEnvironmentUrl() {
-    if (!this.environmentUrl) return;
-    if (this.environmentUrl.startsWith("blob:")) {
-      URL.revokeObjectURL(this.environmentUrl);
-    }
-    this.environmentUrl = null;
-  }
-
-  private revokeEnvironmentUrlIfChanged(nextUrl: string) {
-    if (!this.environmentUrl || this.environmentUrl === nextUrl) {
-      return;
-    }
-
-    this.revokeEnvironmentUrl();
+  private releaseUnusedEnvironmentUrls(activeUrl: string) {
+    Array.from(this.ownedEnvironmentUrls).forEach((url) => {
+      if (url === activeUrl || this.session.hasReferencedHistoryAssetUrl(url)) return;
+      URL.revokeObjectURL(url);
+      this.ownedEnvironmentUrls.delete(url);
+    });
   }
 }

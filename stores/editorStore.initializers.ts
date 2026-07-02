@@ -14,7 +14,7 @@ import type {
   ProjectSaveStatus,
   SceneLoadingStatus
 } from "./editorStore.types";
-import type { StudioSceneState } from "@/render/editor";
+import type { EditorHistoryState, StudioSceneState } from "@/render/editor";
 
 export function createInitialAiImageSettings(): AiImageSettings {
   return {
@@ -127,6 +127,15 @@ export function createInitialStudioSceneState(): StudioSceneState {
     targetRotationY: 0,
     hdriStatus: "idle",
     hdriError: null
+  };
+}
+
+export function createInitialHistoryState(): EditorHistoryState {
+  return {
+    canUndo: false,
+    canRedo: false,
+    undoLabel: null,
+    redoLabel: null
   };
 }
 

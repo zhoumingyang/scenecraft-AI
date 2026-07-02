@@ -69,6 +69,8 @@ const zh: TranslationDictionary = {
     "editor.top.camera": "相机",
     "editor.top.light": "光照",
     "editor.top.mesh": "Mesh",
+    "editor.history.undo": "撤销",
+    "editor.history.redo": "重做",
     "editor.sceneTree.button": "场景树",
     "editor.sceneTree.title": "场景树",
     "editor.sceneTree.sceneGroup": "场景",
