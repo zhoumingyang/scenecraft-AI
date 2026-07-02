@@ -52,8 +52,13 @@ import {
 } from "./renderSync";
 import {
   EditorHistorySession,
-  type EditorHistoryState
+  type EditorHistoryState,
+  type EditorHistorySnapshot
 } from "./historySession";
+import {
+  getEditorCommandHistoryMetadata,
+  shouldCaptureEditorCommandHistory
+} from "./historyCommands";
 import { SceneEnvironmentSessionController } from "./sceneEnvironmentSession";
 import { EditorSelectionSessionController } from "./selection";
 import {
@@ -283,6 +288,9 @@ export class EditorSession {
     }
 
     this.emit({ type: "projectLoaded", projectId: this.projectModel.id });
+    if (!this.history.isRestoring()) {
+      this.history.clear();
+    }
   }
 
   async clearProject() {
@@ -481,10 +489,31 @@ export class EditorSession {
   }
 
   async dispatch(command: EditorCommand) {
+    if (shouldCaptureEditorCommandHistory(command)) {
+      const before = this.createHistorySnapshot();
+      await dispatchEditorCommand(this.commandHandlers, command);
+      const after = this.createHistorySnapshot();
+      const metadata = getEditorCommandHistoryMetadata(command);
+      this.history.capture(metadata.label, before, after, {
+        coalesceKey: metadata.coalesceKey
+      });
+      return;
+    }
+
     await dispatchEditorCommand(this.commandHandlers, command);
   }
 
-  private async restoreHistorySnapshot(snapshot: Parameters<EditorHistorySession["capture"]>[1]) {
+  private createHistorySnapshot(): EditorHistorySnapshot | null {
+    this.flushRuntimeStateToProjectModel();
+    const project = this.getProjectJSON();
+    if (!project) return null;
+    return {
+      project,
+      selectedEntityId: this.selectedEntityId
+    };
+  }
+
+  private async restoreHistorySnapshot(snapshot: EditorHistorySnapshot) {
     if (!snapshot) return;
     await this.history.withRestoreGuardAsync(async () => {
       await this.loadProject(snapshot.project);

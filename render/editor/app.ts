@@ -136,7 +136,8 @@ export class EditorApp {
     }
 
     if (command.type === "project.clear") {
-      await this.clearProject();
+      this.environmentAssets.beforeClearProject();
+      await this.session.dispatch(command);
       return;
     }
 
