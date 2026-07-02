@@ -28,6 +28,7 @@ export default function TopBar() {
   const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
   const projectLoadVersion = useEditorStore((state) => state.projectLoadVersion);
   const lightingConflictNotice = useEditorStore((state) => state.lightingConflictNotice);
+  const historyState = useEditorStore((state) => state.historyState);
   const isStudioSceneActive = useEditorStore((state) => state.studioScene.active);
   const dismissLightingConflictNotice = useEditorStore((state) => state.dismissLightingConflictNotice);
   const theme = getEditorThemeTokens(editorThemeMode);
@@ -124,6 +125,14 @@ export default function TopBar() {
     renderExportControllerRef.current?.abort();
   };
 
+  const handleUndo = () => {
+    void actions.app?.undo();
+  };
+
+  const handleRedo = () => {
+    void actions.app?.redo();
+  };
+
   return (
     <>
       <input
@@ -161,6 +170,7 @@ export default function TopBar() {
 
       <TopBarActionBar
         aiLibraryAssetCount={actions.aiLibraryAssetCount}
+        historyState={historyState}
         disabled={false}
         disabledMenuIds={[...studioDisabledMenuIds]}
         exportDisabled={renderExportStatus.active || !actions.app}
@@ -168,10 +178,12 @@ export default function TopBar() {
         clearDisabled={isStudioSceneActive}
         dropdownConfigs={dropdownConfigs}
         onClearProject={actions.onClearProject}
+        onRedo={handleRedo}
         onExportRender={handleExportRender}
         onOpenAiLibrary={actions.openAiLibraryDialog}
         onOpenMenu={menu.openMenu}
         onSaveScene={actions.onSaveScene}
+        onUndo={handleUndo}
         t={t}
         theme={theme}
       />

@@ -69,6 +69,8 @@ const en = {
     "editor.top.camera": "Camera",
     "editor.top.light": "Light",
     "editor.top.mesh": "Mesh",
+    "editor.history.undo": "Undo",
+    "editor.history.redo": "Redo",
     "editor.sceneTree.button": "Scene Tree",
     "editor.sceneTree.title": "Scene Tree",
     "editor.sceneTree.sceneGroup": "Scene",

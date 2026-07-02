@@ -1,4 +1,5 @@
 import {
+  createInitialHistoryState,
   createInitialLightingConflictNotice,
   createInitialSceneLoadingStatus,
   createInitialStudioSceneState
@@ -12,6 +13,7 @@ type EditorUiSlice = Pick<
   | "selectedEntityId"
   | "sceneLoadingStatus"
   | "lightingConflictNotice"
+  | "historyState"
   | "studioScene"
   | "projectListDialogOpen"
   | "projectSaveDialogOpen"
@@ -27,6 +29,7 @@ type EditorUiSlice = Pick<
   | "syncLightingConflictNotice"
   | "dismissLightingConflictNotice"
   | "resetLightingConflictNotice"
+  | "setHistoryState"
   | "setStudioSceneState"
   | "beginSceneLoading"
   | "endSceneLoading"
@@ -46,6 +49,7 @@ export const createUiSlice: EditorStoreSlice<EditorUiSlice> = (set) => ({
   selectedEntityId: null,
   sceneLoadingStatus: createInitialSceneLoadingStatus(),
   lightingConflictNotice: createInitialLightingConflictNotice(),
+  historyState: createInitialHistoryState(),
   studioScene: createInitialStudioSceneState(),
   projectListDialogOpen: false,
   projectSaveDialogOpen: false,
@@ -97,6 +101,7 @@ export const createUiSlice: EditorStoreSlice<EditorUiSlice> = (set) => ({
     set({
       lightingConflictNotice: createInitialLightingConflictNotice()
     }),
+  setHistoryState: (historyState) => set({ historyState }),
   setStudioSceneState: (studioScene) => set({ studioScene }),
   beginSceneLoading: (message = null) =>
     set((state) => ({

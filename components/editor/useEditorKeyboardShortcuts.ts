@@ -87,6 +87,14 @@ export function useEditorKeyboardShortcuts({
           if (saveDisabled) return;
           onSaveProject();
           return;
+        case "undo":
+          event.preventDefault();
+          void app.undo();
+          return;
+        case "redo":
+          event.preventDefault();
+          void app.redo();
+          return;
       }
     };
 

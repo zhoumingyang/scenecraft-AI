@@ -24,6 +24,7 @@ export function useEditorAppEventBridge({
   const bumpCameraVersion = useEditorStore((state) => state.bumpCameraVersion);
   const bumpViewStateVersion = useEditorStore((state) => state.bumpViewStateVersion);
   const setAiInspectorMode = useEditorStore((state) => state.setAiInspectorMode);
+  const setHistoryState = useEditorStore((state) => state.setHistoryState);
   const setStudioSceneState = useEditorStore((state) => state.setStudioSceneState);
 
   useEffect(() => {
@@ -74,6 +75,7 @@ export function useEditorAppEventBridge({
         bumpMeshListVersion();
         bumpCameraVersion();
         bumpViewStateVersion();
+        setHistoryState(app.getHistoryState());
         setStudioSceneState(app.getStudioSceneState());
         markUnsavedChanges(false);
         syncLightingConflictState(true);
@@ -131,6 +133,10 @@ export function useEditorAppEventBridge({
         setStudioSceneState(event.state);
         bumpSceneTreeVersion();
       }
+
+      if (event.type === "historyChanged") {
+        setHistoryState(event.state);
+      }
     });
 
     return () => {
@@ -155,6 +161,7 @@ export function useEditorAppEventBridge({
     resetLightingConflictNotice,
     setSelectedEntityId,
     setAiInspectorMode,
+    setHistoryState,
     setStudioSceneState
   ]);
 }

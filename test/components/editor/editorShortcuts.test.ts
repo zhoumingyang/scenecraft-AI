@@ -31,6 +31,18 @@ test("editor shortcut actions map only the supported first-pass shortcuts", () =
   assert.equal(getEditorShortcutAction(eventFor({ key: "v", ctrlKey: true })), "paste-selection");
   assert.equal(getEditorShortcutAction(eventFor({ key: "d", metaKey: true })), "duplicate-selection");
   assert.equal(getEditorShortcutAction(eventFor({ key: "s", ctrlKey: true })), "save-project");
+  assert.equal(getEditorShortcutAction(eventFor({ key: "z", metaKey: true })), "undo");
+  assert.equal(getEditorShortcutAction(eventFor({ key: "z", ctrlKey: true })), "undo");
+  assert.equal(
+    getEditorShortcutAction(eventFor({ key: "z", metaKey: true, shiftKey: true })),
+    "redo"
+  );
+  assert.equal(
+    getEditorShortcutAction(eventFor({ key: "z", ctrlKey: true, shiftKey: true })),
+    "redo"
+  );
+  assert.equal(getEditorShortcutAction(eventFor({ key: "y", metaKey: true })), "redo");
+  assert.equal(getEditorShortcutAction(eventFor({ key: "y", ctrlKey: true })), "redo");
   assert.equal(
     getEditorShortcutAction(eventFor({ key: "h", ctrlKey: true, shiftKey: true })),
     "toggle-visibility"
