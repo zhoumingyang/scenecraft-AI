@@ -11,6 +11,7 @@ Scenecraft AI is an AI-assisted browser-based 3D scene editor built on Next.js. 
 - AI PBR texture atlas generation and material application
 - AI panorama generation and scene environment application
 - AI Poly Haven asset kit recommendation and application
+- optional AI optimization for path trace render export screenshots
 - low-poly AI 3D sketch planning and optimization
 - authentication and database-backed user flows
 - authenticated project save/load with persisted scene snapshots
@@ -92,6 +93,7 @@ Behavior to remember:
 - Project save/load APIs should also be treated as unavailable when `DATABASE_URL` is missing.
 - Asset-backed save flows depend on `BLOB_READ_WRITE_TOKEN`; missing Blob config should fail clearly rather than silently degrade.
 - AI routes depend on provider keys and should fail clearly when keys are missing.
+- AI render export optimization depends on `OPENROUTER_API_KEY`; direct render export should still work when optimization is skipped or unavailable.
 
 ## Repo Map
 
@@ -103,6 +105,7 @@ Next.js App Router entrypoints and API routes.
 - `app/editor/` contains the protected editor route
 - `app/api/auth/` contains auth route handlers
 - `app/api/ai/` contains AI API routes for prompt transformation, image generation, panorama generation, 3D generation, and asset recommendation
+- `app/api/ai/render/optimize/` contains the authenticated AI render export image optimization route
 - `app/api/ai/textures/pbr/` contains the authenticated AI PBR texture atlas generation route
 - `app/api/ai/panoramas/` contains the authenticated AI panorama generation route
 - `app/api/ai/assets/recommend/` contains the authenticated AI Poly Haven asset kit recommendation route
@@ -132,7 +135,7 @@ Browser-side API clients and request helpers.
 
 - `frontend/api/projects.ts` wraps project list/load/save/delete calls
 - `frontend/api/assets.ts` wraps prepared asset upload flows
-- `frontend/api/ai.ts` wraps AI image / prompt / AI PBR texture / AI panorama / AI asset recommendation / 3D generation requests
+- `frontend/api/ai.ts` wraps AI image / prompt / AI PBR texture / AI panorama / AI asset recommendation / AI render export optimization / 3D generation requests
 - `frontend/api/externalAssets.ts` wraps Poly Haven list/detail/category lookups
 
 Use this area when changing browser request behavior or updating how UI code talks to backend routes.
@@ -169,6 +172,7 @@ Includes:
 - AI 3D planning pipeline
 - AI Poly Haven asset recommendation intent parsing, candidate search, ranking, and bundle assembly
 - OpenRouter-related provider code
+- AI render export optimization helpers
 - validation, parsing, diagnostics, rules, templates, and workflow code
 
 Keep API contracts, validation, and provider-specific behavior aligned when editing here.
@@ -359,6 +363,20 @@ If the task is about AI generation:
 - inspect `lib/ai/`
 - inspect `lib/api/contracts/`
 - keep prompt optimization target-aware for Image, Texture, and Panorama modes while preserving generic translation behavior
+
+If the task is about path trace render export optimization:
+
+- inspect `components/editor/topBar.tsx`
+- inspect `components/editor/renderExportProgressToast.tsx`
+- inspect `render/editor/runtime/canvasImageCapture.ts`
+- inspect `render/editor/runtime/editorRuntime.ts`
+- inspect `app/api/ai/render/optimize/`
+- inspect `lib/ai/render-export/`
+- inspect `lib/api/contracts/ai/renderExport.ts`
+- keep direct export available when the user cancels AI optimization or when OpenRouter is unavailable
+- keep uploaded render export screenshots compressed below 700KB unless the product requirement changes
+- do not reintroduce `DenoiseMaterial` into the path trace export capture path; real-time viewport denoise can remain separate
+- do not save optimized export images into the project AI library or project snapshot unless explicitly requested
 
 If the task is about AI Poly Haven asset recommendations:
 

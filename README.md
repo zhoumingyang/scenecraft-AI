@@ -54,6 +54,7 @@ This is not just a text-to-image demo, and it is not a full desktop-grade DCC to
 - Built-in lighting presets for faster scene setup
 - Post-processing controls with entry points for effects such as Bloom, SSR, GTAO, Bokeh, Film, Glitch, and Halftone
 - A neutral real-time preview baseline with ACES tone mapping, light GTAO contact shading, and restrained default effect parameters
+- Path trace render export with optional OpenRouter `openai/gpt-5.4-image-2` image optimization; export screenshots are compressed below 700KB before optional model processing
 
 ### 3. AI Image Workflow
 
@@ -174,6 +175,7 @@ This approach makes the result:
 - Database: `Postgres` + `Drizzle ORM`
 - Object storage: `Vercel Blob`
 - AI integration: provider-based image generation, prompt transformation, and AI 3D planning APIs
+- Render export optimization: OpenRouter `openai/gpt-5.4-image-2`
 - PBR texture generation: OpenRouter `openai/gpt-5.4-image-2`
 - Panorama generation: OpenRouter `openai/gpt-5.4-image-2`
 
@@ -218,7 +220,7 @@ Recommended minimum variables:
 
 - `BETTER_AUTH_SECRET`
 - `BETTER_AUTH_URL`
-- `OPENROUTER_API_KEY` required for OpenRouter-backed AI 3D, AI PBR texture, AI panorama, and prompt transformation flows
+- `OPENROUTER_API_KEY` required for OpenRouter-backed AI 3D, AI PBR texture, AI panorama, AI render export optimization, and prompt transformation flows
 - `OPENROUTER_API_KEY` is also required for AI panorama intent completion and AI Poly Haven asset recommendation intent parsing
 - `SILICONFLOW_API_KEY` if you want to enable that provider
 - `DATABASE_URL` required if you want project save/load and persistent auth
