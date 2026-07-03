@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
+import canvasImageCapture from "../../../../render/editor/runtime/canvasImageCapture.ts";
+
+const {
   canvasToCompressedImageDataUrlAsync,
   canvasToPngDataUrlAsync
-} from "../../../../render/editor/runtime/canvasImageCapture.ts";
+} = canvasImageCapture;
 
 test("encodes canvas captures through async toBlob without calling sync toDataURL", async () => {
   let toBlobCalls = 0;
