@@ -11,6 +11,8 @@ import type {
   GenerateAiPbrTextureResponse,
   OptimizeAi3DRequest,
   OptimizeAi3DResponse,
+  OptimizeRenderExportRequest,
+  OptimizeRenderExportResponse,
   RecommendAiExternalAssetsRequest,
   RecommendAiExternalAssetsResponse,
   TransformPromptRequest,
@@ -90,5 +92,20 @@ export async function transformAiPrompt(payload: TransformPromptRequest) {
     appApiClient,
     "/ai/prompts/transform",
     payload
+  );
+}
+
+export async function optimizeRenderExportImage(
+  payload: OptimizeRenderExportRequest,
+  options: { signal?: AbortSignal } = {}
+) {
+  return postJson<OptimizeRenderExportResponse, OptimizeRenderExportRequest>(
+    appApiClient,
+    "/ai/render/optimize",
+    payload,
+    {
+      signal: options.signal,
+      timeout: 240_000
+    }
   );
 }

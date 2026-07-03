@@ -105,6 +105,14 @@ const en = {
     "editor.pathTraceHud.ready": "Ready",
     "editor.export.preparing": "Preparing render export...",
     "editor.export.rendering": "Rendering path traced export...",
+    "editor.export.aiOptimizeTitle": "Use AI optimization?",
+    "editor.export.aiOptimizeMessage":
+      "Use a multimodal model to optimize this render before downloading?",
+    "editor.export.aiOptimizeConfirm": "Optimize and download",
+    "editor.export.aiOptimizeDirect": "Download directly",
+    "editor.export.aiOptimizing": "Optimizing image with AI...",
+    "editor.export.aiOptimizeFailedFallback":
+      "AI optimization failed. The original render will be downloaded instead.",
     "editor.export.progress": "{progress}% complete",
     "editor.export.cancel": "Cancel",
     "editor.export.failed": "Render export failed.",

@@ -418,6 +418,23 @@ export type EditorViewportCaptureProgress = {
 export type EditorViewportCaptureOptions = {
   signal?: AbortSignal;
   onProgress?: (progress: EditorViewportCaptureProgress) => void;
+  image?: EditorViewportCaptureImageOptions;
+  onImageEncoded?: (metadata: EditorViewportCaptureImageMetadata) => void;
+};
+export type EditorViewportCaptureImageOptions = {
+  format: "compressed-jpeg";
+  maxBytes?: number;
+  maxDimensions?: number[];
+  qualities?: number[];
+};
+export type EditorViewportCaptureImageMetadata = {
+  mimeType: "image/jpeg" | "image/png" | "image/webp";
+  byteSize: number;
+  width: number;
+  height: number;
+  quality: number;
+  maxBytes: number;
+  withinBudget: boolean;
 };
 export type EditorRenderMode = "webgl" | "pathTrace";
 

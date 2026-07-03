@@ -38,7 +38,10 @@ import {
   stopRuntimeLifecycle,
   type RuntimeStartOptions
 } from "./editorRuntimeLifecycle";
-import { canvasToPngDataUrlAsync } from "./canvasImageCapture";
+import {
+  canvasToCompressedImageDataUrlAsync,
+  canvasToPngDataUrlAsync
+} from "./canvasImageCapture";
 
 const ORBIT_DAMPING_FRAME_BUDGET = 45;
 
@@ -525,7 +528,7 @@ export class EditorRuntime {
       } else {
         this.renderFrame();
       }
-      return canvasToPngDataUrlAsync(this.renderer.domElement);
+      return this.captureCanvasImageAsync(options);
     }
 
     const previousGridHelperVisible = this.getGridHelperVisible();
@@ -544,7 +547,7 @@ export class EditorRuntime {
       } else {
         this.renderFrame();
       }
-      return canvasToPngDataUrlAsync(this.renderer.domElement);
+      return this.captureCanvasImageAsync(options);
     } finally {
       this.environment.setGridHelperVisible(previousGridHelperVisible);
       this.transformGizmo.setVisible(previousTransformGizmoVisible);
@@ -631,12 +634,34 @@ export class EditorRuntime {
         this.studioScene.getPathTraceEnvironmentTexture(),
         () => {
           this.pathTracer.renderCaptureSamples();
-          this.pathTracer.renderDenoisedCapture();
         }
       );
     } finally {
       this.transformGizmo.root.visible = previousTransformGizmoVisible;
     }
+  }
+
+  private async captureCanvasImageAsync(options: EditorViewportCaptureOptions = {}) {
+    if (options.image?.format !== "compressed-jpeg") {
+      return canvasToPngDataUrlAsync(this.renderer.domElement);
+    }
+
+    const result = await canvasToCompressedImageDataUrlAsync(this.renderer.domElement, {
+      mimeType: "image/jpeg",
+      maxBytes: options.image.maxBytes,
+      maxDimensions: options.image.maxDimensions,
+      qualities: options.image.qualities
+    });
+    options.onImageEncoded?.({
+      mimeType: result.mimeType,
+      byteSize: result.byteSize,
+      width: result.width,
+      height: result.height,
+      quality: result.quality,
+      maxBytes: result.maxBytes,
+      withinBudget: result.withinBudget
+    });
+    return result.dataUrl;
   }
 
   private async renderPathTraceCaptureSamplesAsync(options: EditorViewportCaptureOptions = {}) {
@@ -648,7 +673,6 @@ export class EditorRuntime {
         this.studioScene.getPathTraceEnvironmentTexture(),
         async () => {
           await this.pathTracer.renderCaptureSamplesAsync(options);
-          this.pathTracer.renderDenoisedCapture();
         }
       );
     } finally {
