@@ -5,3 +5,4 @@ export * from "./ai/image";
 export * from "./ai/panorama";
 export * from "./ai/pbrTexture";
 export * from "./ai/promptTransform";
+export * from "./ai/renderExport";
