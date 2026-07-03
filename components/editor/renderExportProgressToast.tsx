@@ -9,6 +9,7 @@ import { useI18n } from "@/lib/i18n";
 
 export type RenderExportProgressStatus = {
   active: boolean;
+  indeterminate?: boolean;
   progress: number;
   message: string;
 };
@@ -92,9 +93,11 @@ export default function RenderExportProgressToast({
               >
                 {status.message}
               </Typography>
-              <Typography sx={{ mt: 0.25, color: theme.mutedText, fontSize: 11 }}>
-                {t("editor.export.progress", { progress: progressPercent })}
-              </Typography>
+              {status.indeterminate ? null : (
+                <Typography sx={{ mt: 0.25, color: theme.mutedText, fontSize: 11 }}>
+                  {t("editor.export.progress", { progress: progressPercent })}
+                </Typography>
+              )}
             </Box>
             <Button
               size="small"
@@ -113,7 +116,7 @@ export default function RenderExportProgressToast({
             </Button>
           </Stack>
           <LinearProgress
-            variant="determinate"
+            variant={status.indeterminate ? "indeterminate" : "determinate"}
             value={progressPercent}
             sx={{
               height: 2,

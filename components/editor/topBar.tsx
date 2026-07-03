@@ -21,9 +21,15 @@ import TopBarActionBar from "@/components/editor/topBar/topBarActionBar";
 import TopBarHistoryControls from "@/components/editor/topBar/topBarHistoryControls";
 import { useTopBarMenu } from "@/components/editor/topBar/useTopBarMenu";
 import { useTopBarProjectActions } from "@/components/editor/topBar/useTopBarProjectActions";
+import { optimizeRenderExportImage } from "@/frontend/api/ai";
 import { getEditorThemeTokens } from "@/components/editor/theme";
 import { useI18n } from "@/lib/i18n";
+import type { EditorViewportCaptureImageMetadata } from "@/render/editor";
 import { useEditorStore } from "@/stores/editorStore";
+
+const RENDER_EXPORT_MAX_IMAGE_BYTES = 700 * 1024;
+const RENDER_EXPORT_MAX_DIMENSIONS = [1536, 1280, 1024, 960];
+const RENDER_EXPORT_JPEG_QUALITIES = [0.9, 0.82, 0.74, 0.66, 0.58];
 
 export default function TopBar() {
   const { t } = useI18n();
@@ -81,6 +87,12 @@ export default function TopBar() {
   const handleExportRender = async () => {
     if (!actions.app || renderExportStatus.active) return;
 
+    const shouldOptimizeWithAi = await confirm({
+      title: t("editor.export.aiOptimizeTitle"),
+      message: t("editor.export.aiOptimizeMessage"),
+      confirmLabel: t("editor.export.aiOptimizeConfirm"),
+      cancelLabel: t("editor.export.aiOptimizeDirect")
+    });
     const controller = new AbortController();
     renderExportControllerRef.current = controller;
     setRenderExportStatus({
@@ -90,8 +102,20 @@ export default function TopBar() {
     });
 
     try {
+      const captureMetadataRef: { current: EditorViewportCaptureImageMetadata | null } = {
+        current: null
+      };
       const dataUrl = await actions.app.captureViewportImageAsync("clean", {
         signal: controller.signal,
+        image: {
+          format: "compressed-jpeg",
+          maxBytes: RENDER_EXPORT_MAX_IMAGE_BYTES,
+          maxDimensions: RENDER_EXPORT_MAX_DIMENSIONS,
+          qualities: RENDER_EXPORT_JPEG_QUALITIES
+        },
+        onImageEncoded: (metadata) => {
+          captureMetadataRef.current = metadata;
+        },
         onProgress: (progress) => {
           setRenderExportStatus({
             active: true,
@@ -100,14 +124,58 @@ export default function TopBar() {
           });
         }
       });
-      downloadDataUrl(dataUrl, createRenderExportFileName());
+
+      if (!shouldOptimizeWithAi) {
+        downloadDataUrl(dataUrl, createRenderExportFileName(dataUrl));
+        setRenderExportStatus({
+          active: false,
+          progress: 0,
+          message: ""
+        });
+        return;
+      }
+
+      const captureMetadata = captureMetadataRef.current;
+      if (!captureMetadata) {
+        throw new Error("Compressed render export metadata was not captured.");
+      }
+
+      setRenderExportStatus({
+        active: true,
+        indeterminate: true,
+        progress: 1,
+        message: t("editor.export.aiOptimizing")
+      });
+
+      try {
+        const optimized = await optimizeRenderExportImage(
+          {
+            imageDataUrl: dataUrl,
+            width: captureMetadata.width,
+            height: captureMetadata.height
+          },
+          { signal: controller.signal }
+        );
+        downloadDataUrl(optimized.imageDataUrl, createRenderExportFileName(optimized.imageDataUrl, {
+          aiOptimized: true
+        }));
+      } catch (optimizationError) {
+        if (isRenderExportAbortError(optimizationError)) {
+          throw optimizationError;
+        }
+
+        console.error("[editor] AI render export optimization failed.", optimizationError);
+        await notify({ message: t("editor.export.aiOptimizeFailedFallback") });
+        downloadDataUrl(dataUrl, createRenderExportFileName(dataUrl));
+      }
+
       setRenderExportStatus({
         active: false,
         progress: 0,
         message: ""
       });
     } catch (error) {
-      if (!(error instanceof Error && error.name === "AbortError")) {
+      if (!isRenderExportAbortError(error)) {
         console.error("[editor] Render export failed.", error);
         await notify({ message: t("editor.export.failed") });
       }
@@ -285,9 +353,13 @@ export default function TopBar() {
   );
 }
 
-function createRenderExportFileName() {
+function createRenderExportFileName(
+  dataUrl: string,
+  options: { aiOptimized?: boolean } = {}
+) {
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-  return `scenecraft-render-${timestamp}.png`;
+  const suffix = options.aiOptimized ? "-ai" : "";
+  return `scenecraft-render-${timestamp}${suffix}.${getDataUrlFileExtension(dataUrl)}`;
 }
 
 function downloadDataUrl(dataUrl: string, fileName: string) {
@@ -298,4 +370,14 @@ function downloadDataUrl(dataUrl: string, fileName: string) {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+}
+
+function getDataUrlFileExtension(dataUrl: string) {
+  if (dataUrl.startsWith("data:image/png")) return "png";
+  if (dataUrl.startsWith("data:image/webp")) return "webp";
+  return "jpg";
+}
+
+function isRenderExportAbortError(error: unknown) {
+  return error instanceof Error && (error.name === "AbortError" || error.name === "CanceledError");
 }
