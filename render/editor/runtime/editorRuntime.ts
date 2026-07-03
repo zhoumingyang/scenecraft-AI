@@ -631,7 +631,6 @@ export class EditorRuntime {
         this.studioScene.getPathTraceEnvironmentTexture(),
         () => {
           this.pathTracer.renderCaptureSamples();
-          this.pathTracer.renderDenoisedCapture();
         }
       );
     } finally {
@@ -648,7 +647,6 @@ export class EditorRuntime {
         this.studioScene.getPathTraceEnvironmentTexture(),
         async () => {
           await this.pathTracer.renderCaptureSamplesAsync(options);
-          this.pathTracer.renderDenoisedCapture();
         }
       );
     } finally {
