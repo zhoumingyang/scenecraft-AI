@@ -15,6 +15,7 @@ import ProjectSelectDialog from "@/components/editor/projectSelectDialog";
 import RenderExportProgressToast, {
   type RenderExportProgressStatus
 } from "@/components/editor/renderExportProgressToast";
+import { normalizeRenderExportImageDataUrl } from "@/components/editor/renderExportImageNormalization";
 import { EDITOR_SAVE_SHORTCUT_EVENT } from "@/components/editor/keyboardShortcuts";
 import { dropdownConfigs } from "@/components/editor/topBar/constants";
 import TopBarActionBar from "@/components/editor/topBar/topBarActionBar";
@@ -28,8 +29,8 @@ import type { EditorViewportCaptureImageMetadata } from "@/render/editor";
 import { useEditorStore } from "@/stores/editorStore";
 
 const RENDER_EXPORT_MAX_IMAGE_BYTES = 700 * 1024;
-const RENDER_EXPORT_MAX_DIMENSIONS = [1536, 1280, 1024, 960];
-const RENDER_EXPORT_JPEG_QUALITIES = [0.9, 0.82, 0.74, 0.66, 0.58];
+const RENDER_EXPORT_MAX_DIMENSIONS = [1536, 1280, 1024, 960, 768, 640];
+const RENDER_EXPORT_JPEG_QUALITIES = [0.9, 0.82, 0.74, 0.66, 0.58, 0.5, 0.42];
 
 export default function TopBar() {
   const { t } = useI18n();
@@ -139,6 +140,9 @@ export default function TopBar() {
       if (!captureMetadata) {
         throw new Error("Compressed render export metadata was not captured.");
       }
+      if (!captureMetadata.withinBudget) {
+        throw new Error("Compressed render export image exceeded the AI upload budget.");
+      }
 
       setRenderExportStatus({
         active: true,
@@ -156,7 +160,12 @@ export default function TopBar() {
           },
           { signal: controller.signal }
         );
-        downloadDataUrl(optimized.imageDataUrl, createRenderExportFileName(optimized.imageDataUrl, {
+        const normalizedImageDataUrl = await normalizeRenderExportImageDataUrl(
+          optimized.imageDataUrl,
+          captureMetadata.width,
+          captureMetadata.height
+        );
+        downloadDataUrl(normalizedImageDataUrl, createRenderExportFileName(normalizedImageDataUrl, {
           aiOptimized: true
         }));
       } catch (optimizationError) {

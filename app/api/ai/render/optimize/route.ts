@@ -20,7 +20,9 @@ export const POST = withAuth(async (request) => {
   try {
     const body = optimizeRenderExportRequestSchema.parse(await request.json());
     const result = await optimizeRenderExportImage({
-      imageDataUrl: body.imageDataUrl
+      imageDataUrl: body.imageDataUrl,
+      width: body.width,
+      height: body.height
     });
 
     return NextResponse.json(result);

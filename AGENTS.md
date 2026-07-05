@@ -375,6 +375,7 @@ If the task is about path trace render export optimization:
 - inspect `lib/api/contracts/ai/renderExport.ts`
 - keep direct export available when the user cancels AI optimization or when OpenRouter is unavailable
 - keep uploaded render export screenshots compressed below 700KB unless the product requirement changes
+- keep AI-optimized render export downloads normalized back to the original compressed capture width/height ratio
 - do not reintroduce `DenoiseMaterial` into the path trace export capture path; real-time viewport denoise can remain separate
 - do not save optimized export images into the project AI library or project snapshot unless explicitly requested
 

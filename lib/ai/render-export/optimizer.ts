@@ -17,13 +17,21 @@ type FetchImage = (url: string) => Promise<{
 
 export type OptimizeRenderExportImageOptions = {
   imageDataUrl: string;
+  width: number;
+  height: number;
   provider?: ImageGenerationProvider;
   fetchImage?: FetchImage;
 };
 
-export function buildRenderExportOptimizationPrompt() {
+export function buildRenderExportOptimizationPrompt(width?: number, height?: number) {
+  const ratioInstruction =
+    typeof width === "number" && typeof height === "number"
+      ? `保持输入图片的宽高比和构图比例不变；输出应匹配 ${width}:${height} 的画面比例。`
+      : "保持输入图片的宽高比和构图比例不变。";
+
   return [
     "对图片进行优化。",
+    ratioInstruction,
     "保持图片内容、构图、整体色彩、主体和画面语义不变。",
     "不增删对象，不改变背景，不添加文字、水印、边框或界面元素。",
     "输出优化后的单张图片。"
@@ -32,6 +40,8 @@ export function buildRenderExportOptimizationPrompt() {
 
 export async function optimizeRenderExportImage({
   imageDataUrl,
+  width,
+  height,
   provider,
   fetchImage = fetch
 }: OptimizeRenderExportImageOptions): Promise<OptimizeRenderExportResponse> {
@@ -40,7 +50,7 @@ export async function optimizeRenderExportImage({
   const result = await imageProvider.generateImage({
     providerId: modelConfig.providerId,
     model: AI_RENDER_EXPORT_OPTIMIZATION_MODEL_ID,
-    prompt: buildRenderExportOptimizationPrompt(),
+    prompt: buildRenderExportOptimizationPrompt(width, height),
     cfg: 7,
     inferenceSteps: 28,
     referenceImages: [imageDataUrl]

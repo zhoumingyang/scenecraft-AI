@@ -54,7 +54,7 @@ This is not just a text-to-image demo, and it is not a full desktop-grade DCC to
 - Built-in lighting presets for faster scene setup
 - Post-processing controls with entry points for effects such as Bloom, SSR, GTAO, Bokeh, Film, Glitch, and Halftone
 - A neutral real-time preview baseline with ACES tone mapping, light GTAO contact shading, and restrained default effect parameters
-- Path trace render export with optional OpenRouter `openai/gpt-5.4-image-2` image optimization; export screenshots are compressed below 700KB before optional model processing
+- Path trace render export with optional OpenRouter `openai/gpt-5.4-image-2` image optimization; export screenshots are compressed below 700KB before optional model processing, and optimized downloads are normalized back to the original capture aspect ratio
 
 ### 3. AI Image Workflow
 

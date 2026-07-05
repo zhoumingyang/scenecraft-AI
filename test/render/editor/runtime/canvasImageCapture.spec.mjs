@@ -130,7 +130,7 @@ test("retries compressed captures with lower quality and smaller dimensions", as
   assert.equal(result.withinBudget, true);
 });
 
-test("returns the smallest compressed capture when no attempt fits the byte budget", async () => {
+test("rejects compressed captures when no attempt fits the byte budget", async () => {
   const sourceCanvas = {
     width: 2000,
     height: 1000,
@@ -139,28 +139,26 @@ test("returns the smallest compressed capture when no attempt fits the byte budg
     }
   };
 
-  const result = await canvasToCompressedImageDataUrlAsync(sourceCanvas, {
-    maxBytes: 700,
-    maxDimensions: [960],
-    qualities: [0.58],
-    createCanvas: (width, height) => ({
-      width,
-      height,
-      getContext() {
-        return {
-          drawImage() {}
-        };
-      },
-      toBlob(callback) {
-        callback({ size: 900, type: "image/jpeg" });
-      }
-    }),
-    readBlobAsDataUrl: async () => "data:image/jpeg;base64,oversize"
-  });
-
-  assert.equal(result.dataUrl, "data:image/jpeg;base64,oversize");
-  assert.equal(result.width, 960);
-  assert.equal(result.height, 480);
-  assert.equal(result.byteSize, 900);
-  assert.equal(result.withinBudget, false);
+  await assert.rejects(
+    () =>
+      canvasToCompressedImageDataUrlAsync(sourceCanvas, {
+        maxBytes: 700,
+        maxDimensions: [960],
+        qualities: [0.58],
+        createCanvas: (width, height) => ({
+          width,
+          height,
+          getContext() {
+            return {
+              drawImage() {}
+            };
+          },
+          toBlob(callback) {
+            callback({ size: 900, type: "image/jpeg" });
+          }
+        }),
+        readBlobAsDataUrl: async () => "data:image/jpeg;base64,oversize"
+      }),
+    /Unable to compress canvas capture below 700 bytes/
+  );
 });

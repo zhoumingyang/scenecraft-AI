@@ -12,9 +12,11 @@ const {
 const SOURCE_IMAGE = "data:image/jpeg;base64,YWJj";
 
 test("builds a conservative image optimization prompt", () => {
-  const prompt = buildRenderExportOptimizationPrompt();
+  const prompt = buildRenderExportOptimizationPrompt(1600, 900);
 
   assert.match(prompt, /对图片进行优化/);
+  assert.match(prompt, /宽高比/);
+  assert.match(prompt, /1600:900/);
   assert.match(prompt, /保持图片内容/);
   assert.match(prompt, /整体色彩/);
   assert.match(prompt, /不增删对象/);
@@ -24,6 +26,8 @@ test("requests render export image optimization from the configured image model"
   const calls = [];
   const result = await optimizeRenderExportImage({
     imageDataUrl: SOURCE_IMAGE,
+    width: 1600,
+    height: 900,
     provider: {
       id: "openrouter",
       async generateImage(request) {
@@ -42,8 +46,10 @@ test("requests render export image optimization from the configured image model"
   assert.equal(calls.length, 1);
   assert.equal(calls[0].model, AI_RENDER_EXPORT_OPTIMIZATION_MODEL_ID);
   assert.equal(calls[0].providerId, "openrouter");
+  assert.ok(!("imageAspectRatio" in calls[0]));
   assert.deepEqual(calls[0].referenceImages, [SOURCE_IMAGE]);
   assert.match(calls[0].prompt, /对图片进行优化/);
+  assert.match(calls[0].prompt, /1600:900/);
 });
 
 test("throws when the provider returns no optimized render export image", async () => {
@@ -51,6 +57,8 @@ test("throws when the provider returns no optimized render export image", async 
     () =>
       optimizeRenderExportImage({
         imageDataUrl: SOURCE_IMAGE,
+        width: 1600,
+        height: 900,
         provider: {
           id: "openrouter",
           async generateImage() {

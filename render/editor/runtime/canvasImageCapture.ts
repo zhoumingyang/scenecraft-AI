@@ -49,8 +49,8 @@ export type CanvasToCompressedImageDataUrlOptions = {
 };
 
 const DEFAULT_COMPRESSED_CAPTURE_MAX_BYTES = 700 * 1024;
-const DEFAULT_COMPRESSED_CAPTURE_DIMENSIONS = [1536, 1280, 1024, 960];
-const DEFAULT_COMPRESSED_CAPTURE_QUALITIES = [0.9, 0.82, 0.74, 0.66, 0.58];
+const DEFAULT_COMPRESSED_CAPTURE_DIMENSIONS = [1536, 1280, 1024, 960, 768, 640];
+const DEFAULT_COMPRESSED_CAPTURE_QUALITIES = [0.9, 0.82, 0.74, 0.66, 0.58, 0.5, 0.42];
 
 export async function canvasToPngDataUrlAsync(
   canvas: CanvasBlobCaptureSource,
@@ -81,8 +81,6 @@ export async function canvasToCompressedImageDataUrlAsync(
     DEFAULT_COMPRESSED_CAPTURE_QUALITIES
   );
   const readBlobAsDataUrl = options.readBlobAsDataUrl ?? readBlobAsDataUrlAsync;
-  let fallback: CompressedImageCaptureMetadata | null = null;
-
   for (const maxDimension of maxDimensions) {
     const dimensions = fitDimensionsWithin(sourceWidth, sourceHeight, maxDimension);
     const targetCanvas = createTargetCanvas(canvas, dimensions.width, dimensions.height, options);
@@ -105,16 +103,10 @@ export async function canvasToCompressedImageDataUrlAsync(
       if (result.withinBudget) {
         return result;
       }
-
-      fallback = result;
     }
   }
 
-  if (!fallback) {
-    throw new Error("Unable to encode compressed canvas capture.");
-  }
-
-  return fallback;
+  throw new Error(`Unable to compress canvas capture below ${maxBytes} bytes.`);
 }
 
 function canvasToBlobAsync(canvas: CanvasBlobCaptureSource, type: string, quality?: number) {
