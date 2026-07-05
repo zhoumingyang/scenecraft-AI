@@ -198,7 +198,6 @@ export default function TopBar() {
     } catch (error) {
       if (!isRenderExportAbortError(error)) {
         console.error("[editor] Render export failed.", error);
-        await notify({ message: t("editor.export.failed") });
       }
       setRenderExportStatus({
         active: false,
