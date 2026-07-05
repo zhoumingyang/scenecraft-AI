@@ -417,6 +417,7 @@ export type EditorViewportCaptureProgress = {
 };
 export type EditorViewportCaptureOptions = {
   signal?: AbortSignal;
+  includeGridHelper?: boolean;
   onProgress?: (progress: EditorViewportCaptureProgress) => void;
   image?: EditorViewportCaptureImageOptions;
   onImageEncoded?: (metadata: EditorViewportCaptureImageMetadata) => void;

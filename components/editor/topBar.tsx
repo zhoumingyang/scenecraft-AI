@@ -16,7 +16,10 @@ import RenderExportProgressToast, {
   type RenderExportProgressStatus
 } from "@/components/editor/renderExportProgressToast";
 import { normalizeRenderExportImageDataUrl } from "@/components/editor/renderExportImageNormalization";
-import { shouldOfferAiRenderExportOptimization } from "@/components/editor/renderExportMode";
+import {
+  shouldIncludeGridHelperInRenderExport,
+  shouldOfferAiRenderExportOptimization
+} from "@/components/editor/renderExportMode";
 import { EDITOR_SAVE_SHORTCUT_EVENT } from "@/components/editor/keyboardShortcuts";
 import { dropdownConfigs } from "@/components/editor/topBar/constants";
 import TopBarActionBar from "@/components/editor/topBar/topBarActionBar";
@@ -89,7 +92,8 @@ export default function TopBar() {
   const handleExportRender = async () => {
     if (!actions.app || renderExportStatus.active) return;
 
-    const canOptimizeWithAi = shouldOfferAiRenderExportOptimization(actions.app.getRenderMode());
+    const renderMode = actions.app.getRenderMode();
+    const canOptimizeWithAi = shouldOfferAiRenderExportOptimization(renderMode);
     const shouldOptimizeWithAi = canOptimizeWithAi
       ? await confirm({
           title: t("editor.export.aiOptimizeTitle"),
@@ -112,6 +116,7 @@ export default function TopBar() {
       };
       const dataUrl = await actions.app.captureViewportImageAsync("clean", {
         signal: controller.signal,
+        includeGridHelper: shouldIncludeGridHelperInRenderExport(renderMode),
         ...(canOptimizeWithAi
           ? {
               image: {

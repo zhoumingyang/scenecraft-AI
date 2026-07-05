@@ -536,7 +536,9 @@ export class EditorRuntime {
     const previousLightHelpersVisible = this.getLightHelpersVisible();
     const previousOutlineEnabled = this.postProcessing.getOutlineEnabled();
 
-    this.environment.setGridHelperVisible(false);
+    if (!options.includeGridHelper) {
+      this.environment.setGridHelperVisible(false);
+    }
     this.transformGizmo.setVisible(false);
     this.environment.setLightHelpersVisible(false);
     this.postProcessing.setOutlineEnabled(false);
