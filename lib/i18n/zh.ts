@@ -110,7 +110,6 @@ const zh: TranslationDictionary = {
     "editor.export.aiOptimizeConfirm": "优化后下载",
     "editor.export.aiOptimizeDirect": "直接下载",
     "editor.export.aiOptimizing": "正在使用大模型优化图片...",
-    "editor.export.aiOptimizeFailedFallback": "AI 优化失败，将下载原始渲染图。",
     "editor.export.progress": "已完成 {progress}%",
     "editor.export.cancel": "取消",
     "editor.export.failed": "渲染导出失败。",

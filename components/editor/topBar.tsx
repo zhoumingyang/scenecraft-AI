@@ -165,7 +165,6 @@ export default function TopBar() {
         }
 
         console.error("[editor] AI render export optimization failed.", optimizationError);
-        await notify({ message: t("editor.export.aiOptimizeFailedFallback") });
         downloadDataUrl(dataUrl, createRenderExportFileName(dataUrl));
       }
 

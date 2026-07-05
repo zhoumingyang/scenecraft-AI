@@ -111,8 +111,6 @@ const en = {
     "editor.export.aiOptimizeConfirm": "Optimize and download",
     "editor.export.aiOptimizeDirect": "Download directly",
     "editor.export.aiOptimizing": "Optimizing image with AI...",
-    "editor.export.aiOptimizeFailedFallback":
-      "AI optimization failed. The original render will be downloaded instead.",
     "editor.export.progress": "{progress}% complete",
     "editor.export.cancel": "Cancel",
     "editor.export.failed": "Render export failed.",
