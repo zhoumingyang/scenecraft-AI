@@ -16,6 +16,7 @@ import RenderExportProgressToast, {
   type RenderExportProgressStatus
 } from "@/components/editor/renderExportProgressToast";
 import { normalizeRenderExportImageDataUrl } from "@/components/editor/renderExportImageNormalization";
+import { shouldOfferAiRenderExportOptimization } from "@/components/editor/renderExportMode";
 import { EDITOR_SAVE_SHORTCUT_EVENT } from "@/components/editor/keyboardShortcuts";
 import { dropdownConfigs } from "@/components/editor/topBar/constants";
 import TopBarActionBar from "@/components/editor/topBar/topBarActionBar";
@@ -88,12 +89,15 @@ export default function TopBar() {
   const handleExportRender = async () => {
     if (!actions.app || renderExportStatus.active) return;
 
-    const shouldOptimizeWithAi = await confirm({
-      title: t("editor.export.aiOptimizeTitle"),
-      message: t("editor.export.aiOptimizeMessage"),
-      confirmLabel: t("editor.export.aiOptimizeConfirm"),
-      cancelLabel: t("editor.export.aiOptimizeDirect")
-    });
+    const canOptimizeWithAi = shouldOfferAiRenderExportOptimization(actions.app.getRenderMode());
+    const shouldOptimizeWithAi = canOptimizeWithAi
+      ? await confirm({
+          title: t("editor.export.aiOptimizeTitle"),
+          message: t("editor.export.aiOptimizeMessage"),
+          confirmLabel: t("editor.export.aiOptimizeConfirm"),
+          cancelLabel: t("editor.export.aiOptimizeDirect")
+        })
+      : false;
     const controller = new AbortController();
     renderExportControllerRef.current = controller;
     setRenderExportStatus({
@@ -108,15 +112,19 @@ export default function TopBar() {
       };
       const dataUrl = await actions.app.captureViewportImageAsync("clean", {
         signal: controller.signal,
-        image: {
-          format: "compressed-jpeg",
-          maxBytes: RENDER_EXPORT_MAX_IMAGE_BYTES,
-          maxDimensions: RENDER_EXPORT_MAX_DIMENSIONS,
-          qualities: RENDER_EXPORT_JPEG_QUALITIES
-        },
-        onImageEncoded: (metadata) => {
-          captureMetadataRef.current = metadata;
-        },
+        ...(canOptimizeWithAi
+          ? {
+              image: {
+                format: "compressed-jpeg" as const,
+                maxBytes: RENDER_EXPORT_MAX_IMAGE_BYTES,
+                maxDimensions: RENDER_EXPORT_MAX_DIMENSIONS,
+                qualities: RENDER_EXPORT_JPEG_QUALITIES
+              },
+              onImageEncoded: (metadata: EditorViewportCaptureImageMetadata) => {
+                captureMetadataRef.current = metadata;
+              }
+            }
+          : {}),
         onProgress: (progress) => {
           setRenderExportStatus({
             active: true,
@@ -126,7 +134,7 @@ export default function TopBar() {
         }
       });
 
-      if (!shouldOptimizeWithAi) {
+      if (!canOptimizeWithAi || !shouldOptimizeWithAi) {
         downloadDataUrl(dataUrl, createRenderExportFileName(dataUrl));
         setRenderExportStatus({
           active: false,
