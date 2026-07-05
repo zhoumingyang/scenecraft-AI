@@ -2,8 +2,8 @@ import type { WebGLPathTracer } from "three-gpu-pathtracer";
 
 export const INTERACTIVE_PATH_TRACE_MIN_SAMPLES = 1;
 export const PATH_TRACE_INTERACTIVE_TARGET_SAMPLES = 256;
-export const PATH_TRACE_CAPTURE_SAMPLES = 2048;
-export const PATH_TRACE_CAPTURE_MAX_ITERATIONS = 2048;
+export const PATH_TRACE_CAPTURE_SAMPLES = 512;
+export const PATH_TRACE_CAPTURE_MAX_ITERATIONS = 512;
 export const PATH_TRACE_GLOSSY_FILTER_FACTOR = 1;
 
 const FULL_FRAME_TILE_COUNT = 1;

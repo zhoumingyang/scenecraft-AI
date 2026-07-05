@@ -1,13 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
+import pathTraceRendererConfig from "../../../../render/editor/runtime/pathTraceRendererConfig.ts";
+
+const {
   PATH_TRACE_CAPTURE_MAX_ITERATIONS,
   PATH_TRACE_CAPTURE_SAMPLES,
   PATH_TRACE_GLOSSY_FILTER_FACTOR,
   PATH_TRACE_INTERACTIVE_TARGET_SAMPLES,
   configureEditorPathTracer
-} from "../../../../render/editor/runtime/pathTraceRendererConfig.ts";
+} = pathTraceRendererConfig;
 
 test("configures path tracing to show the interactive path traced image immediately", () => {
   const calls = [];
@@ -30,10 +32,10 @@ test("configures path tracing to show the interactive path traced image immediat
   assert.equal(pathTracer.stableNoise, true);
 });
 
-test("uses balanced realtime samples and high quality capture samples", () => {
+test("uses balanced realtime samples and bounded capture samples", () => {
   assert.equal(PATH_TRACE_INTERACTIVE_TARGET_SAMPLES, 256);
-  assert.equal(PATH_TRACE_CAPTURE_SAMPLES, 2048);
-  assert.equal(PATH_TRACE_CAPTURE_MAX_ITERATIONS, 2048);
+  assert.equal(PATH_TRACE_CAPTURE_SAMPLES, 512);
+  assert.equal(PATH_TRACE_CAPTURE_MAX_ITERATIONS, 512);
   assert.equal(PATH_TRACE_GLOSSY_FILTER_FACTOR, 1);
 });
 

@@ -1,14 +1,17 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
+import pathTraceSettings from "../../../../render/editor/runtime/pathTraceSettings.ts";
+
+const {
   DEFAULT_PATH_TRACE_SETTINGS,
   getPathTraceCaptureSampleBudget,
   normalizePathTraceSettings
-} from "../../../../render/editor/runtime/pathTraceSettings.ts";
+} = pathTraceSettings;
 
 test("normalizes path trace scene settings with current defaults", () => {
   assert.deepEqual(normalizePathTraceSettings(), DEFAULT_PATH_TRACE_SETTINGS);
+  assert.equal(DEFAULT_PATH_TRACE_SETTINGS.exportSamples, 512);
 });
 
 test("clamps path trace scene settings to safe editor ranges", () => {

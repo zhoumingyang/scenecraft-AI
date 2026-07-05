@@ -70,7 +70,7 @@ export const DEFAULT_PATH_TRACE_SETTINGS: PathTraceSettings = {
   fadeDuration: 0,
   renderDelay: 0,
   realtimeSamples: 256,
-  exportSamples: 2048
+  exportSamples: 512
 };
 
 export function normalizePathTraceSettings(
