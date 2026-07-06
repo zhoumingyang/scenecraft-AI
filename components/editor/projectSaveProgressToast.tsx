@@ -6,13 +6,12 @@ import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import SaveRoundedIcon from "@mui/icons-material/SaveRounded";
 import { Box, Fade, Stack, Typography } from "@mui/material";
 import { alpha, keyframes } from "@mui/material/styles";
-import type { EditorThemeTokens } from "@/components/editor/theme";
+import { useEditorTheme } from "@/components/editor/editorThemeContext";
 import { useI18n } from "@/lib/i18n";
 import type { ProjectSaveStatus } from "@/stores/editorStore";
 
 type ProjectSaveProgressToastProps = {
   status: ProjectSaveStatus;
-  theme: EditorThemeTokens;
   onClose: () => void;
 };
 
@@ -53,10 +52,10 @@ const badgePulse = keyframes`
 
 export default function ProjectSaveProgressToast({
   status,
-  theme,
   onClose
 }: ProjectSaveProgressToastProps) {
   const { t } = useI18n();
+  const { theme } = useEditorTheme();
 
   useEffect(() => {
     if (status.phase === "idle" || status.phase === "saving") {

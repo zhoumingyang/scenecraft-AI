@@ -2,7 +2,7 @@
 
 import { Alert, Box, Dialog, DialogContent, DialogTitle, Grid, Stack, Typography } from "@mui/material";
 import type { ProjectSummary } from "@/lib/api/contracts/projects";
-import type { EditorThemeTokens } from "@/components/editor/theme";
+import { useEditorTheme } from "@/components/editor/editorThemeContext";
 import { useI18n } from "@/lib/i18n";
 import ProjectListCard from "./projectListCard";
 
@@ -12,7 +12,6 @@ type ProjectSelectDialogProps = {
   isLoading: boolean;
   deletingProjectId: string | null;
   errorMessage: string | null;
-  theme: EditorThemeTokens;
   onClose: () => void;
   onSelectProject: (projectId: string) => void;
   onDeleteProject: (projectId: string) => void;
@@ -24,12 +23,12 @@ export default function ProjectSelectDialog({
   isLoading,
   deletingProjectId,
   errorMessage,
-  theme,
   onClose,
   onSelectProject,
   onDeleteProject
 }: ProjectSelectDialogProps) {
   const { t } = useI18n();
+  const { theme } = useEditorTheme();
 
   return (
     <Dialog
@@ -97,7 +96,6 @@ export default function ProjectSelectDialog({
                 <Grid key={project.id} size={{ xs: 12, sm: 6, md: 3 }}>
                   <ProjectListCard
                     project={project}
-                    theme={theme}
                     isDeleting={deletingProjectId === project.id}
                     onSelect={() => onSelectProject(project.id)}
                     onDelete={() => onDeleteProject(project.id)}

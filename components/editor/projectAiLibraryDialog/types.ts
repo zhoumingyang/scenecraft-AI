@@ -1,10 +1,8 @@
-import type { EditorThemeTokens } from "@/components/editor/theme";
 import type { ProjectAiAssetJSON, ProjectAiAssetKindJSON, ProjectAiLibraryV2JSON } from "@/render/editor";
 import type { PendingAiAsset } from "@/stores/editorStore";
 
 export type ProjectAiLibraryDialogProps = {
   open: boolean;
-  theme: EditorThemeTokens;
   loadedLibrary: ProjectAiLibraryV2JSON;
   pendingAssets: PendingAiAsset[];
   mode?: "manage" | "apply";

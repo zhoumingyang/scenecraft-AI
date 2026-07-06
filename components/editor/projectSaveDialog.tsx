@@ -12,13 +12,12 @@ import {
   Typography
 } from "@mui/material";
 import type { EditorProjectMetaJSON } from "@/render/editor";
-import type { EditorThemeTokens } from "@/components/editor/theme";
+import { useEditorTheme } from "@/components/editor/editorThemeContext";
 import { useI18n } from "@/lib/i18n";
 
 type ProjectSaveDialogProps = {
   open: boolean;
   initialMeta: EditorProjectMetaJSON | null;
-  theme: EditorThemeTokens;
   onClose: () => void;
   onConfirm: (meta: EditorProjectMetaJSON) => void;
   isSaving: boolean;
@@ -27,12 +26,12 @@ type ProjectSaveDialogProps = {
 export default function ProjectSaveDialog({
   open,
   initialMeta,
-  theme,
   onClose,
   onConfirm,
   isSaving
 }: ProjectSaveDialogProps) {
   const { t } = useI18n();
+  const { theme } = useEditorTheme();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState("");

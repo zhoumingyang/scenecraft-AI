@@ -2,7 +2,7 @@ import { IconButton, Stack, Tooltip } from "@mui/material";
 import RedoRoundedIcon from "@mui/icons-material/RedoRounded";
 import UndoRoundedIcon from "@mui/icons-material/UndoRounded";
 import type { SxProps, Theme } from "@mui/material/styles";
-import type { EditorThemeTokens } from "@/components/editor/theme";
+import { useEditorTheme } from "@/components/editor/editorThemeContext";
 import type { EditorHistoryState } from "@/render/editor";
 import type { TopBarTranslate } from "./types";
 
@@ -13,7 +13,6 @@ type TopBarHistoryControlsProps = {
   onUndo: () => void | Promise<void>;
   sx?: SxProps<Theme>;
   t: TopBarTranslate;
-  theme: EditorThemeTokens;
 };
 
 export default function TopBarHistoryControls({
@@ -22,9 +21,9 @@ export default function TopBarHistoryControls({
   onRedo,
   onUndo,
   sx,
-  t,
-  theme
+  t
 }: TopBarHistoryControlsProps) {
+  const { theme } = useEditorTheme();
   const iconButtonSx = {
     width: 32,
     height: 32,

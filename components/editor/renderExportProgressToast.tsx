@@ -4,7 +4,7 @@ import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import { Box, Button, Fade, LinearProgress, Stack, Typography } from "@mui/material";
 import { alpha } from "@mui/material/styles";
-import type { EditorThemeTokens } from "@/components/editor/theme";
+import { useEditorTheme } from "@/components/editor/editorThemeContext";
 import { useI18n } from "@/lib/i18n";
 
 export type RenderExportProgressStatus = {
@@ -16,16 +16,15 @@ export type RenderExportProgressStatus = {
 
 type RenderExportProgressToastProps = {
   status: RenderExportProgressStatus;
-  theme: EditorThemeTokens;
   onCancel: () => void;
 };
 
 export default function RenderExportProgressToast({
   status,
-  theme,
   onCancel
 }: RenderExportProgressToastProps) {
   const { t } = useI18n();
+  const { theme } = useEditorTheme();
 
   if (!status.active) {
     return null;

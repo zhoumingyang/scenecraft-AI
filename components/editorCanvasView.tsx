@@ -18,23 +18,30 @@ import { useEditorKeyboardShortcuts } from "@/components/editor/useEditorKeyboar
 import { useEditorThemePersistence } from "@/components/editor/useEditorThemePersistence";
 import { useInitialEditorProjectLoad } from "@/components/editor/useInitialEditorProjectLoad";
 import { EDITOR_SAVE_SHORTCUT_EVENT } from "@/components/editor/keyboardShortcuts";
+import { EditorThemeProvider, useEditorTheme } from "@/components/editor/editorThemeContext";
 import { createEditorSdk } from "@/render/editor/sdk";
 import { useEditorStore } from "@/stores/editorStore";
-import { getEditorThemeTokens } from "@/components/editor/theme";
 
 type EditorCanvasViewProps = {
   userEmail: string | null;
 };
 
 export default function EditorCanvasView({ userEmail }: EditorCanvasViewProps) {
+  return (
+    <EditorThemeProvider>
+      <EditorCanvasViewContent userEmail={userEmail} />
+    </EditorThemeProvider>
+  );
+}
+
+function EditorCanvasViewContent({ userEmail }: EditorCanvasViewProps) {
   const canvasHostRef = useRef<HTMLDivElement | null>(null);
   const setApp = useEditorStore((state) => state.setApp);
-  const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
   const setSelectedEntityId = useEditorStore((state) => state.setSelectedEntityId);
   const setStudioSceneState = useEditorStore((state) => state.setStudioSceneState);
   const selectedEntityId = useEditorStore((state) => state.selectedEntityId);
   const isStudioSceneActive = useEditorStore((state) => state.studioScene.active);
-  const theme = getEditorThemeTokens(editorThemeMode);
+  const { mode: editorThemeMode, theme } = useEditorTheme();
 
   useEditorThemePersistence();
 

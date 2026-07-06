@@ -4,7 +4,7 @@ import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import DeleteSweepRoundedIcon from "@mui/icons-material/DeleteSweepRounded";
 import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
 import CollectionsRoundedIcon from "@mui/icons-material/CollectionsRounded";
-import type { EditorThemeTokens } from "@/components/editor/theme";
+import { useEditorTheme } from "@/components/editor/editorThemeContext";
 import type { DropdownConfig, TopBarTranslate } from "./types";
 
 type TopBarActionBarProps = {
@@ -21,7 +21,6 @@ type TopBarActionBarProps = {
   onExportRender: () => void;
   onSaveScene: () => void;
   t: TopBarTranslate;
-  theme: EditorThemeTokens;
 };
 
 export default function TopBarActionBar({
@@ -37,9 +36,9 @@ export default function TopBarActionBar({
   onOpenMenu,
   onExportRender,
   onSaveScene,
-  t,
-  theme
+  t
 }: TopBarActionBarProps) {
+  const { theme } = useEditorTheme();
   const projectConfig = dropdownConfigs.find((config) => config.id === "project") ?? null;
   const actionConfigs = dropdownConfigs.filter((config) => config.id !== "project");
   const disabledMenuIdSet = new Set(disabledMenuIds);

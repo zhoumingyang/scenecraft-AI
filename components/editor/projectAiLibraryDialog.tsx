@@ -4,8 +4,8 @@ import { useState } from "react";
 import { Box, Dialog, DialogContent, Typography } from "@mui/material";
 import AiImagePreviewDialog from "@/components/editor/aiImagePreviewDialog";
 import { useEditorConfirmationDialog } from "@/components/editor/editorConfirmationDialog";
+import { useEditorTheme } from "@/components/editor/editorThemeContext";
 import { useI18n } from "@/lib/i18n";
-import { useEditorStore } from "@/stores/editorStore";
 import { ProjectAiLibraryGrid } from "./projectAiLibraryDialog/projectAiLibraryGrid";
 import { ProjectAiLibraryHeader } from "./projectAiLibraryDialog/projectAiLibraryHeader";
 import { ProjectAiLibraryTabs } from "./projectAiLibraryDialog/projectAiLibraryTabs";
@@ -19,7 +19,6 @@ import {
 
 export default function ProjectAiLibraryDialog({
   open,
-  theme,
   loadedLibrary,
   pendingAssets,
   mode = "manage",
@@ -31,8 +30,8 @@ export default function ProjectAiLibraryDialog({
   onApplyPanorama
 }: ProjectAiLibraryDialogProps) {
   const { t } = useI18n();
+  const { mode: editorThemeMode, theme } = useEditorTheme();
   const { confirm, confirmationDialog } = useEditorConfirmationDialog({ theme, t });
-  const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
   const [previewItem, setPreviewItem] = useState<Pick<AiAssetListItem, "imageUrl" | "prompt"> | null>(
     null
   );

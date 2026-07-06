@@ -18,12 +18,11 @@ import {
 } from "@mui/material";
 import ProjectThumbnailPreviewDialog from "@/components/editor/projectThumbnailPreviewDialog";
 import type { ProjectSummary } from "@/lib/api/contracts/projects";
-import type { EditorThemeTokens } from "@/components/editor/theme";
+import { useEditorTheme } from "@/components/editor/editorThemeContext";
 import { useI18n } from "@/lib/i18n";
 
 type ProjectListCardProps = {
   project: ProjectSummary;
-  theme: EditorThemeTokens;
   isDeleting?: boolean;
   onSelect: () => void;
   onDelete: () => void;
@@ -31,12 +30,12 @@ type ProjectListCardProps = {
 
 export default function ProjectListCard({
   project,
-  theme,
   isDeleting = false,
   onSelect,
   onDelete
 }: ProjectListCardProps) {
   const { t } = useI18n();
+  const { theme } = useEditorTheme();
   const hasTags = project.tags.length > 0;
   const [previewOpen, setPreviewOpen] = useState(false);
   const hasThumbnail = Boolean(project.thumbnailUrl);
@@ -266,7 +265,6 @@ export default function ProjectListCard({
         open={previewOpen}
         title={project.title}
         thumbnailUrl={project.thumbnailUrl}
-        theme={theme}
         onClose={() => setPreviewOpen(false)}
       />
     </>

@@ -7,7 +7,6 @@ import CollectionsRoundedIcon from "@mui/icons-material/CollectionsRounded";
 import UploadRoundedIcon from "@mui/icons-material/UploadRounded";
 import { Box, Button, IconButton, Slider, Stack, Typography } from "@mui/material";
 import ProjectAiLibraryDialog from "@/components/editor/projectAiLibraryDialog";
-import { getEditorThemeTokens } from "@/components/editor/theme";
 import { useI18n } from "@/lib/i18n";
 import type { ResolvedTextureSchema } from "@/render/editor";
 import { useEditorStore } from "@/stores/editorStore";
@@ -81,14 +80,12 @@ export function TextureConfigDialog({
 }: TextureConfigDialogProps) {
   const { t } = useI18n();
   const app = useEditorStore((state) => state.app);
-  const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
   const loadedAiLibrary = useEditorStore((state) => state.loadedAiLibrary);
   const pendingAiAssets = useEditorStore((state) => state.pendingAiAssets);
   const registerLocalProjectAsset = useEditorStore((state) => state.registerLocalProjectAsset);
   const [inputKey, setInputKey] = useState(0);
   const [aiLibraryOpen, setAiLibraryOpen] = useState(false);
   const hasTexture = Boolean(texture.url);
-  const theme = getEditorThemeTokens(editorThemeMode);
 
   const updateTexture = (
     patch: Partial<ResolvedTextureSchema> & {
@@ -362,7 +359,6 @@ export function TextureConfigDialog({
 
       <ProjectAiLibraryDialog
         open={aiLibraryOpen}
-        theme={theme}
         loadedLibrary={loadedAiLibrary}
         pendingAssets={pendingAiAssets}
         mode="apply"

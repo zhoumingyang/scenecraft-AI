@@ -14,9 +14,9 @@ import {
 } from "@mui/material";
 import { useI18n } from "@/lib/i18n";
 import type { ExternalAssetDetail, ExternalAssetType } from "@/lib/externalAssets/types";
-import { useEditorStore } from "@/stores/editorStore";
 import { useEditorConfirmationDialog } from "./editorConfirmationDialog";
-import type { EditorThemeTokens } from "./theme";
+import { useEditorTheme } from "./editorThemeContext";
+import { useEditorStore } from "@/stores/editorStore";
 import { ExternalAssetApplyOverlay } from "./externalAssets/externalAssetApplyOverlay";
 import { ExternalAssetBrowserFilterBar } from "./externalAssets/externalAssetBrowserFilterBar";
 import { ExternalAssetBrowserResults } from "./externalAssets/externalAssetBrowserResults";
@@ -39,7 +39,6 @@ export type {
 
 type ExternalAssetBrowserDialogProps = {
   open: boolean;
-  theme: EditorThemeTokens;
   assetType: ExternalAssetType;
   onClose: () => void;
   onApplyHdri?: (payload: ExternalHdriApplyPayload) => Promise<void> | void;
@@ -49,7 +48,6 @@ type ExternalAssetBrowserDialogProps = {
 
 export function ExternalAssetBrowserDialog({
   open,
-  theme,
   assetType,
   onClose,
   onApplyHdri,
@@ -57,8 +55,8 @@ export function ExternalAssetBrowserDialog({
   onApplyModel
 }: ExternalAssetBrowserDialogProps) {
   const { t } = useI18n();
+  const { mode: editorThemeMode, theme } = useEditorTheme();
   const { confirmationDialog, notify } = useEditorConfirmationDialog({ theme, t });
-  const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
   const beginSceneLoading = useEditorStore((state) => state.beginSceneLoading);
   const endSceneLoading = useEditorStore((state) => state.endSceneLoading);
   const [isApplying, setIsApplying] = useState(false);

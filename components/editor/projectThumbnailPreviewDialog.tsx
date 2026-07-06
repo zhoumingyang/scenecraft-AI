@@ -2,13 +2,12 @@
 
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import { Box, Dialog, DialogContent, IconButton, Typography } from "@mui/material";
-import type { EditorThemeTokens } from "@/components/editor/theme";
+import { useEditorTheme } from "@/components/editor/editorThemeContext";
 
 type ProjectThumbnailPreviewDialogProps = {
   open: boolean;
   title: string;
   thumbnailUrl: string | null;
-  theme: EditorThemeTokens;
   onClose: () => void;
 };
 
@@ -16,9 +15,10 @@ export default function ProjectThumbnailPreviewDialog({
   open,
   title,
   thumbnailUrl,
-  theme,
   onClose
 }: ProjectThumbnailPreviewDialogProps) {
+  const { theme } = useEditorTheme();
+
   return (
     <Dialog
       open={open}

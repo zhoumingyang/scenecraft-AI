@@ -17,22 +17,21 @@ import { EDITOR_SAVE_SHORTCUT_EVENT } from "@/components/editor/keyboardShortcut
 import { dropdownConfigs } from "@/components/editor/topBar/constants";
 import TopBarActionBar from "@/components/editor/topBar/topBarActionBar";
 import TopBarHistoryControls from "@/components/editor/topBar/topBarHistoryControls";
+import { useEditorTheme } from "@/components/editor/editorThemeContext";
 import { useRenderExport } from "@/components/editor/topBar/useRenderExport";
 import { useTopBarMenu } from "@/components/editor/topBar/useTopBarMenu";
 import { useTopBarProjectActions } from "@/components/editor/topBar/useTopBarProjectActions";
-import { getEditorThemeTokens } from "@/components/editor/theme";
 import { useI18n } from "@/lib/i18n";
 import { useEditorStore } from "@/stores/editorStore";
 
 export default function TopBar() {
   const { t } = useI18n();
-  const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
   const projectLoadVersion = useEditorStore((state) => state.projectLoadVersion);
   const lightingConflictNotice = useEditorStore((state) => state.lightingConflictNotice);
   const historyState = useEditorStore((state) => state.historyState);
   const isStudioSceneActive = useEditorStore((state) => state.studioScene.active);
   const dismissLightingConflictNotice = useEditorStore((state) => state.dismissLightingConflictNotice);
-  const theme = getEditorThemeTokens(editorThemeMode);
+  const { mode: editorThemeMode, theme } = useEditorTheme();
   const { confirm, confirmationDialog, notify } = useEditorConfirmationDialog({ theme, t });
   const studioDisabledMenuIds = isStudioSceneActive ? (["project", "camera"] as const) : [];
   const actions = useTopBarProjectActions({ confirm, notify, t });
@@ -101,7 +100,6 @@ export default function TopBar() {
 
       <ExternalAssetBrowserDialog
         open={actions.polyhavenHdriDialogOpen}
-        theme={theme}
         assetType="hdri"
         onClose={actions.closePolyhavenHdriDialog}
         onApplyHdri={actions.onApplyExternalHdri}
@@ -109,7 +107,6 @@ export default function TopBar() {
 
       <ExternalAssetBrowserDialog
         open={actions.polyhavenModelDialogOpen}
-        theme={theme}
         assetType="model"
         onClose={actions.closePolyhavenModelDialog}
         onApplyModel={actions.onApplyExternalModel}
@@ -147,7 +144,6 @@ export default function TopBar() {
           onOpenMenu={menu.openMenu}
           onSaveScene={actions.onSaveScene}
           t={t}
-          theme={theme}
         />
         <TopBarHistoryControls
           disabled={false}
@@ -155,7 +151,6 @@ export default function TopBar() {
           onRedo={handleRedo}
           onUndo={handleUndo}
           t={t}
-          theme={theme}
           sx={{
             justifySelf: "start"
           }}
@@ -175,7 +170,6 @@ export default function TopBar() {
       <ProjectSaveDialog
         open={actions.projectSaveDialogOpen}
         initialMeta={actions.currentProjectMeta}
-        theme={theme}
         isSaving={actions.isSaving}
         onClose={actions.closeProjectSaveDialog}
         onConfirm={(meta) => {
@@ -189,7 +183,6 @@ export default function TopBar() {
         isLoading={actions.isProjectListLoading}
         deletingProjectId={actions.deletingProjectId}
         errorMessage={actions.projectListError}
-        theme={theme}
         onClose={actions.closeProjectListDialog}
         onSelectProject={(projectId) => {
           void actions.onSelectProject(projectId);
@@ -201,7 +194,6 @@ export default function TopBar() {
 
       <ProjectAiLibraryDialog
         open={actions.aiLibraryDialogOpen}
-        theme={theme}
         loadedLibrary={actions.loadedAiLibrary}
         pendingAssets={actions.pendingAiAssets}
         onClose={actions.closeAiLibraryDialog}
@@ -210,19 +202,16 @@ export default function TopBar() {
 
       <ProjectSaveProgressToast
         status={actions.saveStatus}
-        theme={theme}
         onClose={actions.resetSaveStatus}
       />
 
       <RenderExportProgressToast
         status={renderExportStatus}
-        theme={theme}
         onCancel={onCancelRenderExport}
       />
 
       <LightingConflictToast
         notice={lightingConflictNotice}
-        theme={theme}
         onClose={dismissLightingConflictNotice}
         onRemoveFillLights={() => {
           actions.app?.removeEnvironmentFillLights();

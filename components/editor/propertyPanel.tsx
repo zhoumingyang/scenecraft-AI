@@ -266,7 +266,6 @@ export default function PropertyPanel() {
         {materialPanelTarget && isPolyhavenEnabled ? (
           <ExternalAssetBrowserDialog
             open={materialLibraryOpen}
-            theme={theme}
             assetType="texture"
             onClose={() => setMaterialLibraryOpen(false)}
             onApplyTexture={handleApplyTextureSet}
@@ -275,7 +274,6 @@ export default function PropertyPanel() {
 
         <ProjectAiLibraryDialog
           open={aiLibraryOpen}
-          theme={theme}
           loadedLibrary={loadedAiLibrary}
           pendingAssets={pendingAiAssets}
           mode={entityRecord?.kind === "scene" ? "apply" : "manage"}

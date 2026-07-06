@@ -5,24 +5,23 @@ import DeleteSweepRoundedIcon from "@mui/icons-material/DeleteSweepRounded";
 import LightModeRoundedIcon from "@mui/icons-material/LightModeRounded";
 import { Box, Button, Fade, IconButton, Stack, Typography } from "@mui/material";
 import { alpha } from "@mui/material/styles";
-import type { EditorThemeTokens } from "@/components/editor/theme";
+import { useEditorTheme } from "@/components/editor/editorThemeContext";
 import { useI18n } from "@/lib/i18n";
 import type { LightingConflictNotice } from "@/stores/editorStore";
 
 type LightingConflictToastProps = {
   notice: LightingConflictNotice;
-  theme: EditorThemeTokens;
   onClose: () => void;
   onRemoveFillLights: () => void;
 };
 
 export default function LightingConflictToast({
   notice,
-  theme,
   onClose,
   onRemoveFillLights
 }: LightingConflictToastProps) {
   const { t } = useI18n();
+  const { theme } = useEditorTheme();
 
   if (!notice.open) {
     return null;
