@@ -8,6 +8,8 @@ import {
   getOpenRouterApiKey,
   isOpenRouterApiKeyConfigurationErrorMessage
 } from "@/lib/ai/openrouter/config";
+import { AI_RATE_LIMIT_POLICIES } from "@/lib/server/aiRateLimit/policies";
+import { withAiRateLimit } from "@/lib/server/aiRateLimit/withAiRateLimit";
 import { withAuth } from "@/lib/server/auth/withAuth";
 
 export const maxDuration = 240;
@@ -16,22 +18,24 @@ function getAi3DOptimizationErrorStatus(message: string) {
   return isOpenRouterApiKeyConfigurationErrorMessage(message) ? 500 : 400;
 }
 
-export const POST = withAuth(async (request) => {
-  try {
-    const apiKey = getOpenRouterApiKey();
-    const body = optimizeAi3DRequestSchema.parse(await request.json());
-    const result = await optimizeAi3DPlan({
-      apiKey,
-      prompt: body.prompt,
-      plan: body.plan,
-      images: body.images,
-      intent: body.intent,
-      diagnostics: body.diagnostics
-    });
+export const POST = withAuth(
+  withAiRateLimit(AI_RATE_LIMIT_POLICIES.ai3dOptimize, async (request) => {
+    try {
+      const apiKey = getOpenRouterApiKey();
+      const body = optimizeAi3DRequestSchema.parse(await request.json());
+      const result = await optimizeAi3DPlan({
+        apiKey,
+        prompt: body.prompt,
+        plan: body.plan,
+        images: body.images,
+        intent: body.intent,
+        diagnostics: body.diagnostics
+      });
 
-    return NextResponse.json(result);
-  } catch (error) {
-    const message = getAiApiErrorMessage(error, "AI 3D optimization failed.");
-    return NextResponse.json({ message }, { status: getAi3DOptimizationErrorStatus(message) });
-  }
-});
+      return NextResponse.json(result);
+    } catch (error) {
+      const message = getAiApiErrorMessage(error, "AI 3D optimization failed.");
+      return NextResponse.json({ message }, { status: getAi3DOptimizationErrorStatus(message) });
+    }
+  })
+);

@@ -19,6 +19,8 @@ import {
   getOpenRouterApiKey,
   isOpenRouterApiKeyConfigurationErrorMessage
 } from "@/lib/ai/openrouter/config";
+import { AI_RATE_LIMIT_POLICIES } from "@/lib/server/aiRateLimit/policies";
+import { withAiRateLimit } from "@/lib/server/aiRateLimit/withAiRateLimit";
 import { withAuth } from "@/lib/server/auth/withAuth";
 
 export const maxDuration = 180;
@@ -40,48 +42,50 @@ function buildPanoramaPrompt(prompt: string) {
   ].join("\n");
 }
 
-export const POST = withAuth(async (request) => {
-  try {
-    const body = generateAiPanoramaRequestSchema.parse(await request.json());
-    const openRouterApiKey = getOpenRouterApiKey();
-    const modelConfig = getImageGenerationModelConfig(AI_PANORAMA_MODEL_ID);
-    const provider = createImageGenerationProvider(modelConfig.providerId);
-    const environmentIntent = await resolvePanoramaEnvironmentIntent({
-      apiKey: openRouterApiKey,
-      prompt: body.prompt
-    }).catch((error) => {
-      console.warn("[ai-panorama] Failed to resolve environment intent.", error);
-      return null;
-    });
-    const generationPrompt = environmentIntent?.enhancedPrompt ?? body.prompt;
-    const result = await provider.generateImage({
-      providerId: modelConfig.providerId,
-      model: AI_PANORAMA_MODEL_ID,
-      prompt: buildPanoramaPrompt(generationPrompt),
-      imageAspectRatio: AI_PANORAMA_PROVIDER_ASPECT_RATIO,
-      cfg: AI_PANORAMA_CFG,
-      inferenceSteps: AI_PANORAMA_INFERENCE_STEPS,
-      referenceImages: []
-    });
-    const panoramaImageUrl = result.images[0]?.url;
+export const POST = withAuth(
+  withAiRateLimit(AI_RATE_LIMIT_POLICIES.panoramaGenerate, async (request) => {
+    try {
+      const body = generateAiPanoramaRequestSchema.parse(await request.json());
+      const openRouterApiKey = getOpenRouterApiKey();
+      const modelConfig = getImageGenerationModelConfig(AI_PANORAMA_MODEL_ID);
+      const provider = createImageGenerationProvider(modelConfig.providerId);
+      const environmentIntent = await resolvePanoramaEnvironmentIntent({
+        apiKey: openRouterApiKey,
+        prompt: body.prompt
+      }).catch((error) => {
+        console.warn("[ai-panorama] Failed to resolve environment intent.", error);
+        return null;
+      });
+      const generationPrompt = environmentIntent?.enhancedPrompt ?? body.prompt;
+      const result = await provider.generateImage({
+        providerId: modelConfig.providerId,
+        model: AI_PANORAMA_MODEL_ID,
+        prompt: buildPanoramaPrompt(generationPrompt),
+        imageAspectRatio: AI_PANORAMA_PROVIDER_ASPECT_RATIO,
+        cfg: AI_PANORAMA_CFG,
+        inferenceSteps: AI_PANORAMA_INFERENCE_STEPS,
+        referenceImages: []
+      });
+      const panoramaImageUrl = result.images[0]?.url;
 
-    if (!panoramaImageUrl) {
-      throw new Error("The provider returned no generated panorama.");
+      if (!panoramaImageUrl) {
+        throw new Error("The provider returned no generated panorama.");
+      }
+
+      return NextResponse.json({
+        panoramaImageUrl,
+        model: AI_PANORAMA_MODEL_ID,
+        prompt: body.prompt,
+        enhancedPrompt: environmentIntent?.enhancedPrompt,
+        environmentPatch: environmentIntent?.environmentPatch,
+        width: AI_PANORAMA_WIDTH,
+        height: AI_PANORAMA_HEIGHT,
+        mimeType: AI_PANORAMA_OUTPUT_MIME_TYPE,
+        traceId: result.traceId
+      });
+    } catch (error) {
+      const message = getAiApiErrorMessage(error, "AI panorama generation failed.");
+      return NextResponse.json({ message }, { status: getAiPanoramaErrorStatus(message) });
     }
-
-    return NextResponse.json({
-      panoramaImageUrl,
-      model: AI_PANORAMA_MODEL_ID,
-      prompt: body.prompt,
-      enhancedPrompt: environmentIntent?.enhancedPrompt,
-      environmentPatch: environmentIntent?.environmentPatch,
-      width: AI_PANORAMA_WIDTH,
-      height: AI_PANORAMA_HEIGHT,
-      mimeType: AI_PANORAMA_OUTPUT_MIME_TYPE,
-      traceId: result.traceId
-    });
-  } catch (error) {
-    const message = getAiApiErrorMessage(error, "AI panorama generation failed.");
-    return NextResponse.json({ message }, { status: getAiPanoramaErrorStatus(message) });
-  }
-});
+  })
+);
