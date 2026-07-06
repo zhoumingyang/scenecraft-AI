@@ -1,5 +1,6 @@
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
+import { remoteImageUrlSchema } from "@/lib/api/contracts/assets";
 
 const MAX_REMOTE_IMAGE_FETCH_BYTES = 25 * 1024 * 1024;
 const MAX_REMOTE_IMAGE_REDIRECTS = 5;
@@ -89,16 +90,12 @@ function isBlockedIpAddress(address: string) {
 }
 
 export function parseRemoteImageUrl(value: unknown) {
-  if (typeof value !== "string" || !value.trim()) {
-    throw new Error("Image URL is required.");
+  const parsed = remoteImageUrlSchema.safeParse(value);
+  if (!parsed.success) {
+    throw new Error(parsed.error.issues[0]?.message ?? "Image URL is invalid.");
   }
 
-  const url = new URL(value);
-  if (url.protocol !== "https:") {
-    throw new Error("Only HTTPS image URLs can be fetched.");
-  }
-
-  return url;
+  return parsed.data;
 }
 
 async function assertPublicRemoteImageUrl(url: URL) {

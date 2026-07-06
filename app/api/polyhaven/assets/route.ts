@@ -1,23 +1,11 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
+import { listPolyhavenAssetsQuerySchema } from "@/lib/api/contracts/polyhaven";
 import type { ListExternalAssetsResponse } from "@/lib/externalAssets/contracts";
 import { isPolyhavenProviderEnabled } from "@/lib/externalAssets/config";
 import { polyhavenProvider } from "@/lib/externalAssets/polyhaven";
-import type { ExternalAssetType } from "@/lib/externalAssets/types";
 import { withAuth } from "@/lib/server/auth/withAuth";
 import { getErrorMessage } from "@/lib/server/http/getErrorMessage";
-
-function parseAssetType(value: string | null): ExternalAssetType {
-  if (value === "hdri" || value === "texture" || value === "model") {
-    return value;
-  }
-
-  throw new Error("Unsupported asset type.");
-}
-
-function parsePositiveInteger(value: string | null, fallback: number) {
-  const parsed = Number(value);
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
-}
 
 export const GET = withAuth(async (request) => {
   if (!isPolyhavenProviderEnabled()) {
@@ -26,21 +14,28 @@ export const GET = withAuth(async (request) => {
 
   try {
     const { searchParams } = new URL(request.url);
-    const assetType = parseAssetType(searchParams.get("type"));
-    const page = parsePositiveInteger(searchParams.get("page"), 1);
-    const pageSize = parsePositiveInteger(searchParams.get("pageSize"), 24);
-    const response: ListExternalAssetsResponse = await polyhavenProvider.listAssets({
-      assetType,
-      page,
-      pageSize,
-      query: searchParams.get("q"),
+    const query = listPolyhavenAssetsQuerySchema.parse({
+      type: searchParams.get("type"),
+      page: searchParams.get("page"),
+      pageSize: searchParams.get("pageSize"),
+      q: searchParams.get("q"),
       category: searchParams.get("category")
+    });
+    const response: ListExternalAssetsResponse = await polyhavenProvider.listAssets({
+      assetType: query.assetType,
+      page: query.page,
+      pageSize: query.pageSize,
+      query: query.query,
+      category: query.category
     });
 
     return NextResponse.json(response);
   } catch (error) {
-    const message = getErrorMessage(error, "Failed to load Poly Haven assets.");
-    const status = message.includes("Unsupported asset type") ? 400 : 500;
+    const message =
+      error instanceof z.ZodError
+        ? (error.issues[0]?.message ?? "Failed to load Poly Haven assets.")
+        : getErrorMessage(error, "Failed to load Poly Haven assets.");
+    const status = error instanceof z.ZodError ? 400 : 500;
     return NextResponse.json({ message }, { status });
   }
 });
