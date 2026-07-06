@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect } from "react";
 import { Box } from "@mui/material";
 import DropdownMenu from "@/components/common/dropdownMenu";
 import LightingConflictToast from "@/components/editor/lightingConflictToast";
@@ -12,29 +12,17 @@ import ProjectAiLibraryDialog from "@/components/editor/projectAiLibraryDialog";
 import ProjectSaveDialog from "@/components/editor/projectSaveDialog";
 import ProjectSaveProgressToast from "@/components/editor/projectSaveProgressToast";
 import ProjectSelectDialog from "@/components/editor/projectSelectDialog";
-import RenderExportProgressToast, {
-  type RenderExportProgressStatus
-} from "@/components/editor/renderExportProgressToast";
-import { normalizeRenderExportImageDataUrl } from "@/components/editor/renderExportImageNormalization";
-import {
-  shouldIncludeGridHelperInRenderExport,
-  shouldOfferAiRenderExportOptimization
-} from "@/components/editor/renderExportMode";
+import RenderExportProgressToast from "@/components/editor/renderExportProgressToast";
 import { EDITOR_SAVE_SHORTCUT_EVENT } from "@/components/editor/keyboardShortcuts";
 import { dropdownConfigs } from "@/components/editor/topBar/constants";
 import TopBarActionBar from "@/components/editor/topBar/topBarActionBar";
 import TopBarHistoryControls from "@/components/editor/topBar/topBarHistoryControls";
+import { useRenderExport } from "@/components/editor/topBar/useRenderExport";
 import { useTopBarMenu } from "@/components/editor/topBar/useTopBarMenu";
 import { useTopBarProjectActions } from "@/components/editor/topBar/useTopBarProjectActions";
-import { optimizeRenderExportImage } from "@/frontend/api/ai";
 import { getEditorThemeTokens } from "@/components/editor/theme";
 import { useI18n } from "@/lib/i18n";
-import type { EditorViewportCaptureImageMetadata } from "@/render/editor";
 import { useEditorStore } from "@/stores/editorStore";
-
-const RENDER_EXPORT_MAX_IMAGE_BYTES = 700 * 1024;
-const RENDER_EXPORT_MAX_DIMENSIONS = [1536, 1280, 1024, 960, 768, 640];
-const RENDER_EXPORT_JPEG_QUALITIES = [0.9, 0.82, 0.74, 0.66, 0.58, 0.5, 0.42];
 
 export default function TopBar() {
   const { t } = useI18n();
@@ -47,14 +35,17 @@ export default function TopBar() {
   const theme = getEditorThemeTokens(editorThemeMode);
   const { confirm, confirmationDialog, notify } = useEditorConfirmationDialog({ theme, t });
   const studioDisabledMenuIds = isStudioSceneActive ? (["project", "camera"] as const) : [];
-  const renderExportControllerRef = useRef<AbortController | null>(null);
-  const [renderExportStatus, setRenderExportStatus] = useState<RenderExportProgressStatus>({
-    active: false,
-    progress: 0,
-    message: ""
+  const actions = useTopBarProjectActions({ confirm, notify, t });
+  const {
+    onCancelRenderExport,
+    onExportRender,
+    renderExportStatus
+  } = useRenderExport({
+    app: actions.app,
+    confirm,
+    t
   });
 
-  const actions = useTopBarProjectActions({ confirm, notify, t });
   useEffect(() => {
     const handleSaveShortcut = () => {
       if (isStudioSceneActive) return;
@@ -67,12 +58,6 @@ export default function TopBar() {
       window.removeEventListener(EDITOR_SAVE_SHORTCUT_EVENT, handleSaveShortcut);
     };
   }, [actions.onSaveScene, isStudioSceneActive]);
-
-  useEffect(() => {
-    return () => {
-      renderExportControllerRef.current?.abort();
-    };
-  }, []);
 
   const menu = useTopBarMenu({
     app: actions.app,
@@ -88,132 +73,6 @@ export default function TopBar() {
     projectLoadVersion,
     t
   });
-
-  const handleExportRender = async () => {
-    if (!actions.app || renderExportStatus.active) return;
-
-    const renderMode = actions.app.getRenderMode();
-    const canOptimizeWithAi = shouldOfferAiRenderExportOptimization(renderMode);
-    const shouldOptimizeWithAi = canOptimizeWithAi
-      ? await confirm({
-          title: t("editor.export.aiOptimizeTitle"),
-          message: t("editor.export.aiOptimizeMessage"),
-          confirmLabel: t("editor.export.aiOptimizeConfirm"),
-          cancelLabel: t("editor.export.aiOptimizeDirect")
-        })
-      : false;
-    const controller = new AbortController();
-    renderExportControllerRef.current = controller;
-    setRenderExportStatus({
-      active: true,
-      progress: 0,
-      message: t("editor.export.preparing")
-    });
-
-    try {
-      const captureMetadataRef: { current: EditorViewportCaptureImageMetadata | null } = {
-        current: null
-      };
-      const dataUrl = await actions.app.captureViewportImageAsync("clean", {
-        signal: controller.signal,
-        includeGridHelper: shouldIncludeGridHelperInRenderExport(renderMode),
-        ...(canOptimizeWithAi
-          ? {
-              image: {
-                format: "compressed-jpeg" as const,
-                maxBytes: RENDER_EXPORT_MAX_IMAGE_BYTES,
-                maxDimensions: RENDER_EXPORT_MAX_DIMENSIONS,
-                qualities: RENDER_EXPORT_JPEG_QUALITIES
-              },
-              onImageEncoded: (metadata: EditorViewportCaptureImageMetadata) => {
-                captureMetadataRef.current = metadata;
-              }
-            }
-          : {}),
-        onProgress: (progress) => {
-          setRenderExportStatus({
-            active: true,
-            progress: progress.progress,
-            message: t("editor.export.rendering")
-          });
-        }
-      });
-
-      if (!canOptimizeWithAi || !shouldOptimizeWithAi) {
-        downloadDataUrl(dataUrl, createRenderExportFileName(dataUrl));
-        setRenderExportStatus({
-          active: false,
-          progress: 0,
-          message: ""
-        });
-        return;
-      }
-
-      const captureMetadata = captureMetadataRef.current;
-      if (!captureMetadata) {
-        throw new Error("Compressed render export metadata was not captured.");
-      }
-      if (!captureMetadata.withinBudget) {
-        throw new Error("Compressed render export image exceeded the AI upload budget.");
-      }
-
-      setRenderExportStatus({
-        active: true,
-        indeterminate: true,
-        progress: 1,
-        message: t("editor.export.aiOptimizing")
-      });
-
-      try {
-        const optimized = await optimizeRenderExportImage(
-          {
-            imageDataUrl: dataUrl,
-            width: captureMetadata.width,
-            height: captureMetadata.height
-          },
-          { signal: controller.signal }
-        );
-        const normalizedImageDataUrl = await normalizeRenderExportImageDataUrl(
-          optimized.imageDataUrl,
-          captureMetadata.width,
-          captureMetadata.height
-        );
-        downloadDataUrl(normalizedImageDataUrl, createRenderExportFileName(normalizedImageDataUrl, {
-          aiOptimized: true
-        }));
-      } catch (optimizationError) {
-        if (isRenderExportAbortError(optimizationError)) {
-          throw optimizationError;
-        }
-
-        console.error("[editor] AI render export optimization failed.", optimizationError);
-        downloadDataUrl(dataUrl, createRenderExportFileName(dataUrl));
-      }
-
-      setRenderExportStatus({
-        active: false,
-        progress: 0,
-        message: ""
-      });
-    } catch (error) {
-      if (!isRenderExportAbortError(error)) {
-        console.error("[editor] Render export failed.", error);
-      }
-      setRenderExportStatus({
-        active: false,
-        progress: 0,
-        message: ""
-      });
-    } finally {
-      if (renderExportControllerRef.current === controller) {
-        renderExportControllerRef.current = null;
-      }
-    }
-  };
-
-  const handleCancelRenderExport = () => {
-    renderExportControllerRef.current?.abort();
-  };
 
   const handleUndo = () => {
     void actions.app?.undo();
@@ -283,7 +142,7 @@ export default function TopBar() {
           clearDisabled={isStudioSceneActive}
           dropdownConfigs={dropdownConfigs}
           onClearProject={actions.onClearProject}
-          onExportRender={handleExportRender}
+          onExportRender={onExportRender}
           onOpenAiLibrary={actions.openAiLibraryDialog}
           onOpenMenu={menu.openMenu}
           onSaveScene={actions.onSaveScene}
@@ -358,7 +217,7 @@ export default function TopBar() {
       <RenderExportProgressToast
         status={renderExportStatus}
         theme={theme}
-        onCancel={handleCancelRenderExport}
+        onCancel={onCancelRenderExport}
       />
 
       <LightingConflictToast
@@ -371,33 +230,4 @@ export default function TopBar() {
       />
     </>
   );
-}
-
-function createRenderExportFileName(
-  dataUrl: string,
-  options: { aiOptimized?: boolean } = {}
-) {
-  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-  const suffix = options.aiOptimized ? "-ai" : "";
-  return `scenecraft-render-${timestamp}${suffix}.${getDataUrlFileExtension(dataUrl)}`;
-}
-
-function downloadDataUrl(dataUrl: string, fileName: string) {
-  const link = document.createElement("a");
-  link.href = dataUrl;
-  link.download = fileName;
-  link.rel = "noreferrer";
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-}
-
-function getDataUrlFileExtension(dataUrl: string) {
-  if (dataUrl.startsWith("data:image/png")) return "png";
-  if (dataUrl.startsWith("data:image/webp")) return "webp";
-  return "jpg";
-}
-
-function isRenderExportAbortError(error: unknown) {
-  return error instanceof Error && (error.name === "AbortError" || error.name === "CanceledError");
 }
