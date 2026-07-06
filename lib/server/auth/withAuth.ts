@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "./getSession";
 
-type AuthenticatedSession = NonNullable<Awaited<ReturnType<typeof getSession>>>;
+export type AuthenticatedSession = NonNullable<Awaited<ReturnType<typeof getSession>>>;
 
 type AuthenticatedRouteHandler<TContext> = (
   request: Request,

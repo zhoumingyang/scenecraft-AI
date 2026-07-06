@@ -100,6 +100,8 @@ This is not just a text-to-image demo, and it is not a full desktop-grade DCC to
 
 Prompt enhancement for Image, Texture, and Panorama modes uses one `/api/ai/prompts/transform` endpoint with target-specific optimization rules. Translation remains a shared prompt transform path across these modes.
 
+All authenticated AI API routes are protected by per-user database-backed rate limits and per-route concurrency limits before they call OpenRouter or SiliconFlow. In local development without `DATABASE_URL`, the limiter is bypassed so the editor can still boot; in production, missing database configuration blocks paid AI routes instead of silently allowing unlimited provider calls.
+
 ### 6. AI Poly Haven Asset Recommendation
 
 The AI chat Assets mode turns a scene description into a curated Poly Haven kit for authenticated users.
@@ -224,6 +226,7 @@ Recommended minimum variables:
 - `OPENROUTER_API_KEY` is also required for AI panorama intent completion and AI Poly Haven asset recommendation intent parsing
 - `SILICONFLOW_API_KEY` if you want to enable that provider
 - `DATABASE_URL` required if you want project save/load and persistent auth
+- `DATABASE_URL` is also required for production AI route rate limiting; production AI routes fail closed when the limiter database is unavailable
 - `BLOB_READ_WRITE_TOKEN` required if you want model / texture / thumbnail uploads and project save to succeed
 - `SMTP_HOST`
 - `SMTP_PORT`

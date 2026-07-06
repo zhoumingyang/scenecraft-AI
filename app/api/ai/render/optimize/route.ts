@@ -5,6 +5,8 @@ import {
   getAiApiErrorMessage,
   optimizeRenderExportRequestSchema
 } from "@/lib/api/contracts/ai";
+import { AI_RATE_LIMIT_POLICIES } from "@/lib/server/aiRateLimit/policies";
+import { withAiRateLimit } from "@/lib/server/aiRateLimit/withAiRateLimit";
 import { withAuth } from "@/lib/server/auth/withAuth";
 
 export const maxDuration = 180;
@@ -16,21 +18,23 @@ function getRenderExportOptimizationErrorStatus(message: string) {
     : 400;
 }
 
-export const POST = withAuth(async (request) => {
-  try {
-    const body = optimizeRenderExportRequestSchema.parse(await request.json());
-    const result = await optimizeRenderExportImage({
-      imageDataUrl: body.imageDataUrl,
-      width: body.width,
-      height: body.height
-    });
+export const POST = withAuth(
+  withAiRateLimit(AI_RATE_LIMIT_POLICIES.renderOptimize, async (request) => {
+    try {
+      const body = optimizeRenderExportRequestSchema.parse(await request.json());
+      const result = await optimizeRenderExportImage({
+        imageDataUrl: body.imageDataUrl,
+        width: body.width,
+        height: body.height
+      });
 
-    return NextResponse.json(result);
-  } catch (error) {
-    const message = getAiApiErrorMessage(error, "Render export optimization failed.");
-    return NextResponse.json(
-      { message },
-      { status: getRenderExportOptimizationErrorStatus(message) }
-    );
-  }
-});
+      return NextResponse.json(result);
+    } catch (error) {
+      const message = getAiApiErrorMessage(error, "Render export optimization failed.");
+      return NextResponse.json(
+        { message },
+        { status: getRenderExportOptimizationErrorStatus(message) }
+      );
+    }
+  })
+);

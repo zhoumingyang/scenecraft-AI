@@ -93,6 +93,7 @@ Behavior to remember:
 - Project save/load APIs should also be treated as unavailable when `DATABASE_URL` is missing.
 - Asset-backed save flows depend on `BLOB_READ_WRITE_TOKEN`; missing Blob config should fail clearly rather than silently degrade.
 - AI routes depend on provider keys and should fail clearly when keys are missing.
+- Paid AI routes are protected by database-backed per-user rate limits and route-level concurrency limits; in production, missing `DATABASE_URL` should block these routes rather than bypassing cost controls.
 - AI render export optimization depends on `OPENROUTER_API_KEY`; direct render export should still work when optimization is skipped or unavailable.
 
 ## Repo Map
@@ -362,7 +363,9 @@ If the task is about AI generation:
 - inspect `app/api/ai/`
 - inspect `lib/ai/`
 - inspect `lib/api/contracts/`
+- inspect `lib/server/aiRateLimit/`
 - keep prompt optimization target-aware for Image, Texture, and Panorama modes while preserving generic translation behavior
+- keep authenticated paid AI routes wrapped with `withAiRateLimit` before calling OpenRouter, SiliconFlow, or other paid providers
 
 If the task is about path trace render export optimization:
 
