@@ -7,6 +7,7 @@ export const PANEL_WIDTH = 320;
 export const COLLAPSED_VISIBLE_WIDTH = 44;
 export const CLOSED_AI_LIBRARY: ProjectAiLibraryV2JSON = { version: 2, assets: [] };
 export const CLOSED_PENDING_AI_ASSETS: PendingAiAsset[] = [];
+export const CLOSED_SELECTED_ENTITY_IDS: string[] = [];
 
 export const STUDIO_RESETTABLE_ENTITY_ROLES = new Set<StudioTransientEntityRole>([
   "background",

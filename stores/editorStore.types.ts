@@ -231,6 +231,7 @@ export type EditorStoreState = {
   setProjectSaveDialogOpen: (open: boolean) => void;
   bumpProjectVersion: () => void;
   bumpEntityVersion: (entityId: string) => void;
+  bumpRenderEntityVersions: (entityIds: string[]) => void;
   bumpSceneTreeVersion: () => void;
   bumpMeshListVersion: () => void;
   bumpEntityRenderVersion: () => void;

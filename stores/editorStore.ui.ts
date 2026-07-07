@@ -38,6 +38,7 @@ type EditorUiSlice = Pick<
   | "setProjectListDialogOpen"
   | "setProjectSaveDialogOpen"
   | "bumpEntityVersion"
+  | "bumpRenderEntityVersions"
   | "bumpSceneTreeVersion"
   | "bumpMeshListVersion"
   | "bumpEntityRenderVersion"
@@ -138,6 +139,18 @@ export const createUiSlice: EditorStoreSlice<EditorUiSlice> = (set) => ({
         [entityId]: (state.entityVersions[entityId] ?? 0) + 1
       }
     })),
+  bumpRenderEntityVersions: (entityIds) =>
+    set((state) => {
+      if (entityIds.length === 0) return {};
+      const entityVersions = { ...state.entityVersions };
+      entityIds.forEach((entityId) => {
+        entityVersions[entityId] = (entityVersions[entityId] ?? 0) + 1;
+      });
+      return {
+        entityVersions,
+        entityRenderVersion: state.entityRenderVersion + 1
+      };
+    }),
   bumpSceneTreeVersion: () =>
     set((state) => ({
       sceneTreeVersion: state.sceneTreeVersion + 1

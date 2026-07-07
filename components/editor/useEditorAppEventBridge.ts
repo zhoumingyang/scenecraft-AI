@@ -17,9 +17,9 @@ export function useEditorAppEventBridge({
   const resetLightingConflictNotice = useEditorStore((state) => state.resetLightingConflictNotice);
   const bumpProjectVersion = useEditorStore((state) => state.bumpProjectVersion);
   const bumpEntityVersion = useEditorStore((state) => state.bumpEntityVersion);
+  const bumpRenderEntityVersions = useEditorStore((state) => state.bumpRenderEntityVersions);
   const bumpSceneTreeVersion = useEditorStore((state) => state.bumpSceneTreeVersion);
   const bumpMeshListVersion = useEditorStore((state) => state.bumpMeshListVersion);
-  const bumpEntityRenderVersion = useEditorStore((state) => state.bumpEntityRenderVersion);
   const bumpProjectLoadVersion = useEditorStore((state) => state.bumpProjectLoadVersion);
   const bumpCameraVersion = useEditorStore((state) => state.bumpCameraVersion);
   const bumpViewStateVersion = useEditorStore((state) => state.bumpViewStateVersion);
@@ -46,11 +46,8 @@ export function useEditorAppEventBridge({
       if (disposed) return;
 
       if (pendingRenderEntityIds.size > 0) {
-        pendingRenderEntityIds.forEach((entityId) => {
-          bumpEntityVersion(entityId);
-        });
+        bumpRenderEntityVersions(Array.from(pendingRenderEntityIds));
         pendingRenderEntityIds.clear();
-        bumpEntityRenderVersion();
       }
     };
 
@@ -151,9 +148,9 @@ export function useEditorAppEventBridge({
     bumpProjectLoadVersion,
     bumpProjectVersion,
     bumpEntityVersion,
+    bumpRenderEntityVersions,
     bumpSceneTreeVersion,
     bumpMeshListVersion,
-    bumpEntityRenderVersion,
     bumpCameraVersion,
     bumpViewStateVersion,
     markUnsavedChanges,

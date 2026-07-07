@@ -10,7 +10,11 @@ import {
 } from "@/render/editor";
 import { useEditorStore } from "@/stores/editorStore";
 import { getLightTypeLabel } from "@/components/editor/propertyPanelSections/util";
-import { CLOSED_AI_LIBRARY, CLOSED_PENDING_AI_ASSETS } from "./constants";
+import {
+  CLOSED_AI_LIBRARY,
+  CLOSED_PENDING_AI_ASSETS,
+  CLOSED_SELECTED_ENTITY_IDS
+} from "./constants";
 
 export type PropertyPanelEntityRecord =
   | {
@@ -45,7 +49,9 @@ function getPanelTitle(
 export function usePropertyPanelState(open: boolean, t: Translate) {
   const app = useEditorStore((state) => (open ? state.app : null));
   const selectedEntityId = useEditorStore((state) => (open ? state.selectedEntityId : null));
-  const selectedEntityIds = useEditorStore((state) => (open ? state.selectedEntityIds : []));
+  const selectedEntityIds = useEditorStore((state) =>
+    open ? state.selectedEntityIds : CLOSED_SELECTED_ENTITY_IDS
+  );
   const isMultiSelection = selectedEntityIds.length > 1;
   const viewStateVersion = useEditorStore((state) => (open ? state.viewStateVersion : 0));
   const selectedEntityVersion = useEditorStore((state) =>
