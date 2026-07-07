@@ -5,19 +5,21 @@ import AutoFixHighRoundedIcon from "@mui/icons-material/AutoFixHighRounded";
 import TranslateRoundedIcon from "@mui/icons-material/TranslateRounded";
 import AiImageModelMenu from "@/components/editor/aiImageModelMenu";
 import type { EditorThemeTokens } from "@/components/editor/theme";
+import type { TranslationFunction } from "@/lib/i18n";
+import type { AiImageModelId } from "@/stores/editorStore";
 
 type Props = {
-  model: string;
+  model: AiImageModelId;
   theme: EditorThemeTokens;
   utilityIconButtonSx: object;
   isGenerating: boolean;
   isPromptActionPending: boolean;
   prompt: string;
   activePromptAction: "optimize" | "translate-en" | null;
-  setAiModel: (model: any) => void;
+  setAiModel: (model: AiImageModelId) => void;
   focusAiMode: () => void;
   handlePromptTransform: (mode: "optimize" | "translate-en") => Promise<void>;
-  t: (key: any, params?: Record<string, string | number>) => string;
+  t: TranslationFunction;
 };
 
 export default function ImageToolbar({
@@ -35,7 +37,7 @@ export default function ImageToolbar({
 }: Props) {
   return (
     <Stack direction="row" spacing={0.8} alignItems="center">
-      <AiImageModelMenu model={model as any} onChange={setAiModel} onFocus={focusAiMode} />
+      <AiImageModelMenu model={model} onChange={setAiModel} onFocus={focusAiMode} />
       <IconButton
         size="small"
         disabled={isGenerating || isPromptActionPending || !prompt.trim()}

@@ -274,6 +274,13 @@ Keep store shape changes coordinated with the components or editor logic that co
 - Preserve current naming and file organization patterns.
 - Do not concentrate multiple new features into a single file just because it is the fastest place to patch.
 
+### TypeScript type safety
+
+- Avoid explicit `any`; prefer concrete domain types, generics, `unknown` plus narrowing, or inferred types from existing schemas and APIs.
+- Do not use `as any` to bypass type errors. Fix the source type, add a narrow helper, or validate unknown data at the boundary.
+- If `any` is truly unavoidable at a third-party or untyped runtime boundary, keep it local, document why it is unavoidable, and avoid letting it flow through public types.
+- Keep `@typescript-eslint/no-explicit-any` enabled so new explicit `any` usage fails lint.
+
 ### Organize shared constants by domain
 
 - When constants, literal option sets, or enum-like value groups are shared across files, prefer a nearby `constants/` directory scoped to that domain.

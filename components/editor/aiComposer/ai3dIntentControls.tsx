@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button, Collapse, Grid, MenuItem, Stack, TextField, Typography } from "@mui/material";
 import type { EditorThemeTokens } from "@/components/editor/theme";
+import type { TranslationFunction, TranslationKey } from "@/lib/i18n";
 import type {
   Ai3DIntentInput,
   Ai3DIntentSubjectType
@@ -12,7 +13,7 @@ type Props = {
   theme: EditorThemeTokens;
   value: Partial<Ai3DIntentInput>;
   onChange: (payload: Partial<Ai3DIntentInput>) => void;
-  t: (key: any, params?: Record<string, string | number>) => string;
+  t: TranslationFunction;
 };
 
 type ResolvedSubjectTypeWithAuto = Ai3DIntentSubjectType | "auto";
@@ -45,6 +46,10 @@ const STYLE_OPTIONS: NonNullable<Ai3DIntentInput["styleBias"]>[] = [
   "clean",
   "chunky"
 ];
+
+function translationKey(key: TranslationKey) {
+  return key;
+}
 
 function parseCommaSeparatedList(value: string) {
   const items = value
@@ -143,7 +148,7 @@ export default function Ai3dIntentControls({ theme, value, onChange, t }: Props)
           >
             {SUBJECT_OPTIONS.map((option) => (
               <MenuItem key={option} value={option}>
-                {t(`editor.ai3d.subjectType.${option}` as any)}
+                {t(translationKey(`editor.ai3d.subjectType.${option}`))}
               </MenuItem>
             ))}
           </TextField>
@@ -164,7 +169,7 @@ export default function Ai3dIntentControls({ theme, value, onChange, t }: Props)
           >
             {DETAIL_OPTIONS.map((option) => (
               <MenuItem key={option} value={option}>
-                {t(`editor.ai3d.detailLevel.${option}` as any)}
+                {t(translationKey(`editor.ai3d.detailLevel.${option}`))}
               </MenuItem>
             ))}
           </TextField>
@@ -185,7 +190,7 @@ export default function Ai3dIntentControls({ theme, value, onChange, t }: Props)
           >
             {STYLE_OPTIONS.map((option) => (
               <MenuItem key={option} value={option}>
-                {t(`editor.ai3d.styleBias.${option}` as any)}
+                {t(translationKey(`editor.ai3d.styleBias.${option}`))}
               </MenuItem>
             ))}
           </TextField>
@@ -211,7 +216,7 @@ export default function Ai3dIntentControls({ theme, value, onChange, t }: Props)
               >
                 {POSE_OPTIONS.map((option) => (
                   <MenuItem key={option} value={option}>
-                    {t(`editor.ai3d.pose.${option}` as any)}
+                    {t(translationKey(`editor.ai3d.pose.${option}`))}
                   </MenuItem>
                 ))}
               </TextField>
@@ -232,7 +237,7 @@ export default function Ai3dIntentControls({ theme, value, onChange, t }: Props)
               >
                 {SYMMETRY_OPTIONS.map((option) => (
                   <MenuItem key={option} value={option}>
-                    {t(`editor.ai3d.symmetry.${option}` as any)}
+                    {t(translationKey(`editor.ai3d.symmetry.${option}`))}
                   </MenuItem>
                 ))}
               </TextField>

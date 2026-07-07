@@ -7,6 +7,7 @@ import {
   AI_PBR_TEXTURE_INFERENCE_STEPS
 } from "@/lib/ai/pbr-texture/constants";
 import { getApiErrorMessage } from "@/lib/http/axios";
+import type { TranslationFunction } from "@/lib/i18n";
 import {
   createPbrAtlasMaterialPatch,
   GROUND_HELPER_NODE_ID,
@@ -33,7 +34,7 @@ type Params = {
     lastSeed?: number | null;
     target?: AiTextureTarget | null;
   }) => void;
-  t: (key: any, params?: Record<string, string | number>) => string;
+  t: TranslationFunction;
 };
 
 function resolveCurrentTextureTarget(app: EditorApp | null): AiTextureTarget | null {

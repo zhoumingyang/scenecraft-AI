@@ -13,6 +13,7 @@ const dictionaries: Record<Locale, Dictionary> = {
 export type TranslationKey = keyof typeof en;
 
 type TranslationParams = Record<string, string | number>;
+export type TranslationFunction = (key: TranslationKey, params?: TranslationParams) => string;
 
 export function translate(locale: Locale, key: TranslationKey, params?: TranslationParams): string;
 export function translate(locale: Locale, key: string, params?: TranslationParams): string;

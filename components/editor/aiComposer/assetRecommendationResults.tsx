@@ -13,6 +13,7 @@ import {
 import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import type { AiExternalAssetRecommendationBundle } from "@/lib/api/contracts/ai";
 import type { EditorThemeTokens } from "@/components/editor/theme";
+import type { TranslationFunction } from "@/lib/i18n";
 
 type Props = {
   theme: EditorThemeTokens;
@@ -24,7 +25,7 @@ type Props = {
   applyMessage: string | null;
   onItemSelected: (itemId: string, selected: boolean) => void;
   onApply?: (bundle: AiExternalAssetRecommendationBundle) => void;
-  t: (key: any, params?: Record<string, string | number>) => string;
+  t: TranslationFunction;
 };
 
 function AssetPreview({

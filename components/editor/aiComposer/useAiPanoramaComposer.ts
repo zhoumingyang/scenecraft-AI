@@ -12,6 +12,7 @@ import {
   AI_PANORAMA_WIDTH
 } from "@/lib/ai/panorama/constants";
 import { getApiErrorMessage } from "@/lib/http/axios";
+import type { TranslationFunction } from "@/lib/i18n";
 import { createClientUuid } from "@/components/editor/projectPersistence";
 import type { EditorApp } from "@/render/editor";
 import type { LocalProjectAssetEntry, PendingAiAsset } from "@/stores/editorStore";
@@ -33,7 +34,7 @@ type Params = {
     errorMessage?: string | null;
     result?: AiPanoramaResult | null;
   }) => void;
-  t: (key: any, params?: Record<string, string | number>) => string;
+  t: TranslationFunction;
 };
 
 const PANORAMA_TARGET_ASPECT_RATIO = AI_PANORAMA_WIDTH / AI_PANORAMA_HEIGHT;

@@ -12,6 +12,7 @@ import {
   validateTreeRuleParams,
   type TreeRuleParams
 } from "@/lib/ai/ai3d/rules";
+import type { Ai3DPlan } from "@/render/editor/ai3d/plan";
 import { OPENROUTER_AI3D_MODEL, requestStructuredResponse } from "./client";
 import { buildTextAndImagesContent, parseJsonWithValidator, readTextContent } from "./parsing";
 import {
@@ -157,12 +158,12 @@ async function reviewTreeRuleParams({
   prompt: string;
   intent: Ai3DIntent;
   diagnostics: Ai3DPlanDiagnostics;
-  plan: unknown;
+  plan: Ai3DPlan;
 }) {
   const text = [
     `Original prompt: ${prompt}`,
     `Resolved intent JSON: ${JSON.stringify(intent)}`,
-    `Current rule params JSON: ${JSON.stringify(inferTreeRuleParamsFromPlan(plan as any))}`,
+    `Current rule params JSON: ${JSON.stringify(inferTreeRuleParamsFromPlan(plan))}`,
     `Current rule-built plan JSON: ${JSON.stringify(plan)}`,
     `Diagnostics JSON: ${JSON.stringify(diagnostics)}`,
     getAi3DDiagnosticPromptSummary(diagnostics),
@@ -191,12 +192,12 @@ async function optimizeTreeRuleParams({
   intent: Ai3DIntent;
   diagnostics: Ai3DPlanDiagnostics;
   images: string[];
-  plan: unknown;
+  plan: Ai3DPlan;
 }) {
   const text = [
     `Original prompt: ${prompt}`,
     `Resolved intent JSON: ${JSON.stringify(intent)}`,
-    `Current rule params JSON: ${JSON.stringify(inferTreeRuleParamsFromPlan(plan as any))}`,
+    `Current rule params JSON: ${JSON.stringify(inferTreeRuleParamsFromPlan(plan))}`,
     `Current rule-built plan JSON: ${JSON.stringify(plan)}`,
     `Diagnostics JSON: ${JSON.stringify(diagnostics)}`,
     getAi3DDiagnosticPromptSummary(diagnostics),

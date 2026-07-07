@@ -4,6 +4,7 @@ import { CircularProgress, IconButton, Stack/*, Typography*/ } from "@mui/materi
 import AutoFixHighRoundedIcon from "@mui/icons-material/AutoFixHighRounded";
 import TranslateRoundedIcon from "@mui/icons-material/TranslateRounded";
 import type { EditorThemeTokens } from "@/components/editor/theme";
+import type { TranslationFunction } from "@/lib/i18n";
 
 type Props = {
   theme: EditorThemeTokens;
@@ -16,7 +17,7 @@ type Props = {
   canOptimizePrompt?: boolean;
   activePromptAction: "optimize" | "translate-en" | null;
   handlePromptTransform: (mode: "optimize" | "translate-en") => Promise<void>;
-  t: (key: any, params?: Record<string, string | number>) => string;
+  t: TranslationFunction;
 };
 
 export default function Ai3dToolbar({

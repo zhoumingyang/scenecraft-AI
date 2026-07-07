@@ -2,6 +2,7 @@
 
 import { recommendAiExternalAssets } from "@/frontend/api/ai";
 import { getApiErrorMessage } from "@/lib/http/axios";
+import type { TranslationFunction } from "@/lib/i18n";
 import {
   GROUND_HELPER_NODE_ID,
   SCENE_NODE_ID,
@@ -37,7 +38,7 @@ type Params = {
     lastTraceId?: string | null;
     cacheHit?: boolean;
   }) => void;
-  t: (key: any, params?: Record<string, string | number>) => string;
+  t: TranslationFunction;
 };
 
 function collectRecommendationItemIds(bundles: AiExternalAssetRecommendationBundle[]) {

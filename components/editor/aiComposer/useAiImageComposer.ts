@@ -4,15 +4,16 @@ import { useMemo } from "react";
 import { generateAiImages } from "@/frontend/api/ai";
 import { getImageGenerationModelConfig } from "@/lib/ai/image-generation/models";
 import { getApiErrorMessage } from "@/lib/http/axios";
+import type { TranslationFunction } from "@/lib/i18n";
 import { createClientUuid } from "@/components/editor/projectPersistence";
-import type { PendingAiAsset } from "@/stores/editorStore";
+import type { AiImageModelId, AiImageSize, PendingAiAsset } from "@/stores/editorStore";
 import { parseSeed } from "./utils";
 
 type Params = {
-  model: string;
+  model: AiImageModelId;
   prompt: string;
   seed: string;
-  imageSize: string;
+  imageSize: AiImageSize;
   cfg: number;
   inferenceSteps: number;
   referenceImages: Array<{ dataUrl: string | null; fileName?: string | null }>;
@@ -25,7 +26,7 @@ type Params = {
     results?: Array<{ url: string }>;
     lastSeed?: number | null;
   }) => void;
-  t: (key: any, params?: Record<string, string | number>) => string;
+  t: TranslationFunction;
 };
 
 export function useAiImageComposer({
@@ -53,7 +54,7 @@ export function useAiImageComposer({
     if (!trimmedPrompt || isGenerating || isPromptActionPending) return;
 
     const parsedSeed = parseSeed(seed);
-    const modelConfig = getImageGenerationModelConfig(model as any);
+    const modelConfig = getImageGenerationModelConfig(model);
 
     if (parsedSeed === null) {
       setAiGeneratingState({
@@ -78,10 +79,10 @@ export function useAiImageComposer({
 
     try {
       const payload = await generateAiImages({
-        model: model as any,
+        model,
         prompt: trimmedPrompt,
         seed: parsedSeed,
-        imageSize: modelConfig.supportsImageSize ? (imageSize as any) : undefined,
+        imageSize: modelConfig.supportsImageSize ? imageSize : undefined,
         cfg,
         inferenceSteps,
         referenceImages:

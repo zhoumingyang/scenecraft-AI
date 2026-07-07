@@ -18,12 +18,13 @@ import FormatPaintRoundedIcon from "@mui/icons-material/FormatPaintRounded";
 import PanoramaPhotosphereRoundedIcon from "@mui/icons-material/PanoramaPhotosphereRounded";
 import ViewInArRoundedIcon from "@mui/icons-material/ViewInArRounded";
 import type { EditorThemeTokens } from "@/components/editor/theme";
+import type { TranslationFunction } from "@/lib/i18n";
 import type { AiMode } from "@/stores/editorStore";
 
 type Props = {
   aiMode: AiMode;
   theme: EditorThemeTokens;
-  t: (key: any, params?: Record<string, string | number>) => string;
+  t: TranslationFunction;
   onChange: (mode: AiMode) => void;
 };
 

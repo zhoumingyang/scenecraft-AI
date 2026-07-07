@@ -1,4 +1,5 @@
 import type { SaveProjectRequest } from "@/lib/api/contracts/projects";
+import type { requireDatabase } from "@/lib/server/db/requireDatabase";
 import { assets } from "@/db/schema";
 
 export type ProjectMutationResult<TProject> = {
@@ -15,7 +16,7 @@ export function serializeProjectPayload(payload: SaveProjectRequest) {
 }
 
 type InsertUploadedAssetsOptions = {
-  tx: any;
+  tx: Parameters<Parameters<ReturnType<typeof requireDatabase>["transaction"]>[0]>[0];
   payload: SaveProjectRequest;
   projectId: string;
   userId: string;

@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { transformAiPrompt } from "@/frontend/api/ai";
 import { getApiErrorMessage } from "@/lib/http/axios";
+import type { TranslationFunction } from "@/lib/i18n";
 import type { AiMode } from "@/stores/editorStore";
 
 type Params = {
@@ -38,7 +39,7 @@ type Params = {
   setAi3dState: (payload: {
     errorMessage?: string | null;
   }) => void;
-  t: (key: any, params?: Record<string, string | number>) => string;
+  t: TranslationFunction;
 };
 
 function getPromptTransformTarget(aiMode: AiMode) {

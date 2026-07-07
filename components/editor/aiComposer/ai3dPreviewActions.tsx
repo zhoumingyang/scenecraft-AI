@@ -6,6 +6,7 @@ import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import RestoreRoundedIcon from "@mui/icons-material/RestoreRounded";
 import type { EditorThemeTokens } from "@/components/editor/theme";
+import type { TranslationFunction } from "@/lib/i18n";
 
 type Props = {
   theme: EditorThemeTokens;
@@ -21,7 +22,7 @@ type Props = {
   onOptimize: () => Promise<void>;
   onDiscard: () => void;
   onApply: () => Promise<void>;
-  t: (key: any, params?: Record<string, string | number>) => string;
+  t: TranslationFunction;
 };
 
 export default function Ai3dPreviewActions({

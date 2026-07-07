@@ -3,6 +3,7 @@
 import { generateAi3D, optimizeAi3D } from "@/frontend/api/ai";
 import type { Ai3DIntentInput, Ai3DPlanDiagnostics } from "@/lib/ai/ai3d/intent";
 import { getApiErrorMessage } from "@/lib/http/axios";
+import type { TranslationFunction } from "@/lib/i18n";
 import { AI3D_TOOL_NAME } from "@/render/editor/ai3d/constants/plan";
 import type { EditorApp } from "@/render/editor";
 import type { Ai3DPlan } from "@/render/editor/ai3d/plan";
@@ -26,7 +27,7 @@ type Params = {
   ai3d: Ai3dState;
   setAi3dState: (payload: Partial<Ai3dState>) => void;
   setAiInspectorMode: (mode: "entity" | "ai") => void;
-  t: (key: any, params?: Record<string, string | number>) => string;
+  t: TranslationFunction;
 };
 
 export function useAi3dComposer({ app, ai3d, setAi3dState, setAiInspectorMode, t }: Params) {
