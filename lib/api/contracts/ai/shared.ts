@@ -2,7 +2,13 @@ import { z } from "zod";
 import type { ImageGenerationImageSize } from "@/lib/ai/image-generation/models";
 import { IMAGE_SIZE_OPTIONS } from "@/lib/ai/image-generation/models";
 
-export const promptSchema = z.string().trim().min(1, "Prompt is required.");
+export const AI_PROMPT_MAX_LENGTH = 4000;
+
+export const promptSchema = z
+  .string()
+  .trim()
+  .min(1, "Prompt is required.")
+  .max(AI_PROMPT_MAX_LENGTH, `Prompt must be ${AI_PROMPT_MAX_LENGTH} characters or fewer.`);
 
 export const imageGenerationSizeSchema = z
   .string()
