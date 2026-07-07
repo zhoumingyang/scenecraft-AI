@@ -3,6 +3,7 @@ import type { SaveProjectRequest, SaveProjectResponse } from "@/lib/api/contract
 import { normalizeProjectAiLibrary, projectSaveRequestSchema } from "@/lib/project/schema";
 import { withAuth } from "@/lib/server/auth/withAuth";
 import { deleteBlobAssets } from "@/lib/server/assets/config";
+import { getServerErrorStatus } from "@/lib/server/http/errors";
 import { getErrorMessage } from "@/lib/server/http/getErrorMessage";
 import { deleteProject, updateProject } from "@/lib/server/projects/mutations";
 import { getProjectByIdForUser } from "@/lib/server/projects/queries";
@@ -77,8 +78,7 @@ export const PUT = withAuth<RouteContext>(async (request, context, session) => {
     return NextResponse.json(response);
   } catch (error) {
     const message = getErrorMessage(error, "Failed to update project.");
-    const status = message.includes("DATABASE_URL") ? 500 : 400;
-    return NextResponse.json({ message }, { status });
+    return NextResponse.json({ message }, { status: getServerErrorStatus(error, 400) });
   }
 });
 
@@ -98,7 +98,6 @@ export const DELETE = withAuth<RouteContext>(async (_request, context, session) 
     return new NextResponse(null, { status: 204 });
   } catch (error) {
     const message = getErrorMessage(error, "Failed to delete project.");
-    const status = message.includes("DATABASE_URL") ? 500 : 400;
-    return NextResponse.json({ message }, { status });
+    return NextResponse.json({ message }, { status: getServerErrorStatus(error, 400) });
   }
 });

@@ -15,13 +15,10 @@ import {
 import { AI_RATE_LIMIT_POLICIES } from "@/lib/server/aiRateLimit/policies";
 import { withAiRateLimit } from "@/lib/server/aiRateLimit/withAiRateLimit";
 import { withAuth } from "@/lib/server/auth/withAuth";
+import { getServerErrorStatus } from "@/lib/server/http/errors";
 import { PBR_ATLAS_LAYOUT_VERSION } from "@/render/editor";
 
 export const maxDuration = 180;
-
-function getAiPbrTextureErrorStatus(message: string) {
-  return message.includes("_API_KEY is not configured") ? 500 : 400;
-}
 
 export const POST = withAuth(
   withAiRateLimit(AI_RATE_LIMIT_POLICIES.pbrTextureGenerate, async (request) => {
@@ -56,7 +53,7 @@ export const POST = withAuth(
       });
     } catch (error) {
       const message = getAiApiErrorMessage(error, "AI PBR texture generation failed.");
-      return NextResponse.json({ message }, { status: getAiPbrTextureErrorStatus(message) });
+      return NextResponse.json({ message }, { status: getServerErrorStatus(error, 400) });
     }
   })
 );

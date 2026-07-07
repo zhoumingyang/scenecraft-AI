@@ -7,6 +7,7 @@ import {
   createAssetUploadClientToken
 } from "@/lib/server/assets/config";
 import { withAuth } from "@/lib/server/auth/withAuth";
+import { getServerErrorStatus } from "@/lib/server/http/errors";
 import { getErrorMessage } from "@/lib/server/http/getErrorMessage";
 
 export const POST = withAuth(async (request, _context, session) => {
@@ -26,7 +27,6 @@ export const POST = withAuth(async (request, _context, session) => {
     return NextResponse.json(response);
   } catch (error) {
     const message = getErrorMessage(error, "Failed to prepare asset upload.");
-    const status = message.includes("BLOB_READ_WRITE_TOKEN") ? 500 : 400;
-    return NextResponse.json({ message }, { status });
+    return NextResponse.json({ message }, { status: getServerErrorStatus(error, 400) });
   }
 });

@@ -17,20 +17,13 @@ import {
 import { resolvePanoramaEnvironmentIntent } from "@/lib/ai/panorama/environmentIntent";
 import {
   getOpenRouterApiKey,
-  isOpenRouterApiKeyConfigurationErrorMessage
 } from "@/lib/ai/openrouter/config";
 import { AI_RATE_LIMIT_POLICIES } from "@/lib/server/aiRateLimit/policies";
 import { withAiRateLimit } from "@/lib/server/aiRateLimit/withAiRateLimit";
 import { withAuth } from "@/lib/server/auth/withAuth";
+import { getServerErrorStatus } from "@/lib/server/http/errors";
 
 export const maxDuration = 180;
-
-function getAiPanoramaErrorStatus(message: string) {
-  return message.includes("_API_KEY is not configured") ||
-    isOpenRouterApiKeyConfigurationErrorMessage(message)
-    ? 500
-    : 400;
-}
 
 function buildPanoramaPrompt(prompt: string) {
   return [
@@ -85,7 +78,7 @@ export const POST = withAuth(
       });
     } catch (error) {
       const message = getAiApiErrorMessage(error, "AI panorama generation failed.");
-      return NextResponse.json({ message }, { status: getAiPanoramaErrorStatus(message) });
+      return NextResponse.json({ message }, { status: getServerErrorStatus(error, 400) });
     }
   })
 );

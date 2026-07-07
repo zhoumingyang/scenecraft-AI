@@ -8,12 +8,9 @@ import {
 import { AI_RATE_LIMIT_POLICIES } from "@/lib/server/aiRateLimit/policies";
 import { withAiRateLimit } from "@/lib/server/aiRateLimit/withAiRateLimit";
 import { withAuth } from "@/lib/server/auth/withAuth";
+import { getServerErrorStatus } from "@/lib/server/http/errors";
 
 export const maxDuration = 180;
-
-function getImageGenerationErrorStatus(message: string) {
-  return message.includes("_API_KEY is not configured") ? 500 : 400;
-}
 
 export const POST = withAuth(
   withAiRateLimit(AI_RATE_LIMIT_POLICIES.imageGenerate, async (request) => {
@@ -35,7 +32,7 @@ export const POST = withAuth(
       return NextResponse.json(result);
     } catch (error) {
       const message = getAiApiErrorMessage(error, "Image generation failed.");
-      return NextResponse.json({ message }, { status: getImageGenerationErrorStatus(message) });
+      return NextResponse.json({ message }, { status: getServerErrorStatus(error, 400) });
     }
   })
 );

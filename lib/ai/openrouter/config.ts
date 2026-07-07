@@ -2,6 +2,7 @@ import {
   CLOUDFLARE_AI_GATEWAY_BASE_URL,
   DEFAULT_OPENROUTER_API_BASE_URL
 } from "./constants/urls";
+import { ServerConfigurationError } from "@/lib/server/http/errors";
 
 export const OPENROUTER_API_KEY_CONFIGURATION_ERROR_MESSAGE =
   "OPENROUTER_API_KEY is not configured.";
@@ -29,7 +30,7 @@ export function getOpenRouterApiBaseUrl() {
   }
 
   if (!accountId || !gatewayId) {
-    throw new Error(
+    throw new ServerConfigurationError(
       "Cloudflare AI Gateway is partially configured. Set both CLOUDFLARE_AI_GATEWAY_ACCOUNT_ID and CLOUDFLARE_AI_GATEWAY_ID, or remove both."
     );
   }
@@ -41,14 +42,10 @@ export function getOpenRouterApiKey() {
   const apiKey = readEnv("OPENROUTER_API_KEY");
 
   if (!apiKey) {
-    throw new Error(OPENROUTER_API_KEY_CONFIGURATION_ERROR_MESSAGE);
+    throw new ServerConfigurationError(OPENROUTER_API_KEY_CONFIGURATION_ERROR_MESSAGE);
   }
 
   return apiKey;
-}
-
-export function isOpenRouterApiKeyConfigurationErrorMessage(message: string) {
-  return message === OPENROUTER_API_KEY_CONFIGURATION_ERROR_MESSAGE;
 }
 
 export function getOpenRouterChatCompletionsEndpoint() {

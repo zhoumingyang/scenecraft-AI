@@ -1,6 +1,7 @@
 import { del } from "@vercel/blob";
 import { generateClientTokenFromReadWriteToken } from "@vercel/blob/client";
 import type { PrepareAssetUploadRequest } from "@/lib/api/contracts/assets";
+import { ServerConfigurationError } from "@/lib/server/http/errors";
 import {
   CONTENT_TYPES_BY_KIND,
   DEFAULT_MAX_SIZE,
@@ -31,7 +32,9 @@ export function getMaximumUploadSize(kind: PrepareAssetUploadRequest["kind"]) {
 
 export function assertBlobConfigured() {
   if (!process.env.BLOB_READ_WRITE_TOKEN) {
-    throw new Error("BLOB_READ_WRITE_TOKEN is not configured. Asset uploads are unavailable.");
+    throw new ServerConfigurationError(
+      "BLOB_READ_WRITE_TOKEN is not configured. Asset uploads are unavailable."
+    );
   }
 }
 

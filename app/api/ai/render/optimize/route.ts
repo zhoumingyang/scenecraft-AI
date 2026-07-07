@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { optimizeRenderExportImage } from "@/lib/ai/render-export/optimizer";
-import { isOpenRouterApiKeyConfigurationErrorMessage } from "@/lib/ai/openrouter/config";
 import {
   getAiApiErrorMessage,
   optimizeRenderExportRequestSchema
@@ -8,15 +7,9 @@ import {
 import { AI_RATE_LIMIT_POLICIES } from "@/lib/server/aiRateLimit/policies";
 import { withAiRateLimit } from "@/lib/server/aiRateLimit/withAiRateLimit";
 import { withAuth } from "@/lib/server/auth/withAuth";
+import { getServerErrorStatus } from "@/lib/server/http/errors";
 
 export const maxDuration = 180;
-
-function getRenderExportOptimizationErrorStatus(message: string) {
-  return message.includes("_API_KEY is not configured") ||
-    isOpenRouterApiKeyConfigurationErrorMessage(message)
-    ? 500
-    : 400;
-}
 
 export const POST = withAuth(
   withAiRateLimit(AI_RATE_LIMIT_POLICIES.renderOptimize, async (request) => {
@@ -33,7 +26,7 @@ export const POST = withAuth(
       const message = getAiApiErrorMessage(error, "Render export optimization failed.");
       return NextResponse.json(
         { message },
-        { status: getRenderExportOptimizationErrorStatus(message) }
+        { status: getServerErrorStatus(error, 400) }
       );
     }
   })

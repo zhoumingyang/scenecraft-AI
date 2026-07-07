@@ -5,18 +5,14 @@ import {
   getAiApiErrorMessage
 } from "@/lib/api/contracts/ai";
 import {
-  getOpenRouterApiKey,
-  isOpenRouterApiKeyConfigurationErrorMessage
+  getOpenRouterApiKey
 } from "@/lib/ai/openrouter/config";
 import { AI_RATE_LIMIT_POLICIES } from "@/lib/server/aiRateLimit/policies";
 import { withAiRateLimit } from "@/lib/server/aiRateLimit/withAiRateLimit";
 import { withAuth } from "@/lib/server/auth/withAuth";
+import { getServerErrorStatus } from "@/lib/server/http/errors";
 
 export const maxDuration = 180;
-
-function getAi3DGenerationErrorStatus(message: string) {
-  return isOpenRouterApiKeyConfigurationErrorMessage(message) ? 500 : 400;
-}
 
 export const POST = withAuth(
   withAiRateLimit(AI_RATE_LIMIT_POLICIES.ai3dGenerate, async (request) => {
@@ -33,7 +29,7 @@ export const POST = withAuth(
       return NextResponse.json(result);
     } catch (error) {
       const message = getAiApiErrorMessage(error, "AI 3D generation failed.");
-      return NextResponse.json({ message }, { status: getAi3DGenerationErrorStatus(message) });
+      return NextResponse.json({ message }, { status: getServerErrorStatus(error, 400) });
     }
   })
 );

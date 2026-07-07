@@ -6,6 +6,7 @@ import type {
 } from "@/lib/api/contracts/projects";
 import { normalizeProjectAiLibrary, projectSaveRequestSchema } from "@/lib/project/schema";
 import { withAuth } from "@/lib/server/auth/withAuth";
+import { getServerErrorStatus } from "@/lib/server/http/errors";
 import { getErrorMessage } from "@/lib/server/http/getErrorMessage";
 import { createProject } from "@/lib/server/projects/mutations";
 import { listProjectsByUser } from "@/lib/server/projects/queries";
@@ -48,7 +49,6 @@ export const POST = withAuth(async (request, _context, session) => {
     return NextResponse.json(response, { status: 201 });
   } catch (error) {
     const message = getErrorMessage(error, "Failed to create project.");
-    const status = message.includes("DATABASE_URL") ? 500 : 400;
-    return NextResponse.json({ message }, { status });
+    return NextResponse.json({ message }, { status: getServerErrorStatus(error, 400) });
   }
 });

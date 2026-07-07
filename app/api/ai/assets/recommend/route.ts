@@ -5,27 +5,15 @@ import {
   recommendAiExternalAssetsRequestSchema
 } from "@/lib/api/contracts/ai";
 import {
-  getOpenRouterApiKey,
-  isOpenRouterApiKeyConfigurationErrorMessage
+  getOpenRouterApiKey
 } from "@/lib/ai/openrouter/config";
 import { isPolyhavenProviderEnabled } from "@/lib/externalAssets/config";
 import { AI_RATE_LIMIT_POLICIES } from "@/lib/server/aiRateLimit/policies";
 import { withAiRateLimit } from "@/lib/server/aiRateLimit/withAiRateLimit";
 import { withAuth } from "@/lib/server/auth/withAuth";
+import { getServerErrorStatus } from "@/lib/server/http/errors";
 
 export const maxDuration = 180;
-
-function getRecommendationErrorStatus(message: string) {
-  if (isOpenRouterApiKeyConfigurationErrorMessage(message)) {
-    return 500;
-  }
-
-  if (message.includes("Poly Haven provider is disabled")) {
-    return 404;
-  }
-
-  return 400;
-}
 
 export const POST = withAuth(
   withAiRateLimit(AI_RATE_LIMIT_POLICIES.assetRecommend, async (request) => {
@@ -47,7 +35,7 @@ export const POST = withAuth(
       return NextResponse.json(result);
     } catch (error) {
       const message = getAiApiErrorMessage(error, "AI asset recommendations failed.");
-      return NextResponse.json({ message }, { status: getRecommendationErrorStatus(message) });
+      return NextResponse.json({ message }, { status: getServerErrorStatus(error, 400) });
     }
   })
 );

@@ -1,6 +1,7 @@
 import { SiliconFlowImageGenerationProvider } from "@/lib/ai/image-generation/providers/siliconflow";
 import { OpenRouterImageGenerationProvider } from "@/lib/ai/image-generation/providers/openrouter";
 import { getOpenRouterApiKey } from "@/lib/ai/openrouter/config";
+import { ServerConfigurationError } from "@/lib/server/http/errors";
 import type {
   ImageGenerationProvider,
   ImageGenerationProviderId
@@ -13,7 +14,7 @@ export function createImageGenerationProvider(
     case "siliconflow": {
       const apiKey = process.env.SILICONFLOW_API_KEY?.trim();
       if (!apiKey) {
-        throw new Error("SILICONFLOW_API_KEY is not configured.");
+        throw new ServerConfigurationError("SILICONFLOW_API_KEY is not configured.");
       }
 
       return new SiliconFlowImageGenerationProvider(apiKey);
