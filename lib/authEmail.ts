@@ -1,4 +1,5 @@
 import axios from "axios";
+import { getResendSendFailureMessage } from "./authEmailErrors";
 import { createHttpClient } from "@/lib/http/axios";
 
 const resendApiKey = process.env.RESEND_API_KEY;
@@ -34,11 +35,7 @@ async function sendByResend({ to, subject, html }: SendAuthEmailArgs) {
   } catch (error) {
     if (axios.isAxiosError(error)) {
       const status = error.response?.status ?? "unknown";
-      const payload =
-        typeof error.response?.data === "string"
-          ? error.response.data
-          : JSON.stringify(error.response?.data ?? {});
-      throw new Error(`Resend send failed: ${status} ${payload}`);
+      throw new Error(getResendSendFailureMessage(status));
     }
 
     throw error;
