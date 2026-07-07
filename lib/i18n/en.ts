@@ -116,6 +116,7 @@ const en = {
     "editor.export.failed": "Render export failed.",
     "editor.properties.title": "Properties",
     "editor.properties.none": "No selection",
+    "editor.properties.multiSelection": "Multiple selection",
     "editor.properties.emptyHint": "Select an object on the canvas or from the scene tree.",
     "editor.properties.isolate": "Render only selected object",
     "editor.properties.restoreVisibility": "Restore scene visibility",

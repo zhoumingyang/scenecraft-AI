@@ -17,7 +17,7 @@ export default function SceneTreePanel() {
   const { t } = useI18n();
   const app = useEditorStore((state) => state.app);
   const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
-  const selectedEntityId = useEditorStore((state) => state.selectedEntityId);
+  const selectedEntityIds = useEditorStore((state) => state.selectedEntityIds);
   const sceneTreeVersion = useEditorStore((state) => state.sceneTreeVersion);
   const isStudioSceneActive = useEditorStore((state) => state.studioScene.active);
   const [open, setOpen] = useState(false);
@@ -37,12 +37,13 @@ export default function SceneTreePanel() {
     [app, sceneTreeVersion, t]
   );
 
-  const onSelectEntity = (entityId: string) => {
+  const onSelectEntity = (entityId: string, mode: "replace" | "toggle" = "replace") => {
     if (!app) return;
     if (isStudioSceneActive && !app.canUseStudioSceneEntityAction(entityId, "select")) return;
     void app.dispatch({
       type: "selection.set",
       entityId,
+      mode,
       source: "ui"
     });
   };
@@ -139,7 +140,7 @@ export default function SceneTreePanel() {
                 key={section.id}
                 section={section}
                 emptyLabel={t("editor.sceneTree.empty")}
-                selectedEntityId={selectedEntityId}
+                selectedEntityIds={selectedEntityIds}
                 editingNodeId={editingNodeId}
                 draftLabel={draftLabel}
                 theme={theme}

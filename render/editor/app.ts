@@ -2,7 +2,7 @@ import type * as THREE from "three";
 
 import type { ExternalAssetSourceJSON } from "@/lib/externalAssets/types";
 import type { Ai3DPlan } from "./ai3d/plan";
-import type { EditorCommand, MeshMaterialPatch } from "./core/commands";
+import type { EditorCommand, MeshMaterialPatch, SelectionMode } from "./core/commands";
 import type { EditorAppEvent, EditorAppListener } from "./core/events";
 import type {
   EditorCameraJSON,
@@ -76,10 +76,11 @@ export class EditorApp {
     this.pointerPicking = new EditorAppPointerPicking({
       runtime: this.runtime,
       pickEntity: (clientX, clientY) => this.session.pick(clientX, clientY),
-      setSelectedEntity: (entityId) => {
+      setSelectedEntity: (entityId, mode) => {
         void this.dispatch({
           type: "selection.set",
           entityId,
+          mode,
           source: "render"
         });
       },
@@ -185,6 +186,10 @@ export class EditorApp {
 
   getSelectedEntityId(): string | null {
     return this.session.getSelectedEntityId();
+  }
+
+  getSelectedEntityIds(): string[] {
+    return this.session.getSelectedEntityIds();
   }
 
   getHistoryState(): EditorHistoryState {
@@ -624,10 +629,15 @@ export class EditorApp {
     this.runtime.setOutlineSelection(object ? [object] : []);
   }
 
-  setSelectedEntity(entityId: string | null, source: SyncSource = "ui") {
+  setSelectedEntity(
+    entityId: string | null,
+    source: SyncSource = "ui",
+    mode: SelectionMode = "replace"
+  ) {
     void this.dispatch({
       type: "selection.set",
       entityId,
+      mode,
       source
     });
   }

@@ -1,4 +1,5 @@
 import type { BindingRegistry } from "../bindings/bindingRegistry";
+import type { SelectionMode } from "../core/commands";
 import type { EditorAppEvent } from "../core/events";
 import {
   GROUND_HELPER_NODE_ID,
@@ -20,8 +21,8 @@ type EditorSelectionSessionControllerOptions = {
   registry: BindingRegistry;
   emit: Emit;
   getProjectModel: () => EditorProjectModel | null;
-  getSelectedEntityId: () => string | null;
-  setSelectedEntityId: (entityId: string | null) => void;
+  getSelectedEntityIds: () => string[];
+  setSelectedEntityIds: (entityIds: string[]) => void;
   studioScene: StudioSceneSessionController;
   canUseStudioSceneEntityAction: (
     entityId: string,
@@ -51,8 +52,8 @@ export class EditorSelectionSessionController {
   private readonly registry: BindingRegistry;
   private readonly emit: Emit;
   private readonly getProjectModel: () => EditorProjectModel | null;
-  private readonly getSelectedEntityId: () => string | null;
-  private readonly setSelectedEntityId: (entityId: string | null) => void;
+  private readonly getSelectedEntityIds: () => string[];
+  private readonly setSelectedEntityIds: (entityIds: string[]) => void;
   private readonly studioScene: StudioSceneSessionController;
   private readonly canUseStudioSceneEntityAction: (
     entityId: string,
@@ -64,8 +65,8 @@ export class EditorSelectionSessionController {
     this.registry = options.registry;
     this.emit = options.emit;
     this.getProjectModel = options.getProjectModel;
-    this.getSelectedEntityId = options.getSelectedEntityId;
-    this.setSelectedEntityId = options.setSelectedEntityId;
+    this.getSelectedEntityIds = options.getSelectedEntityIds;
+    this.setSelectedEntityIds = options.setSelectedEntityIds;
     this.studioScene = options.studioScene;
     this.canUseStudioSceneEntityAction = options.canUseStudioSceneEntityAction;
   }
@@ -99,7 +100,13 @@ export class EditorSelectionSessionController {
     return resolveCanvasPickedEntityId(projectModel, pickedEntityId);
   }
 
-  setSelectedEntity(entityId: string | null, source: SyncSource = "ui") {
+  setSelectedEntity(
+    entityId: string | null,
+    source: SyncSource = "ui",
+    mode: SelectionMode = "replace"
+  ) {
+    if (mode === "toggle" && !entityId) return;
+
     if (
       this.studioScene.isActive() &&
       entityId &&
@@ -111,10 +118,7 @@ export class EditorSelectionSessionController {
     if (entityId === GROUND_HELPER_NODE_ID) {
       const projectModel = this.getProjectModel();
       if (!projectModel?.envConfig.ground.visible) return;
-      if (this.getSelectedEntityId() === entityId) return;
-      this.setSelectedEntityId(entityId);
-      this.runtime.attachTransformTarget(null);
-      this.emit({ type: "selectionChanged", selectedEntityId: entityId, source });
+      this.applySelection([entityId], source);
       return;
     }
 
@@ -132,11 +136,49 @@ export class EditorSelectionSessionController {
       }
     }
 
-    if (this.getSelectedEntityId() === entityId) return;
-    this.setSelectedEntityId(entityId);
-    const binding =
-      entityId && entityId !== SCENE_SELECTION_ID ? this.registry.get(entityId) : null;
-    this.runtime.attachTransformTarget(binding?.object ?? null);
-    this.emit({ type: "selectionChanged", selectedEntityId: entityId, source });
+    if (mode === "toggle" && entityId && entityId !== SCENE_SELECTION_ID) {
+      const currentIds = this.getSelectedEntityIds().filter((id) =>
+        id !== SCENE_SELECTION_ID && id !== GROUND_HELPER_NODE_ID
+      );
+      const nextIds = currentIds.includes(entityId)
+        ? currentIds.filter((id) => id !== entityId)
+        : [...currentIds, entityId];
+      this.applySelection(nextIds, source);
+      return;
+    }
+
+    this.applySelection(entityId ? [entityId] : [], source);
   }
+
+  private applySelection(entityIds: string[], source: SyncSource) {
+    const normalizedEntityIds = Array.from(new Set(entityIds));
+    if (areEntityIdListsEqual(this.getSelectedEntityIds(), normalizedEntityIds)) return;
+
+    this.setSelectedEntityIds(normalizedEntityIds);
+    const selectedEntityId = getSingleSelectedEntityId(normalizedEntityIds);
+    const selectedObjects = normalizedEntityIds
+      .filter((entityId) => entityId !== SCENE_SELECTION_ID && entityId !== GROUND_HELPER_NODE_ID)
+      .map((entityId) => this.registry.get(entityId)?.object ?? null)
+      .filter((object): object is NonNullable<typeof object> => Boolean(object));
+
+    this.runtime.attachTransformTarget(
+      selectedEntityId && selectedObjects.length === 1 ? selectedObjects[0] : null
+    );
+    this.runtime.setOutlineSelection(selectedObjects);
+    this.emit({
+      type: "selectionChanged",
+      selectedEntityId,
+      selectedEntityIds: normalizedEntityIds,
+      source
+    });
+  }
+}
+
+function getSingleSelectedEntityId(entityIds: string[]) {
+  return entityIds.length === 1 ? entityIds[0] : null;
+}
+
+function areEntityIdListsEqual(left: string[], right: string[]) {
+  if (left.length !== right.length) return false;
+  return left.every((id, index) => id === right[index]);
 }

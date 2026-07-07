@@ -173,6 +173,7 @@ export type EditorStoreState = {
   app: EditorApp | null;
   editorThemeMode: EditorThemeMode;
   selectedEntityId: string | null;
+  selectedEntityIds: string[];
   currentProjectId: string | null;
   currentProjectMeta: EditorProjectMetaJSON | null;
   loadedAiLibrary: ProjectAiLibraryV2JSON;
@@ -204,6 +205,7 @@ export type EditorStoreState = {
   setApp: (app: EditorApp | null) => void;
   setEditorThemeMode: (mode: EditorThemeMode) => void;
   setSelectedEntityId: (selectedEntityId: string | null) => void;
+  setSelectedEntityIds: (selectedEntityIds: string[]) => void;
   setCurrentProject: (projectId: string | null) => void;
   setProjectMeta: (meta: EditorProjectMetaJSON | null) => void;
   setLoadedAiLibrary: (library: ProjectAiLibraryJSON) => void;

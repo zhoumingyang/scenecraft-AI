@@ -23,6 +23,7 @@ export function EntityInspectorContent(props: PropertyPanelContentProps) {
     entityRecord,
     isCurrentEntityInStudio,
     isCurrentEntityIsolated,
+    isMultiSelection,
     isPolyhavenEnabled,
     panelTitle,
     selectedEntityId,
@@ -41,6 +42,7 @@ export function EntityInspectorContent(props: PropertyPanelContentProps) {
   if (!entityRecord) {
     return (
       <EmptyPropertyPanel
+        message={isMultiSelection ? t("editor.properties.multiSelection") : undefined}
         theme={theme}
         t={t}
       />

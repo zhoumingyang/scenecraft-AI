@@ -31,7 +31,7 @@ type SceneTreePanelRowProps = {
   expanded?: boolean;
   onToggleExpand?: (nodeId: string) => void;
   onDraftLabelChange: (value: string) => void;
-  onSelectEntity: (entityId: string) => void;
+  onSelectEntity: (entityId: string, mode?: "replace" | "toggle") => void;
   onDeleteEntity: (entityId: string) => void;
   onDuplicateEntity: (entityId: string) => void;
   onToggleLock: (entityId: string, locked: boolean) => void;
@@ -131,9 +131,9 @@ export default function SceneTreePanelRow({
         opacity: interactive && node.effectivelyVisible ? 1 : 0.5,
         cursor: selectionDisabled ? "default" : "pointer"
       }}
-      onClick={() => {
+      onClick={(event) => {
         if (selectionDisabled || isEditing) return;
-        onSelectEntity(node.id);
+        onSelectEntity(node.id, event.shiftKey ? "toggle" : "replace");
       }}
     >
       <Stack

@@ -11,7 +11,7 @@ type UseEditorAppEventBridgeOptions = {
 export function useEditorAppEventBridge({
   app
 }: UseEditorAppEventBridgeOptions) {
-  const setSelectedEntityId = useEditorStore((state) => state.setSelectedEntityId);
+  const setSelectedEntityIds = useEditorStore((state) => state.setSelectedEntityIds);
   const markUnsavedChanges = useEditorStore((state) => state.markUnsavedChanges);
   const syncLightingConflictNotice = useEditorStore((state) => state.syncLightingConflictNotice);
   const resetLightingConflictNotice = useEditorStore((state) => state.resetLightingConflictNotice);
@@ -61,7 +61,7 @@ export function useEditorAppEventBridge({
 
     const unsubscribe = app.subscribe((event) => {
       if (event.type === "selectionChanged") {
-        setSelectedEntityId(event.selectedEntityId);
+        setSelectedEntityIds(event.selectedEntityIds);
         if (event.selectedEntityId) {
           setAiInspectorMode("entity");
         }
@@ -159,7 +159,7 @@ export function useEditorAppEventBridge({
     markUnsavedChanges,
     syncLightingConflictNotice,
     resetLightingConflictNotice,
-    setSelectedEntityId,
+    setSelectedEntityIds,
     setAiInspectorMode,
     setHistoryState,
     setStudioSceneState

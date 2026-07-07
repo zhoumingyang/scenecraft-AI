@@ -1,7 +1,7 @@
 import * as THREE from "three";
 
 import type { Ai3DPlan } from "../ai3d/plan";
-import type { EditorCommand, MeshMaterialPatch } from "../core/commands";
+import type { EditorCommand, MeshMaterialPatch, SelectionMode } from "../core/commands";
 import type {
   EditorCameraJSON,
   EditorEnvConfigJSON,
@@ -101,6 +101,7 @@ export class EditorSession {
     before: EditorHistorySnapshot | null;
   } | null = null;
   private selectedEntityId: string | null = null;
+  private selectedEntityIds: string[] = [];
 
   projectModel: EditorProjectModel | null = null;
 
@@ -205,9 +206,10 @@ export class EditorSession {
       registry: this.registry,
       emit,
       getProjectModel: () => this.projectModel,
-      getSelectedEntityId: () => this.selectedEntityId,
-      setSelectedEntityId: (entityId) => {
-        this.selectedEntityId = entityId;
+      getSelectedEntityIds: () => this.selectedEntityIds,
+      setSelectedEntityIds: (entityIds) => {
+        this.selectedEntityIds = entityIds;
+        this.selectedEntityId = entityIds.length === 1 ? entityIds[0] : null;
       },
       studioScene: this.studioScene,
       canUseStudioSceneEntityAction: (entityId, action) =>
@@ -217,7 +219,8 @@ export class EditorSession {
       loadProject: (project) => this.loadProject(project),
       clearProject: () => this.clearProject(),
       importModel: (file, source) => this.importModel(file, source),
-      setSelectedEntity: (entityId, source) => this.setSelectedEntity(entityId, source),
+      setSelectedEntity: (entityId, source, mode) =>
+        this.setSelectedEntity(entityId, source, mode),
       removeEntity: (entityId, source) => this.removeEntity(entityId, source),
       duplicateEntity: (entityId, source, duplicateOptions) =>
         this.duplicateEntity(entityId, source, duplicateOptions),
@@ -331,6 +334,10 @@ export class EditorSession {
 
   getSelectedEntityId(): string | null {
     return this.selectedEntityId;
+  }
+
+  getSelectedEntityIds(): string[] {
+    return [...this.selectedEntityIds];
   }
 
   getHistoryState(): EditorHistoryState {
@@ -589,7 +596,8 @@ export class EditorSession {
     if (!project) return null;
     return {
       project,
-      selectedEntityId: this.selectedEntityId
+      selectedEntityId: this.selectedEntityId,
+      selectedEntityIds: this.selectedEntityIds
     };
   }
 
@@ -597,7 +605,10 @@ export class EditorSession {
     if (!snapshot) return;
     await this.history.withRestoreGuardAsync(async () => {
       await this.loadProject(snapshot.project);
-      this.setSelectedEntity(snapshot.selectedEntityId, "ui");
+      this.setSelectedEntities(
+        snapshot.selectedEntityIds ?? legacySelectedEntityIds(snapshot.selectedEntityId),
+        "ui"
+      );
       this.emit({
         type: "sceneUpdated",
         source: "ui",
@@ -838,8 +849,23 @@ export class EditorSession {
     return this.selection.pick(clientX, clientY);
   }
 
-  setSelectedEntity(entityId: string | null, source: SyncSource = "ui") {
-    this.selection.setSelectedEntity(entityId, source);
+  setSelectedEntity(
+    entityId: string | null,
+    source: SyncSource = "ui",
+    mode: SelectionMode = "replace"
+  ) {
+    this.selection.setSelectedEntity(entityId, source, mode);
+  }
+
+  setSelectedEntities(entityIds: string[], source: SyncSource = "ui") {
+    if (entityIds.length === 0) {
+      this.selection.setSelectedEntity(null, source);
+      return;
+    }
+
+    entityIds.forEach((entityId, index) => {
+      this.selection.setSelectedEntity(entityId, source, index === 0 ? "replace" : "toggle");
+    });
   }
 
   removeEntity(entityId: string, source: SyncSource = "ui") {
@@ -908,4 +934,8 @@ export class EditorSession {
       }
     });
   }
+}
+
+function legacySelectedEntityIds(selectedEntityId: string | null) {
+  return selectedEntityId ? [selectedEntityId] : [];
 }

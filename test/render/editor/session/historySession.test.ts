@@ -69,6 +69,32 @@ test("history ignores unchanged snapshots and clears redo after new edits", () =
   });
 });
 
+test("history snapshots clone selected entity id lists", () => {
+  const history = new EditorHistorySession();
+  const before = {
+    ...snapshot("empty"),
+    selectedEntityIds: []
+  };
+  const selectedEntityIds = ["mesh-1", "mesh-2"];
+  const after = {
+    ...snapshot("mesh"),
+    selectedEntityId: null,
+    selectedEntityIds
+  };
+
+  history.capture("Multi-select", before, after);
+  selectedEntityIds.push("mesh-3");
+
+  const redo = history.redo();
+  assert.equal(redo, null);
+
+  const undo = history.undo();
+  assert.deepEqual(undo?.snapshot.selectedEntityIds, []);
+
+  const restored = history.redo();
+  assert.deepEqual(restored?.snapshot.selectedEntityIds, ["mesh-1", "mesh-2"]);
+});
+
 test("history coalesces repeated edits only inside the configured time window", () => {
   let now = 1000;
   const history = new EditorHistorySession({

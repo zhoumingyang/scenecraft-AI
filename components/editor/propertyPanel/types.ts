@@ -24,9 +24,11 @@ export type PropertyPanelContentProps = {
   inspectorMode: "entity" | "ai";
   isCurrentEntityInStudio: boolean;
   isCurrentEntityIsolated: boolean;
+  isMultiSelection: boolean;
   isPolyhavenEnabled: boolean;
   panelTitle: string;
   selectedEntityId: string | null;
+  selectedEntityIds: string[];
   studioEntityMetadata: StudioTransientEntityMetadata | null;
   studioPostProcessingState: StudioScenePostProcessingState | null;
   studioScene: StudioSceneState | null;

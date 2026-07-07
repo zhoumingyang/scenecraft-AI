@@ -36,6 +36,7 @@ export function useEditorKeyboardShortcuts({
       if (!action) return;
 
       const activeSelectedEntityId = app.getSelectedEntityId() ?? selectedEntityId;
+      const activeSelectedEntityIds = app.getSelectedEntityIds();
 
       switch (action) {
         case "delete-selection":
@@ -63,7 +64,7 @@ export function useEditorKeyboardShortcuts({
           });
           return;
         case "clear-selection":
-          if (!activeSelectedEntityId) return;
+          if (activeSelectedEntityIds.length === 0 && !activeSelectedEntityId) return;
           event.preventDefault();
           app.setSelectedEntity(null);
           return;

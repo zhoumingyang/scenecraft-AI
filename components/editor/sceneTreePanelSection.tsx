@@ -12,12 +12,12 @@ import type { SceneTreeNode, SceneTreeSection } from "./sceneTreePanel.types";
 type SceneTreePanelSectionProps = {
   section: SceneTreeSection;
   emptyLabel: string;
-  selectedEntityId: string | null;
+  selectedEntityIds: string[];
   editingNodeId: string | null;
   draftLabel: string;
   theme: ReturnType<typeof getEditorThemeTokens>;
   onDraftLabelChange: (value: string) => void;
-  onSelectEntity: (entityId: string) => void;
+  onSelectEntity: (entityId: string, mode?: "replace" | "toggle") => void;
   onDeleteEntity: (entityId: string) => void;
   onDuplicateEntity: (entityId: string) => void;
   onToggleLock: (entityId: string, locked: boolean) => void;
@@ -35,7 +35,7 @@ type SceneTreePanelSectionProps = {
 export default function SceneTreePanelSection({
   section,
   emptyLabel,
-  selectedEntityId,
+  selectedEntityIds,
   editingNodeId,
   draftLabel,
   theme,
@@ -81,20 +81,21 @@ export default function SceneTreePanelSection({
   }, [allNodeIds]);
 
   useEffect(() => {
-    if (!selectedEntityId) return;
+    if (selectedEntityIds.length === 0) return;
 
     const ancestorIds: string[] = [];
     const collectAncestorIds = (nodes: SceneTreeNode[], trail: string[]): boolean => {
+      let found = false;
       for (const node of nodes) {
-        if (node.id === selectedEntityId) {
+        if (selectedEntityIds.includes(node.id)) {
           ancestorIds.push(...trail);
-          return true;
+          found = true;
         }
         if (collectAncestorIds(node.children, [...trail, node.id])) {
-          return true;
+          found = true;
         }
       }
-      return false;
+      return found;
     };
 
     if (!collectAncestorIds(section.nodes, [])) return;
@@ -104,7 +105,7 @@ export default function SceneTreePanelSection({
       ancestorIds.forEach((id) => next.delete(id));
       return next;
     });
-  }, [section.nodes, selectedEntityId]);
+  }, [section.nodes, selectedEntityIds]);
 
   const totalNodes = useMemo(() => {
     const countNodes = (nodes: SceneTreeNode[]): number =>
@@ -138,7 +139,7 @@ export default function SceneTreePanelSection({
           depth={depth}
           expanded={expanded}
           onToggleExpand={toggleNode}
-          selected={node.id === selectedEntityId}
+          selected={selectedEntityIds.includes(node.id)}
           isEditing={editingNodeId === node.id}
           draftLabel={draftLabel}
           theme={theme}

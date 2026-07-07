@@ -2,9 +2,10 @@ import { Stack, Typography } from "@mui/material";
 import type { PropertyPanelContentProps } from "./types";
 
 export function EmptyPropertyPanel({
+  message,
   theme,
   t
-}: Pick<PropertyPanelContentProps, "theme" | "t">) {
+}: Pick<PropertyPanelContentProps, "theme" | "t"> & { message?: string }) {
   return (
     <Stack
       alignItems="center"
@@ -12,7 +13,7 @@ export function EmptyPropertyPanel({
       sx={{ height: "100%", minHeight: 180, color: theme.mutedText, textAlign: "center" }}
     >
       <Typography sx={{ fontSize: 14, fontWeight: 600 }}>
-        {t("editor.properties.none")}
+        {message ?? t("editor.properties.none")}
       </Typography>
     </Stack>
   );

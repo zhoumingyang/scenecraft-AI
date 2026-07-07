@@ -115,6 +115,7 @@ const zh: TranslationDictionary = {
     "editor.export.failed": "渲染导出失败。",
     "editor.properties.title": "属性面板",
     "editor.properties.none": "未选中对象",
+    "editor.properties.multiSelection": "多选",
     "editor.properties.emptyHint": "请在画布中或场景树里选择一个对象。",
     "editor.properties.isolate": "仅渲染当前对象",
     "editor.properties.restoreVisibility": "恢复场景原有显示",

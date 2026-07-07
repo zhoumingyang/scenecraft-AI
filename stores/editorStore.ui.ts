@@ -11,6 +11,7 @@ type EditorUiSlice = Pick<
   | "app"
   | "editorThemeMode"
   | "selectedEntityId"
+  | "selectedEntityIds"
   | "sceneLoadingStatus"
   | "lightingConflictNotice"
   | "historyState"
@@ -26,6 +27,7 @@ type EditorUiSlice = Pick<
   | "setApp"
   | "setEditorThemeMode"
   | "setSelectedEntityId"
+  | "setSelectedEntityIds"
   | "syncLightingConflictNotice"
   | "dismissLightingConflictNotice"
   | "resetLightingConflictNotice"
@@ -47,6 +49,7 @@ export const createUiSlice: EditorStoreSlice<EditorUiSlice> = (set) => ({
   app: null,
   editorThemeMode: "dark",
   selectedEntityId: null,
+  selectedEntityIds: [],
   sceneLoadingStatus: createInitialSceneLoadingStatus(),
   lightingConflictNotice: createInitialLightingConflictNotice(),
   historyState: createInitialHistoryState(),
@@ -61,7 +64,13 @@ export const createUiSlice: EditorStoreSlice<EditorUiSlice> = (set) => ({
   viewStateVersion: 0,
   setApp: (app) => set({ app }),
   setEditorThemeMode: (editorThemeMode) => set({ editorThemeMode }),
-  setSelectedEntityId: (selectedEntityId) => set({ selectedEntityId }),
+  setSelectedEntityId: (selectedEntityId) =>
+    set({ selectedEntityId, selectedEntityIds: selectedEntityId ? [selectedEntityId] : [] }),
+  setSelectedEntityIds: (selectedEntityIds) =>
+    set({
+      selectedEntityIds,
+      selectedEntityId: selectedEntityIds.length === 1 ? selectedEntityIds[0] : null
+    }),
   syncLightingConflictNotice: ({ hasAmbientLight, hasHemisphereLight, hasConflict }) =>
     set((state) => {
       if (!hasConflict) {
