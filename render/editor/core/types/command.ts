@@ -7,6 +7,7 @@ import type { EditorProjectJSON } from "./project";
 import type { SyncSource, TransformPatch, Vec3Tuple } from "./shared";
 
 export type MeshMaterialPatch = Partial<EditorMeshMaterialJSON>;
+export type SelectionMode = "replace" | "toggle";
 
 export type EditorCommand =
   | {
@@ -24,6 +25,7 @@ export type EditorCommand =
   | {
       type: "selection.set";
       entityId: string | null;
+      mode?: SelectionMode;
       source?: SyncSource;
     }
   | {

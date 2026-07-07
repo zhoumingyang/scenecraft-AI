@@ -1,4 +1,4 @@
-import type { EditorCommand } from "../core/commands";
+import type { EditorCommand, SelectionMode } from "../core/commands";
 import type { EditorLightJSON, SyncSource, Vec3Tuple } from "../core/types";
 import type { StudioSceneEntityAction } from "./studioSceneSession";
 
@@ -8,7 +8,7 @@ export type EditorCommandHandlers = {
     : never;
   clearProject: () => Promise<void>;
   importModel: (file: File, source: SyncSource) => Promise<unknown>;
-  setSelectedEntity: (entityId: string | null, source: SyncSource) => void;
+  setSelectedEntity: (entityId: string | null, source: SyncSource, mode: SelectionMode) => void;
   removeEntity: (entityId: string, source: SyncSource) => void;
   duplicateEntity: (
     entityId: string,
@@ -106,7 +106,7 @@ export async function dispatchEditorCommand(
       await handlers.importModel(command.file, source);
       return;
     case "selection.set":
-      handlers.setSelectedEntity(command.entityId, source);
+      handlers.setSelectedEntity(command.entityId, source, command.mode ?? "replace");
       return;
     case "entity.remove":
       handlers.removeEntity(command.entityId, source);

@@ -1,4 +1,5 @@
 import { PICK_POINTER_MOVE_THRESHOLD_PX } from "../constants/input";
+import type { SelectionMode } from "../core/commands";
 import type { EditorRuntime } from "../runtime/editorRuntime";
 
 type PointerPickingRuntime = Pick<
@@ -16,7 +17,7 @@ type PendingPick = {
 export class EditorAppPointerPicking {
   private readonly runtime: PointerPickingRuntime;
   private readonly pickEntity: (clientX: number, clientY: number) => string | null;
-  private readonly setSelectedEntity: (entityId: string | null) => void;
+  private readonly setSelectedEntity: (entityId: string | null, mode: SelectionMode) => void;
   private readonly onTransformInteractionStart: () => void;
   private readonly onTransformInteractionEnd: () => void;
   private pendingPick: PendingPick | null = null;
@@ -31,7 +32,7 @@ export class EditorAppPointerPicking {
   }: {
     runtime: PointerPickingRuntime;
     pickEntity: (clientX: number, clientY: number) => string | null;
-    setSelectedEntity: (entityId: string | null) => void;
+    setSelectedEntity: (entityId: string | null, mode: SelectionMode) => void;
     onTransformInteractionStart?: () => void;
     onTransformInteractionEnd?: () => void;
   }) {
@@ -98,7 +99,9 @@ export class EditorAppPointerPicking {
     this.pendingPick = null;
     if (!shouldPick) return;
 
-    this.setSelectedEntity(this.pickEntity(event.clientX, event.clientY));
+    const pickedEntityId = this.pickEntity(event.clientX, event.clientY);
+    if (event.shiftKey && !pickedEntityId) return;
+    this.setSelectedEntity(pickedEntityId, event.shiftKey ? "toggle" : "replace");
   };
 
   private onPointerCancel = (event: PointerEvent) => {

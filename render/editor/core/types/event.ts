@@ -25,6 +25,7 @@ export type SceneUpdatedEvent = {
 export type SelectionChangedEvent = {
   type: "selectionChanged";
   selectedEntityId: string | null;
+  selectedEntityIds: string[];
   source: SyncSource;
 };
 

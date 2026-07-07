@@ -27,10 +27,12 @@ type Translate = ReturnType<typeof useI18n>["t"];
 
 function getPanelTitle(
   inspectorMode: "entity" | "ai",
+  isMultiSelection: boolean,
   entityRecord: PropertyPanelEntityRecord | null,
   t: Translate
 ) {
   if (inspectorMode === "ai") return t("editor.ai.panelTitle");
+  if (isMultiSelection) return t("editor.properties.multiSelection");
   if (!entityRecord) return t("editor.properties.none");
   if (entityRecord.kind === "scene") return t("editor.sceneTree.scene");
   if (entityRecord.kind === "group") return t("editor.sceneTree.group");
@@ -43,9 +45,11 @@ function getPanelTitle(
 export function usePropertyPanelState(open: boolean, t: Translate) {
   const app = useEditorStore((state) => (open ? state.app : null));
   const selectedEntityId = useEditorStore((state) => (open ? state.selectedEntityId : null));
+  const selectedEntityIds = useEditorStore((state) => (open ? state.selectedEntityIds : []));
+  const isMultiSelection = selectedEntityIds.length > 1;
   const viewStateVersion = useEditorStore((state) => (open ? state.viewStateVersion : 0));
   const selectedEntityVersion = useEditorStore((state) =>
-    open && selectedEntityId ? state.entityVersions[selectedEntityId] ?? 0 : 0
+    open && selectedEntityId && !isMultiSelection ? state.entityVersions[selectedEntityId] ?? 0 : 0
   );
   const sceneTreeVersion = useEditorStore((state) => (open ? state.sceneTreeVersion : 0));
   const inspectorMode = useEditorStore((state) => (open ? state.aiImage.inspectorMode : "entity"));
@@ -61,6 +65,7 @@ export function usePropertyPanelState(open: boolean, t: Translate) {
 
   const entityRecord = useMemo<PropertyPanelEntityRecord | null>(() => {
     if (!open) return null;
+    if (isMultiSelection) return null;
     const project = app?.projectModel;
     if (!project || !selectedEntityId) return null;
     if (selectedEntityId === SCENE_NODE_ID) {
@@ -80,9 +85,17 @@ export function usePropertyPanelState(open: boolean, t: Translate) {
 
     const record = project.getEntityById(selectedEntityId);
     return record ? { ...record } : null;
-  }, [app, open, sceneTreeVersion, selectedEntityId, selectedEntityVersion, viewStateVersion]);
+  }, [
+    app,
+    isMultiSelection,
+    open,
+    sceneTreeVersion,
+    selectedEntityId,
+    selectedEntityVersion,
+    viewStateVersion
+  ]);
 
-  const panelTitle = getPanelTitle(inspectorMode, entityRecord, t);
+  const panelTitle = getPanelTitle(inspectorMode, isMultiSelection, entityRecord, t);
   const isolatedEntityId = useMemo(
     () => (open ? app?.getIsolatedEntityId() ?? null : null),
     [app, open, viewStateVersion]
@@ -121,20 +134,25 @@ export function usePropertyPanelState(open: boolean, t: Translate) {
       studioScene.targetEntityId === currentIsolatableEntityId
   );
   const studioEntityMetadata = useMemo(
-    () => (studioScene?.active ? app?.getStudioSceneEntityMetadata(selectedEntityId) ?? null : null),
-    [app, selectedEntityId, studioScene?.active, viewStateVersion]
+    () =>
+      studioScene?.active && !isMultiSelection
+        ? app?.getStudioSceneEntityMetadata(selectedEntityId) ?? null
+        : null,
+    [app, isMultiSelection, selectedEntityId, studioScene?.active, viewStateVersion]
   );
   const studioPostProcessingState = useMemo(
     () =>
-      studioScene?.active && selectedEntityId === SCENE_NODE_ID
+      studioScene?.active && !isMultiSelection && selectedEntityId === SCENE_NODE_ID
         ? app?.getStudioScenePostProcessingState() ?? null
         : null,
-    [app, selectedEntityId, studioScene?.active, viewStateVersion]
+    [app, isMultiSelection, selectedEntityId, studioScene?.active, viewStateVersion]
   );
 
   return {
     app,
     selectedEntityId,
+    selectedEntityIds,
+    isMultiSelection,
     inspectorMode,
     aiMode,
     aiTexture,

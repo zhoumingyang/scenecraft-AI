@@ -3,6 +3,7 @@ import type { EditorProjectJSON } from "../core/types";
 export type EditorHistorySnapshot = {
   project: EditorProjectJSON;
   selectedEntityId: string | null;
+  selectedEntityIds?: string[];
 };
 
 export type EditorHistoryState = {
@@ -182,10 +183,14 @@ export class EditorHistorySession {
 }
 
 function cloneSnapshot(snapshot: EditorHistorySnapshot): EditorHistorySnapshot {
-  return {
+  const clone: EditorHistorySnapshot = {
     project: structuredClone(snapshot.project),
     selectedEntityId: snapshot.selectedEntityId
   };
+  if (snapshot.selectedEntityIds) {
+    clone.selectedEntityIds = [...snapshot.selectedEntityIds];
+  }
+  return clone;
 }
 
 function snapshotsEqual(

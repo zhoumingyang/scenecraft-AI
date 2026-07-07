@@ -46,6 +46,8 @@ export default function PropertyPanel() {
   const {
     app,
     selectedEntityId,
+    selectedEntityIds,
+    isMultiSelection,
     inspectorMode,
     aiMode,
     aiTexture,
@@ -192,9 +194,11 @@ export default function PropertyPanel() {
                 inspectorMode={inspectorMode}
                 isCurrentEntityInStudio={isCurrentEntityInStudio}
                 isCurrentEntityIsolated={isCurrentEntityIsolated}
+                isMultiSelection={isMultiSelection}
                 isPolyhavenEnabled={isPolyhavenEnabled}
                 panelTitle={panelTitle}
                 selectedEntityId={selectedEntityId}
+                selectedEntityIds={selectedEntityIds}
                 studioEntityMetadata={studioEntityMetadata}
                 studioPostProcessingState={studioPostProcessingState}
                 studioScene={studioScene}
