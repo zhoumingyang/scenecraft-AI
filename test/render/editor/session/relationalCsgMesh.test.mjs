@@ -26,6 +26,10 @@ const CSG_SESSION_SOURCE = readFileSync(
   new URL("../../../../render/editor/session/meshCsgSession.ts", import.meta.url),
   "utf8"
 );
+const EDITOR_SESSION_SOURCE = readFileSync(
+  new URL("../../../../render/editor/session/editorSession.ts", import.meta.url),
+  "utf8"
+);
 
 test("project JSON stores CsgMesh relationships without baked mesh geometry", () => {
   assert.match(CSG_TYPES_SOURCE, /export type EditorCsgMeshJSON/);
@@ -47,3 +51,9 @@ test("CsgMesh owns the runtime result while operands keep model data only", () =
   assert.match(CSG_SESSION_SOURCE, /this\.registry\.create\(operand\)/);
 });
 
+test("deleting a CsgMesh removes its relationship and operand mesh data", () => {
+  assert.match(CSG_SESSION_SOURCE, /deleteWithOperands\(entityId: string/);
+  assert.match(CSG_SESSION_SOURCE, /projectModel\.removeEntity\(operandId\)/);
+  assert.match(EDITOR_SESSION_SOURCE, /this\.meshCsgSession\.deleteWithOperands\(entityId, source\)/);
+  assert.doesNotMatch(EDITOR_SESSION_SOURCE, /removeEntity\(entityId: string,[\s\S]*this\.releaseMeshCsg\(entityId, source\)/);
+});

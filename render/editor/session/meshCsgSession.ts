@@ -135,4 +135,44 @@ export class MeshCsgSessionController {
     this.setSelectedEntities(operandIds, source);
     return operandIds;
   }
+
+  deleteWithOperands(entityId: string, source: SyncSource) {
+    const projectModel = this.getProjectModel();
+    if (!projectModel) return [];
+    const record = projectModel.getEntityById(entityId);
+    if (!record || record.kind !== "csgMesh" || record.item.locked) return [];
+
+    const operandIds = [...record.item.operandIds];
+    this.registry.remove(entityId);
+    projectModel.removeEntity(entityId);
+
+    operandIds.forEach((operandId) => {
+      this.registry.remove(operandId);
+      projectModel.removeEntity(operandId);
+      this.emit({
+        type: "entityUpdated",
+        entityId: operandId,
+        entityKind: "mesh",
+        source,
+        affectsSceneTree: true,
+        affectsMeshList: true
+      });
+    });
+
+    rebuildProjectGroupHierarchy({
+      projectModel,
+      registry: this.registry,
+      scene: this.scene
+    });
+    this.emit({
+      type: "entityUpdated",
+      entityId,
+      entityKind: "csgMesh",
+      source,
+      affectsSceneTree: true,
+      affectsMeshList: true
+    });
+    this.setSelectedEntities([], source);
+    return operandIds;
+  }
 }

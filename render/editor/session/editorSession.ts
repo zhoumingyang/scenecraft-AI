@@ -940,7 +940,8 @@ export class EditorSession {
 
   removeEntity(entityId: string, source: SyncSource = "ui") {
     if (this.projectModel?.getEntityById(entityId)?.kind === "csgMesh") {
-      this.releaseMeshCsg(entityId, source);
+      this.meshCsgSession.deleteWithOperands(entityId, source);
+      this.syncPreviewLighting();
       return;
     }
     if (this.studioScene.isActive() && !this.canUseStudioSceneEntityAction(entityId, "delete")) return;
