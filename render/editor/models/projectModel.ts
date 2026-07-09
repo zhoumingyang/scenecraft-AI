@@ -6,6 +6,7 @@ import type {
 } from "../core/types";
 import { normalizeString } from "../utils/normalize";
 import { CameraModel } from "./cameraModel";
+import { CsgMeshEntityModel } from "./csgMeshEntityModel";
 import { GroupEntityModel } from "./groupEntityModel";
 import { LightEntityModel } from "./lightEntityModel";
 import { MeshEntityModel } from "./meshEntityModel";
@@ -24,6 +25,7 @@ export class EditorProjectModel {
   envConfig: ResolvedEditorEnvConfigJSON;
   models: Map<string, ModelEntityModel>;
   meshes: Map<string, MeshEntityModel>;
+  csgMeshes: Map<string, CsgMeshEntityModel>;
   lights: Map<string, LightEntityModel>;
   groups: Map<string, GroupEntityModel>;
   camera: CameraModel;
@@ -42,6 +44,7 @@ export class EditorProjectModel {
     this.camera = camera;
     this.models = new Map();
     this.meshes = new Map();
+    this.csgMeshes = new Map();
     this.lights = new Map();
     this.groups = new Map();
   }
@@ -71,6 +74,11 @@ export class EditorProjectModel {
       project.meshes.set(mesh.id, mesh);
     });
 
+    (source.csgMesh || []).forEach((item, index) => {
+      const csgMesh = new CsgMeshEntityModel(index, item);
+      project.csgMeshes.set(csgMesh.id, csgMesh);
+    });
+
     (source.light || []).forEach((item, index) => {
       const light = new LightEntityModel(index, item);
       project.lights.set(light.id, light);
@@ -87,11 +95,13 @@ export class EditorProjectModel {
     | { kind: "group"; item: GroupEntityModel }
     | { kind: "model"; item: ModelEntityModel }
     | { kind: "mesh"; item: MeshEntityModel }
+    | { kind: "csgMesh"; item: CsgMeshEntityModel }
     | { kind: "light"; item: LightEntityModel }
     | null {
     if (this.groups.has(id)) return { kind: "group", item: this.groups.get(id)! };
     if (this.models.has(id)) return { kind: "model", item: this.models.get(id)! };
     if (this.meshes.has(id)) return { kind: "mesh", item: this.meshes.get(id)! };
+    if (this.csgMeshes.has(id)) return { kind: "csgMesh", item: this.csgMeshes.get(id)! };
     if (this.lights.has(id)) return { kind: "light", item: this.lights.get(id)! };
     return null;
   }
@@ -129,6 +139,19 @@ export class EditorProjectModel {
     return true;
   }
 
+  getCsgOwnerForMesh(meshId: string) {
+    for (const csgMesh of this.csgMeshes.values()) {
+      if (csgMesh.operandIds.includes(meshId)) {
+        return csgMesh;
+      }
+    }
+    return null;
+  }
+
+  isMeshConsumedByCsg(meshId: string) {
+    return Boolean(this.getCsgOwnerForMesh(meshId));
+  }
+
   addModel(source: ConstructorParameters<typeof ModelEntityModel>[1]) {
     const model = new ModelEntityModel(this.models.size, source);
     this.models.set(model.id, model);
@@ -139,6 +162,12 @@ export class EditorProjectModel {
     const mesh = new MeshEntityModel(this.meshes.size, source);
     this.meshes.set(mesh.id, mesh);
     return mesh;
+  }
+
+  addCsgMesh(source: ConstructorParameters<typeof CsgMeshEntityModel>[1]) {
+    const csgMesh = new CsgMeshEntityModel(this.csgMeshes.size, source);
+    this.csgMeshes.set(csgMesh.id, csgMesh);
+    return csgMesh;
   }
 
   addLight(source: ConstructorParameters<typeof LightEntityModel>[1]) {
@@ -180,6 +209,7 @@ export class EditorProjectModel {
     });
     if (this.models.delete(id)) return "model";
     if (this.meshes.delete(id)) return "mesh";
+    if (this.csgMeshes.delete(id)) return "csgMesh";
     if (this.lights.delete(id)) return "light";
     return null;
   }

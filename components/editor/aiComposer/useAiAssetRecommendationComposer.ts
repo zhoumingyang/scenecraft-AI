@@ -90,7 +90,7 @@ function resolveSelectedTarget(app: EditorApp | null): AiExternalAssetRecommenda
     return null;
   }
 
-  if (entityRecord.kind === "light") {
+  if (entityRecord.kind === "light" || entityRecord.kind === "csgMesh") {
     return null;
   }
 

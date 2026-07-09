@@ -2,12 +2,14 @@ import type { LightPresetId } from "../../lightPresets";
 import type { EditorCameraJSON } from "./camera";
 import type { EditorEnvConfigJSON } from "./environment";
 import type { EditorLightJSON } from "./light";
+import type { EditorCsgMeshOperation } from "./csgMesh";
 import type { EditorGroundConfigJSON, EditorMeshMaterialJSON } from "./mesh";
 import type { EditorProjectJSON } from "./project";
 import type { SyncSource, TransformPatch, Vec3Tuple } from "./shared";
 
 export type MeshMaterialPatch = Partial<EditorMeshMaterialJSON>;
 export type SelectionMode = "replace" | "toggle";
+export type MeshCsgOperation = EditorCsgMeshOperation;
 
 export type EditorCommand =
   | {
@@ -92,6 +94,30 @@ export type EditorCommand =
   | {
       type: "mesh.create";
       geometryName: string;
+      source?: SyncSource;
+    }
+  | {
+      type: "mesh.csg";
+      operation: MeshCsgOperation;
+      source?: SyncSource;
+    }
+  | {
+      type: "mesh.csg.release";
+      entityId: string;
+      source?: SyncSource;
+    }
+  | {
+      type: "mesh.csg.patch";
+      entityId: string;
+      patch: {
+        operation?: MeshCsgOperation;
+        materialMode?: "sourceParts" | "single";
+        material?: MeshMaterialPatch;
+        materialPart?: {
+          sourceEntityId: string;
+          material?: MeshMaterialPatch | null;
+        };
+      };
       source?: SyncSource;
     }
   | {

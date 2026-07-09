@@ -1,1 +1,6 @@
-export type { EditorCommand, MeshMaterialPatch, SelectionMode } from "./types/command";
+export type {
+  EditorCommand,
+  MeshCsgOperation,
+  MeshMaterialPatch,
+  SelectionMode
+} from "./types/command";

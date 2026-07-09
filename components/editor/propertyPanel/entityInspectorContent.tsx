@@ -12,6 +12,8 @@ import {
 import StudioScenePropertySection from "@/components/editor/studioScenePropertySection";
 import { EmptyPropertyPanel } from "./emptyPropertyPanel";
 import { StudioHeaderActions } from "./headerActions";
+import { CsgMeshInspectorSection } from "./csgMeshInspectorSection";
+import { MeshCsgSection } from "./meshCsgSection";
 import type { PropertyPanelContentProps } from "./types";
 
 export function EntityInspectorContent(props: PropertyPanelContentProps) {
@@ -23,6 +25,7 @@ export function EntityInspectorContent(props: PropertyPanelContentProps) {
     entityRecord,
     isCurrentEntityInStudio,
     isCurrentEntityIsolated,
+    isMeshMultiSelection,
     isMultiSelection,
     isPolyhavenEnabled,
     panelTitle,
@@ -32,6 +35,7 @@ export function EntityInspectorContent(props: PropertyPanelContentProps) {
     studioScene,
     theme,
     t,
+    selectedMeshEntityIds,
     onAiLibraryOpen,
     onAdvancedMaterialOpen,
     onMaterialLibraryOpen,
@@ -40,6 +44,31 @@ export function EntityInspectorContent(props: PropertyPanelContentProps) {
   } = props;
 
   if (!entityRecord) {
+    if (isMeshMultiSelection && selectedMeshEntityIds.length > 1) {
+      return (
+        <Stack spacing={0.9}>
+          <Typography
+            sx={{
+              px: 0.15,
+              minWidth: 0,
+              flex: 1,
+              fontSize: 13,
+              fontWeight: 600,
+              color: theme.pillText
+            }}
+          >
+            {panelTitle}
+          </Typography>
+          <MeshCsgSection
+            app={app}
+            selectedMeshEntityIds={selectedMeshEntityIds}
+            theme={theme}
+            t={t}
+          />
+        </Stack>
+      );
+    }
+
     return (
       <EmptyPropertyPanel
         message={isMultiSelection ? t("editor.properties.multiSelection") : undefined}
@@ -146,6 +175,15 @@ export function EntityInspectorContent(props: PropertyPanelContentProps) {
         studioScene={studioScene}
         theme={theme}
       />
+
+      {entityRecord.kind === "csgMesh" ? (
+        <CsgMeshInspectorSection
+          app={app}
+          csgMesh={entityRecord.item}
+          theme={theme}
+          t={t}
+        />
+      ) : null}
 
       {entityRecord.kind === "mesh" ? (
         <MeshAppearanceSection

@@ -26,6 +26,7 @@ export type RenderBinding = {
 
 export type BindingContext = {
   scene: THREE.Scene;
+  getProjectModel?: () => import("../models").EditorProjectModel | null;
   modelLoaderFactory: ModelLoaderFactory;
   textureLoader: THREE.TextureLoader;
   invalidateScene?: () => void;

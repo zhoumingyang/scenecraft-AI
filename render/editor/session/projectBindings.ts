@@ -20,7 +20,11 @@ export function createProjectBindings(
 
   projectModel.groups.forEach((group) => registerBinding(registry.create(group)));
   projectModel.models.forEach((model) => registerBinding(registry.create(model)));
-  projectModel.meshes.forEach((mesh) => registerBinding(registry.create(mesh)));
+  projectModel.meshes.forEach((mesh) => {
+    if (projectModel.isMeshConsumedByCsg(mesh.id)) return;
+    registerBinding(registry.create(mesh));
+  });
+  projectModel.csgMeshes.forEach((csgMesh) => registerBinding(registry.create(csgMesh)));
   projectModel.lights.forEach((light) => registerBinding(registry.create(light)));
 
   return pendingBindingReady;
@@ -46,8 +50,14 @@ export function rebuildProjectGroupHierarchy({
   });
 
   projectModel.meshes.forEach((mesh) => {
+    if (projectModel.isMeshConsumedByCsg(mesh.id)) return;
     const parentGroupId = projectModel.getParentGroupId(mesh.id);
     registry.attach(mesh.id, parentGroupId, scene);
+  });
+
+  projectModel.csgMeshes.forEach((csgMesh) => {
+    const parentGroupId = projectModel.getParentGroupId(csgMesh.id);
+    registry.attach(csgMesh.id, parentGroupId, scene);
   });
 
   projectModel.lights.forEach((light) => {

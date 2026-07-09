@@ -15,8 +15,10 @@ export function getEditorMeshList(
 ): EditorMeshListItem[] {
   const meshes = projectModel?.meshes;
   if (!meshes) return [];
-  return Array.from(meshes.values()).map((mesh, index) => ({
-    id: mesh.id,
-    label: mesh.label || `${formatTitleCase(mesh.geometryName)} ${index + 1}`
-  }));
+  return Array.from(meshes.values())
+    .filter((mesh) => !projectModel?.isMeshConsumedByCsg(mesh.id))
+    .map((mesh, index) => ({
+      id: mesh.id,
+      label: mesh.label || `${formatTitleCase(mesh.geometryName)} ${index + 1}`
+    }));
 }

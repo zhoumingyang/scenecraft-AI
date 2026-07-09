@@ -103,6 +103,7 @@ function buildEntityNodeMap(
   });
 
   Array.from(project.meshes.values()).forEach((mesh, index) => {
+    if (project.isMeshConsumedByCsg(mesh.id)) return;
     const fallbackLabel = `${formatTitleCase(mesh.geometryName)} ${index + 1}`;
     entityNodeMap.set(mesh.id, {
       id: mesh.id,
@@ -114,6 +115,20 @@ function buildEntityNodeMap(
       fallbackLabel
     });
     entityIdsInOrder.push(mesh.id);
+  });
+
+  Array.from(project.csgMeshes.values()).forEach((csgMesh, index) => {
+    const fallbackLabel = `CSG Mesh ${index + 1}`;
+    entityNodeMap.set(csgMesh.id, {
+      id: csgMesh.id,
+      type: "csgMesh",
+      locked: csgMesh.locked,
+      visible: csgMesh.visible,
+      effectivelyVisible: project.isEntityEffectivelyVisible(csgMesh.id),
+      label: csgMesh.label || fallbackLabel,
+      fallbackLabel
+    });
+    entityIdsInOrder.push(csgMesh.id);
   });
 
   Array.from(project.lights.values()).forEach((light, index) => {
@@ -187,6 +202,7 @@ export function getNodeIcon(nodeType: SceneTreeNodeType) {
   if (nodeType === "gridHelper") return <GridViewRoundedIcon sx={{ fontSize: 16 }} />;
   if (nodeType === "group") return <AccountTreeRoundedIcon sx={{ fontSize: 16 }} />;
   if (nodeType === "model") return <FolderRoundedIcon sx={{ fontSize: 16 }} />;
+  if (nodeType === "csgMesh") return <AccountTreeRoundedIcon sx={{ fontSize: 16 }} />;
   if (nodeType === "mesh") return <GridViewRoundedIcon sx={{ fontSize: 16 }} />;
   return <LightModeRoundedIcon sx={{ fontSize: 16 }} />;
 }

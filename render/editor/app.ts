@@ -2,7 +2,12 @@ import type * as THREE from "three";
 
 import type { ExternalAssetSourceJSON } from "@/lib/externalAssets/types";
 import type { Ai3DPlan } from "./ai3d/plan";
-import type { EditorCommand, MeshMaterialPatch, SelectionMode } from "./core/commands";
+import type {
+  EditorCommand,
+  MeshCsgOperation,
+  MeshMaterialPatch,
+  SelectionMode
+} from "./core/commands";
 import type { EditorAppEvent, EditorAppListener } from "./core/events";
 import type {
   EditorCameraJSON,
@@ -190,6 +195,31 @@ export class EditorApp {
 
   getSelectedEntityIds(): string[] {
     return this.session.getSelectedEntityIds();
+  }
+
+  applyMeshCsg(operation: MeshCsgOperation) {
+    return this.dispatch({
+      type: "mesh.csg",
+      operation
+    });
+  }
+
+  releaseMeshCsg(entityId: string) {
+    return this.dispatch({
+      type: "mesh.csg.release",
+      entityId
+    });
+  }
+
+  patchMeshCsg(
+    entityId: string,
+    patch: Extract<EditorCommand, { type: "mesh.csg.patch" }>["patch"]
+  ) {
+    return this.dispatch({
+      type: "mesh.csg.patch",
+      entityId,
+      patch
+    });
   }
 
   getHistoryState(): EditorHistoryState {
