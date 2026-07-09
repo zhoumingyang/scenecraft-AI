@@ -45,6 +45,19 @@ export type EditorCommandHandlers = {
     source: SyncSource
   ) => void;
   createMesh: (geometryName: string, source: SyncSource) => Promise<void>;
+  applyMeshCsg: (
+    operation: Extract<EditorCommand, { type: "mesh.csg" }>["operation"],
+    source: SyncSource
+  ) => void;
+  releaseMeshCsg: (
+    entityId: Extract<EditorCommand, { type: "mesh.csg.release" }>["entityId"],
+    source: SyncSource
+  ) => void;
+  patchMeshCsg: (
+    entityId: Extract<EditorCommand, { type: "mesh.csg.patch" }>["entityId"],
+    patch: Extract<EditorCommand, { type: "mesh.csg.patch" }>["patch"],
+    source: SyncSource
+  ) => void;
   updateLight: (
     entityId: string,
     patch: Extract<EditorCommand, { type: "light.patch" }>["patch"],
@@ -145,6 +158,15 @@ export async function dispatchEditorCommand(
       return;
     case "mesh.create":
       await handlers.createMesh(command.geometryName, source);
+      return;
+    case "mesh.csg":
+      handlers.applyMeshCsg(command.operation, source);
+      return;
+    case "mesh.csg.release":
+      handlers.releaseMeshCsg(command.entityId, source);
+      return;
+    case "mesh.csg.patch":
+      handlers.patchMeshCsg(command.entityId, command.patch, source);
       return;
     case "light.patch":
       handlers.updateLight(command.entityId, command.patch, source);

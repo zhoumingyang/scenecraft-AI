@@ -41,6 +41,7 @@ function getPanelTitle(
   if (entityRecord.kind === "scene") return t("editor.sceneTree.scene");
   if (entityRecord.kind === "group") return t("editor.sceneTree.group");
   if (entityRecord.kind === "model") return t("editor.sceneTree.model");
+  if (entityRecord.kind === "csgMesh") return t("editor.properties.csgMesh");
   if (entityRecord.kind === "mesh") return t("editor.sceneTree.meshes");
   if (entityRecord.kind === "gridHelper") return t("editor.view.gridHelper");
   return getLightTypeLabel(entityRecord.item.lightType, t);
@@ -153,11 +154,24 @@ export function usePropertyPanelState(open: boolean, t: Translate) {
         : null,
     [app, isMultiSelection, selectedEntityId, studioScene?.active, viewStateVersion]
   );
+  const selectedMeshEntityIds = useMemo(() => {
+    if (!open || selectedEntityIds.length <= 1) return CLOSED_SELECTED_ENTITY_IDS;
+    const project = app?.projectModel;
+    if (!project) return CLOSED_SELECTED_ENTITY_IDS;
+    return selectedEntityIds.filter((entityId) => {
+      const record = project.getEntityById(entityId);
+      return record?.kind === "mesh" && !project.isMeshConsumedByCsg(entityId);
+    });
+  }, [app, open, sceneTreeVersion, selectedEntityIds, viewStateVersion]);
+  const isMeshMultiSelection =
+    isMultiSelection && selectedMeshEntityIds.length === selectedEntityIds.length;
 
   return {
     app,
     selectedEntityId,
     selectedEntityIds,
+    selectedMeshEntityIds,
+    isMeshMultiSelection,
     isMultiSelection,
     inspectorMode,
     aiMode,

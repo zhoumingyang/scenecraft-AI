@@ -25,6 +25,7 @@ import {
 } from "../runtime/colorManagement";
 import { normalizePathTraceSettings } from "../runtime/pathTraceSettings";
 import type { CameraModel } from "./cameraModel";
+import type { CsgMeshEntityModel } from "./csgMeshEntityModel";
 import type { GroupEntityModel } from "./groupEntityModel";
 import type { LightEntityModel } from "./lightEntityModel";
 import type { MeshEntityModel } from "./meshEntityModel";
@@ -133,6 +134,7 @@ export function serializeProjectModel(source: {
   id: string;
   lights: Map<string, LightEntityModel>;
   meshes: Map<string, MeshEntityModel>;
+  csgMeshes: Map<string, CsgMeshEntityModel>;
   meta: EditorProjectMetaJSON | null;
   models: Map<string, ModelEntityModel>;
   thumbnail: EditorProjectThumbnailJSON | null;
@@ -279,6 +281,25 @@ export function serializeProjectModel(source: {
       normals: item.normals.map((normal) => ({ ...normal })),
       indices: [...item.indices],
       material: serializeMeshMaterial(item.material),
+      locked: item.locked,
+      visible: item.visible,
+      position: [...item.position],
+      quaternion: [...item.quaternion],
+      scale: [...item.scale]
+    })),
+    csgMesh: Array.from(source.csgMeshes.values()).map((item) => ({
+      id: item.id,
+      label: item.label,
+      operation: item.operation,
+      operandIds: [...item.operandIds],
+      materialMode: item.materialMode,
+      material: serializeMeshMaterial(item.material),
+      materialParts: item.materialParts.map((part) => ({
+        id: part.id,
+        sourceEntityId: part.sourceEntityId,
+        label: part.label,
+        ...(part.material ? { material: part.material } : {})
+      })),
       locked: item.locked,
       visible: item.visible,
       position: [...item.position],

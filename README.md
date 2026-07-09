@@ -32,7 +32,7 @@ This is not just a text-to-image demo, and it is not a full desktop-grade DCC to
 - Real-time 3D viewport powered by `Three.js`
 - Scene tree management with selection, Shift-click multi-selection, deletion, duplication, locking, visibility toggles, and isolation
 - Basic editor shortcuts for undo/redo, delete/backspace, copy/paste, duplicate, clear selection, save, visibility, and locking
-- Property panel editing for transforms, `MeshPhysicalMaterial` controls, lights, and scene settings
+- Property panel editing for transforms, `MeshPhysicalMaterial` controls, mesh multi-selection CSG operations, lights, and scene settings
 - Built-in primitive creation such as `box`, `sphere`, `cylinder`, and `torus`
 - Model import support for `gltf/glb`, `fbx`, `obj`, and `vrm`
 - Model animation controls including play, pause, stop, step, and playback speed adjustment

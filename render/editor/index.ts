@@ -15,7 +15,7 @@ export {
 } from "./ai3d/plan";
 export { createEditorSdk } from "./sdk";
 export type { EditorSdk } from "./sdk";
-export type { EditorCommand, MeshMaterialPatch } from "./core/commands";
+export type { EditorCommand, MeshCsgOperation, MeshMaterialPatch } from "./core/commands";
 export type { EditorHistoryState } from "./session/historySession";
 export { PATH_TRACE_DENOISE_LIMITS } from "./runtime/pathTraceDenoise";
 export type { PathTraceDenoiseSettings } from "./runtime/pathTraceDenoise";
@@ -24,6 +24,7 @@ export type { PathTraceSettings } from "./runtime/pathTraceSettings";
 export {
   BaseEntityModel,
   CameraModel,
+  CsgMeshEntityModel,
   EditorProjectModel,
   LightEntityModel,
   MeshEntityModel,

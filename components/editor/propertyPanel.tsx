@@ -47,6 +47,7 @@ export default function PropertyPanel() {
     app,
     selectedEntityId,
     selectedEntityIds,
+    selectedMeshEntityIds,
     isMultiSelection,
     inspectorMode,
     aiMode,
@@ -58,6 +59,7 @@ export default function PropertyPanel() {
     panelTitle,
     studioEntityMetadata,
     studioPostProcessingState,
+    isMeshMultiSelection,
     canIsolateCurrentEntity,
     currentIsolatableEntityId,
     isCurrentEntityIsolated,
@@ -194,11 +196,13 @@ export default function PropertyPanel() {
                 inspectorMode={inspectorMode}
                 isCurrentEntityInStudio={isCurrentEntityInStudio}
                 isCurrentEntityIsolated={isCurrentEntityIsolated}
+                isMeshMultiSelection={isMeshMultiSelection}
                 isMultiSelection={isMultiSelection}
                 isPolyhavenEnabled={isPolyhavenEnabled}
                 panelTitle={panelTitle}
                 selectedEntityId={selectedEntityId}
                 selectedEntityIds={selectedEntityIds}
+                selectedMeshEntityIds={selectedMeshEntityIds}
                 studioEntityMetadata={studioEntityMetadata}
                 studioPostProcessingState={studioPostProcessingState}
                 studioScene={studioScene}

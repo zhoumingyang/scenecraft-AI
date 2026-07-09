@@ -14,7 +14,7 @@ export type TransformPatch = {
   scale?: number[];
 };
 
-export type EntityKind = "model" | "mesh" | "light" | "group";
+export type EntityKind = "model" | "mesh" | "csgMesh" | "light" | "group";
 export type SyncSource = "load" | "ui" | "render";
 
 export type LightingConflictState = {

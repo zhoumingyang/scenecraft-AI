@@ -5,6 +5,7 @@ export type {
 } from "../constants/model";
 export * from "./types/camera";
 export * from "./types/command";
+export * from "./types/csgMesh";
 export * from "./types/environment";
 export * from "./types/event";
 export * from "./types/group";

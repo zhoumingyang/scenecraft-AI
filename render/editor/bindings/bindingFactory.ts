@@ -1,5 +1,6 @@
 import type {
   EntityModel,
+  CsgMeshEntityModel,
   GroupEntityModel,
   LightEntityModel,
   MeshEntityModel,
@@ -7,6 +8,7 @@ import type {
 } from "../models";
 import type { BindingContext, RenderBinding } from "./types";
 import { createGroupBinding } from "./groupBinding";
+import { createCsgMeshBinding } from "./csgMeshBinding";
 import { createLightBinding } from "./lightBinding";
 import { createMeshBinding } from "./meshBinding";
 import { createModelBinding } from "./modelBinding";
@@ -20,6 +22,9 @@ export function createBinding(context: BindingContext, model: EntityModel): Rend
   }
   if ("meshType" in model) {
     return createMeshBinding(context, model as MeshEntityModel);
+  }
+  if ("operandIds" in model) {
+    return createCsgMeshBinding(context, model as CsgMeshEntityModel);
   }
   return createLightBinding(context, model as LightEntityModel);
 }

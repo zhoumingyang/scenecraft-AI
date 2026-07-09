@@ -41,6 +41,10 @@ function getEditorCommandCoalesceKey(command: EditorCommand) {
       return "ground.material";
     case "mesh.material":
       return `mesh.material:${command.entityId}`;
+    case "mesh.csg":
+    case "mesh.csg.release":
+    case "mesh.csg.patch":
+      return null;
     case "light.patch":
       return `light.patch:${command.entityId}`;
     default:
@@ -78,6 +82,12 @@ function getEditorCommandHistoryLabel(command: EditorCommand) {
       return "Update material";
     case "mesh.create":
       return "Create mesh";
+    case "mesh.csg":
+      return "Apply CSG";
+    case "mesh.csg.release":
+      return "Release CSG";
+    case "mesh.csg.patch":
+      return "Update CSG";
     case "light.patch":
       return "Update light";
     case "light.create":

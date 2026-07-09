@@ -1,7 +1,12 @@
 import * as THREE from "three";
 
 import type { Ai3DPlan } from "../ai3d/plan";
-import type { EditorCommand, MeshMaterialPatch, SelectionMode } from "../core/commands";
+import type {
+  EditorCommand,
+  MeshCsgOperation,
+  MeshMaterialPatch,
+  SelectionMode
+} from "../core/commands";
 import type {
   EditorCameraJSON,
   EditorEnvConfigJSON,
@@ -39,6 +44,7 @@ import type { EntityDuplicateOptions } from "./entityDuplicator";
 import { EntityMutationSessionController } from "./entityMutationSession";
 import { createMeshEntityId, createMeshPayload } from "./entityFactories";
 import { LightSessionController } from "./lightSession";
+import { MeshCsgSessionController } from "./meshCsgSession";
 import { ModelImportSessionController } from "./modelImportSession";
 import { ModelAnimationSessionController } from "./modelAnimationSession";
 import {
@@ -88,6 +94,7 @@ export class EditorSession {
   private readonly entityIsolation: EntityIsolationSessionController;
   private readonly entityMutation: EntityMutationSessionController;
   private readonly lightSession: LightSessionController;
+  private readonly meshCsgSession: MeshCsgSessionController;
   private readonly sceneEnvironment: SceneEnvironmentSessionController;
   private readonly modelImport: ModelImportSessionController;
   private readonly modelAnimation: ModelAnimationSessionController;
@@ -118,6 +125,7 @@ export class EditorSession {
     });
     this.registry = new BindingRegistry({
       scene: runtime.scene,
+      getProjectModel: () => this.projectModel,
       modelLoaderFactory: runtime.modelLoaderFactory,
       textureLoader: runtime.textureLoader,
       invalidateScene: () => runtime.invalidatePathTraceScene(),
@@ -182,6 +190,15 @@ export class EditorSession {
       rebuildGroupHierarchy: () => this.rebuildGroupHierarchy(),
       setSelectedEntity: (entityId, source) => this.setSelectedEntity(entityId, source)
     });
+    this.meshCsgSession = new MeshCsgSessionController({
+      registry: this.registry,
+      scene: this.runtime.scene,
+      emit,
+      getProjectModel: () => this.projectModel,
+      getSelectedEntityIds: () => this.selectedEntityIds,
+      setSelectedEntity: (entityId, source) => this.setSelectedEntity(entityId, source),
+      setSelectedEntities: (entityIds, source) => this.setSelectedEntities(entityIds, source)
+    });
     this.sceneEnvironment = new SceneEnvironmentSessionController({
       runtime,
       emit,
@@ -240,6 +257,9 @@ export class EditorSession {
       updateMeshMaterial: (entityId, patch, source) =>
         this.updateMeshMaterial(entityId, patch, source),
       createMesh: (geometryName, source) => this.createMesh(geometryName, source),
+      applyMeshCsg: (operation, source) => this.applyMeshCsg(operation, source),
+      releaseMeshCsg: (entityId, source) => this.releaseMeshCsg(entityId, source),
+      patchMeshCsg: (entityId, patch, source) => this.patchMeshCsg(entityId, patch, source),
       updateLight: (entityId, patch, source) => this.updateLight(entityId, patch, source),
       createLight: (lightType, source) => this.createLight(lightType, source),
       createLightPreset: (presetId, source) => this.createLightPreset(presetId, source),
@@ -728,6 +748,56 @@ export class EditorSession {
     this.setSelectedEntity(meshId, source);
   }
 
+  applyMeshCsg(operation: MeshCsgOperation, source: SyncSource = "ui") {
+    if (this.studioScene.isActive()) return;
+    this.flushRuntimeStateToProjectModel();
+    this.meshCsgSession.apply(operation, source);
+  }
+
+  releaseMeshCsg(entityId: string, source: SyncSource = "ui") {
+    if (this.studioScene.isActive()) return;
+    this.meshCsgSession.release(entityId, source);
+  }
+
+  patchMeshCsg(
+    entityId: string,
+    patch: Extract<EditorCommand, { type: "mesh.csg.patch" }>["patch"],
+    source: SyncSource = "ui"
+  ) {
+    if (this.studioScene.isActive()) return;
+    const projectModel = this.projectModel;
+    const record = projectModel?.getEntityById(entityId);
+    if (!projectModel || !record || record.kind !== "csgMesh" || record.item.locked) return;
+
+    if (patch.operation) {
+      record.item.setOperation(patch.operation);
+    }
+    if (patch.materialMode) {
+      record.item.setMaterialMode(patch.materialMode);
+    }
+    if (patch.material) {
+      record.item.patchMaterial(patch.material);
+    }
+    if (patch.materialPart) {
+      record.item.patchMaterialPart(
+        patch.materialPart.sourceEntityId,
+        patch.materialPart.material ?? null
+      );
+    }
+
+    this.registry.remove(entityId);
+    this.registry.create(record.item);
+    this.rebuildGroupHierarchy();
+    this.emit({
+      type: "entityUpdated",
+      entityId,
+      entityKind: "csgMesh",
+      source,
+      affectsSceneTree: true,
+      affectsMeshList: false
+    });
+  }
+
   updateLight(entityId: string, patch: Partial<EditorLightJSON>, source: SyncSource = "ui") {
     if (this.studioScene.isActive() && !this.canUseStudioSceneEntityAction(entityId, "light")) return;
     this.lightSession.updateLight(entityId, patch, source);
@@ -869,6 +939,11 @@ export class EditorSession {
   }
 
   removeEntity(entityId: string, source: SyncSource = "ui") {
+    if (this.projectModel?.getEntityById(entityId)?.kind === "csgMesh") {
+      this.meshCsgSession.deleteWithOperands(entityId, source);
+      this.syncPreviewLighting();
+      return;
+    }
     if (this.studioScene.isActive() && !this.canUseStudioSceneEntityAction(entityId, "delete")) return;
     this.entityMutation.remove(entityId, source);
     this.syncPreviewLighting();

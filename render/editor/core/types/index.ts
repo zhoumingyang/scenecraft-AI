@@ -1,5 +1,6 @@
 export * from "./camera";
 export * from "./command";
+export * from "./csgMesh";
 export * from "./environment";
 export * from "./event";
 export * from "./group";

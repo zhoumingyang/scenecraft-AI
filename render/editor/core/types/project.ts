@@ -1,4 +1,5 @@
 import type { EditorCameraJSON } from "./camera";
+import type { EditorCsgMeshJSON } from "./csgMesh";
 import type { EditorEnvConfigJSON } from "./environment";
 import type { EditorGroupJSON } from "./group";
 import type { EditorLightJSON } from "./light";
@@ -112,6 +113,7 @@ export type EditorProjectJSON = {
   envConfig?: EditorEnvConfigJSON;
   model?: EditorModelJSON[];
   mesh?: EditorMeshJSON[];
+  csgMesh?: EditorCsgMeshJSON[];
   light?: EditorLightJSON[];
   groups?: EditorGroupJSON[];
   camera?: EditorCameraJSON;

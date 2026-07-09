@@ -67,6 +67,35 @@ const editorMeshSchema = z
   })
   .strict();
 
+const csgOperationSchema = z.enum(["SUBTRACTION", "INTERSECTION", "ADDITION"]);
+const csgMaterialModeSchema = z.enum(["sourceParts", "single"]);
+
+const editorCsgMeshMaterialPartSchema = z
+  .object({
+    id: trimmedString(120),
+    sourceEntityId: trimmedString(120),
+    label: optionalTrimmedString(120),
+    material: editorMeshMaterialSchema.optional()
+  })
+  .strict();
+
+const editorCsgMeshSchema = z
+  .object({
+    id: trimmedString(120),
+    label: optionalTrimmedString(120),
+    operation: csgOperationSchema.optional(),
+    operandIds: z.array(trimmedString(120)).optional(),
+    materialMode: csgMaterialModeSchema.optional(),
+    material: editorMeshMaterialSchema.optional(),
+    materialParts: z.array(editorCsgMeshMaterialPartSchema).optional(),
+    locked: z.boolean().optional(),
+    visible: z.boolean().optional(),
+    position: numericArraySchema.optional(),
+    quaternion: numericArraySchema.optional(),
+    scale: numericArraySchema.optional()
+  })
+  .strict();
+
 const editorLightSchema = z
   .object({
     id: trimmedString(120),
@@ -159,6 +188,7 @@ export const editorProjectSchema = z
     envConfig: editorEnvConfigSchema.optional(),
     model: z.array(editorModelSchema).optional(),
     mesh: z.array(editorMeshSchema).optional(),
+    csgMesh: z.array(editorCsgMeshSchema).optional(),
     light: z.array(editorLightSchema).optional(),
     groups: z.array(editorGroupSchema).optional(),
     camera: editorCameraSchema.optional()
