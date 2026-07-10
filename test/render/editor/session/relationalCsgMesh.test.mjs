@@ -46,6 +46,9 @@ test("CsgMesh owns the runtime result while operands keep model data only", () =
   assert.match(PROJECT_BINDINGS_SOURCE, /projectModel\.csgMeshes\.forEach/);
   assert.match(CSG_SESSION_SOURCE, /projectModel\.addCsgMesh/);
   assert.match(CSG_SESSION_SOURCE, /operandIds/);
+  assert.match(CSG_SESSION_SOURCE, /copyCsgAnchorTransform\(meshRecords\[0\]\)/);
+  assert.match(CSG_SESSION_SOURCE, /attachCsgMeshToAnchorParent\(projectModel, meshRecords\[0\]\.id, csgMesh\.id\)/);
+  assert.doesNotMatch(CSG_SESSION_SOURCE, /position:\s*\[0,\s*0,\s*0\]/);
   assert.match(CSG_SESSION_SOURCE, /this\.registry\.remove\(operandId\)/);
   assert.match(CSG_SESSION_SOURCE, /release\(entityId: string/);
   assert.match(CSG_SESSION_SOURCE, /this\.registry\.create\(operand\)/);

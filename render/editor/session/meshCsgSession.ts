@@ -10,6 +10,38 @@ import { rebuildProjectGroupHierarchy } from "./projectBindings";
 
 type Emit = (event: EditorAppEvent) => void;
 
+type CsgAnchorTransform = {
+  position: [number, number, number];
+  quaternion: [number, number, number, number];
+  scale: [number, number, number];
+};
+
+function copyCsgAnchorTransform(anchor: CsgAnchorTransform): CsgAnchorTransform {
+  return {
+    position: [...anchor.position],
+    quaternion: [...anchor.quaternion],
+    scale: [...anchor.scale]
+  };
+}
+
+function attachCsgMeshToAnchorParent(
+  projectModel: EditorProjectModel,
+  anchorEntityId: string,
+  csgMeshId: string
+) {
+  const parentGroupId = projectModel.getParentGroupId(anchorEntityId);
+  if (!parentGroupId) return;
+
+  const parentGroup = projectModel.groups.get(parentGroupId);
+  if (!parentGroup) return;
+
+  const anchorIndex = parentGroup.children.indexOf(anchorEntityId);
+  const nextChildren = parentGroup.children.filter((childId) => childId !== csgMeshId);
+  const insertionIndex = anchorIndex >= 0 ? anchorIndex : nextChildren.length;
+  nextChildren.splice(insertionIndex, 0, csgMeshId);
+  parentGroup.children = nextChildren;
+}
+
 export type MeshCsgSessionOptions = {
   registry: BindingRegistry;
   scene: THREE.Scene;
@@ -64,6 +96,7 @@ export class MeshCsgSessionController {
       }
       return record.item;
     });
+    const anchorTransform = copyCsgAnchorTransform(meshRecords[0]);
 
     const csgMesh = projectModel.addCsgMesh({
       id: createMeshEntityId(),
@@ -76,10 +109,11 @@ export class MeshCsgSessionController {
         sourceEntityId: mesh.id,
         label: mesh.label
       })),
-      position: [0, 0, 0],
-      quaternion: [0, 0, 0, 1],
-      scale: [1, 1, 1]
+      position: anchorTransform.position,
+      quaternion: anchorTransform.quaternion,
+      scale: anchorTransform.scale
     });
+    attachCsgMeshToAnchorParent(projectModel, meshRecords[0].id, csgMesh.id);
 
     csgMesh.operandIds.forEach((operandId) => {
       this.registry.remove(operandId);
