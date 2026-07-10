@@ -21,6 +21,7 @@ const CSG_PANEL_SOURCE = readFileSync(
 
 test("scene tree hides CSG operands and shows CsgMesh entities", () => {
   assert.match(SCENE_TREE_SOURCE, /isMeshConsumedByCsg\(mesh\.id\)/);
+  assert.match(SCENE_TREE_SOURCE, /isEntityConsumedByCsg\(csgMesh\.id\)/);
   assert.match(SCENE_TREE_SOURCE, /project\.csgMeshes\.values\(\)/);
   assert.match(SCENE_TREE_SOURCE, /type: "csgMesh"/);
 });
@@ -31,4 +32,3 @@ test("property panel switches to a CsgMesh inspector with release action", () =>
   assert.match(CSG_PANEL_SOURCE, /releaseMeshCsg/);
   assert.match(CSG_PANEL_SOURCE, /editor\.properties\.csgRelease/);
 });
-

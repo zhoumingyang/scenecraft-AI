@@ -139,17 +139,39 @@ export class EditorProjectModel {
     return true;
   }
 
-  getCsgOwnerForMesh(meshId: string) {
+  getCsgOwnerForEntity(entityId: string) {
     for (const csgMesh of this.csgMeshes.values()) {
-      if (csgMesh.operandIds.includes(meshId)) {
+      if (csgMesh.operandIds.includes(entityId)) {
         return csgMesh;
       }
     }
     return null;
   }
 
+  getCsgOwnerForMesh(meshId: string) {
+    return this.getCsgOwnerForEntity(meshId);
+  }
+
+  getTopLevelCsgOwnerForEntity(entityId: string) {
+    let owner = this.getCsgOwnerForEntity(entityId);
+    let topLevelOwner = owner;
+    const visited = new Set<string>([entityId]);
+
+    while (owner && !visited.has(owner.id)) {
+      visited.add(owner.id);
+      topLevelOwner = owner;
+      owner = this.getCsgOwnerForEntity(owner.id);
+    }
+
+    return topLevelOwner;
+  }
+
+  isEntityConsumedByCsg(entityId: string) {
+    return Boolean(this.getCsgOwnerForEntity(entityId));
+  }
+
   isMeshConsumedByCsg(meshId: string) {
-    return Boolean(this.getCsgOwnerForMesh(meshId));
+    return this.isEntityConsumedByCsg(meshId);
   }
 
   addModel(source: ConstructorParameters<typeof ModelEntityModel>[1]) {

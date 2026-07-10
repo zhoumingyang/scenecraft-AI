@@ -4,7 +4,7 @@ import type { MeshCsgOperation } from "../core/commands";
 import type { SyncSource } from "../core/types";
 import type { BindingRegistry } from "../bindings/bindingRegistry";
 import type { EditorAppEvent } from "../core/events";
-import type { EditorProjectModel } from "../models";
+import type { CsgMeshEntityModel, EditorProjectModel, MeshEntityModel } from "../models";
 import { createDefaultMeshLabel, createMeshEntityId } from "./entityFactories";
 import { rebuildProjectGroupHierarchy } from "./projectBindings";
 
@@ -15,6 +15,12 @@ type CsgAnchorTransform = {
   quaternion: [number, number, number, number];
   scale: [number, number, number];
 };
+
+function isCsgOperandEntity(
+  record: ReturnType<EditorProjectModel["getEntityById"]>
+): record is { kind: "mesh"; item: MeshEntityModel } | { kind: "csgMesh"; item: CsgMeshEntityModel } {
+  return record?.kind === "mesh" || record?.kind === "csgMesh";
+}
 
 function copyCsgAnchorTransform(anchor: CsgAnchorTransform): CsgAnchorTransform {
   return {
@@ -82,38 +88,37 @@ export class MeshCsgSessionController {
       throw new Error("CSG requires at least two selected mesh entities.");
     }
 
-    const meshRecords = selectedEntityIds.map((entityId) => {
+    const operandRecords = selectedEntityIds.map((entityId) => {
       const record = projectModel.getEntityById(entityId);
       if (
-        !record ||
-        record.kind !== "mesh" ||
-        projectModel.isMeshConsumedByCsg(entityId)
+        !isCsgOperandEntity(record) ||
+        projectModel.isEntityConsumedByCsg(entityId)
       ) {
-        throw new Error("CSG can only be applied to mesh selections.");
+        throw new Error("CSG can only be applied to available mesh or CSG mesh selections.");
       }
       if (record.item.locked) {
         throw new Error("Locked meshes cannot be used for CSG.");
       }
       return record.item;
     });
-    const anchorTransform = copyCsgAnchorTransform(meshRecords[0]);
+    const anchorTransform = copyCsgAnchorTransform(operandRecords[0]);
 
     const csgMesh = projectModel.addCsgMesh({
       id: createMeshEntityId(),
       label: createDefaultMeshLabel(`CSG ${operation}`, projectModel.csgMeshes.size),
       operation,
-      operandIds: meshRecords.map((mesh) => mesh.id),
+      operandIds: operandRecords.map((operand) => operand.id),
       materialMode: "sourceParts",
-      materialParts: meshRecords.map((mesh) => ({
-        id: `operand:${mesh.id}`,
-        sourceEntityId: mesh.id,
-        label: mesh.label
+      materialParts: operandRecords.map((operand) => ({
+        id: `operand:${operand.id}`,
+        sourceEntityId: operand.id,
+        label: operand.label
       })),
       position: anchorTransform.position,
       quaternion: anchorTransform.quaternion,
       scale: anchorTransform.scale
     });
-    attachCsgMeshToAnchorParent(projectModel, meshRecords[0].id, csgMesh.id);
+    attachCsgMeshToAnchorParent(projectModel, operandRecords[0].id, csgMesh.id);
 
     csgMesh.operandIds.forEach((operandId) => {
       this.registry.remove(operandId);
@@ -147,8 +152,9 @@ export class MeshCsgSessionController {
     projectModel.removeEntity(entityId);
 
     operandIds.forEach((operandId) => {
-      if (projectModel.isMeshConsumedByCsg(operandId)) return;
-      const operand = projectModel.meshes.get(operandId);
+      if (projectModel.isEntityConsumedByCsg(operandId)) return;
+      const operandRecord = projectModel.getEntityById(operandId);
+      const operand = isCsgOperandEntity(operandRecord) ? operandRecord.item : null;
       if (!operand || this.registry.get(operandId)) return;
       this.registry.create(operand);
     });
@@ -176,37 +182,45 @@ export class MeshCsgSessionController {
     const record = projectModel.getEntityById(entityId);
     if (!record || record.kind !== "csgMesh" || record.item.locked) return [];
 
-    const operandIds = [...record.item.operandIds];
-    this.registry.remove(entityId);
-    projectModel.removeEntity(entityId);
-
-    operandIds.forEach((operandId) => {
-      this.registry.remove(operandId);
-      projectModel.removeEntity(operandId);
-      this.emit({
-        type: "entityUpdated",
-        entityId: operandId,
-        entityKind: "mesh",
-        source,
-        affectsSceneTree: true,
-        affectsMeshList: true
-      });
-    });
+    const removedOperandIds = this.deleteCsgEntityTree(entityId, source);
 
     rebuildProjectGroupHierarchy({
       projectModel,
       registry: this.registry,
       scene: this.scene
     });
-    this.emit({
-      type: "entityUpdated",
-      entityId,
-      entityKind: "csgMesh",
-      source,
-      affectsSceneTree: true,
-      affectsMeshList: true
-    });
     this.setSelectedEntities([], source);
-    return operandIds;
+    return removedOperandIds;
+  }
+
+  private deleteCsgEntityTree(entityId: string, source: SyncSource, visited = new Set<string>()) {
+    const projectModel = this.getProjectModel();
+    if (!projectModel || visited.has(entityId)) return [];
+    visited.add(entityId);
+
+    const record = projectModel.getEntityById(entityId);
+    if (!record || (record.kind !== "mesh" && record.kind !== "csgMesh")) return [];
+
+    const removedIds: string[] = [];
+    const operandIds = record.kind === "csgMesh" ? [...record.item.operandIds] : [];
+    this.registry.remove(entityId);
+    const removedKind = projectModel.removeEntity(entityId);
+    if (removedKind) {
+      removedIds.push(entityId);
+      this.emit({
+        type: "entityUpdated",
+        entityId,
+        entityKind: removedKind,
+        source,
+        affectsSceneTree: true,
+        affectsMeshList: true
+      });
+    }
+
+    operandIds.forEach((operandId) => {
+      removedIds.push(...this.deleteCsgEntityTree(operandId, source, visited));
+    });
+
+    return removedIds;
   }
 }

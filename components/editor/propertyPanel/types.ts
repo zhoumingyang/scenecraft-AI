@@ -24,13 +24,13 @@ export type PropertyPanelContentProps = {
   inspectorMode: "entity" | "ai";
   isCurrentEntityInStudio: boolean;
   isCurrentEntityIsolated: boolean;
-  isMeshMultiSelection: boolean;
+  isCsgOperandMultiSelection: boolean;
   isMultiSelection: boolean;
   isPolyhavenEnabled: boolean;
   panelTitle: string;
   selectedEntityId: string | null;
   selectedEntityIds: string[];
-  selectedMeshEntityIds: string[];
+  selectedCsgOperandEntityIds: string[];
   studioEntityMetadata: StudioTransientEntityMetadata | null;
   studioPostProcessingState: StudioScenePostProcessingState | null;
   studioScene: StudioSceneState | null;

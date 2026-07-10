@@ -154,24 +154,27 @@ export function usePropertyPanelState(open: boolean, t: Translate) {
         : null,
     [app, isMultiSelection, selectedEntityId, studioScene?.active, viewStateVersion]
   );
-  const selectedMeshEntityIds = useMemo(() => {
+  const selectedCsgOperandEntityIds = useMemo(() => {
     if (!open || selectedEntityIds.length <= 1) return CLOSED_SELECTED_ENTITY_IDS;
     const project = app?.projectModel;
     if (!project) return CLOSED_SELECTED_ENTITY_IDS;
     return selectedEntityIds.filter((entityId) => {
       const record = project.getEntityById(entityId);
-      return record?.kind === "mesh" && !project.isMeshConsumedByCsg(entityId);
+      return (
+        (record?.kind === "mesh" || record?.kind === "csgMesh") &&
+        !project.isEntityConsumedByCsg(entityId)
+      );
     });
   }, [app, open, sceneTreeVersion, selectedEntityIds, viewStateVersion]);
-  const isMeshMultiSelection =
-    isMultiSelection && selectedMeshEntityIds.length === selectedEntityIds.length;
+  const isCsgOperandMultiSelection =
+    isMultiSelection && selectedCsgOperandEntityIds.length === selectedEntityIds.length;
 
   return {
     app,
     selectedEntityId,
     selectedEntityIds,
-    selectedMeshEntityIds,
-    isMeshMultiSelection,
+    selectedCsgOperandEntityIds,
+    isCsgOperandMultiSelection,
     isMultiSelection,
     inspectorMode,
     aiMode,

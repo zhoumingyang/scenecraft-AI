@@ -24,7 +24,10 @@ export function createProjectBindings(
     if (projectModel.isMeshConsumedByCsg(mesh.id)) return;
     registerBinding(registry.create(mesh));
   });
-  projectModel.csgMeshes.forEach((csgMesh) => registerBinding(registry.create(csgMesh)));
+  projectModel.csgMeshes.forEach((csgMesh) => {
+    if (projectModel.isEntityConsumedByCsg(csgMesh.id)) return;
+    registerBinding(registry.create(csgMesh));
+  });
   projectModel.lights.forEach((light) => registerBinding(registry.create(light)));
 
   return pendingBindingReady;
@@ -56,6 +59,7 @@ export function rebuildProjectGroupHierarchy({
   });
 
   projectModel.csgMeshes.forEach((csgMesh) => {
+    if (projectModel.isEntityConsumedByCsg(csgMesh.id)) return;
     const parentGroupId = projectModel.getParentGroupId(csgMesh.id);
     registry.attach(csgMesh.id, parentGroupId, scene);
   });

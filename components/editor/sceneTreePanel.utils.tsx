@@ -118,6 +118,7 @@ function buildEntityNodeMap(
   });
 
   Array.from(project.csgMeshes.values()).forEach((csgMesh, index) => {
+    if (project.isEntityConsumedByCsg(csgMesh.id)) return;
     const fallbackLabel = `CSG Mesh ${index + 1}`;
     entityNodeMap.set(csgMesh.id, {
       id: csgMesh.id,

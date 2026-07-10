@@ -11,20 +11,20 @@ const CSG_OPERATIONS: MeshCsgOperation[] = ["SUBTRACTION", "INTERSECTION", "ADDI
 
 type MeshCsgSectionProps = {
   app: EditorApp | null;
-  selectedMeshEntityIds: string[];
+  selectedCsgOperandEntityIds: string[];
   theme: EditorThemeTokens;
   t: Translate;
 };
 
 export function MeshCsgSection({
   app,
-  selectedMeshEntityIds,
+  selectedCsgOperandEntityIds,
   theme,
   t
 }: MeshCsgSectionProps) {
   const [pendingOperation, setPendingOperation] = useState<MeshCsgOperation | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const disabled = !app || selectedMeshEntityIds.length < 2 || pendingOperation !== null;
+  const disabled = !app || selectedCsgOperandEntityIds.length < 2 || pendingOperation !== null;
 
   const applyOperation = async (operation: MeshCsgOperation) => {
     if (!app || pendingOperation) return;

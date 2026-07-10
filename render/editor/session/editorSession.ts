@@ -785,8 +785,9 @@ export class EditorSession {
       );
     }
 
-    this.registry.remove(entityId);
-    this.registry.create(record.item);
+    const refreshCsgMesh = projectModel.getTopLevelCsgOwnerForEntity(entityId) ?? record.item;
+    this.registry.remove(refreshCsgMesh.id);
+    this.registry.create(refreshCsgMesh);
     this.rebuildGroupHierarchy();
     this.emit({
       type: "entityUpdated",

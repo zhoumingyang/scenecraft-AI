@@ -25,7 +25,7 @@ export function EntityInspectorContent(props: PropertyPanelContentProps) {
     entityRecord,
     isCurrentEntityInStudio,
     isCurrentEntityIsolated,
-    isMeshMultiSelection,
+    isCsgOperandMultiSelection,
     isMultiSelection,
     isPolyhavenEnabled,
     panelTitle,
@@ -35,7 +35,7 @@ export function EntityInspectorContent(props: PropertyPanelContentProps) {
     studioScene,
     theme,
     t,
-    selectedMeshEntityIds,
+    selectedCsgOperandEntityIds,
     onAiLibraryOpen,
     onAdvancedMaterialOpen,
     onMaterialLibraryOpen,
@@ -44,7 +44,7 @@ export function EntityInspectorContent(props: PropertyPanelContentProps) {
   } = props;
 
   if (!entityRecord) {
-    if (isMeshMultiSelection && selectedMeshEntityIds.length > 1) {
+    if (isCsgOperandMultiSelection && selectedCsgOperandEntityIds.length > 1) {
       return (
         <Stack spacing={0.9}>
           <Typography
@@ -61,7 +61,7 @@ export function EntityInspectorContent(props: PropertyPanelContentProps) {
           </Typography>
           <MeshCsgSection
             app={app}
-            selectedMeshEntityIds={selectedMeshEntityIds}
+            selectedCsgOperandEntityIds={selectedCsgOperandEntityIds}
             theme={theme}
             t={t}
           />

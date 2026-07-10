@@ -32,6 +32,17 @@ export function CsgMeshInspectorSection({
     patchCsg({ material: { color: event.target.value } });
   };
 
+  const getOperandLabel = (operandId: string) => {
+    const record = project?.getEntityById(operandId);
+    return record?.item.label || operandId;
+  };
+
+  const getOperandColor = (operandId: string) => {
+    const record = project?.getEntityById(operandId);
+    if (record?.kind !== "mesh" && record?.kind !== "csgMesh") return "#ffffff";
+    return record.item.material.color;
+  };
+
   return (
     <Stack spacing={0.9}>
       <PropertyPanelSection title={t("editor.properties.csg")}>
@@ -98,7 +109,7 @@ export function CsgMeshInspectorSection({
           {csgMesh.operandIds.map((operandId) => (
             <Stack key={operandId} spacing={0.45}>
               <Typography sx={{ fontSize: 11, color: theme.text }}>
-                {project?.meshes.get(operandId)?.label || operandId}
+                {getOperandLabel(operandId)}
               </Typography>
               {csgMesh.materialMode === "sourceParts" ? (
                 <Stack direction="row" spacing={0.6} alignItems="center">
@@ -106,8 +117,7 @@ export function CsgMeshInspectorSection({
                     compact
                     value={
                       csgMesh.getMaterialPart(operandId)?.material?.color ||
-                      project?.meshes.get(operandId)?.material.color ||
-                      "#ffffff"
+                      getOperandColor(operandId)
                     }
                     onChange={(event) =>
                       patchCsg({
