@@ -135,6 +135,32 @@ function disposeResultMaterial(material: THREE.Material | THREE.Material[]) {
   material.dispose();
 }
 
+function centerGeometryOriginOnModel(geometry: THREE.BufferGeometry, model: CsgMeshEntityModel) {
+  geometry.computeBoundingBox();
+  const center = geometry.boundingBox?.getCenter(new THREE.Vector3()) ?? null;
+  if (!center || center.lengthSq() < 1e-12) return;
+
+  geometry.translate(-center.x, -center.y, -center.z);
+  geometry.computeBoundingBox();
+  geometry.computeBoundingSphere();
+
+  const offset = center
+    .clone()
+    .multiply(new THREE.Vector3(model.scale[0], model.scale[1], model.scale[2]))
+    .applyQuaternion(new THREE.Quaternion(
+      model.quaternion[0],
+      model.quaternion[1],
+      model.quaternion[2],
+      model.quaternion[3]
+    ));
+
+  model.position = [
+    model.position[0] + offset.x,
+    model.position[1] + offset.y,
+    model.position[2] + offset.z
+  ];
+}
+
 export function createCsgMeshBinding(
   context: BindingContext,
   model: CsgMeshEntityModel
@@ -149,6 +175,7 @@ export function createCsgMeshBinding(
 
     const resultBrush = createCsgResultBrush(context, projectModel, model, new Set());
     mesh = new THREE.Mesh(resultBrush.geometry.clone(), cloneMaterial(resultBrush.material));
+    centerGeometryOriginOnModel(mesh.geometry, model);
     disposeBrush(resultBrush);
   } catch {
     mesh = new THREE.Mesh(new THREE.BufferGeometry(), createSingleMaterial(context, model));
@@ -232,12 +259,16 @@ function createCsgResultBrush(
     if (!geometry.getAttribute("position")) {
       throw new Error("CSG produced an empty geometry.");
     }
-    const inverseCsgMatrix = new THREE.Matrix4();
     const csgTransformObject = new THREE.Object3D();
     model.applyTransformToObject(csgTransformObject);
     csgTransformObject.updateMatrixWorld(true);
-    inverseCsgMatrix.copy(csgTransformObject.matrixWorld).invert();
-    geometry.applyMatrix4(inverseCsgMatrix);
+    evaluatedBrush.updateMatrixWorld(true);
+
+    const csgLocalFromResultLocal = new THREE.Matrix4()
+      .copy(csgTransformObject.matrixWorld)
+      .invert()
+      .multiply(evaluatedBrush.matrixWorld);
+    geometry.applyMatrix4(csgLocalFromResultLocal);
     geometry.computeVertexNormals();
 
     const brush = new Brush(geometry, cloneMaterial(evaluatedBrush.material));
