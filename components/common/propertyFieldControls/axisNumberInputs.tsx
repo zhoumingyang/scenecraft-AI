@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo, useRef, type ReactNode } from "react";
 import { IconButton, InputAdornment, Stack, TextField, Typography } from "@mui/material";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import RemoveRoundedIcon from "@mui/icons-material/RemoveRounded";
@@ -26,7 +27,77 @@ export function AxisNumberInputs({
 }: AxisNumberInputsProps) {
   const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
   const theme = getEditorThemeTokens(editorThemeMode);
-  const compactAxisInputSx = getCompactAxisInputSx(theme);
+  const compactAxisInputSx = useMemo(() => getCompactAxisInputSx(theme), [theme]);
+  const callbacksRef = useRef({ onChange, onFocus, onCommit, onNudge });
+  callbacksRef.current = { onChange, onFocus, onCommit, onNudge };
+  const adornments = useMemo(
+    () =>
+      AXES.reduce(
+        (acc, axis) => {
+          acc[axis] = {
+            end: (
+              <InputAdornment
+                position="end"
+                sx={{
+                  position: "absolute",
+                  right: 3,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  m: 0,
+                  height: "100%",
+                  maxHeight: 16,
+                  alignItems: "center"
+                }}
+              >
+                <Stack spacing={0.05}>
+                  <IconButton
+                    size="small"
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => callbacksRef.current.onNudge(axis, 0.1)}
+                    sx={{ p: 0, color: theme.titleText }}
+                  >
+                    <AddRoundedIcon sx={{ fontSize: 10 }} />
+                  </IconButton>
+                  <IconButton
+                    size="small"
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => callbacksRef.current.onNudge(axis, -0.1)}
+                    sx={{ p: 0, color: theme.titleText }}
+                  >
+                    <RemoveRoundedIcon sx={{ fontSize: 10 }} />
+                  </IconButton>
+                </Stack>
+              </InputAdornment>
+            ),
+            start: (
+              <InputAdornment
+                position="start"
+                sx={{
+                  position: "absolute",
+                  left: 6,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  m: 0
+                }}
+              >
+                <Typography
+                  sx={{
+                    fontSize: 10,
+                    color: theme.titleText,
+                    textTransform: "uppercase"
+                  }}
+                >
+                  {axis}
+                </Typography>
+              </InputAdornment>
+            )
+          };
+          return acc;
+        },
+        {} as Record<Axis, { end: ReactNode; start: ReactNode }>
+      ),
+    [theme.titleText]
+  );
 
   return (
     <Stack spacing={0.75}>
@@ -37,16 +108,20 @@ export function AxisNumberInputs({
             key={axis}
             size="small"
             value={values[axis]}
-            onFocus={() => onFocus(axis)}
-            onChange={(event) => onChange(axis, event.target.value)}
-            onBlur={onCommit}
+            onFocus={() => callbacksRef.current.onFocus(axis)}
+            onChange={(event) => callbacksRef.current.onChange(axis, event.target.value)}
+            onBlur={() => callbacksRef.current.onCommit()}
             onKeyDown={(event) => {
               if (event.key !== "Enter") return;
               event.preventDefault();
-              onCommit();
+              callbacksRef.current.onCommit();
               event.currentTarget.blur();
             }}
             slotProps={{
+              input: {
+                endAdornment: adornments[axis].end,
+                startAdornment: adornments[axis].start
+              },
               htmlInput: {
                 inputMode: "decimal",
                 style: {
@@ -59,64 +134,6 @@ export function AxisNumberInputs({
             sx={{
               flex: 1,
               ...compactAxisInputSx
-            }}
-            InputProps={{
-              endAdornment: (
-                <InputAdornment
-                  position="end"
-                  sx={{
-                    position: "absolute",
-                    right: 3,
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    m: 0,
-                    height: "100%",
-                    maxHeight: 16,
-                    alignItems: "center"
-                  }}
-                >
-                  <Stack spacing={0.05}>
-                    <IconButton
-                      size="small"
-                      onMouseDown={(event) => event.preventDefault()}
-                      onClick={() => onNudge(axis, 0.1)}
-                      sx={{ p: 0, color: theme.titleText }}
-                    >
-                      <AddRoundedIcon sx={{ fontSize: 10 }} />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      onMouseDown={(event) => event.preventDefault()}
-                      onClick={() => onNudge(axis, -0.1)}
-                      sx={{ p: 0, color: theme.titleText }}
-                    >
-                      <RemoveRoundedIcon sx={{ fontSize: 10 }} />
-                    </IconButton>
-                  </Stack>
-                </InputAdornment>
-              ),
-              startAdornment: (
-                <InputAdornment
-                  position="start"
-                  sx={{
-                    position: "absolute",
-                    left: 6,
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    m: 0
-                  }}
-                >
-                  <Typography
-                    sx={{
-                      fontSize: 10,
-                      color: theme.titleText,
-                      textTransform: "uppercase"
-                    }}
-                  >
-                    {axis}
-                  </Typography>
-                </InputAdornment>
-              )
             }}
           />
         ))}

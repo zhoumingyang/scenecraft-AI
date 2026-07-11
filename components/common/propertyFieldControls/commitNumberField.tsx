@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo, useRef } from "react";
 import { IconButton, InputAdornment, Stack, TextField } from "@mui/material";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import RemoveRoundedIcon from "@mui/icons-material/RemoveRounded";
@@ -30,8 +31,48 @@ export function CommitNumberField({
 }: CommitNumberFieldProps) {
   const editorThemeMode = useEditorStore((state) => state.editorThemeMode);
   const theme = getEditorThemeTokens(editorThemeMode);
-  const compactAxisInputSx = getCompactAxisInputSx(theme);
-  const labeledInputSx = getLabeledInputSx(theme);
+  const compactAxisInputSx = useMemo(() => getCompactAxisInputSx(theme), [theme]);
+  const labeledInputSx = useMemo(() => getLabeledInputSx(theme), [theme]);
+  const callbacksRef = useRef({ onNudge, nudgeStep });
+  callbacksRef.current = { onNudge, nudgeStep };
+  const endAdornment = useMemo(
+    () =>
+      onNudge ? (
+        <InputAdornment
+          position="end"
+          sx={{
+            position: "absolute",
+            right: 3,
+            top: "50%",
+            transform: "translateY(-50%)",
+            m: 0,
+            height: "100%",
+            maxHeight: 22,
+            alignItems: "center"
+          }}
+        >
+          <Stack spacing={0.05}>
+            <IconButton
+              size="small"
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => callbacksRef.current.onNudge?.(callbacksRef.current.nudgeStep)}
+              sx={{ p: 0.05, color: theme.titleText }}
+            >
+              <AddRoundedIcon sx={{ fontSize: 11 }} />
+            </IconButton>
+            <IconButton
+              size="small"
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => callbacksRef.current.onNudge?.(-callbacksRef.current.nudgeStep)}
+              sx={{ p: 0.05, color: theme.titleText }}
+            >
+              <RemoveRoundedIcon sx={{ fontSize: 11 }} />
+            </IconButton>
+          </Stack>
+        </InputAdornment>
+      ) : null,
+    [Boolean(onNudge), theme.titleText]
+  );
 
   return (
     <TextField
@@ -48,51 +89,16 @@ export function CommitNumberField({
         event.currentTarget.blur();
       }}
       slotProps={{
+        input: endAdornment
+          ? {
+              endAdornment
+            }
+          : undefined,
         htmlInput: {
           inputMode: "decimal",
           style: onNudge ? { paddingRight: 26 } : undefined
         }
       }}
-      InputProps={
-        onNudge
-          ? {
-              endAdornment: (
-                <InputAdornment
-                  position="end"
-                  sx={{
-                    position: "absolute",
-                    right: 3,
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    m: 0,
-                    height: "100%",
-                    maxHeight: 22,
-                    alignItems: "center"
-                  }}
-                >
-                  <Stack spacing={0.05}>
-                    <IconButton
-                      size="small"
-                      onMouseDown={(event) => event.preventDefault()}
-                      onClick={() => onNudge(nudgeStep)}
-                      sx={{ p: 0.05, color: theme.titleText }}
-                    >
-                      <AddRoundedIcon sx={{ fontSize: 11 }} />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      onMouseDown={(event) => event.preventDefault()}
-                      onClick={() => onNudge(-nudgeStep)}
-                      sx={{ p: 0.05, color: theme.titleText }}
-                    >
-                      <RemoveRoundedIcon sx={{ fontSize: 11 }} />
-                    </IconButton>
-                  </Stack>
-                </InputAdornment>
-              )
-            }
-          : undefined
-      }
       sx={
         compact
           ? {
